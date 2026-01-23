@@ -5,7 +5,6 @@ import {
     ListVectorStoreEntriesRequest,
     QueryEntityRequest,
     QueryEntityResponse,
-    ResponseRagsLatest,
     SearchKnowledgeBaseEntryRequest,
     SearchKnowledgeBaseEntryResponse,
     TClearKnowledgeResponse,
@@ -14,7 +13,7 @@ import {
     type KnowledgeBaseFile
 } from "./TKnowledgeBase"
 import {KnowledgeBaseItem} from "./hooks/useKnowledgeBase"
-import {failed, yakitNotify} from "@/utils/notification"
+import {yakitNotify} from "@/utils/notification"
 
 import {
     CrabIcon,
@@ -39,9 +38,14 @@ import {
     RobotIcon
 } from "./icon/sidebarIcon"
 import {YakitSideTabProps} from "../../components/yakitSideTab/YakitSideTabType"
-import {APIFunc} from "@/apiUtils/type"
 import {API} from "@/services/swagger/resposeType"
 import {NetWorkApi} from "@/services/fetch"
+import {OutlineBookOpenTextIcon, OutlineChipIcon, OutlinePuzzleIcon} from "@/assets/icon/outline"
+import knowledgeJoyrideFirst from "@/pages/KnowledgeBase/images/knowledge-joyride-first.gif"
+import knowledgeJoyrideLast from "@/pages/KnowledgeBase/images/knowledge-joyride-last.gif"
+import joyrideFirstStepImg from "@/pages/KnowledgeBase/images/joyride-first-step.png"
+import {Step} from "react-joyride"
+import styles from "./knowledgeBase.module.scss"
 
 const {ipcRenderer} = window.require("electron")
 
@@ -62,9 +66,21 @@ export enum KnowledgeTabListEnum {
     AI_Model = "AIModel"
 }
 export const KnowledgeTabList: YakitSideTabProps["yakitTabs"] = [
-    {value: KnowledgeTabListEnum.Knowledge, label: "知识库"},
-    {value: KnowledgeTabListEnum.Plugin, label: "插件"},
-    {value: KnowledgeTabListEnum.AI_Model, label: "AI模型"}
+    {value: KnowledgeTabListEnum.Knowledge, label: "知识库", icon: <OutlineBookOpenTextIcon />},
+    {
+        value: KnowledgeTabListEnum.Plugin,
+        label: "插件",
+        icon: <OutlinePuzzleIcon />
+    },
+    {
+        value: KnowledgeTabListEnum.AI_Model,
+        label: () => (
+            <div className='first-step' style={{display: "flex", gap: 4}}>
+                <OutlineChipIcon />
+                模型
+            </div>
+        )
+    }
 ]
 
 const insertModaOptions = [
@@ -446,7 +462,9 @@ const BuildingKnowledgeBase = async (targetKnowledgeBase: KnowledgeBaseItem) => 
         {Key: "entrylen", Value: `${targetKnowledgeBase.KnowledgeBaseLength ?? 1000}`},
         {Key: "k", Value: "0"},
         {Key: "kmin", Value: "2"},
-        {Key: "kmax", Value: "4"}
+        {Key: "kmax", Value: "4"},
+        {Key: "chunk", Value: targetKnowledgeBase?.chunk ?? "Medium"},
+        {Key: "concurrency", Value: `${targetKnowledgeBase?.concurrency ?? 10}`}
     ]
     const disableERM = {
         Key: "disableERM",
@@ -457,7 +475,7 @@ const BuildingKnowledgeBase = async (targetKnowledgeBase: KnowledgeBaseItem) => 
         PluginType: plugin.Type,
         Input: "",
         HTTPRequestTemplate: {...defPluginExecuteFormValue, IsHttpFlowId: false, HTTPFlowId: []},
-        ExecParams: targetKnowledgeBase.disableERM ? ExecParams.concat(disableERM) : ExecParams,
+        ExecParams: targetKnowledgeBase.disableERM === "true" ? ExecParams.concat(disableERM) : ExecParams,
         PluginName: plugin.ScriptName
     }
 
@@ -779,6 +797,17 @@ const extractAddedHistory = <T extends {token: string}>(
     return currentList.find((item) => !previousTokens.has(item.token)) ?? null
 }
 
+const extractStreamTokenChangedItem = (currentList, previousList) => {
+    const prevMap = new Map(previousList.map((item) => [item.ID, item.streamToken]))
+
+    return (
+        currentList.find((item) => {
+            const prevToken = prevMap.get(item.ID)
+            return prevToken !== undefined && prevToken !== item.streamToken
+        }) ?? null
+    )
+}
+
 const answerOptions = [
     {
         value: "hypothetical_answer",
@@ -900,6 +929,63 @@ export const apiFetchQueryOnlieRageLatest: () => Promise<any> = () => {
     })
 }
 
+const stopList = [
+    {
+        title: "AI 召回",
+        description: "可用于校验生成的知识库内容是否正确",
+        images: knowledgeJoyrideFirst
+    },
+    {
+        title: "从实体生成知识",
+        description:
+            "可从已经生成的实体和知识中，选择需要的实体或知识再次生成相关知识，当感觉知识内容有缺少时可用此方法对知识进行补充",
+        images: knowledgeJoyrideLast
+    }
+]
+
+// Joyride 步骤定义
+const joyrideSteps: Step[] = [
+    {
+        target: ".first-step",
+        disableBeacon: true,
+        placement: "right",
+        spotlightPadding: 5,
+        title: "添加模型",
+        content: (
+            <div className={styles["joyride-steps-content"]}>
+                <div>
+                    选择厂商后输入 ApiKey 选择对应使用模型即可。（注：需要添加<span>视觉模型</span>）
+                </div>
+                <div className={styles["joyride-steps-img-wrapper"]}>
+                    <img src={joyrideFirstStepImg} alt='' style={{width: "351px"}} />
+                </div>
+            </div>
+        )
+    },
+    {
+        target: ".second-step",
+        disableBeacon: true,
+        spotlightPadding: 2,
+        title: "知识库可用性诊断",
+        content: (
+            <div className={styles["joyride-steps-content"]}>
+                <div>添加模型后，可以使用可用性诊断，判断模型是否可用于生成知识库</div>
+            </div>
+        )
+    },
+    {
+        target: ".third-step",
+        disableBeacon: true,
+        spotlightPadding: 2,
+        title: "新建知识库",
+        content: (
+            <div className={styles["joyride-steps-content"]}>
+                <div>输入知识库名后拖拽文件创建即可</div>
+            </div>
+        )
+    }
+]
+
 export {
     targetInstallList,
     getFileInfoList,
@@ -928,5 +1014,8 @@ export {
     checkAIModelAvailability,
     mergeKnowledgeBaseList,
     totalKeyMap,
-    BuildingOnlineKnowledgeBase
+    BuildingOnlineKnowledgeBase,
+    stopList,
+    joyrideSteps,
+    extractStreamTokenChangedItem
 }
