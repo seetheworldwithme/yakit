@@ -70,3 +70,6 @@ common/yak/ssa2llvm/runtime/embed/ssa2llvm-runtime/
 # local build artifacts
 /ssa2llvm
 .serena/
+
+# yak-demo binary (too large for GitHub)
+yak-demo
