@@ -96,6 +96,7 @@ process.on('loaded', function () {
       openYakitPath: () => invoke('open-yakit-path'),
       checkYakitInstallFile: (filename) => invoke('check-yakit-install-file', filename),
       installIntranetYakit: (filePath) => invoke('install-intranet-yakit', filePath),
+      launchToolsApp: (pageKey) => invoke('launch-tools-app', { pageKey }),
       openRemoteLink: () => invoke('open-remote-link'),
       getRemoteFilePath: () => invoke('fetch-remote-file-path'),
       launchToolsApp: (pageKey) => invoke('shell-launch-tools-app', pageKey),
