@@ -241,6 +241,95 @@ export const AIDownAngleRightIcon = (props: Partial<IconProps>) => {
   return <Icon component={AIDownAngleRight} {...props} />
 }
 
+const AIEngineeringProgram = () => (
+    <svg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25' fill='none'>
+        <path d='M24.5 0.5H12.5H9.5L0.5 9.5V12.5V24.5H12.5H15.5H24.5V15.5V12.5V0.5Z' stroke='#E6E8ED' />
+        <path d='M6.5 0.5H0.5V6.5L6.5 0.5Z' fill='#E6E8ED' />
+        <path d='M18.5 24.5H24.5V18.5L18.5 24.5Z' fill='#E6E8ED' />
+        <path d='M18.5 0.5H24.5V6.5M0.5 18.5V24.5H6.5' stroke='#868C97' />
+        <g clipPath='url(#clip0_eng_normal)'>
+            <path
+                d='M8 10L6 12.5L8 15'
+                stroke='currentColor'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+            <path
+                d='M17 10L19 12.5L17 15'
+                stroke='currentColor'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+            <path
+                d='M14 9L11 16'
+                stroke='currentColor'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+        </g>
+        <defs>
+            <clipPath id='clip0_eng_normal'>
+                <rect width='16' height='16' fill='white' transform='translate(4.5 4.5)' />
+            </clipPath>
+        </defs>
+    </svg>
+)
+/**
+ * @description  AI首页推荐 工程化程序 图标
+ */
+export const AIEngineeringProgramIcon = (props: Partial<IconProps>) => {
+    return <Icon component={AIEngineeringProgram} {...props} />
+}
+
+const HoverAIEngineeringProgram = () => (
+    <svg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25' fill='none'>
+        <path
+            d='M24.5 0.5H12.5H9.5L0.5 9.5V12.5V24.5H12.5H15.5H24.5V15.5V12.5V0.5Z'
+            stroke='var(--Colors-Use-Main-Focus)'
+        />
+        <path d='M6.5 0.5H0.5V6.5L6.5 0.5Z' fill='var(--Colors-Use-Main-Focus)' />
+        <path d='M18.5 24.5H24.5V18.5L18.5 24.5Z' fill='var(--Colors-Use-Main-Focus)' />
+        <path d='M18.5 0.5H24.5V6.5M0.5 18.5V24.5H6.5' stroke='var(--Colors-Use-Main-Hover)' />
+        <g clipPath='url(#clip0_eng_hover)'>
+            <path
+                d='M8 10L6 12.5L8 15'
+                stroke='var(--Colors-Use-Main-Primary)'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+            <path
+                d='M17 10L19 12.5L17 15'
+                stroke='var(--Colors-Use-Main-Primary)'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+            <path
+                d='M14 9L11 16'
+                stroke='var(--Colors-Use-Main-Primary)'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeDasharray='1 1'
+            />
+        </g>
+        <defs>
+            <clipPath id='clip0_eng_hover'>
+                <rect width='16' height='16' fill='white' transform='translate(4.5 4.5)' />
+            </clipPath>
+        </defs>
+    </svg>
+)
+/**
+ * @description  AI首页推荐 hover工程化程序 图标
+ */
+export const HoverAIEngineeringProgramIcon = (props: Partial<IconProps>) => {
+    return <Icon component={HoverAIEngineeringProgram} {...props} />
+}
+
 const AIDetailsDash = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="3" viewBox="0 0 15 3" fill="none">
     <path d="M1.5 1.5H13.5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="0.5 5" />
