@@ -1,4 +1,0 @@
-package mq
-
-func init() {
-}

@@ -1,6 +1,0 @@
-desc("Description": 'checking setFeature/setXIncludeAware/setExpandEntityReferences in DocumentBuilderFactory.newInstance()')
-
-DocumentBuilderFactory.newInstance()?{!((.setFeature) || (.setXIncludeAware) || (.setExpandEntityReferences))} as $entry;
-$entry.*Builder().parse(* #-> as $source);
-
-check $source then "XXE Attack" else "XXE Safe";

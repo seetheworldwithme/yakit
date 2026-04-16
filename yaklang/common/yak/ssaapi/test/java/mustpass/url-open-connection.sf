@@ -1,4 +1,0 @@
-// URL(* #-> * as $source).openConnection().getResponseMessage() as $sink;
-.getResponseMessage() as $sink;
-
-check $sink then "Request From URL" else "No Response From URL";

@@ -1,2 +1,0 @@
-// mock core plugin for gzip embed path test
-println("plugin1")

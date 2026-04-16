@@ -1,1 +1,0 @@
-go run ./common/yak/cmd/yak.go grpc --frontend=irify  --profile-db irify-profile-rule.db --project-db default-irify.db

@@ -1,3 +1,0 @@
-package yakvm
-
-const ()
