@@ -285,6 +285,13 @@ function createWindow() {
     printLogOutputFile(`[mainWin] did-fail-load: ${errorCode} - ${errorDescription}, URL: ${validatedURL}`)
   })
 
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const levelName = ['verbose', 'info', 'warning', 'error'][level] || level
+    if (level >= 2) {
+      printLogOutputFile(`[mainWin] console(${levelName}): ${message} (${sourceId}:${line})`)
+    }
+  })
+
   win.webContents.on('did-stop-loading', () => {
     printLogOutputFile(`[mainWin] did-stop-loading`)
   })
