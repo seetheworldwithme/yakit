@@ -1,0 +1,44 @@
+# === Dependencies (restored by npm install / go mod download) ===
+node_modules/
+
+# === Build output (rebuilt by npm run build) ===
+dist/
+frontend/dist/
+backend/bin/
+
+# === Database (auto-created by app on first run) ===
+data/
+backend/data/
+backend/cmd/server/data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# === Go caches ===
+.gocache/
+.gomodcache/
+.gopath/
+.gotmp/
+
+# === npm cache ===
+.npm-cache/
+
+# === Generated reports ===
+reports/
+
+# === Logs & temp ===
+*.log
+*.tmp
+*.go.*.*
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,112 @@
+:root {
+  --bg: #f3f6fc;
+  --panel: rgba(255, 255, 255, 0.72);
+  --line: rgba(149, 168, 206, 0.4);
+  --accent: #2b7cff;
+  --text: #112243;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  z-index: -2;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.72), rgba(226, 234, 249, 0.86) 55%, rgba(205, 218, 243, 0.92));
+}
+
+body::after {
+  z-index: -1;
+  background: url("/assets/app-brand-transparent.png") center center / min(144vw, 1960px) auto no-repeat;
+  opacity: 0.4;
+}
+
+.ant-layout,
+.ant-layout-content {
+  background: transparent !important;
+}
+
+.ant-layout-sider {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border-right: 1px solid rgba(131, 152, 194, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.ant-menu {
+  background: transparent !important;
+}
+
+.ant-card,
+.ant-table-wrapper,
+.ant-tabs-content-holder {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.header {
+  background: linear-gradient(90deg, rgba(16, 33, 77, 0.9), rgba(31, 72, 157, 0.88)) !important;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.brand {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #0f2554;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+
+.module-card {
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(28, 56, 109, 0.14);
+  background: var(--panel);
+}
+
+.log-box {
+  height: 240px;
+  overflow: auto;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(252, 253, 255, 0.85);
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.graph-empty {
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a97b3;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: rgba(248, 251, 255, 0.8);
+}

@@ -1,0 +1,210 @@
+package service
+
+import (
+	"archive/zip"
+	"database/sql"
+	"encoding/json"
+	"encoding/xml"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"antifraud-workbench/backend/internal/model"
+	"antifraud-workbench/backend/internal/util"
+)
+
+type ReportService struct {
+	db                 *sql.DB
+	penetrationService *PenetrationService
+	profileService     *ProfileService
+	mu                 sync.RWMutex
+}
+
+func NewReportService(db *sql.DB, penetrationService *PenetrationService, profileService *ProfileService) *ReportService {
+	return &ReportService{
+		db:                 db,
+		penetrationService: penetrationService,
+		profileService:     profileService,
+	}
+}
+
+func (s *ReportService) Generate(taskID string, req model.ReportRequest) (model.ReportResponse, error) {
+	if strings.TrimSpace(req.PenetrationTaskID) == "" {
+		req.PenetrationTaskID = s.penetrationService.LatestTaskID()
+	}
+	if strings.TrimSpace(req.ProfileTaskID) == "" {
+		req.ProfileTaskID = s.profileService.LatestTaskID()
+	}
+	penetration, ok := s.penetrationService.Get(req.PenetrationTaskID)
+	if !ok {
+		return model.ReportResponse{}, fmt.Errorf("penetration result not found")
+	}
+	profile, ok := s.profileService.Get(req.ProfileTaskID)
+	if !ok {
+		return model.ReportResponse{}, fmt.Errorf("profile result not found")
+	}
+
+	outputPath := strings.TrimSpace(req.OutputPath)
+	if outputPath == "" {
+		_ = os.MkdirAll("reports", 0o755)
+		outputPath = filepath.Join("reports", "anti_fraud_report_"+time.Now().Format("20060102_150405")+".docx")
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return model.ReportResponse{}, err
+	}
+
+	lines := buildReportLines(penetration, profile)
+	if err := writeDocx(outputPath, lines); err != nil {
+		return model.ReportResponse{}, err
+	}
+
+	resp := model.ReportResponse{
+		TaskID:      taskID,
+		OutputPath:  outputPath,
+		DownloadURL: "/download?path=" + outputPath,
+	}
+	_, err := s.db.Exec(
+		`INSERT OR REPLACE INTO report_task(task_id,output_path,status,result_json) VALUES(?,?,?,?)`,
+		taskID, outputPath, "completed", util.JSONString(resp),
+	)
+	if err != nil {
+		return model.ReportResponse{}, err
+	}
+	return resp, nil
+}
+
+func buildReportLines(p model.PenetrationResult, profile model.ProfileResult) []string {
+	lines := []string{
+		"反诈研判分析报告",
+		"",
+		"一、案件摘要",
+		"线索入口: " + p.Entry,
+		fmt.Sprintf("穿透层级: %d 层", p.MaxHops),
+		fmt.Sprintf("穿透结果: %d 个主体, %d 条资金边", p.NodeSize, p.EdgeSize),
+		"",
+		"二、资金穿透关键发现",
+		p.Summary,
+		"",
+		"三、团伙画像",
+		profile.OrganizationBrief,
+	}
+
+	for _, group := range profile.RoleGroups {
+		lines = append(lines, fmt.Sprintf("%s: %s", group.Role, strings.Join(group.Members, "、")))
+	}
+	lines = append(lines, "")
+	lines = append(lines, "四、关键资金关系")
+	limit := min(10, len(profile.FrequentContacts))
+	for i := 0; i < limit; i++ {
+		item := profile.FrequentContacts[i]
+		lines = append(lines, fmt.Sprintf("%d) %s -> %s, 笔数 %d, 金额 %.2f", i+1, item.Source, item.Target, item.Count, item.Amount))
+	}
+	lines = append(lines, "")
+	lines = append(lines, "五、活跃特征")
+	for _, h := range profile.ActiveByHour {
+		lines = append(lines, fmt.Sprintf("%02d时: %d 笔", h.Hour, h.Count))
+	}
+	lines = append(lines, "")
+	lines = append(lines, "六、结论建议")
+	lines = append(lines, "1. 对高频关键节点开展重点核查，追踪上下游账户。")
+	lines = append(lines, "2. 结合活跃时段和高频链路开展并行侦查。")
+	lines = append(lines, "3. 固化关键交易证据并同步更新图谱。")
+	lines = append(lines, "")
+	lines = append(lines, "附注: 图谱可在系统界面查看与导出。")
+	return lines
+}
+
+func writeDocx(path string, lines []string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	zw := zip.NewWriter(file)
+	defer zw.Close()
+
+	files := map[string]string{
+		"[Content_Types].xml": contentTypesXML,
+		"_rels/.rels":         rootRelsXML,
+		"word/_rels/document.xml.rels": documentRelsXML,
+		"word/styles.xml":               stylesXML,
+		"word/document.xml":             buildDocumentXML(lines),
+	}
+
+	for name, payload := range files {
+		w, err := zw.Create(name)
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write([]byte(payload)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildDocumentXML(lines []string) string {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
+	b.WriteString(`<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">`)
+	b.WriteString(`<w:body>`)
+	for _, line := range lines {
+		b.WriteString(`<w:p><w:r><w:t xml:space="preserve">`)
+		b.WriteString(xmlEscape(line))
+		b.WriteString(`</w:t></w:r></w:p>`)
+	}
+	b.WriteString(`<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr>`)
+	b.WriteString(`</w:body></w:document>`)
+	return b.String()
+}
+
+func xmlEscape(v string) string {
+	out, _ := xml.Marshal(struct {
+		XMLName xml.Name `xml:"x"`
+		Value   string   `xml:",chardata"`
+	}{Value: v})
+	s := string(out)
+	s = strings.TrimPrefix(s, "<x>")
+	s = strings.TrimSuffix(s, "</x>")
+	return s
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+const contentTypesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`
+
+const rootRelsXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`
+
+const documentRelsXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`
+
+const stylesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+  </w:style>
+</w:styles>`
+
+func parseJSON[T any](raw string) (T, error) {
+	var out T
+	err := json.Unmarshal([]byte(raw), &out)
+	return out, err
+}

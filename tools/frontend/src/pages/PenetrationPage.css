@@ -1,0 +1,108 @@
+.penetration-hero-card {
+  border: 1px solid #d7e5ff;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 4% 4%, rgba(236, 248, 255, 0.9), rgba(232, 240, 255, 0.95) 44%, rgba(242, 247, 255, 0.95));
+  box-shadow: 0 12px 30px rgba(20, 66, 138, 0.11);
+}
+
+.penetration-hero-title {
+  font-size: 28px;
+  line-height: 1.2;
+  color: #0f2b52;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+  font-weight: 700;
+  font-family: "Trebuchet MS", "Gill Sans", "Segoe UI", "PingFang SC", sans-serif;
+}
+
+.penetration-hero-subtitle {
+  color: #425d7e;
+  max-width: 980px;
+  margin-bottom: 18px;
+}
+
+.penetration-stat-card {
+  border-radius: 14px;
+  border: 1px solid #dbe7ff;
+  box-shadow: 0 8px 20px rgba(24, 71, 150, 0.08);
+}
+
+.penetration-filter-card {
+  border-radius: 14px;
+  border: 1px solid #d9e7ff;
+}
+
+.penetration-graph-card {
+  border-radius: 14px;
+  border: 1px solid #d9e6ff;
+}
+
+.penetration-panel-card {
+  border-radius: 14px;
+  border: 1px solid #d9e6ff;
+}
+
+.focus-node-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #12365d;
+  font-family: "Trebuchet MS", "Segoe UI", "PingFang SC", sans-serif;
+}
+
+.penetration-fullscreen-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: linear-gradient(160deg, #edf4ff, #f5f9ff);
+  padding: 12px 14px 14px 14px;
+}
+
+.penetration-fullscreen-toolbar {
+  height: 56px;
+  border: 1px solid #d8e6ff;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  box-shadow: 0 8px 20px rgba(22, 68, 134, 0.1);
+}
+
+.penetration-fullscreen-content {
+  margin-top: 10px;
+  height: calc(100vh - 92px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 12px;
+}
+
+.penetration-fullscreen-graph {
+  min-width: 0;
+  border: 1px solid #d8e6ff;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 10px;
+}
+
+.penetration-fullscreen-side {
+  overflow: hidden;
+}
+
+.penetration-fullscreen-tip {
+  min-height: 780px;
+  border: 1px dashed #c7d8ff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b6c95;
+  background: linear-gradient(180deg, #f5f9ff, #eff5ff);
+}
+
+@media (max-width: 1300px) {
+  .penetration-fullscreen-content {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}

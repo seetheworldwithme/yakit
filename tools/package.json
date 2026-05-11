@@ -1,0 +1,55 @@
+{
+  "name": "anti-fraud-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:frontend\" \"npm:dev:electron\"",
+    "dev:web": "concurrently -k \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "vite --config frontend/vite.config.js",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "dev:backend": "go run -C backend ./cmd/server",
+    "build:frontend": "vite build --config frontend/vite.config.js",
+    "build:backend": "go build -C backend -o bin/server.exe ./cmd/server",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "cross-env NODE_ENV=production electron ."
+  },
+  "dependencies": {
+    "@antv/g6": "^4.8.25",
+    "antd": "^5.27.5",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.2.0",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.jzmemfit.anti-fraud-workbench",
+    "productName": "jztools",
+    "beforePack": "electron/before-pack.js",
+    "mac": {
+      "target": "dir"
+    },
+    "win": {
+      "target": "dir"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/bin/server.exe",
+        "to": "backend/bin/server.exe"
+      }
+    ]
+  }
+}
