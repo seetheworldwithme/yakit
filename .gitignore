@@ -62,3 +62,5 @@ yarn.lock
 .serena/
 .ci-changed-files-list.txt
 pr-ci-changed-files-list.txt
+tools/backend/bin/server
+tools/backend/bin/server.exe
