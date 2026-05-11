@@ -67,11 +67,21 @@ import { AIMentionCommandParams } from '../components/aiMilkdownInput/aiMilkdown
 const randomAIMaterialsDataIsEmpty = (randObj) => {
   try {
     return (
-      randObj.tools.data.length === 0 && randObj.forges.data.length === 0 && randObj.knowledgeBases.data.length === 0
+      randObj.tools.data.length === 0 &&
+      randObj.forges.data.length === 0 &&
+      randObj.knowledgeBases.data.length === 0 &&
+      randObj.engineeringPrograms.data.length === 0
     )
   } catch (error) {
     return true
   }
+}
+
+const ENGINEERING_PAGE_MAP: Record<string, string> = {
+  数据清洗: 'clean',
+  资金穿透: 'penetration',
+  团伙画像: 'profile',
+  一键报告: 'report',
 }
 
 enum AIChatWelcomeTabKeyEnum {
@@ -149,6 +159,13 @@ const AIChatWelcome: React.FC<AIChatWelcomeProps> = React.memo(
           setTabActiveKey(AIChatWelcomeTabKeyEnum.Tools)
           setOpenDrawer(true)
           break
+        case '工程化程序':
+          if ((window as any).yakitBridge?.shell?.launchToolsApp) {
+            ;(window as any).yakitBridge.shell.launchToolsApp('').catch((err: any) => {
+              console.error('启动 Tools 应用失败:', err)
+            })
+          }
+          break
         default:
           break
       }
@@ -166,6 +183,15 @@ const AIChatWelcome: React.FC<AIChatWelcomeProps> = React.memo(
         })
       },
     )
+
+    const onLaunchEngineeringProgram = useMemoizedFn((name: string) => {
+      const pageKey = ENGINEERING_PAGE_MAP[name]
+      if (pageKey && (window as any).yakitBridge?.shell?.launchToolsApp) {
+        ;(window as any).yakitBridge.shell.launchToolsApp(pageKey).catch((err: any) => {
+          console.error('启动 Tools 应用失败:', err)
+        })
+      }
+    })
 
     const isEmptyAIMaterials = useCreation(() => {
       return randomAIMaterialsDataIsEmpty(randomAIMaterialsData)
@@ -299,7 +325,7 @@ const AIChatWelcome: React.FC<AIChatWelcomeProps> = React.memo(
           <div className={styles['content-absolute']}>
             <div className={styles['input-wrapper']}>
               <div className={styles['input-heard']}>
-                <div className={styles['title']}>Memfit AI Agent</div>
+                <div className={styles['title']}>经吾卫 AI Agent</div>
                 <div className={styles['subtitle']}>{t('AIChatWelcome.WelcomeHomeSubTitle')}</div>
               </div>
               <div className={classNames(styles['input-body-wrapper'])}>
@@ -354,7 +380,11 @@ const AIChatWelcome: React.FC<AIChatWelcomeProps> = React.memo(
                           data={aiItem.data}
                           lineStartDOMRect={lineStartDOMRect}
                           onMore={() => onMore(aiItem.type)}
-                          onCheckItem={(v) => onCheckItem(v, aiItem.mentionType)}
+                          onCheckItem={
+                            aiItem.type === '工程化程序'
+                              ? (v) => onLaunchEngineeringProgram(v.name)
+                              : (v) => onCheckItem(v, aiItem.mentionType)
+                          }
                         />
                       ) : (
                         <React.Fragment key={aiItem.type}></React.Fragment>

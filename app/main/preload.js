@@ -98,6 +98,7 @@ process.on('loaded', function () {
       installIntranetYakit: (filePath) => invoke('install-intranet-yakit', filePath),
       openRemoteLink: () => invoke('open-remote-link'),
       getRemoteFilePath: () => invoke('fetch-remote-file-path'),
+      launchToolsApp: (pageKey) => invoke('shell-launch-tools-app', pageKey),
     },
     reverse: {
       getStatus: () => invoke('get-global-reverse-server-status'),

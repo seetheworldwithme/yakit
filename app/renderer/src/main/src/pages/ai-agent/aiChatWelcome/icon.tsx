@@ -252,3 +252,44 @@ const AIDetailsDash = () => (
 export const AIDetailsDashIcon = (props: Partial<IconProps>) => {
   return <Icon component={AIDetailsDash} {...props} />
 }
+
+const AIEngineeringProgram = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25" fill="none">
+    <path d="M24.5 0.5H12.5H9.5L0.5 9.5V12.5V24.5H12.5H15.5H24.5V15.5V12.5V0.5Z" stroke="#E6E8ED" />
+    <path d="M6.5 0.5H0.5V6.5L6.5 0.5Z" fill="#E6E8ED" />
+    <path d="M18.5 24.5H24.5V18.5L18.5 24.5Z" fill="#E6E8ED" />
+    <path d="M18.5 0.5H24.5V6.5M0.5 18.5V24.5H6.5" stroke="#868C97" />
+    <text x="12.5" y="16" textAnchor="middle" fill="currentColor" fontSize="8" fontFamily="monospace" fontWeight="bold">
+      {'</>'}
+    </text>
+  </svg>
+)
+export const AIEngineeringProgramIcon = (props: Partial<IconProps>) => {
+  return <Icon component={AIEngineeringProgram} {...props} />
+}
+
+const HoverAIEngineeringProgram = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25" fill="none">
+    <path
+      d="M24.5 0.5H12.5H9.5L0.5 9.5V12.5V24.5H12.5H15.5H24.5V15.5V12.5V0.5Z"
+      stroke="var(--Colors-Use-Main-Focus)"
+    />
+    <path d="M6.5 0.5H0.5V6.5L6.5 0.5Z" fill="var(--Colors-Use-Main-Focus)" />
+    <path d="M18.5 24.5H24.5V18.5L18.5 24.5Z" fill="var(--Colors-Use-Main-Focus)" />
+    <path d="M18.5 0.5H24.5V6.5M0.5 18.5V24.5H6.5" stroke="var(--Colors-Use-Main-Hover)" />
+    <text
+      x="12.5"
+      y="16"
+      textAnchor="middle"
+      fill="var(--Colors-Use-Main-Primary)"
+      fontSize="8"
+      fontFamily="monospace"
+      fontWeight="bold"
+    >
+      {'</>'}
+    </text>
+  </svg>
+)
+export const HoverAIEngineeringProgramIcon = (props: Partial<IconProps>) => {
+  return <Icon component={HoverAIEngineeringProgram} {...props} />
+}

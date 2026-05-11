@@ -1118,10 +1118,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
       { page: YakitRoute.AI_Tool, ...YakitRouteToPageInfo[YakitRoute.AI_Tool] },
       { page: YakitRoute.AI_Forge, ...YakitRouteToPageInfo[YakitRoute.AI_Forge] },
       {
-        page: YakitRoute.Plugin_Hub,
-        ...YakitRouteToPageInfo[YakitRoute.Plugin_Hub],
-      },
-      {
         page: undefined,
         label: '数据库',
         labelUi: 'YakitRoute.database',
@@ -1131,11 +1127,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
             ...YakitRouteToPageInfo[YakitRoute.DB_HTTPHistory],
           },
           { page: YakitRoute.DB_Report, ...YakitRouteToPageInfo[YakitRoute.DB_Report] },
-          { page: YakitRoute.DB_Risk, ...YakitRouteToPageInfo[YakitRoute.DB_Risk] },
-          { page: YakitRoute.DB_Ports, ...YakitRouteToPageInfo[YakitRoute.DB_Ports] },
-          { page: YakitRoute.DB_Domain, ...YakitRouteToPageInfo[YakitRoute.DB_Domain] },
-          { page: YakitRoute.FingerprintManage, ...YakitRouteToPageInfo[YakitRoute.FingerprintManage] },
-          { page: YakitRoute.DB_CVE, ...YakitRouteToPageInfo[YakitRoute.DB_CVE] },
         ],
       },
     ]

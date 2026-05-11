@@ -57,6 +57,7 @@ interface YakitBridge {
     installIntranetYakit: (filePath: string) => Promise<any>
     openRemoteLink: () => Promise<unknown>
     getRemoteFilePath: () => Promise<string>
+    launchToolsApp: (pageKey: string) => Promise<unknown>
   }
   reverse: {
     getStatus: () => Promise<boolean>

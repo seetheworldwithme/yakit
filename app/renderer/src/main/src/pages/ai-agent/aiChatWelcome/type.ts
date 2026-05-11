@@ -37,6 +37,7 @@ export interface RandomAIMaterialsDataProps {
   tools: AIMaterialsData
   forges: AIMaterialsData
   knowledgeBases: AIMaterialsData
+  engineeringPrograms: AIMaterialsData
 }
 
 export interface SideSettingButtonProps extends YakitButtonProp {}

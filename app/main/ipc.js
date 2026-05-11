@@ -265,6 +265,7 @@ module.exports = {
     require('./handlers/codec')(win, getClient)
     require('./handlers/yakLocal').register(win, getClient)
     require('./handlers/openWebsiteByChrome')(win, getClient)
+    require('./handlers/launchTools')(win, getClient)
     require('./handlers/manageYakScript')(win, getClient)
     require('./handlers/payloads')(win, getClient)
     require('./handlers/completion')(win, getClient)

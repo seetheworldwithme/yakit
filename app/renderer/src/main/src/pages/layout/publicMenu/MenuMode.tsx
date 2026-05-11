@@ -19,7 +19,6 @@ import {
   PublicKnowledgeBaseIcon,
   PublicMitmIcon,
   PublicPayloadGeneraterIcon,
-  PublicPluginStoreIcon,
   PublicPocIcon,
   PublicPortsIcon,
   PublicProjectManagerIcon,
@@ -248,16 +247,6 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
       )}
       {mode === '插件' && (
         <>
-          <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Plugin_Hub)}>
-            <div className={styles['menu-icon-wrapper']}>
-              <div className={styles['icon-wrapper']}>
-                <PublicPluginStoreIcon />
-              </div>
-            </div>
-            <div className={styles['title-style']}>{t('YakitRoute.pluginHub')}</div>
-          </div>
-
-          <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.BatchExecutorPage)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>

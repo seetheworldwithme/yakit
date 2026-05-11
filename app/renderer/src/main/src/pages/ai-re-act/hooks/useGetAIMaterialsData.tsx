@@ -10,6 +10,8 @@ import {
   HoverAIForgeIcon,
   HoverAIKnowledgeBaseIcon,
   HoverAIToolIcon,
+  AIEngineeringProgramIcon,
+  HoverAIEngineeringProgramIcon,
 } from '../../ai-agent/aiChatWelcome/icon'
 export interface AIRecommendIconByType {
   icon: ReactNode
@@ -32,6 +34,10 @@ export const getAIRecommendIconByType = (type: string) => {
     case '知识库':
       icons.icon = <AIKnowledgeBaseIcon />
       icons.hoverIcon = <HoverAIKnowledgeBaseIcon />
+      break
+    case '工程化程序':
+      icons.icon = <AIEngineeringProgramIcon />
+      icons.hoverIcon = <HoverAIEngineeringProgramIcon />
       break
     default:
       break
@@ -98,10 +104,21 @@ function useGetAIMaterialsData() {
         description: knowledgeBase.KnowledgeDetails || '',
       })),
     }
+    const engineeringPrograms: AIMaterialsData = {
+      type: '工程化程序',
+      mentionType: 'tool',
+      data: [
+        { type: '工程化程序', name: '数据清洗', description: '' },
+        { type: '工程化程序', name: '资金穿透', description: '' },
+        { type: '工程化程序', name: '团伙画像', description: '' },
+        { type: '工程化程序', name: '一键报告', description: '' },
+      ],
+    }
     return {
       tools,
       forges,
       knowledgeBases,
+      engineeringPrograms,
     }
   }, [randomAIMaterials])
   const data: UseGetAIMaterialsData = useCreation(() => {

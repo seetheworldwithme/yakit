@@ -589,8 +589,6 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
           <div className={styles['divider-style']}></div>
         </div>
         <div className={styles['state-setting-wrapper']}>
-          {!showProjectManage && !isIRify() && <UIOpRisk isEngineLink={isEngineLink} />}
-          {!showProjectManage && isIRify() && <UIOpIRifyRisk isEngineLink={isEngineLink} />}
           {!isEnpriTraceAgent() && (
             <UIOpNotice isEngineLink={isEngineLink} isRemoteMode={isRemoteMode} onLogin={() => setLoginShow(true)} />
           )}
@@ -1061,36 +1059,10 @@ const GetUIOpSettingMenu = () => {
       key: 'explab',
       label: '试验性功能',
       children: [
-        {
-          key: 'bas-chaosmaker',
-          label: 'BAS实验室',
-        },
-        {
-          key: 'debug-monaco-editor',
-          label: '(DEV)调试Playground',
-        },
-        {
-          key: 'vulinbox-manager',
-          label: '(靶场)Vulinbox',
-        },
-        {
-          key: 'debug-traffic-analize',
-          label: '流量分析',
-        },
-        {
-          key: 'run-node',
-          label: '运行节点',
-        },
-        {
-          key: 'webshell-manager',
-          label: '网站管理',
-        },
-        { key: 'mcp', label: 'Yak Mcp' },
         { key: 'ai-agent', label: 'AI Agent' },
-        { key: 'ssa-result-diff', label: 'ssa-result-diff' },
         { key: 'ai-repository', label: '知识库' },
-        { key: 'ssa-compile-history', label: 'SSA项目编译历史' },
         { key: 'memory-base', label: '记忆库' },
+        { key: 'mcp', label: 'Yak Mcp' },
       ],
     },
     ModeSwitch(),
@@ -1127,14 +1099,6 @@ const GetUIOpSettingMenu = () => {
     {
       key: 'store',
       label: '配置插件源',
-    },
-    {
-      key: 'cve-database',
-      label: 'CVE 数据库',
-      children: [
-        { label: '全量更新', key: 'cve-database-all-update' },
-        { label: '差量更新', key: 'cve-database-differential-update' },
-      ],
     },
     {
       key: 'link',

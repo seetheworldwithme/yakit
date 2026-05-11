@@ -1069,7 +1069,9 @@ export const StartupPage: React.FC = () => {
               <startupLogo.component style={{ height: startupLogo.height, width: startupLogo.width }} />
             )}
           </div>
-          <div className={styles['startup-desc']}>为网络安全而生</div>
+          <div className={styles['startup-desc']}>
+            {isCommunityMemfit() || isMemfit() ? '为经侦智能而生' : '为网络安全而生'}
+          </div>
         </div>
         <YaklangEngineWatchDog
           credential={credential}

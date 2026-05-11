@@ -14,9 +14,6 @@ import {
   PublicNotepadManagerIcon,
   PublicPayloadGeneraterIcon,
   PublicPayloadManagerIcon,
-  PublicPluginLocalIcon,
-  PublicPluginMineIcon,
-  PublicPluginStoreIcon,
   PublicPocIcon,
   PublicPublicToolLightbulbIcon,
   PublicScanPortIcon,
@@ -33,7 +30,6 @@ import {
   PublicToolICMPSizeLogIcon,
   PublicToolModScanPortIcon,
   PublicToolPayloadIcon,
-  PublicToolPluginHubIcon,
   PublicToolReverseServerIcon,
   PublicToolScreenRecorderPageIcon,
   PublicToolScreenRecordingIcon,
@@ -196,14 +192,6 @@ const Home: React.FC<HomeProp> = (props) => {
         desc: t('YakitRoute.searchAndQueryCVEData'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_CVE }),
-      },
-      {
-        label: t('YakitRoute.pluginHub'),
-        icon: <PublicToolPluginHubIcon />,
-        iconStyle: { backgroundColor: '#F4736B', padding: 1 },
-        desc: t('YakitRoute.massiveYakitPluginsOne-ClickDownload', { edition: getReleaseEditionName() }),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.Plugin_Hub }),
       },
       {
         label: t('YakitRoute.portListener'),
@@ -812,7 +800,6 @@ const Home: React.FC<HomeProp> = (props) => {
   const informationGatheringRef = useRef<HTMLDivElement>(null)
   const scanningRef = useRef<HTMLDivElement>(null)
   const scanningSize = useSize(scanningRef)
-  const pluginHubRef = useRef<HTMLDivElement>(null)
   const smallToolsRef = useRef<HTMLDivElement>(null)
   const [watchWidth, setWatchWidth] = useState<number>(0)
   const adjustHeight = (container, wRadio: number, hRadio: number, minHeight: number, maxHeight: number) => {
@@ -893,13 +880,6 @@ const Home: React.FC<HomeProp> = (props) => {
           9,
           calcInformationGatheringAndScanningMinHeight(),
           calcInformationGatheringAndScanningMaxHeight(),
-        )
-        adjustHeight(
-          pluginHubRef.current,
-          16,
-          9,
-          calcSignlejumpAndSmallToolsMinHeight(),
-          calcSignlejumpAndSmallToolsMaxHeight(),
         )
         adjustHeight(
           smallToolsRef.current,
@@ -1382,60 +1362,6 @@ const Home: React.FC<HomeProp> = (props) => {
             <div className={styles['left-row-wrapper']}>
               {isScanMode ? (
                 <>
-                  <div ref={pluginHubRef} className={classNames(styles['pluginHub-card'], styles['home-card'])}>
-                    <div className={styles['home-card-header']}>
-                      <div className={styles['home-card-header-title']}>
-                        <PublicPluginStoreIcon className={styles['title-icon']} />
-                        <span className={styles['title-text']}>{t('YakitRoute.pluginHub')}</span>
-                      </div>
-                      <div className={styles['home-card-header-desc']}>{t('Home.pluginCoverageDescription')}</div>
-                    </div>
-                    <div className={styles['pluginHub-tabs']}>
-                      <div
-                        className={styles['pluginHub-tabs-item']}
-                        onClick={() =>
-                          onMenuParams({
-                            route: YakitRoute.Plugin_Hub,
-                            params: { tabActive: 'online' } as PluginHubPageInfoProps,
-                          })
-                        }
-                      >
-                        <PublicPluginStoreIcon className={styles['tabs-icon']} />
-                        <span className={styles['tabs-text']} title={t('Home.pluginStore')}>
-                          {t('Home.pluginStore')}
-                        </span>
-                      </div>
-                      <div
-                        className={styles['pluginHub-tabs-item']}
-                        onClick={() =>
-                          onMenuParams({
-                            route: YakitRoute.Plugin_Hub,
-                            params: { tabActive: 'own' } as PluginHubPageInfoProps,
-                          })
-                        }
-                      >
-                        <PublicPluginMineIcon className={styles['tabs-icon']} />
-                        <span className={styles['tabs-text']} title={t('Home.pluginsMine')}>
-                          {t('Home.pluginsMine')}
-                        </span>
-                      </div>
-                      <div
-                        className={styles['pluginHub-tabs-item']}
-                        onClick={() =>
-                          onMenuParams({
-                            route: YakitRoute.Plugin_Hub,
-                            params: { tabActive: 'local' } as PluginHubPageInfoProps,
-                          })
-                        }
-                      >
-                        <PublicPluginLocalIcon className={styles['tabs-icon']} />
-                        <span className={styles['tabs-text']} title={t('Home.pluginLocal')}>
-                          {t('Home.pluginLocal')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
                   <div ref={smallToolsRef} className={styles['small-tools-wrapper']}>
                     <div className={styles['small-tools-item']} onClick={() => onMenu({ route: YakitRoute.Codec })}>
                       <div className={styles['small-tools-item-cont']}>
