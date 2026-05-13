@@ -1,0 +1,196 @@
+package filesys_test
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yaklang/yaklang/common/utils/filesys"
+)
+
+// TestHandlerFileMonitor_FileChanges tests that the monitor detects file changes
+func TestHandlerFileMonitor_FileChanges(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "yak_monitor_test_*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Channel to collect events
+	eventsChan := make(chan *filesys.EventSet, 10)
+	eventsHandler := func(eventSet *filesys.EventSet) {
+		eventsChan <- eventSet
+	}
+
+	// Manually create a monitor (bypassing the handler for this test)
+	monitor, err := filesys.WatchPath(ctx, tmpDir, eventsHandler, filesys.WithPollInterval(200*time.Millisecond))
+	require.NoError(t, err)
+	defer func() {
+		monitor.CancelFunc()
+	}()
+
+	// Wait a bit for the monitor to initialize
+	time.Sleep(2 * time.Second)
+
+	// Create a new file
+	testFile := filepath.Join(tmpDir, "test.txt")
+	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	require.NoError(t, err)
+
+	// Wait for the event
+	// 可能需要处理多个事件（包括空事件），所以循环等待直到找到文件创建事件
+	timeout := time.After(5 * time.Second)
+	found := false
+	for !found {
+		select {
+		case events := <-eventsChan:
+			require.NotNil(t, events)
+			// 跳过空事件
+			if events.IsEmpty() {
+				continue
+			}
+			for _, event := range events.CreateEvents {
+				if event.Path == testFile {
+					found = true
+					require.Equal(t, filesys.FsMonitorCreate, event.Op)
+					require.False(t, event.IsDir)
+					break
+				}
+			}
+		case <-timeout:
+			t.Fatal("Timeout waiting for create event")
+		}
+	}
+
+	// Delete the file
+	err = os.Remove(testFile)
+	require.NoError(t, err)
+
+	// Wait for the delete event
+	// 可能需要处理多个事件（包括空事件），所以循环等待直到找到文件删除事件
+	timeout = time.After(5 * time.Second)
+	found = false
+	for !found {
+		select {
+		case events := <-eventsChan:
+			require.NotNil(t, events)
+			// 跳过空事件
+			if events.IsEmpty() {
+				continue
+			}
+			for _, event := range events.DeleteEvents {
+				if event.Path == testFile {
+					found = true
+					require.Equal(t, filesys.FsMonitorDelete, event.Op)
+					break
+				}
+			}
+		case <-timeout:
+			t.Fatal("Timeout waiting for delete event")
+		}
+	}
+}
+
+// TestHandlerFileMonitor_DirectoryChanges tests that the monitor detects directory changes
+func TestHandlerFileMonitor_DirectoryChanges(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "yak_monitor_test_*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Channel to collect events
+	eventsChan := make(chan *filesys.EventSet, 10)
+	eventsHandler := func(eventSet *filesys.EventSet) {
+		eventsChan <- eventSet
+	}
+
+	// Manually create a monitor
+	monitor, err := filesys.WatchPath(ctx, tmpDir, eventsHandler, filesys.WithPollInterval(200*time.Millisecond))
+	require.NoError(t, err)
+	defer func() {
+		monitor.CancelFunc()
+	}()
+
+	// Create a new directory
+	testDir := filepath.Join(tmpDir, "testdir")
+	err = os.Mkdir(testDir, 0755)
+	require.NoError(t, err)
+
+	// Wait for the event
+	select {
+	case events := <-eventsChan:
+		require.NotNil(t, events)
+		found := false
+		for _, event := range events.CreateEvents {
+			if event.Path == testDir {
+				found = true
+				require.Equal(t, filesys.FsMonitorCreate, event.Op)
+				require.True(t, event.IsDir)
+				break
+			}
+		}
+		require.True(t, found, "Should detect directory creation")
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timeout waiting for create event")
+	}
+}
+
+// TestHandlerFileMonitor_NestedFiles tests monitoring nested directory structures
+func TestHandlerFileMonitor_NestedFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "yak_monitor_test_*")
+	require.NoError(t, err)
+
+	// Create nested directory structure
+	subDir := filepath.Join(tmpDir, "subdir")
+	err = os.Mkdir(subDir, 0755)
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// context
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Channel to collect events
+	eventsChan := make(chan *filesys.EventSet, 10)
+	eventsHandler := func(eventSet *filesys.EventSet) {
+		eventsChan <- eventSet
+	}
+
+	// Create a monitor
+	monitor, err := filesys.WatchPath(ctx, tmpDir, eventsHandler, filesys.WithPollInterval(200*time.Millisecond))
+	require.NoError(t, err)
+	defer func() {
+		monitor.CancelFunc()
+	}()
+
+	// Create file in subdirectory
+	nestedFile := filepath.Join(subDir, "nested.txt")
+	err = os.WriteFile(nestedFile, []byte("nested content"), 0644)
+	require.NoError(t, err)
+
+	// Wait for file creation event
+	select {
+	case events := <-eventsChan:
+		require.NotNil(t, events)
+		found := false
+		for _, event := range events.CreateEvents {
+			if event.Path == nestedFile {
+				found = true
+				require.False(t, event.IsDir)
+				break
+			}
+		}
+		require.True(t, found, "Should detect nested file creation")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Timeout waiting for nested file creation event")
+	}
+}

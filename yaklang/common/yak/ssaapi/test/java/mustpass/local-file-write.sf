@@ -1,0 +1,9 @@
+*Mapping.__ref__?{opcode: function} as $entryFunc;
+$entryFunc<getFormalParams>?{opcode: param && !have: this} as $source;
+Files.write(,* as $sink)
+$sink #{
+    until: <<<CODE
+<self> & $source
+CODE,
+}-> as $result;
+check $result then "Local Files Writer" else "No Files Written";

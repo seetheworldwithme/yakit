@@ -1,0 +1,1101 @@
+package ai
+
+import (
+	"errors"
+	"fmt"
+	"github.com/yaklang/yaklang/common/ai/aibalance"
+	"github.com/yaklang/yaklang/common/ai/aid/aicache"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/yaklang/yaklang/common/ai/dashscopebase"
+	"github.com/yaklang/yaklang/common/ai/deepseek"
+	"github.com/yaklang/yaklang/common/ai/gemini"
+	"github.com/yaklang/yaklang/common/ai/openrouter"
+	"github.com/yaklang/yaklang/common/ai/siliconflow"
+
+	"github.com/samber/lo"
+	"github.com/yaklang/yaklang/common/ai/aispec"
+	"github.com/yaklang/yaklang/common/ai/chatglm"
+	"github.com/yaklang/yaklang/common/ai/comate"
+	"github.com/yaklang/yaklang/common/ai/moonshot"
+	"github.com/yaklang/yaklang/common/ai/ollama"
+	"github.com/yaklang/yaklang/common/ai/openai"
+	"github.com/yaklang/yaklang/common/ai/tongyi"
+	"github.com/yaklang/yaklang/common/ai/volcengine"
+	"github.com/yaklang/yaklang/common/consts"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/yakgrpc/yakit"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+func init() {
+	aispec.Register("aibalance", func() aispec.AIClient {
+		return &aibalance.GatewayClient{}
+	})
+	aispec.Register("openai", func() aispec.AIClient {
+		return &openai.GatewayClient{}
+	})
+	aispec.Register("custom", func() aispec.AIClient {
+		return &openai.GatewayClient{}
+	})
+	aispec.Register("chatglm", func() aispec.AIClient {
+		return &chatglm.GLMClient{}
+	})
+	aispec.Register("moonshot", func() aispec.AIClient {
+		return &moonshot.GatewayClient{}
+	})
+	aispec.Register("tongyi", func() aispec.AIClient {
+		return &tongyi.GatewayClient{}
+	})
+	aispec.Register("volcengine", func() aispec.AIClient {
+		return &volcengine.GatewayClient{}
+	})
+	aispec.Register("comate", func() aispec.AIClient {
+		return &comate.Client{}
+	})
+	aispec.Register("deepseek", func() aispec.AIClient {
+		return &deepseek.GatewayClient{}
+	})
+	aispec.Register("siliconflow", func() aispec.AIClient {
+		return &siliconflow.GatewayClient{}
+	})
+	aispec.Register("ollama", func() aispec.AIClient {
+		return &ollama.GatewayClient{}
+	})
+	aispec.Register("openrouter", func() aispec.AIClient {
+		return &openrouter.GatewayClient{}
+	})
+	aispec.Register("gemini", func() aispec.AIClient {
+		return &gemini.Client{}
+	})
+	aispec.Register("yaklang-writer", func() aispec.AIClient {
+		return dashscopebase.CreateDashScopeGateway("a51e9af5a60f40c983dac6ed50dba15b")
+	})
+	aispec.Register("yaklang-rag", func() aispec.AIClient {
+		return dashscopebase.CreateDashScopeGateway("e3acc5f1c8ea4995aeac7618bc543ad5")
+	})
+	aispec.Register("yaklang-com-search", func() aispec.AIClient {
+		return dashscopebase.CreateDashScopeGateway("5d880c5d33484343b5b08a66c4d5ee77")
+	})
+	aispec.Register("yakit-plugin-search", func() aispec.AIClient {
+		return dashscopebase.CreateDashScopeGateway("e8be1ba351dc44568728bcb46e36aac2")
+	})
+}
+
+type Gateway struct {
+	Config    *aispec.AIConfig
+	TargetUrl string
+	aispec.AIClient
+}
+
+func (g *Gateway) GetTypeName() string {
+	if g.Config == nil {
+		return ""
+	}
+	return g.Config.Type
+}
+
+func (g *Gateway) GetModelName() string {
+	if g.Config == nil {
+		return ""
+	}
+	return g.Config.Model
+}
+
+func (g *Gateway) Chat(s string, f ...any) (string, error) {
+	return aispec.ChatBase(g.TargetUrl, g.Config.Model, s,
+		aispec.WithChatBase_Function(f),
+		aispec.WithChatBase_PoCOptions(g.AIClient.BuildHTTPOptions),
+		aispec.WithChatBase_StreamHandler(g.Config.StreamHandler),
+		aispec.WithChatBase_ReasonStreamHandler(g.Config.ReasonStreamHandler),
+		aispec.WithChatBase_ErrHandler(g.Config.HTTPErrorHandler),
+		aispec.WithChatBase_ImageRawInstance(g.Config.Images...),
+		aispec.ChatBaseThinkingOptions(g.Config, g.TargetUrl),
+		aispec.WithChatBase_AISamplingFromConfig(g.Config),
+		aispec.WithChatBase_ToolCallCallback(g.Config.ToolCallCallback),
+		aispec.WithChatBase_Tools(g.Config.Tools),
+		aispec.WithChatBase_ToolChoice(g.Config.ToolChoice),
+		aispec.WithChatBase_RawHTTPResponseHeaderCallback(g.Config.RawHTTPResponseHeaderCallback),
+		aispec.WithChatBase_RawHTTPResponseCallback(g.Config.RawHTTPResponseCallback),
+		aispec.WithChatBase_RawHTTPRequestResponseCallback(g.Config.RawHTTPRequestResponseCallback),
+		aispec.WithChatBase_RawMessages(g.Config.RawMessages),
+		// UsageCallback 透传：让 yak 用户层 ai.usageCallback(...) 注册的回调
+		// 能拿到上游 LLM SSE 末帧的 token 用量（包含 cached_tokens 等隐式缓存命中信息）。
+		// 关键词: Gateway.Chat UsageCallback 透传, cached_tokens 暴露给 yak
+		aispec.WithChatBase_UsageCallback(g.Config.UsageCallback),
+	)
+}
+
+func (g *Gateway) ExtractData(msg string, desc string, fields map[string]any) (map[string]any, error) {
+	return aispec.ChatBasedExtractData(g.TargetUrl, g.Config.Model, msg, fields, g.AIClient.BuildHTTPOptions, g.Config.StreamHandler, g.Config.ReasonStreamHandler, g.Config.HTTPErrorHandler, g.Config.Images...)
+}
+
+func (g *Gateway) ChatStream(s string) (io.Reader, error) {
+	return aispec.ChatWithStream(
+		g.TargetUrl,
+		g.Config.Model,
+		s,
+		g.Config.HTTPErrorHandler,
+		g.Config.StreamHandler,
+		g.AIClient.BuildHTTPOptions,
+		aispec.ChatBaseThinkingOptions(g.Config, g.TargetUrl),
+		aispec.WithChatBase_AISamplingFromConfig(g.Config),
+		aispec.WithChatBase_RawHTTPResponseHeaderCallback(g.Config.RawHTTPResponseHeaderCallback),
+		aispec.WithChatBase_RawHTTPResponseCallback(g.Config.RawHTTPResponseCallback),
+		aispec.WithChatBase_RawHTTPRequestResponseCallback(g.Config.RawHTTPRequestResponseCallback),
+	)
+}
+
+func NewGateway() *Gateway {
+	return &Gateway{}
+}
+
+func tryCreateAIGateway(t string, disableProviderFallback bool, cb func(string, aispec.AIClient) (bool, error)) error {
+	createAIGatewayByType := func(typ string) aispec.AIClient {
+		gw, ok := aispec.Lookup(typ)
+		if !ok {
+			return nil
+		}
+		return gw
+	}
+
+	total := aispec.RegisteredAIGateways()
+	if utils.StringArrayContains(total, t) {
+		gw := createAIGatewayByType(t)
+		if gw != nil {
+			ok, err := cb(t, gw)
+			if ok {
+				return nil
+			}
+			if disableProviderFallback {
+				if err != nil {
+					return err
+				}
+				return errors.New("specified ai provider failed and provider fallback is disabled")
+			}
+		}
+	}
+	if disableProviderFallback && t != "" {
+		return fmt.Errorf("unsupported ai type: %s", t)
+	}
+	if t != "" {
+		log.Warnf("unsupported ai type: %s, use default config ai type", t)
+	}
+
+	if tiered := consts.GetTieredAIConfig(); tiered != nil {
+		priorityOrders := [][]*ypb.AIModelConfig{
+			consts.GetIntelligentAIConfigs(),
+			consts.GetLightweightAIConfigs(),
+			consts.GetVisionAIConfigs(),
+		}
+		for _, configs := range priorityOrders {
+			for _, modelCfg := range configs {
+				if modelCfg == nil || modelCfg.GetProvider() == nil {
+					continue
+				}
+				providerType := strings.TrimSpace(modelCfg.GetProvider().GetType())
+				if providerType == "" {
+					continue
+				}
+				agent := createAIGatewayByType(providerType)
+				if agent == nil {
+					continue
+				}
+				ok, _ := cb(providerType, agent)
+				if ok {
+					return nil
+				}
+			}
+		}
+	}
+
+	cfg := yakit.GetNetworkConfig()
+	if cfg == nil {
+		return nil
+	}
+
+	// update database if registered ai type is not in config or configured ai type is not in registered
+	updateCfg := false
+	cfg.AiApiPriority = lo.Filter(cfg.AiApiPriority, func(s string, _ int) bool {
+		reserve := utils.StringArrayContains(total, s)
+		if !reserve {
+			updateCfg = true
+		}
+		return reserve
+	})
+
+	for _, s := range total {
+		if !utils.StringArrayContains(cfg.AiApiPriority, s) {
+			cfg.AiApiPriority = append(cfg.AiApiPriority, s)
+			updateCfg = true
+		}
+	}
+	if updateCfg {
+		yakit.ConfigureNetWork(cfg)
+	}
+
+	for _, typ := range cfg.AiApiPriority {
+		agent := createAIGatewayByType(typ)
+		if agent != nil {
+			ok, _ := cb(typ, agent)
+			if ok {
+				return nil
+			}
+		} else {
+			log.Warnf("create ai agent by type %s failed", typ)
+		}
+	}
+
+	return errors.New("not found valid ai agent")
+}
+
+func invokeModelInfoCallback(gateway aispec.AIClient, provider string) {
+	cfg := gateway.GetConfig()
+	if cfg != nil && cfg.ModelInfoCallback != nil {
+		cfg.ModelInfoCallback(provider, cfg.Model)
+	}
+}
+
+func invokeModelInfoConfirmCallback(gateway aispec.AIClient, provider string) {
+	cfg := gateway.GetConfig()
+	if cfg != nil && cfg.ModelInfoConfirmCallback != nil {
+		cfg.ModelInfoConfirmCallback(provider, cfg.Model)
+	}
+}
+
+func createAIGateway(t string) aispec.AIClient {
+	gw, ok := aispec.Lookup(t)
+	if !ok {
+		return nil
+	}
+	return gw
+}
+
+/*
+ai mod
+
+client = ai.Client()
+*/
+
+// OpenAI 创建一个 OpenAI 客户端实例，支持 OpenAI 官方 API 及兼容的第三方服务。
+//
+// 参数：
+// - opts(...aispec.AIConfigOption): 配置选项（必须包含 apiKey）
+//
+// 返回值：
+// - r1: AI 客户端实例
+//
+// Example:
+// ```go
+// // 创建 OpenAI 客户端
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.model("gpt-3.5-turbo"),
+//
+// )
+//
+// // 发送消息
+// response, err = client.Chat("你好")
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// println(response)
+//
+// // 使用自定义 API 地址
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.baseURL("https://xxx.com/v1"),
+//	ai.model("gpt-4"),
+//
+// )
+// // 发送消息
+// response, err = client.Chat("你好")
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// println(response)
+// ```
+func OpenAI(opts ...aispec.AIConfigOption) aispec.AIClient {
+	agent := createAIGateway("openai")
+	if agent != nil {
+		agent.LoadOption(opts...)
+	}
+	return agent
+}
+
+func HaveAI(t string) bool {
+	_, ok := aispec.Lookup(t)
+	return ok
+}
+
+func GetAI(t string, opts ...aispec.AIConfigOption) aispec.AIClient {
+	agent := createAIGateway(t)
+	if agent != nil {
+		agent.LoadOption(opts...)
+	}
+	return agent
+}
+
+// ChatGLM 创建一个 ChatGLM 客户端实例，用于调用智谱 AI 的 ChatGLM 系列模型。
+//
+// 参数:
+// - opts(...aispec.AIConfigOption): 配置选项（必须包含 apiKey）
+//
+// 返回值:
+// - r1: AI 客户端实例
+//
+// Example:
+// ```go
+// // 创建 ChatGLM 客户端
+// client = ai.ChatGLM(
+//
+//	ai.apiKey("your-api-key"),
+//	ai.model("chatglm_turbo"),
+//
+// )
+//
+// // 调用对话
+// response, err = client.Chat("介绍一下你自己")
+// die(err)
+// println(response)
+// ```
+func ChatGLM(opts ...aispec.AIConfigOption) aispec.AIClient {
+	agent := createAIGateway("chatglm")
+	if agent != nil {
+		agent.LoadOption(opts...)
+	}
+	return agent
+}
+
+// Moonshot 创建一个 Moonshot 客户端实例，用于调用 Moonshot AI 服务。
+//
+// 参数：
+// - opts(...aispec.AIConfigOption): 配置选项（必须包含 apiKey）
+//
+// 返回值：
+// - r1: AI 客户端实例
+//
+// Example:
+// ```go
+// // 创建 Moonshot 客户端
+// client = ai.Moonshot(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.model("moonshot-v1-8k"),
+//
+// )
+//
+// // 使用客户端
+// response, err = client.Chat("帮我分析这段代码")
+// die(err)
+// println(response)
+// ```
+func Moonshot(opts ...aispec.AIConfigOption) aispec.AIClient {
+	agent := createAIGateway("moonshot")
+	if agent != nil {
+		agent.LoadOption(opts...)
+	}
+	return agent
+}
+
+func Volcengine(opts ...aispec.AIConfigOption) aispec.AIClient {
+	agent := createAIGateway("volcengine")
+	if agent != nil {
+		agent.LoadOption(opts...)
+	}
+	return agent
+}
+
+func GetPrimaryAgent() aispec.AIClient {
+	var agent aispec.AIClient
+
+	t := consts.GetAIPrimaryType()
+	if t == "" {
+		for _, defaultType := range []string{
+			"openai", "chatglm", "moonshot", "tongyi", "volcengine", "comate",
+		} {
+			agent = createAIGateway(defaultType)
+			if agent == nil {
+				continue
+			}
+			break
+		}
+	} else {
+		agent = createAIGateway(t)
+	}
+	return agent
+}
+
+// Chat 快速调用 AI 服务进行对话，这是最简单的调用方式。
+//
+// 参数：
+// - msg(string): 要发送给 AI 的消息内容
+// - opts(...aispec.AIConfigOption): AI 配置选项（如 apiKey、model 等）若不指定，则默认尝试全局配置中的AI提供商配置
+//
+// 返回值：
+// - string(string): AI 返回的回复内容
+// - error(error): 错误信息
+//
+// Example:
+// ```go
+// response = ai.Chat("介绍一下Yakit")~
+// println(response)
+//
+// // 显式使用质量优先模型
+// response = ai.Chat("分析这个漏洞利用链", ai.qualityPriority())~
+// println(response)
+//
+// // 显式使用图片模型
+// response = ai.Chat("分析这张截图", ai.imageFile("/tmp/demo.png"), ai.imageAI())~
+// println(response)
+// ```
+func Chat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	// Parse options to check if user explicitly specified a type
+	config := aispec.NewDefaultAIConfig(opts...)
+
+	// If user explicitly specified a type, use legacy chat to respect their choice
+	if config.Type != "" {
+		return legacyChat(msg, opts...)
+	}
+
+	if preferredTier, ok := resolvePreferredTier(config); ok {
+		return TieredChatWithTier(preferredTier, msg, opts...)
+	}
+
+	// Check if tiered AI model configuration is enabled
+	if consts.IsTieredAIModelConfigEnabled() {
+		return tieredChat(msg, opts...)
+	}
+	// Fall back to legacy chat logic
+	return legacyChat(msg, opts...)
+}
+
+// legacyChat is the original Chat implementation for backward compatibility
+func legacyChat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	var responseRsp string
+	var err error
+	err = tryCreateAIGateway(config.Type, config.DisableProviderFallback, func(typ string, gateway aispec.AIClient) (bool, error) {
+		gateway.LoadOption(append([]aispec.AIConfigOption{aispec.WithType(typ)}, opts...)...)
+		if err := gateway.CheckValid(); err != nil {
+			log.Debugf("check valid by %s failed: %s", typ, err)
+			return false, err
+		}
+		invokeModelInfoCallback(gateway, typ)
+		log.Infof("start to chat completions by %v", typ)
+		responseRsp, err = gateway.Chat(msg)
+		if err != nil {
+			log.Warnf("chat by %s failed: %s", typ, err)
+			return false, err
+		}
+		invokeModelInfoConfirmCallback(gateway, typ)
+		return true, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return responseRsp, nil
+}
+
+// tieredChat handles chat using the tiered AI model configuration
+func tieredChat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	// Get the current routing policy
+	policy := consts.GetTieredAIRoutingPolicy()
+	configs := getConfigsForPolicy(policy)
+
+	if len(configs) == 0 {
+		log.Warnf("No tiered AI config available for policy %s, falling back to legacy chat", policy)
+		return legacyChat(msg, opts...)
+	}
+
+	result, err := chatWithConfigs(msg, configs, opts...)
+	if err == nil {
+		return result, nil
+	}
+
+	// Fallback to lightweight if not already using it
+	if policy != consts.PolicyCost && !consts.IsTieredAIFallbackDisabled() {
+		log.Debugf("Falling back to lightweight model")
+		result, err := chatWithConfigs(msg, consts.GetLightweightAIConfigs(), opts...)
+		if err == nil {
+			return result, nil
+		}
+	}
+
+	// Final fallback to legacy chat
+	log.Warnf("All tiered configs failed, falling back to legacy chat")
+	return legacyChat(msg, opts...)
+}
+
+// chatWithModelConfig performs chat using a specific AIModelConfig.
+func chatWithModelConfig(msg string, cfg *ypb.AIModelConfig, opts ...aispec.AIConfigOption) (string, error) {
+	if cfg == nil {
+		return "", errors.New("config is nil")
+	}
+	provider := cfg.GetProvider()
+	if provider == nil {
+		return "", errors.New("provider config is nil")
+	}
+	providerType := provider.GetType()
+	if providerType == "" {
+		return "", errors.New("provider type is empty")
+	}
+
+	// Build options from config
+	configOpts := aispec.BuildOptionsFromConfig(cfg)
+	allOpts := append(configOpts, opts...)
+
+	// Create gateway and chat
+	agent := createAIGateway(providerType)
+	if agent == nil {
+		return "", errors.New("failed to create AI gateway for type: " + providerType)
+	}
+
+	agent.LoadOption(allOpts...)
+	if err := agent.CheckValid(); err != nil {
+		return "", err
+	}
+
+	invokeModelInfoCallback(agent, providerType)
+	log.Debugf("Start tiered chat with type=%s", providerType)
+	result, err := agent.Chat(msg)
+	if err != nil {
+		return "", err
+	}
+	invokeModelInfoConfirmCallback(agent, providerType)
+	return result, nil
+}
+
+func chatWithConfigs(msg string, configs []*ypb.AIModelConfig, opts ...aispec.AIConfigOption) (string, error) {
+	var lastErr error
+	for _, model := range configs {
+		result, err := chatWithModelConfig(msg, model, opts...)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		if model == nil || model.GetProvider() == nil {
+			log.Debugf("Chat with model config failed: provider is nil, trying next")
+			continue
+		}
+		log.Debugf("Chat with config type=%s failed: %v, trying next", model.GetProvider().GetType(), err)
+	}
+	if lastErr == nil {
+		lastErr = errors.New("no model configuration available")
+	}
+	return "", lastErr
+}
+
+func resolvePreferredTier(config *aispec.AIConfig) (ModelTier, bool) {
+	if config == nil {
+		return "", false
+	}
+	if config.PreferredTier != "" {
+		return ModelTier(config.PreferredTier), true
+	}
+	if len(config.Images) > 0 {
+		return TierVision, true
+	}
+	return "", false
+}
+
+// TieredChat allows explicit selection of a model tier for chat
+type ModelTier = consts.ModelTier
+
+const (
+	TierIntelligent ModelTier = consts.TierIntelligent
+	TierLightweight ModelTier = consts.TierLightweight
+	TierVision      ModelTier = consts.TierVision
+)
+
+func getConfigsForPolicy(policy consts.RoutingPolicy) []*ypb.AIModelConfig {
+	switch policy {
+	case consts.PolicyPerformance:
+		return consts.GetIntelligentAIConfigs()
+	case consts.PolicyCost:
+		return consts.GetLightweightAIConfigs()
+	case consts.PolicyBalance, consts.PolicyAuto:
+		return consts.GetLightweightAIConfigs()
+	default:
+		return consts.GetLightweightAIConfigs()
+	}
+}
+
+func getConfigsForTier(tier ModelTier) []*ypb.AIModelConfig {
+	switch tier {
+	case TierIntelligent:
+		return consts.GetIntelligentAIConfigs()
+	case TierLightweight:
+		return consts.GetLightweightAIConfigs()
+	case TierVision:
+		return consts.GetVisionAIConfigs()
+	default:
+		return consts.GetIntelligentAIConfigs()
+	}
+}
+
+// TieredChatWithTier performs chat with a specific model tier
+func TieredChatWithTier(tier ModelTier, msg string, opts ...aispec.AIConfigOption) (string, error) {
+	if !consts.IsTieredAIModelConfigEnabled() {
+		log.Debugf("Tiered AI config not enabled, using legacy chat")
+		return legacyChat(msg, opts...)
+	}
+
+	configs := getConfigsForTier(tier)
+	if tier != TierIntelligent && tier != TierLightweight && tier != TierVision {
+		log.Warnf("Unknown tier %s, using intelligent", tier)
+	}
+
+	if len(configs) == 0 {
+		return "", errors.New("no configuration available for tier: " + string(tier))
+	}
+
+	return chatWithConfigs(msg, configs, opts...)
+}
+
+// IntelligentChat uses the intelligent (high-quality) model
+func IntelligentChat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	return TieredChatWithTier(TierIntelligent, msg, opts...)
+}
+
+// LightweightChat uses the lightweight (fast) model
+func LightweightChat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	return TieredChatWithTier(TierLightweight, msg, opts...)
+}
+
+// VisionChat uses the vision model
+func VisionChat(msg string, opts ...aispec.AIConfigOption) (string, error) {
+	return TieredChatWithTier(TierVision, msg, opts...)
+}
+
+func legacyFunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	var responseRsp map[string]any
+	var err error
+	err = tryCreateAIGateway(config.Type, config.DisableProviderFallback, func(typ string, gateway aispec.AIClient) (bool, error) {
+		gateway.LoadOption(append([]aispec.AIConfigOption{aispec.WithType(typ)}, opts...)...)
+		if err := gateway.CheckValid(); err != nil {
+			log.Debugf("check valid by %s failed: %s", typ, err)
+			return false, err
+		}
+		var ok bool
+		for i := 0; i < config.FunctionCallRetryTimes; i++ {
+			responseRsp, err = gateway.ExtractData(input, "", utils.InterfaceToGeneralMap(funcs))
+			if err != nil {
+				log.Warnf("chat by %s failed: %s, retry times: %d", typ, err, i)
+			} else {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return false, err
+		}
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return responseRsp, nil
+}
+
+func functionCallWithModelConfig(input string, funcs any, cfg *ypb.AIModelConfig, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	if cfg == nil {
+		return nil, errors.New("config is nil")
+	}
+	provider := cfg.GetProvider()
+	if provider == nil {
+		return nil, errors.New("provider config is nil")
+	}
+	providerType := provider.GetType()
+	if providerType == "" {
+		return nil, errors.New("provider type is empty")
+	}
+
+	configOpts := aispec.BuildOptionsFromConfig(cfg)
+	allOpts := append(configOpts, opts...)
+	agent := createAIGateway(providerType)
+	if agent == nil {
+		return nil, errors.New("failed to create AI gateway for type: " + providerType)
+	}
+
+	agent.LoadOption(allOpts...)
+	if err := agent.CheckValid(); err != nil {
+		return nil, err
+	}
+
+	config := aispec.NewDefaultAIConfig(allOpts...)
+	var response map[string]any
+	var err error
+	for i := 0; i < config.FunctionCallRetryTimes; i++ {
+		response, err = agent.ExtractData(input, "", utils.InterfaceToGeneralMap(funcs))
+		if err == nil {
+			return response, nil
+		}
+		log.Warnf("function call by %s failed: %s, retry times: %d", providerType, err, i)
+	}
+	return nil, err
+}
+
+func functionCallWithConfigs(input string, funcs any, configs []*ypb.AIModelConfig, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	var lastErr error
+	for _, model := range configs {
+		result, err := functionCallWithModelConfig(input, funcs, model, opts...)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		if model == nil || model.GetProvider() == nil {
+			log.Debugf("FunctionCall with model config failed: provider is nil, trying next")
+			continue
+		}
+		log.Debugf("FunctionCall with config type=%s failed: %v, trying next", model.GetProvider().GetType(), err)
+	}
+	if lastErr == nil {
+		lastErr = errors.New("no model configuration available")
+	}
+	return nil, lastErr
+}
+
+func tieredFunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	policy := consts.GetTieredAIRoutingPolicy()
+	configs := getConfigsForPolicy(policy)
+	if len(configs) == 0 {
+		log.Warnf("No tiered AI config available for policy %s, falling back to legacy function call", policy)
+		return legacyFunctionCall(input, funcs, opts...)
+	}
+
+	result, err := functionCallWithConfigs(input, funcs, configs, opts...)
+	if err == nil {
+		return result, nil
+	}
+
+	if policy != consts.PolicyCost && !consts.IsTieredAIFallbackDisabled() {
+		log.Debugf("Falling back to lightweight model for function call")
+		result, err := functionCallWithConfigs(input, funcs, consts.GetLightweightAIConfigs(), opts...)
+		if err == nil {
+			return result, nil
+		}
+	}
+
+	log.Warnf("All tiered configs failed for function call, falling back to legacy path")
+	return legacyFunctionCall(input, funcs, opts...)
+}
+
+func TieredFunctionCallWithTier(tier ModelTier, input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	if !consts.IsTieredAIModelConfigEnabled() {
+		log.Debugf("Tiered AI config not enabled, using legacy function call")
+		return legacyFunctionCall(input, funcs, opts...)
+	}
+
+	configs := getConfigsForTier(tier)
+	if tier != TierIntelligent && tier != TierLightweight && tier != TierVision {
+		log.Warnf("Unknown tier %s, using intelligent", tier)
+	}
+	if len(configs) == 0 {
+		return nil, errors.New("no configuration available for tier: " + string(tier))
+	}
+
+	return functionCallWithConfigs(input, funcs, configs, opts...)
+}
+
+func IntelligentFunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	return TieredFunctionCallWithTier(TierIntelligent, input, funcs, opts...)
+}
+
+func LightweightFunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	return TieredFunctionCallWithTier(TierLightweight, input, funcs, opts...)
+}
+
+func VisionFunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	return TieredFunctionCallWithTier(TierVision, input, funcs, opts...)
+}
+
+// StructuredStream 获取结构化的流式输出，支持实时接收 AI 返回的数据。
+//
+// 参数：
+// - input(string): 输入消息
+// - opts(...aispec.AIConfigOption): 配置选项
+//
+// 返回值：
+// - r1(chan *aispec.StructuredData): 结构化数据通道
+// - r2(error): 错误信息
+//
+// Example:
+// ```go
+// // 获取流式输出
+// stream, err = ai.StructuredStream(
+//
+//	"1+1等于几",
+//
+// )
+// die(err)
+//
+// // 读取流数据
+// collectedData = ""
+//
+//	for data = range stream {
+//	 printf("收到数据: %v\n", data.OutputText)
+//	 collectedData += data.OutputText
+//	}
+//
+// printf("最终输出: %s\n", collectedData)
+// ```
+func StructuredStream(input string, opts ...aispec.AIConfigOption) (chan *aispec.StructuredData, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	var selectedGateway aispec.AIClient
+	tryCreateAIGateway(config.Type, config.DisableProviderFallback, func(typ string, gateway aispec.AIClient) (bool, error) {
+		gateway.LoadOption(append([]aispec.AIConfigOption{aispec.WithType(typ)}, opts...)...)
+		if err := gateway.CheckValid(); err != nil {
+			log.Debugf("check valid by %s failed: %s", typ, err)
+			return false, err
+		}
+
+		if gateway.SupportedStructuredStream() {
+			selectedGateway = gateway
+		}
+		return true, nil
+	})
+	if selectedGateway == nil {
+		return nil, errors.New("not found valid ai agent")
+	}
+
+	for i := 0; i < config.FunctionCallRetryTimes; i++ {
+		ch, err := selectedGateway.StructuredStream(input)
+		if err != nil {
+			log.Warnf("structured stream by %s failed: %s, retry times: %d", config.Type, err, i)
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+		return ch, nil
+	}
+	return nil, errors.New("not found valid ai agent or retry times is over")
+}
+
+// ListModels 列出当前配置下所有可用的 AI 模型。
+//
+// 参数：
+// - opts(...aispec.AIConfigOption): 配置选项（如 apiKey、type）
+//
+// 返回值：
+// - r1([]*aispec.ModelMeta): 模型元数据列表
+// - r2(error): 错误信息
+//
+// Example:
+// ```go
+// models, err = ai.ListModels(ai.type("aibalance"))
+// die(err)
+//
+//	for _, model = range models {
+//	 printf("模型: %s\n", model.Id)
+//	}
+//
+// ```
+func ListModels(opts ...aispec.AIConfigOption) ([]*aispec.ModelMeta, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	client := GetAI(config.Type, opts...)
+	if utils.IsNil(client) {
+		return nil, utils.Error("List AI model failed:unknown AI type")
+	}
+	return client.GetModelList()
+}
+
+// ListModelByProviderType 根据提供商类型列出可用的 AI 模型。
+//
+// 参数：
+// - providerType(string): 提供商类型（如 "openai"、"chatglm"、"moonshot"）
+// - opts(...aispec.AIConfigOption): 配置选项
+//
+// 返回值：
+//
+// - r1([]*aispec.ModelMeta): 模型元数据列表
+// - r2(error): 错误信息
+//
+// Example:
+// ```go
+// models, err = ai.ListModelByProviderType("aibalance")
+// die(err)
+//
+//	for _, model = range models {
+//	 printf("模型: %s\n", model.Id)
+//	}
+//
+// ```
+func ListModelByProviderType(providerType string, opts ...aispec.AIConfigOption) ([]*aispec.ModelMeta, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	config.Type = providerType
+	client := GetAI(config.Type, opts...)
+	return client.GetModelList()
+}
+
+// FunctionCall 让 AI 根据用户输入自动调用预定义的函数，实现智能函数调用能力。
+//
+// 参数：
+// - input(string): 用户输入的自然语言指令
+// - funcs(any): 函数定义（支持结构体或函数列表）
+// - opts(...aispec.AIConfigOption): AI 配置选项
+//
+// 返回值：
+//
+// - r1(map[string]any): 函数调用结果
+// - r2(error): 错误信息
+//
+// Example:
+// ```go
+// // 定义可调用的函数
+//
+//	funcs = {
+//	    "searchVulnerability": func(keyword) {
+//	       return {"result": sprintf("搜索漏洞: %s", keyword)}
+//	     },
+//	    "scanTarget": func(target, port) {
+//	      return {"target": target, "port": port, "status": "scanning"}
+//	   },
+//	}
+//
+// // AI 自动识别并调用函数
+// result, err = ai.FunctionCall(
+//
+//	"帮我搜索 SQL 注入漏洞",
+//	funcs,
+//
+// )
+//
+// die(err)
+// dump(result)
+//
+// // 显式使用速度优先模型做函数调用
+// result, err = ai.FunctionCall("快速提取端口参数", funcs, ai.speedPriority())
+// die(err)
+// dump(result)
+// ```
+func FunctionCall(input string, funcs any, opts ...aispec.AIConfigOption) (map[string]any, error) {
+	config := aispec.NewDefaultAIConfig(opts...)
+	if config.Type != "" {
+		return legacyFunctionCall(input, funcs, opts...)
+	}
+	if preferredTier, ok := resolvePreferredTier(config); ok {
+		return TieredFunctionCallWithTier(preferredTier, input, funcs, opts...)
+	}
+	if consts.IsTieredAIModelConfigEnabled() {
+		return tieredFunctionCall(input, funcs, opts...)
+	}
+	return legacyFunctionCall(input, funcs, opts...)
+}
+
+func LoadChater(name string, defaultOpts ...aispec.AIConfigOption) (aispec.GeneralChatter, error) {
+	gateway, ok := aispec.Lookup(name)
+	if !ok {
+		return nil, errors.New("not found valid ai chatter type: " + name)
+	}
+	return func(msg string, opts ...aispec.AIConfigOption) (string, error) {
+		gateway.LoadOption(append(defaultOpts, append([]aispec.AIConfigOption{aispec.WithType(name)}, opts...)...)...)
+		if err := gateway.CheckValid(); err != nil {
+			log.Warnf("check valid by %s failed: %s", name, err)
+			return "", err
+		}
+		invokeModelInfoCallback(gateway, name)
+		result, err := gateway.Chat(msg)
+		if err != nil {
+			return "", err
+		}
+		invokeModelInfoConfirmCallback(gateway, name)
+		return result, nil
+	}, nil
+}
+
+func LoadAiGatewayConfig(name string) (*aispec.AIConfig, error) {
+	gateway, ok := aispec.Lookup(name)
+	if !ok {
+		return nil, errors.New("not found valid ai gateway type: " + name)
+	}
+	gateway.LoadOption(aispec.WithType(name))
+	return gateway.GetConfig(), nil
+}
+
+var Exports = map[string]any{
+	"OpenAI":   OpenAI,
+	"ChatGLM":  ChatGLM,
+	"Moonshot": Moonshot,
+
+	"Chat":                    Chat,
+	"IntelligentChat":         IntelligentChat,
+	"LightweightChat":         LightweightChat,
+	"VisionChat":              VisionChat,
+	"FunctionCall":            FunctionCall,
+	"IntelligentFunctionCall": IntelligentFunctionCall,
+	"LightweightFunctionCall": LightweightFunctionCall,
+	"VisionFunctionCall":      VisionFunctionCall,
+	"StructuredStream":        StructuredStream,
+	"ListModels":              ListModels,
+	"ListModelByProviderType": ListModelByProviderType,
+
+	"thinking":                       aispec.WithEnableThinking,
+	"timeout":                        aispec.WithTimeout,
+	"proxy":                          aispec.WithProxy,
+	"model":                          aispec.WithModel,
+	"apiKey":                         aispec.WithAPIKey,
+	"noHttps":                        aispec.WithNoHttps,
+	"funcCallRetryTimes":             aispec.WithFunctionCallRetryTimes,
+	"domain":                         aispec.WithDomain,
+	"baseURL":                        aispec.WithBaseURL,
+	"onStream":                       aispec.WithStreamHandler,
+	"onReasonStream":                 aispec.WithReasonStreamHandler,
+	"debugStream":                    aispec.WithDebugStream,
+	"type":                           aispec.WithType,
+	"preferredTier":                  aispec.WithPreferredTier,
+	"speedPriority":                  aispec.WithSpeedPriority,
+	"qualityPriority":                aispec.WithQualityPriority,
+	"visionPriority":                 aispec.WithVisionPriority,
+	"imageAI":                        aispec.WithVisionPriority,
+	"imageFile":                      aispec.WithImageFile,
+	"imageBase64":                    aispec.WithImageBase64,
+	"imageRaw":                       aispec.WithImageRaw,
+	"videoUrl":                       aispec.WithVideoUrl,
+	"videoBase64":                    aispec.WithVideoBase64,
+	"videoRaw":                       aispec.WithVideoRaw,
+	"toolCallCallback":               aispec.WithToolCallCallback,
+	"modelInfoCallback":              aispec.WithModelInfoCallback,
+	"modelInfoConfirmCallback":       aispec.WithModelInfoConfirmCallback,
+	"rawHTTPResponseHeaderCallback":  aispec.WithRawHTTPResponseHeaderCallback,
+	"rawHTTPResponseCallback":        aispec.WithRawHTTPResponseCallback,
+	"rawHTTPRequestResponseCallback": aispec.WithRawHTTPRequestResponseCallback,
+	"rawMessages":                    aispec.WithRawMessages,
+
+	// usageCallback 让 yak 脚本可以接收上游 LLM 在 SSE 末帧返回的 token 用量
+	// （含 prompt_tokens_details.cached_tokens 隐式缓存命中信息）。
+	// 使用方法：ai.usageCallback(func(usage){ println(usage.PromptTokens, usage.PromptTokensDetails.CachedTokens) })
+	// 注：触发该回调依赖上游开启 stream_options.include_usage=true，
+	// aispec 会在检测到 ctx.UsageCallback 时自动注入这一参数。
+	// 关键词: yak ai usageCallback, 隐式缓存可见, cached_tokens 暴露给脚本
+	"usageCallback": aispec.WithUsageCallback,
+
+	// aicacheSession 暴露当前进程的 aicache 调试落盘根目录绝对路径。
+	// 用法：sessionDir = ai.aicacheSession()
+	// 触发条件：仅在 utils.InDebugMode()（DEBUG / PALMDEBUG / YAKLANGDEBUG 任一非空）
+	// 或测试场景下，aicache.Observe 才会异步落盘 000XXX.txt；返回路径稳定可复用。
+	// 关键词: yak ai aicacheSession, dump 目录暴露, cachebench
+	"aicacheSession": aicache.SessionDir,
+}
+
+// CreateChatterFromConfig creates a chat function from AIModelConfig.
+func CreateChatterFromConfig(config *ypb.AIModelConfig) (func(string, ...aispec.AIConfigOption) (string, error), error) {
+	if config == nil {
+		return nil, fmt.Errorf("AIModelConfig is nil")
+	}
+	if config.GetProvider() == nil {
+		return nil, fmt.Errorf("AIModelConfig provider is nil")
+	}
+
+	opts := aispec.BuildOptionsFromConfig(config)
+	return LoadChater(config.GetProvider().GetType(), opts...)
+}

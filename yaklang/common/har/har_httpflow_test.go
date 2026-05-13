@@ -1,0 +1,786 @@
+package har
+
+import (
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/require"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/lowhttp"
+)
+
+func TestHAR2HTTPFlow(t *testing.T) {
+	wantRspBody := "Hello World"
+	randTag := utils.RandStringBytes(16)
+	entry := HAREntry{
+		Request: &HARRequest{
+			Method:      "GET",
+			URL:         "https://example.com",
+			HTTPVersion: "http/2.0",
+			Headers: []*HARKVPair{
+				{
+					Name:  ":authority",
+					Value: "example.com",
+				},
+				{
+					Name:  ":method",
+					Value: "GET",
+				},
+				{
+					Name:  ":path",
+					Value: "/",
+				},
+				{
+					Name:  ":scheme",
+					Value: "https",
+				},
+				{
+					Name:  "user-agent",
+					Value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+				},
+			},
+			HeadersSize: -1,
+			BodySize:    0,
+		},
+		Response: &HARResponse{
+			StatusCode:  200,
+			StatusText:  "OK",
+			HTTPVersion: "http/2.0",
+			HeadersSize: -1,
+			Headers: []*HARKVPair{
+				{
+					Name:  "content-length",
+					Value: strconv.Itoa(len(wantRspBody)),
+				},
+				{
+					Name:  "content-type",
+					Value: "text/html",
+				},
+				{
+					Name:  "vary",
+					Value: "Accept-Encoding",
+				},
+			},
+			Content: &HARHTTPContent{
+				Size:     len(wantRspBody),
+				MimeType: "text/html",
+				Text:     wantRspBody,
+			},
+			BodySize: -1,
+		},
+		MetaData: &HTTPFlowMetaData{
+			SourceType: "har",
+			Tags:       randTag,
+		},
+	}
+	flow, err := HarEntry2HTTPFlow(&entry)
+	require.NoError(t, err)
+	require.Equal(t, "GET", flow.Method)
+	require.Equal(t, int64(200), flow.StatusCode)
+	require.Equal(t, "https://example.com", flow.Url)
+	// check request
+	req, err := strconv.Unquote(flow.Request)
+	require.NoError(t, err)
+	reqBytes := []byte(req)
+	_, _, version := lowhttp.GetHTTPPacketFirstLine(reqBytes)
+	require.Equal(t, "HTTP/2.0", version)
+	require.Equal(t, "example.com", lowhttp.GetHTTPPacketHeader(reqBytes, "Host"))
+	require.Equal(t, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", lowhttp.GetHTTPPacketHeader(reqBytes, "User-Agent"))
+	// check response
+	rsp, err := strconv.Unquote(flow.Response)
+	require.NoError(t, err)
+	rspBytes := []byte(rsp)
+	respVersion, statusCode, statusMessage := lowhttp.GetHTTPPacketFirstLine(rspBytes)
+	require.Equal(t, "HTTP/2.0", respVersion)
+	require.Equal(t, "200", statusCode)
+	require.Equal(t, "OK", statusMessage)
+	require.Equal(t, strconv.Itoa(len(wantRspBody)), lowhttp.GetHTTPPacketHeader(rspBytes, "Content-Length"))
+	require.Equal(t, "text/html", lowhttp.GetHTTPPacketHeader(rspBytes, "Content-Type"))
+	require.Equal(t, "Accept-Encoding", lowhttp.GetHTTPPacketHeader(rspBytes, "Vary"))
+	require.Equal(t, wantRspBody, string(lowhttp.GetHTTPPacketBody(rspBytes)))
+	// check metadata
+	require.Equal(t, "har", flow.SourceType)
+	require.Equal(t, randTag, flow.Tags)
+}
+
+func TestHTTPFlow2HAR(t *testing.T) {
+	// generate a random data
+	host := fmt.Sprintf("%s.com", utils.RandStringBytes(16))
+	path := fmt.Sprintf("/%s", utils.RandStringBytes(16))
+	url := fmt.Sprintf(`https://%s%s`, host, path)
+	requestBody := utils.RandStringBytes(16)
+	responseBody := fmt.Sprintf(`<html><body><p>%s</p><body></html>`, utils.RandStringBytes(16))
+	queryParams := make([]*HARKVPair, 16)
+	for i := 0; i < 16; i++ {
+		queryParams[i] = &HARKVPair{
+			Name:  utils.RandStringBytes(16),
+			Value: utils.RandStringBytes(16),
+		}
+	}
+	queryString := strings.Join(lo.Map(queryParams, func(item *HARKVPair, _ int) string {
+		return fmt.Sprintf("%s=%s", item.Name, item.Value)
+	}), "&")
+
+	headers := make([]*HARKVPair, 16, 17)
+	for i := 0; i < 16; i++ {
+		headers[i] = &HARKVPair{
+			Name:  utils.RandStringBytes(16),
+			Value: utils.RandStringBytes(16),
+		}
+	}
+	headerString := strings.Join(lo.Map(headers, func(item *HARKVPair, _ int) string {
+		return fmt.Sprintf("%s: %s", item.Name, item.Value)
+	}), "\n")
+	responseHeaders := make([]*HARKVPair, 16, 17)
+	for i := 0; i < 16; i++ {
+		responseHeaders[i] = &HARKVPair{
+			Name:  utils.RandStringBytes(16),
+			Value: utils.RandStringBytes(16),
+		}
+	}
+	responseHeaderString := strings.Join(lo.Map(responseHeaders, func(item *HARKVPair, _ int) string {
+		return fmt.Sprintf("%s: %s", item.Name, item.Value)
+	}), "\n")
+
+	request := fmt.Sprintf(`POST %s?%s HTTP/2
+%s
+Host: %s
+
+%s`, path, queryString, headerString, host, requestBody)
+	request = strconv.Quote(request)
+	response := fmt.Sprintf(`HTTP/2 200 OK
+Content-Type: text/html
+Content-Length: %d
+%s
+
+%s`, len(responseBody), responseHeaderString, responseBody)
+	response = strconv.Quote(response)
+	sourceType := "har"
+	randTag := utils.RandStringBytes(16)
+	// build flow
+	flow := &schema.HTTPFlow{
+		Request:    request,
+		Response:   response,
+		Method:     "POST",
+		Url:        url,
+		BodyLength: int64(len(requestBody)),
+		StatusCode: 200,
+		// metadata
+		SourceType: sourceType,
+		Tags:       randTag,
+	}
+
+	// convert flow to har entry
+	// 传递所有字段以确保 Request 和 Response 不为 nil
+	options := &HTTPFlow2HarEntryOptions{
+		SelectedFields: []string{"request", "response", "tags", "source_type"},
+	}
+	entry, err := HTTPFlow2HarEntry(flow, options)
+
+	// check request
+	require.NoError(t, err)
+	require.NotNil(t, entry.Request, "Request should not be nil when 'request' field is selected")
+	require.NotNil(t, entry.Response, "Response should not be nil when 'response' field is selected")
+	gotRequest := entry.Request
+	gotResponse := entry.Response
+	require.Equal(t, "POST", gotRequest.Method)
+	require.Equal(t, url, gotRequest.URL)
+	require.Equal(t, "HTTP/2", gotRequest.HTTPVersion)
+	// sort query params
+	sort.Slice(queryParams, func(i, j int) bool {
+		return queryParams[i].Name < queryParams[j].Name
+	})
+	sort.Slice(gotRequest.QueryString, func(i, j int) bool {
+		return gotRequest.QueryString[i].Name < gotRequest.QueryString[j].Name
+	})
+	require.Equal(t, queryParams, gotRequest.QueryString)
+
+	// add extra header for check
+	headers = append(headers,
+		&HARKVPair{
+			Name:  ":authority",
+			Value: host,
+		}, &HARKVPair{
+			Name:  ":method",
+			Value: "POST",
+		}, &HARKVPair{
+			Name:  ":path",
+			Value: path,
+		})
+	// in http2, headers are all lower
+	for i := range headers {
+		headers[i].Name = strings.ToLower(headers[i].Name)
+	}
+	// sort headers
+	sort.Slice(headers, func(i, j int) bool {
+		return headers[i].Name < headers[j].Name
+	})
+	sort.Slice(gotRequest.Headers, func(i, j int) bool {
+		return gotRequest.Headers[i].Name < gotRequest.Headers[j].Name
+	})
+	require.Equal(t, headers, gotRequest.Headers)
+	require.Equal(t, len(requestBody), gotRequest.BodySize)
+	require.Equal(t, requestBody, gotRequest.PostData.Text)
+
+	// check response
+	require.Equal(t, 200, gotResponse.StatusCode)
+	require.Equal(t, "OK", gotResponse.StatusText)
+	require.Equal(t, "HTTP/2", gotResponse.HTTPVersion)
+	// add extra header for check
+	responseHeaders = append(responseHeaders,
+		&HARKVPair{
+			Name:  "content-type",
+			Value: "text/html",
+		}, &HARKVPair{
+			Name:  "content-length",
+			Value: strconv.Itoa(len(responseBody)),
+		})
+	// in http2, headers are all lower
+	for i := range responseHeaders {
+		responseHeaders[i].Name = strings.ToLower(responseHeaders[i].Name)
+	}
+	// sort headers
+	sort.Slice(responseHeaders, func(i, j int) bool {
+		return responseHeaders[i].Name < responseHeaders[j].Name
+	})
+	sort.Slice(gotResponse.Headers, func(i, j int) bool {
+		return gotResponse.Headers[i].Name < gotResponse.Headers[j].Name
+	})
+	require.Equal(t, responseHeaders, gotResponse.Headers)
+	require.Equal(t, len(responseBody), gotResponse.BodySize)
+	require.Equal(t, responseBody, gotResponse.Content.Text)
+
+	// check metadata
+	require.Equal(t, sourceType, flow.SourceType)
+	require.Equal(t, randTag, flow.Tags)
+}
+
+// TestHTTPFlow2HarEntryWithFieldSelection tests HAR export field selection functionality
+// Similar to Excel export test style, tests the impact of field selection on HAR export
+func TestHTTPFlow2HarEntryWithFieldSelection(t *testing.T) {
+	requestBody := "test request body"
+	responseBody := "test response body"
+	randTag := utils.RandStringBytes(16)
+	fromPlugin := "test-plugin"
+	duration := int64(123)
+	ipAddress := "192.168.1.1"
+
+	request := fmt.Sprintf(`POST /test HTTP/1.1
+Host: example.com
+Content-Type: application/json
+
+%s`, requestBody)
+	request = strconv.Quote(request)
+
+	response := fmt.Sprintf(`HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Length: %d
+
+%s`, len(responseBody), responseBody)
+	response = strconv.Quote(response)
+
+	flow := &schema.HTTPFlow{
+		Request:           request,
+		Response:          response,
+		Method:            "POST",
+		Url:               "http://example.com/test",
+		StatusCode:        200,
+		BodyLength:        int64(len(responseBody)),
+		SourceType:        "mitm",
+		Tags:              randTag,
+		FromPlugin:        fromPlugin,
+		Duration:          duration,
+		IPAddress:         ipAddress,
+		Path:              "/test",
+		GetParamsTotal:    2,
+		PostParamsTotal:   1,
+		CookieParamsTotal: 3,
+		IsWebsocket:       false,
+		Payload:           "test-payload",
+	}
+
+	t.Run("only request packet fields - with parent field", func(t *testing.T) {
+		// 测试传递了父级字段"request"时，应该包含所有request子字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"request"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// 传递了"request"父级字段，应该包含所有request子字段
+		// 没有传递response相关字段，response应该为nil
+		// 没有传递metadata相关字段，metadata应该为nil
+		require.Equal(t, entry, &HAREntry{
+			Request: &HARRequest{
+				Method:      "POST",
+				URL:         "http://example.com/test",
+				HTTPVersion: "HTTP/1.1",
+				QueryString: nil,
+				Headers: []*HARKVPair{
+					{
+						Name:  "Host",
+						Value: "example.com",
+					},
+					{
+						Name:  "Content-Type",
+						Value: "application/json",
+					},
+				},
+				HeadersSize: 2,
+				BodySize:    17,
+				PostData: &HARHTTPPostData{
+					Text:     requestBody,
+					Params:   nil,
+					MimeType: "application/json",
+				},
+				Timings: nil,
+			},
+			Response: nil,
+			MetaData: nil,
+		})
+	})
+
+	t.Run("only request sub-field - method only", func(t *testing.T) {
+		// 测试只传递了子字段"method"时，应该只设置method字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"method"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// 只传递了"method"，应该只设置method字段
+		// 没有传递response相关字段，response应该为nil
+		// 没有传递metadata相关字段，metadata应该为nil
+		require.Equal(t, entry, &HAREntry{
+			Request: &HARRequest{
+				Method: "POST",
+			},
+			Response: nil,
+			MetaData: nil,
+		})
+	})
+
+	t.Run("only request sub-fields - method and body_length", func(t *testing.T) {
+		// 测试只传递了"method"和"body_length"时，应该只设置这两个字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"method", "body_length"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// 只传递了"method"和"body_length"，应该只设置这两个字段
+		// 没有传递response相关字段，response应该为nil
+		// 没有传递metadata相关字段，metadata应该为nil
+		require.Equal(t, entry, &HAREntry{
+			Request: &HARRequest{
+				Method: "POST",
+			},
+			Response: &HARResponse{
+				BodySize: int(flow.BodyLength),
+			},
+			MetaData: nil,
+		})
+	})
+
+	t.Run("only response packet fields - with parent field", func(t *testing.T) {
+		// 测试传递了父级字段"response"时，应该包含所有response子字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"response"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// 没有传递request相关字段，request应该为nil
+		require.Nil(t, entry.Request)
+		// 传递了"response"父级字段，应该包含所有response子字段
+		require.NotNil(t, entry.Response)
+		require.Equal(t, 200, entry.Response.StatusCode)
+		require.Equal(t, "OK", entry.Response.StatusText)
+		require.Equal(t, "HTTP/1.1", entry.Response.HTTPVersion)
+		require.Equal(t, 18, entry.Response.BodySize)
+		require.Equal(t, 2, entry.Response.HeadersSize)
+		// 检查 Headers（不依赖顺序）
+		require.Len(t, entry.Response.Headers, 2)
+		headerMap := make(map[string]string)
+		for _, h := range entry.Response.Headers {
+			headerMap[h.Name] = h.Value
+		}
+		require.Equal(t, "text/html", headerMap["Content-Type"])
+		require.Equal(t, "18", headerMap["Content-Length"])
+		// 检查 Content
+		require.NotNil(t, entry.Response.Content)
+		require.Equal(t, 18, entry.Response.Content.Size)
+		require.Equal(t, "text/html", entry.Response.Content.MimeType)
+		require.Equal(t, responseBody, entry.Response.Content.Text)
+		// 没有传递metadata相关字段，metadata应该为nil
+		require.Nil(t, entry.MetaData)
+	})
+
+	t.Run("only response sub-field - status_code only", func(t *testing.T) {
+		// 测试只传递了子字段"status_code"时，应该只设置status_code字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"status_code"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// 没有传递request相关字段，request应该为nil
+		// 只传递了"status_code"，应该只设置status_code字段（StatusText和HTTPVersion会自动设置，因为需要解析response）
+		// 没有传递metadata相关字段，metadata应该为nil
+		require.Equal(t, entry, &HAREntry{
+			Request: nil,
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+			},
+			MetaData: nil,
+		})
+		// 验证其他字段不应该存在
+		require.Nil(t, entry.Response.Headers)
+		require.Nil(t, entry.Response.Content)
+		require.Equal(t, 0, entry.Response.BodySize)
+	})
+
+	t.Run("only metadata fields", func(t *testing.T) {
+		// Similar to Excel export test, test selecting metadata fields only
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"tags", "from_plugin", "duration", "ip_address", "path"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// Should not include request and response fields
+		// Should include selected metadata fields
+		require.Equal(t, entry, &HAREntry{
+			Request:  nil,
+			Response: nil,
+			MetaData: &HTTPFlowMetaData{
+				Tags:       randTag,
+				FromPlugin: fromPlugin,
+				Duration:   duration,
+				IPAddress:  ipAddress,
+				Path:       "/test",
+			},
+		})
+	})
+
+	t.Run("include parameter statistics fields", func(t *testing.T) {
+		// Test parameter statistics field selection
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{"get_params_total", "path", "url"},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		require.NotNil(t, entry.MetaData)
+		// When get_params_total is selected, should include all parameter statistics
+		require.Equal(t, 2, entry.MetaData.GetParamsTotal)
+		require.Equal(t, 1, entry.MetaData.PostParamsTotal)
+		require.Equal(t, 3, entry.MetaData.CookieParamsTotal)
+	})
+
+	t.Run("no field name - should include nothing", func(t *testing.T) {
+		// 测试不传递FieldName时，应该不包含任何字段
+		entry, err := HTTPFlow2HarEntry(flow)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// request和response应该为nil，因为没有任何字段被选中
+		// MetaData应该为nil，因为没有任何metadata字段被选中
+		require.Equal(t, entry, &HAREntry{
+			Request:  nil,
+			Response: nil,
+			MetaData: nil,
+		})
+	})
+
+	t.Run("empty field name - should include nothing", func(t *testing.T) {
+		// 测试传递空FieldName数组时，应该不包含任何字段
+		options := &HTTPFlow2HarEntryOptions{
+			SelectedFields: []string{},
+		}
+		entry, err := HTTPFlow2HarEntry(flow, options)
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		// request和response应该为nil，因为没有任何字段被选中
+		// MetaData应该为nil，因为没有任何metadata字段被选中
+		require.Equal(t, entry, &HAREntry{
+			Request:  nil,
+			Response: nil,
+			MetaData: nil,
+		})
+	})
+}
+
+// TestHarEntry2HTTPFlow_NilCases tests HarEntry2HTTPFlow with nil cases
+func TestHarEntry2HTTPFlow_NilCases(t *testing.T) {
+	t.Run("entry is nil", func(t *testing.T) {
+		flow, err := HarEntry2HTTPFlow(nil)
+		require.Error(t, err)
+		require.Nil(t, flow)
+		require.Contains(t, err.Error(), "HAREntry is nil")
+	})
+
+	t.Run("Request is nil, Response is nil, MetaData exists", func(t *testing.T) {
+		// 这是用户报告的情况：Request 和 Response 都为 nil，但 MetaData 存在
+		entry := &HAREntry{
+			Request:         nil,
+			Response:        nil,
+			ServerIPAddress: "",
+			MetaData: &HTTPFlowMetaData{
+				ID:         3,
+				IsHTTPS:    true,
+				Host:       "www.baidu.com",
+				Path:       "/test",
+				SourceType: "har",
+				Tags:       "test-tag",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该使用默认值
+		require.Equal(t, "GET", flow.Method)
+		require.Equal(t, int64(200), flow.StatusCode)
+		// 如果 metadata 中有 Host，应该尝试构建 URL
+		require.Contains(t, flow.Url, "www.baidu.com")
+		// 应该从 metadata 中获取信息
+		require.Equal(t, "www.baidu.com", flow.Host)
+		require.Equal(t, "/test", flow.Path)
+		require.Equal(t, "har", flow.SourceType)
+		require.Equal(t, "test-tag", flow.Tags)
+		require.True(t, flow.IsHTTPS)
+		// Request 和 Response 应该不为空（创建了基本的请求和响应包）
+		require.NotEmpty(t, flow.Request)
+		require.NotEmpty(t, flow.Response)
+	})
+
+	t.Run("Request is nil, Response exists", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: nil,
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+				Content: &HARHTTPContent{
+					Size:     100,
+					MimeType: "text/html",
+					Text:     "response body",
+				},
+			},
+			MetaData: &HTTPFlowMetaData{
+				Host: "example.com",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该使用默认的请求方法
+		require.Equal(t, "GET", flow.Method)
+		// 应该从 Response 中获取状态码
+		require.Equal(t, int64(200), flow.StatusCode)
+		// 应该从 metadata 中获取 Host
+		require.Equal(t, "example.com", flow.Host)
+		// 应该从 Response.Content 中获取 BodyLength 和 ContentType
+		require.Equal(t, int64(100), flow.BodyLength)
+		require.Equal(t, "text/html", flow.ContentType)
+	})
+
+	t.Run("Request exists, Response is nil", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "POST",
+				URL:         "https://example.com/test",
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: nil,
+			MetaData: &HTTPFlowMetaData{
+				Host: "example.com",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该从 Request 中获取方法
+		require.Equal(t, "POST", flow.Method)
+		require.Equal(t, "https://example.com/test", flow.Url)
+		// 应该使用默认的状态码
+		require.Equal(t, int64(200), flow.StatusCode)
+		// 应该从 metadata 中获取 Host
+		require.Equal(t, "example.com", flow.Host)
+	})
+
+	t.Run("Request is nil, Response is nil, MetaData is nil", func(t *testing.T) {
+		entry := &HAREntry{
+			Request:         nil,
+			Response:        nil,
+			ServerIPAddress: "192.168.1.1",
+			MetaData:        nil,
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该使用默认值
+		require.Equal(t, "GET", flow.Method)
+		require.Equal(t, int64(200), flow.StatusCode)
+		require.Equal(t, "192.168.1.1", flow.RemoteAddr)
+		// Request 和 Response 应该不为空（创建了基本的请求和响应包）
+		require.NotEmpty(t, flow.Request)
+		require.NotEmpty(t, flow.Response)
+	})
+
+	t.Run("Request with empty URL but MetaData has Host", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "", // URL 为空
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+			},
+			MetaData: &HTTPFlowMetaData{
+				Host:       "www.example.com",
+				IsHTTPS:    true,
+				SourceType: "har",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该尝试从 metadata.Host 构建 URL
+		require.Contains(t, flow.Url, "www.example.com")
+		require.Equal(t, "www.example.com", flow.Host)
+		require.True(t, flow.IsHTTPS)
+	})
+
+	t.Run("Response with nil Content", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "https://example.com",
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+				Content:     nil, // Content 为 nil
+			},
+			MetaData: &HTTPFlowMetaData{
+				ContentType: "application/json",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该从 metadata 中获取 ContentType
+		require.Equal(t, "application/json", flow.ContentType)
+		// BodyLength 应该为 0（因为 Content 为 nil）
+		require.Equal(t, int64(0), flow.BodyLength)
+	})
+
+	t.Run("Request with nil Headers and QueryString", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "https://example.com",
+				HTTPVersion: "HTTP/1.1",
+				Headers:     nil, // Headers 为 nil
+				QueryString: nil, // QueryString 为 nil
+			},
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+				Headers:     nil, // Headers 为 nil
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		require.Equal(t, "GET", flow.Method)
+		require.Equal(t, "https://example.com", flow.Url)
+		require.Equal(t, int64(200), flow.StatusCode)
+	})
+
+	t.Run("Request with empty HTTPVersion", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "https://example.com",
+				HTTPVersion: "", // HTTPVersion 为空
+			},
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "", // HTTPVersion 为空
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该使用默认的 HTTP/1.1
+		require.Equal(t, "GET", flow.Method)
+		require.Equal(t, int64(200), flow.StatusCode)
+		// 验证请求和响应包中使用了 HTTP/1.1
+		req, _ := strconv.Unquote(flow.Request)
+		require.Contains(t, req, "HTTP/1.1")
+		rsp, _ := strconv.Unquote(flow.Response)
+		require.Contains(t, rsp, "HTTP/1.1")
+	})
+
+	t.Run("Response with zero StatusCode", func(t *testing.T) {
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "https://example.com",
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: &HARResponse{
+				StatusCode:  0, // StatusCode 为 0
+				StatusText:  "",
+				HTTPVersion: "HTTP/1.1",
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该使用默认的状态码 200
+		require.Equal(t, int64(200), flow.StatusCode)
+	})
+
+	t.Run("MetaData with UpdatedAt", func(t *testing.T) {
+		now := time.Now()
+		entry := &HAREntry{
+			Request: &HARRequest{
+				Method:      "GET",
+				URL:         "https://example.com",
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: &HARResponse{
+				StatusCode:  200,
+				StatusText:  "OK",
+				HTTPVersion: "HTTP/1.1",
+			},
+			MetaData: &HTTPFlowMetaData{
+				Host:      "example.com",
+				UpdatedAt: now,
+			},
+		}
+		flow, err := HarEntry2HTTPFlow(entry)
+		require.NoError(t, err)
+		require.NotNil(t, flow)
+		// 应该从 metadata 中获取 UpdatedAt
+		require.False(t, flow.UpdatedAt.IsZero())
+		require.Equal(t, "example.com", flow.Host)
+	})
+}

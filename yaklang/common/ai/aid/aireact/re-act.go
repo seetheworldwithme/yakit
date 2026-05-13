@@ -1,0 +1,630 @@
+package aireact
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/yaklang/yaklang/common/ai"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/aid/aimem"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool/buildinaitools"
+	"github.com/yaklang/yaklang/common/ai/rag/rag_search_tool"
+	"github.com/yaklang/yaklang/common/aiforge"
+	"github.com/yaklang/yaklang/common/consts"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/chanx"
+	"github.com/yaklang/yaklang/common/utils/filesys"
+	"github.com/yaklang/yaklang/common/yakgrpc/yakit"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+
+	_ "github.com/yaklang/yaklang/common/ai/aid/aireact/reactloops/reactinit"
+)
+
+// 同步类型常量
+const (
+	SYNC_TYPE_QUEUE_INFO                = "queue_info"
+	SYNC_TYPE_TIMELINE                  = "timeline"
+	SYNC_TYPE_KNOWLEDGE                 = "enhance_knowledge"
+	SYNC_TYPE_UPDATE_CONFIG             = "update_config"
+	SYNC_TYPE_MEMORY_CONTEXT            = "memory_sync"
+	SYNC_TYPE_REACT_CANCEL_CURRENT_TASK = "react_cancel_current_task"
+	SYNC_TYPE_REACT_JUMP_QUEUE          = "react_jump_queue"
+	SYNC_TYPE_REACT_CANCEL_TASK         = "react_cancel_task"
+	SYNC_TYPE_REACT_REMOVE_TASK         = "react_remove_task"
+	SYNC_TYPE_REACT_CLEAR_TASK          = "react_clear_task"
+	SYNC_TYPE_RECOVERY_PLAN_AND_EXEC    = "recovery_plan_and_exec"
+)
+
+// ReactTaskItem 表示ReAct任务队列中的单个任务
+type ReactTaskItem struct {
+	ID        string                 // 任务唯一标识
+	UserInput string                 // 用户输入
+	Event     *ypb.AIInputEvent      // 原始输入事件
+	Status    string                 // 任务状态: pending, processing, completed, failed
+	CreatedAt time.Time              // 创建时间
+	StartedAt *time.Time             // 开始处理时间
+	EndedAt   *time.Time             // 完成时间
+	Metadata  map[string]interface{} // 额外元数据
+}
+
+var (
+	_ aicommon.AIInvokeRuntime = (*ReAct)(nil)
+)
+
+type ReAct struct {
+	*aicommon.Emitter
+
+	currentIteration            int
+	currentUserInteractiveCount int64 // 当前用户交互次数
+	knowledgeEmitCounter        int   // Counter for knowledge emit events
+	verificationHistoryMutex    sync.Mutex
+	verificationHistory         []*aicommon.VerifySatisfactionResult
+
+	config        *aicommon.Config
+	promptManager *PromptManager
+
+	inputChanx *chanx.UnlimitedChan[*ypb.AIInputEvent]
+
+	// 任务队列相关
+	currentTask aicommon.AIStatefulTask // 当前正在处理的任务
+
+	lastTask aicommon.AIStatefulTask // 上一个完成的任务
+
+	// All Runtime Tasks
+	RuntimeTasks           []aicommon.AIStatefulTask
+	UpdateRuntimeTaskMutex sync.Mutex
+
+	currentPlanExecution aicommon.AIStatefulTask
+	taskQueue            *TaskQueue // 任务队列
+	queueProcessor       sync.Once  // 确保队列处理器只启动一次
+	mirrorMutex          sync.RWMutex
+	mirrorOfAIInputEvent map[string]func(*ypb.AIInputEvent)
+
+	saveTimelineThrottle func(func())
+	artifacts            *filesys.RelLocalFs
+
+	wg           *sync.WaitGroup
+	memoryTriage aicommon.MemoryTriage
+
+	midtermRecallMutex           sync.Mutex
+	pendingMidtermTimelineRecall bool
+	pendingMidtermPerception     *midtermPerceptionSnapshot
+
+	pureInvokerMode bool // 纯调用者模式，不启动事件循环和队列处理器
+}
+
+func (r *ReAct) SetCurrentTask(task aicommon.AIStatefulTask) {
+	r.setCurrentTask(task)
+}
+
+func (r *ReAct) GetBasicPromptInfo(tools []*aitool.Tool) (string, map[string]any, error) {
+	return r.promptManager.GetBasicPromptInfo(tools)
+}
+
+const SKIP_AI_REVIEW = "skip_ai_review"
+
+func (r *ReAct) GetConfig() aicommon.AICallerConfigIf {
+	return r.config
+}
+
+func (r *ReAct) SaveTimeline() {
+	if r.config.PersistentSessionId == "" {
+		return
+	}
+	r.saveTimelineThrottle(func() {
+		ins := r.config.Timeline
+		if ins == nil {
+			return
+		}
+		tl, err := aicommon.MarshalTimeline(ins)
+		if err != nil {
+			log.Errorf("ReAct: marshal timeline failed: %v", err)
+			return
+		}
+		result := strconv.Quote(tl)
+		if err := yakit.UpdateAIAgentRuntimeTimeline(r.config.GetDB(), r.config.Id, result); err != nil {
+			log.Errorf("ReAct: save timeline to db failed: %v", err)
+			return
+		}
+		last1 := ins.ToTimelineItemOutputLastN(1)
+		if len(last1) > 0 {
+			log.Debugf("ReAct: save timeline to db success timeline last updated time: %v", last1[0].Timestamp.String())
+		}
+	})
+}
+
+func (r *ReAct) DumpTimeline() string {
+	if r == nil || r.config == nil || r.config.Timeline == nil {
+		return ""
+	}
+	return r.config.Timeline.Dump()
+}
+
+func (r *ReAct) SetCurrentPlanExecutionTask(t aicommon.AIStatefulTask) {
+	if r == nil {
+		return
+	}
+	r.currentPlanExecution = t
+}
+
+func (r *ReAct) GetCurrentPlanExecutionTask() aicommon.AIStatefulTask {
+	if r == nil {
+		return nil
+	}
+	if r.currentPlanExecution == nil {
+		return nil
+	}
+	return r.currentPlanExecution
+}
+
+func (r *ReAct) RegisterMirrorOfAIInputEvent(id string, f func(*ypb.AIInputEvent)) {
+	r.mirrorMutex.Lock()
+	defer r.mirrorMutex.Unlock()
+	r.mirrorOfAIInputEvent[id] = f
+}
+
+func (r *ReAct) CallMirrorOfAIInputEvent(event *ypb.AIInputEvent) {
+	r.mirrorMutex.RLock()
+	defer r.mirrorMutex.RUnlock()
+	for _, f := range r.mirrorOfAIInputEvent {
+		f(event)
+	}
+}
+
+func (r *ReAct) UnregisterMirrorOfAIInputEvent(id string) {
+	r.mirrorMutex.Lock()
+	defer r.mirrorMutex.Unlock()
+	delete(r.mirrorOfAIInputEvent, id)
+}
+
+func NewReAct(opts ...aicommon.ConfigOption) (*ReAct, error) {
+	configLoadingStart := time.Now()
+	opts = append(opts, aicommon.WithAIBlueprintManager(aiforge.NewForgeFactory()))
+	cfg := aicommon.NewConfig(context.Background(), opts...)
+
+	// Extract built-in skills to ~/yakit-projects/ai-skills/ only when auto-skills
+	// are enabled, then load from the local directory so users can modify them on disk.
+	if !cfg.IsAutoSkillsDisabled() {
+		aiSkillsDir := consts.GetDefaultAISkillsDir()
+		if err := ExtractBuiltinSkillsToDir(aiSkillsDir); err != nil {
+			log.Warnf("failed to extract built-in skills to %s: %v", aiSkillsDir, err)
+		}
+		if err := cfg.LoadBuiltinSkillsFromDir(aiSkillsDir); err != nil {
+			log.Warnf("failed to load skills from %s: %v", aiSkillsDir, err)
+		}
+	}
+
+	if du := time.Since(configLoadingStart); du > 500*time.Millisecond {
+		log.Warnf("loading ReAct config took %s, too long, maybe some events happened.", du.String())
+	}
+
+	// artifacts directory is lazily created when user input arrives (ensureWorkDirectory)
+	// artifacts field starts as nil and is initialized in ensureWorkDirectory or getArtifacts
+	react := &ReAct{
+		config:               cfg,
+		Emitter:              cfg.Emitter, // Use the emitter from config
+		taskQueue:            NewTaskQueue("react-main-queue"),
+		mirrorOfAIInputEvent: make(map[string]func(*ypb.AIInputEvent)),
+		saveTimelineThrottle: utils.NewThrottleEx(3, true, true),
+		artifacts:            nil, // lazy: created in ensureWorkDirectory
+		wg:                   new(sync.WaitGroup),
+	}
+
+	if cfg.PersistentSessionId != "" && cfg.GetDB() != nil {
+		meta, err := yakit.EnsureAISessionMeta(cfg.GetDB(), cfg.PersistentSessionId)
+		if err != nil {
+			log.Warnf("ensure ai session meta failed for %s: %v", cfg.PersistentSessionId, err)
+		} else if meta != nil && strings.TrimSpace(meta.Title) != "" {
+			cfg.SetConfig("session_title", meta.Title)
+			cfg.SetSessionTitle(meta.Title)
+			cfg.SetConfig(sessionTitleGeneratedKey, true)
+			react.Emitter.EmitSessionTitle(meta.Title)
+		}
+	}
+
+	memoryLoadStart := time.Now()
+	if cfg.MemoryTriage != nil {
+		react.memoryTriage = cfg.MemoryTriage
+	} else {
+		memoryTriageId := cfg.MemoryTriageId
+		if memoryTriageId == "" {
+			memoryTriageId = "default"
+		}
+		var err error
+		react.memoryTriage, err = aimem.NewAIMemory(memoryTriageId, aimem.WithInvoker(react))
+		if err != nil {
+			return nil, utils.Errorf("create memory triage failed: %v", err)
+		}
+		react.config.MemoryTriage = react.memoryTriage
+	}
+	memoryLoad := time.Now().Sub(memoryLoadStart)
+	if memoryLoad.Milliseconds() > 500 {
+		log.Warnf("loading memory triage took %s, too long, maybe some events happened.", memoryLoad.String())
+	}
+
+	log.Infof("memory triage id: %s", react.memoryTriage.GetSessionID())
+
+	if cfg.TimelineArchiveStore == nil && strings.TrimSpace(cfg.PersistentSessionId) != "" {
+		midtermSessionID := aimem.PersistentSessionToMidtermMemorySessionID(cfg.PersistentSessionId)
+		midtermStore, err := aimem.NewAIMemoryForQuery(midtermSessionID, aimem.WithDatabase(cfg.GetDB()))
+		if err != nil {
+			log.Warnf("create timeline archive store failed for session %s: %v", cfg.PersistentSessionId, err)
+		} else {
+			cfg.TimelineArchiveStore = midtermStore
+			log.Infof("timeline archive store ready for persistent session %s", cfg.PersistentSessionId)
+		}
+	}
+	cfg.EnhanceKnowledgeManager.SetEmitter(cfg.Emitter)
+	if cfg.Timeline == nil {
+		cfg.Timeline = aicommon.NewTimeline(cfg, nil)
+	}
+	if cfg.TimelineDiffer == nil {
+		cfg.TimelineDiffer = aicommon.NewTimelineDiffer(cfg.Timeline)
+	}
+	// Initialize prompt manager (workdir does not depend on artifacts, which is lazy)
+	workdir := cfg.Workdir
+	if workdir == "" {
+		workdir = filepath.Join(consts.GetDefaultYakitBaseDir(), "code")
+		if utils.GetFirstExistedFile(workdir) == "" {
+			os.MkdirAll(workdir, os.ModePerm)
+		}
+	}
+	react.promptManager = NewPromptManager(react, workdir)
+
+	// Register pending context providers
+	react.promptManager.cpm = cfg.ContextProviderManager
+	// Start the event loop in background
+	mainloopDone := make(chan struct{})
+	react.startEventLoop(cfg.Ctx, mainloopDone)
+	select {
+	case <-cfg.Ctx.Done():
+		return nil, utils.Errorf("context canceled before ReAct invoker started")
+	case <-mainloopDone:
+	}
+
+	// Start queue processor in background
+	done := make(chan struct{})
+	react.startQueueProcessor(cfg.Ctx, done)
+	select {
+	case <-cfg.Ctx.Done():
+		return nil, utils.Errorf("context canceled before queue processer started")
+	case <-done:
+	}
+
+	if err := cfg.CreateOrUpdateRuntimeRecord(&schema.AIAgentRuntime{
+		Uuid:              cfg.GetRuntimeId(),
+		Name:              "[re-act-runtime]",
+		Seq:               cfg.Seq,
+		TypeName:          schema.AIAgentRuntimeType_ReAct,
+		PersistentSession: cfg.PersistentSessionId,
+	}); err != nil {
+		return nil, err
+	}
+	cfg.FlushRestoredSessionEvidence()
+	// EmitPinDirectory is deferred to ensureWorkDirectory when user input arrives
+
+	if !react.config.DisallowMCPServers {
+		// load mcp servers into ai-tool
+		react.loadMCPServers()
+	}
+
+	return react, nil
+}
+
+// UpdateDebugMode dynamically updates the debug mode settings
+func (r *ReAct) UpdateDebugMode(debug bool) {
+	r.config.DebugPrompt = debug
+	r.config.DebugEvent = debug
+}
+
+// SendInputEvent sends an input event to the task queue (non-blocking)
+// This is the only public API for external clients to send input to ReAct
+func (r *ReAct) SendInputEvent(event *ypb.AIInputEvent) (ret error) {
+	defer func() {
+		if retErr := recover(); retErr != nil {
+			ret = utils.Errorf("SendInputEvent panic: %v", retErr)
+		}
+	}()
+	if event == nil {
+		return fmt.Errorf("input event is nil")
+	}
+
+	r.config.EventInputChan.SafeFeed(event)
+	return nil
+}
+
+// AddToTimeline 添加条目到时间线
+func (r *ReAct) AddToTimeline(entryType, content string) {
+	msg := new(bytes.Buffer)
+	if entryType != "" {
+		msg.WriteString(fmt.Sprintf("[%s]", entryType))
+	} else {
+		msg.WriteString("[note]")
+	}
+
+	t := r.GetCurrentTask()
+	taskId := ""
+	if t != nil {
+		taskId = t.GetId()
+		msg.WriteString(fmt.Sprintf(" [task:%s]:\n", taskId))
+	} else {
+		msg.WriteString(":\n")
+	}
+	// 旧实现给 body 整体加过 '  ' 缩进, 当时是为了让人类阅读 dump 时一眼区分
+	// 'header line' 与 'body lines'. timeline 渲染 (TimelineIntervalBlock.Render)
+	// 现在已经为每个 item 输出独立的 'HH:MM:SS [type/...]' 行头, 缩进对 LLM 不再
+	// 提供任何信息, 只消耗 token. 直接拼 body 即可, humanReadable parser 端的
+	// removeIndent 在新数据无前缀时是 no-op, 向后兼容历史持久化.
+	// 关键词: ReAct.AddToTimeline 去掉 body 缩进, prompt token 节省
+	msg.WriteString(content)
+	r.config.Timeline.PushText(r.config.AcquireId(), msg.String())
+	r.SaveTimeline()
+}
+
+// getTimeline 获取时间线信息（可选择限制数量）
+func (r *ReAct) getTimeline(lastN int) []*aicommon.TimelineItemOutput {
+	return r.config.Timeline.ToTimelineItemOutputLastN(lastN)
+}
+
+func (r *ReAct) getTimelineTotal() int {
+	return r.config.Timeline.GetIdToTimelineItem().Len()
+}
+
+// startQueueProcessor 启动任务队列处理器
+func (r *ReAct) startQueueProcessor(ctx context.Context, done chan struct{}) {
+	closeDoneOnce := new(sync.Once)
+	r.queueProcessor.Do(func() {
+		go func() {
+			defer func() {
+				closeDoneOnce.Do(func() {
+					close(done)
+				})
+			}()
+			if r.config.DebugEvent {
+				log.Infof("Task queue processor started for ReAct instance: %s", r.config.Id)
+			}
+
+			// register hook for queue
+			r.taskQueue.AddEnqueueHook(func(task aicommon.AIStatefulTask) (bool, error) {
+				r.EmitEnqueueReActTask(task)
+				return true, nil
+			})
+			r.taskQueue.AddDequeueHook(func(task aicommon.AIStatefulTask, reason string) {
+				r.EmitDequeueReActTask(task, reason)
+			})
+
+			ticker := time.NewTicker(100 * time.Millisecond) // 每100ms检查一次队列
+			defer ticker.Stop()
+			closeDoneOnce.Do(func() {
+				close(done)
+			})
+			for {
+				select {
+				case <-ticker.C:
+					r.processReActFromQueue()
+					r.updateRuntimeTasks()
+				case <-ctx.Done():
+					if r.config.DebugEvent {
+						log.Infof("Task queue processor stopped for ReAct instance: %s", r.config.Id)
+					}
+					return
+				}
+			}
+		}()
+	})
+}
+
+// GetQueueInfo 获取任务队列信息
+func (r *ReAct) GetQueueInfo() map[string]interface{} {
+	queueingTasks := r.taskQueue.GetQueueingTasks()
+	taskInfos := make([]map[string]interface{}, 0, len(queueingTasks))
+
+	for _, task := range queueingTasks {
+		taskInfo := map[string]interface{}{
+			"id":         task.GetId(),
+			"user_input": task.GetUserInput(),
+			"status":     task.GetStatus(),
+			"created_at": task.GetCreatedAt(),
+			"focus_mode": task.GetFocusMode(),
+		}
+
+		taskInfos = append(taskInfos, taskInfo)
+	}
+
+	return map[string]interface{}{
+		"queue_name":    r.taskQueue.GetQueueName(),
+		"total_tasks":   r.taskQueue.GetQueueingCount(),
+		"is_processing": r.IsProcessingReAct(),
+		"tasks":         taskInfos,
+		"queue_empty":   r.taskQueue.IsEmpty(),
+	}
+}
+
+// processInputEvent processes a single input event and triggers ReAct loop
+func (r *ReAct) processInputEvent(event *ypb.AIInputEvent) error {
+	if r.config.DebugEvent {
+		log.Infof("Processing input event: IsFreeInput=%v, IsInteractive=%v", event.IsFreeInput, event.IsInteractiveMessage)
+	}
+
+	r.CallMirrorOfAIInputEvent(event)
+
+	if event.IsFreeInput {
+		return r.handleFreeValue(event)
+	} else if event.IsInteractiveMessage {
+		return r.handleInteractiveEvent(event)
+	} else if event.IsSyncMessage {
+		return r.handleSyncMessage(event)
+	}
+
+	log.Warnf("No valid input found in event: %v", event)
+	return nil
+}
+
+// startEventLoop starts the background event processing loop
+func (r *ReAct) startEventLoop(ctx context.Context, done chan struct{}) {
+	doneOnce := new(sync.Once)
+	if !r.pureInvokerMode {
+		r.config.InputEventManager.SetFreeInputCallback(r.handleFreeValue)
+	}
+	r.RegisterReActSyncEvent()
+	r.config.StartEventLoopEx(ctx,
+		func() {
+			doneOnce.Do(func() {
+				if done != nil {
+					close(done)
+				}
+			})
+		},
+		func() {
+			r.UnRegisterReActSyncEvent()
+			doneOnce.Do(func() {
+				if done != nil {
+					close(done)
+				}
+			})
+		})
+}
+
+func (r *ReAct) IsFinished() bool {
+	if r.GetCurrentTask() == nil {
+		return true
+	}
+	return r.GetCurrentTask().IsFinished()
+}
+
+func (r *ReAct) Wait() {
+	if r.wg == nil {
+		return
+	}
+	r.wg.Wait()
+}
+
+// loadMCPServers loads AI tools from enabled MCP servers asynchronously
+func (r *ReAct) loadMCPServers() {
+	go func() {
+		emitter := r.config.GetEmitter()
+		startLoadingPR, startLoadingPW := utils.NewPipe()
+		defer startLoadingPW.Close()
+		doneLoadingPR, doneLoadingPW := utils.NewPipe()
+		defer doneLoadingPW.Close()
+
+		m := new(sync.Mutex)
+		promptStartLoadingOnce := utils.NewOnce()
+		promptDoneLoadingOnce := utils.NewOnce()
+
+		tools, err := aitool.LoadAllEnabledAIToolsFromMCPServersWithCallback(
+			consts.GetGormProfileDatabase(),
+			r.config.Ctx,
+			func(mcpServer *schema.MCPServer) {
+				m.Lock()
+				defer m.Unlock()
+
+				promptStartLoadingOnce.Do(func() {
+					emitter.EmitDefaultStreamEvent(
+						"mcp-loader",
+						startLoadingPR,
+						r.config.GetRuntimeId(),
+					)
+					startLoadingPW.WriteString("Loading AI tools from MCP server: ")
+				})
+				startLoadingPW.WriteString(mcpServer.Name + " ")
+			}, func(mcpServer *schema.MCPServer, tools []*aitool.Tool, err error) {
+				m.Lock()
+				defer m.Unlock()
+
+				if len(tools) > 0 {
+					promptDoneLoadingOnce.Do(func() {
+						emitter.EmitDefaultStreamEvent(
+							"mcp-loader",
+							doneLoadingPR,
+							r.config.GetRuntimeId(),
+						)
+						doneLoadingPW.WriteString("Loaded AI tools from MCP servers: ")
+					})
+					doneLoadingPW.WriteString(fmt.Sprintf("@mcp[%v](%v tools) ", mcpServer.Name, len(tools)))
+				}
+			}, func(tools []*aitool.Tool, err error) {
+				startLoadingPW.Close()
+				doneLoadingPW.Close()
+			},
+		)
+		if err != nil {
+			log.Errorf("load tools failed: %v", err)
+		}
+		if len(tools) > 0 {
+			mng := r.config.GetAiToolManager()
+			mng.AppendTools(tools...)
+		}
+	}()
+}
+
+// cycle import issue
+
+func WithBuiltinTools() aicommon.ConfigOption {
+	return func(cfg *aicommon.Config) error {
+
+		// Get all builtin tools
+		allTools := buildinaitools.GetAllTools()
+
+		// Create a simple AI chat function for the searcher
+		aiChatFunc := func(prompt string) (io.Reader, error) {
+			response, err := ai.Chat(prompt)
+			if err != nil {
+				return nil, err
+			}
+			return strings.NewReader(response), nil
+		}
+
+		// Create keyword searcher
+		aiToolSearcher := rag_search_tool.NewComprehensiveSearcher[*aitool.Tool](rag_search_tool.AIToolVectorIndexName, aiChatFunc)
+		forgeSearcher := rag_search_tool.NewComprehensiveSearcher[*schema.AIForge](rag_search_tool.ForgeVectorIndexName, aiChatFunc)
+
+		log.Infof("Added %d builtin AI tools (search_capabilities is a built-in @action)", len(allTools))
+		return aicommon.WithAiToolManagerOptions(
+			buildinaitools.WithExtendTools(allTools, true),
+			buildinaitools.WithAIToolsSearcher(aiToolSearcher),
+			buildinaitools.WithAiForgeSearcher(forgeSearcher))(cfg)
+	}
+}
+
+// emitArtifactsSummaryToTimeline pushes a summary of the artifacts directory into the
+// timeline after plan/forge completion, and ensures EmitPinDirectory is called for UI visibility.
+// This provides an immediate notification layer; the persistent layer is ArtifactsContextProvider
+// which runs on every prompt build.
+func (r *ReAct) emitArtifactsSummaryToTimeline() {
+	artifactsDir := r.config.GetOrCreateWorkDir()
+	if artifactsDir == "" {
+		return
+	}
+
+	glance := filesys.Glance(artifactsDir)
+	if glance == "" {
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Artifacts directory: %s\n", artifactsDir))
+	sb.WriteString("Directory structure:\n")
+	sb.WriteString(glance)
+	r.AddToTimeline("artifacts_summary", sb.String())
+	log.Infof("emitted artifacts summary to timeline for dir: %s", artifactsDir)
+
+	// Ensure the artifacts directory is pinned for UI visibility
+	if !r.config.IsArtifactsPinned() {
+		if r.Emitter != nil {
+			r.Emitter.EmitPinDirectory(artifactsDir)
+		}
+		r.config.SetArtifactsPinned()
+	}
+}

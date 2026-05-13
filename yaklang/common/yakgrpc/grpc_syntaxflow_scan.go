@@ -1,0 +1,133 @@
+//go:build !irify_exclude
+
+package yakgrpc
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"sync/atomic"
+
+	"github.com/yaklang/yaklang/common/yak/ssaapi/ssaconfig"
+	"github.com/yaklang/yaklang/common/yak/syntaxflow_scan"
+	"github.com/yaklang/yaklang/common/yak/yaklib"
+
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+type syntaxFlowScanStream interface {
+	Send(response *ypb.SyntaxFlowScanResponse) error
+	Context() context.Context
+}
+
+type wrapperSyntaxFlowScanStream struct {
+	ctx       context.Context
+	root      ypb.Yak_SyntaxFlowScanServer
+	sendMutex *sync.Mutex
+}
+
+func newWrapperSyntaxFlowScanStream(ctx context.Context, stream ypb.Yak_SyntaxFlowScanServer) *wrapperSyntaxFlowScanStream {
+	return &wrapperSyntaxFlowScanStream{
+		root:      stream,
+		ctx:       ctx,
+		sendMutex: new(sync.Mutex),
+	}
+}
+
+func (w *wrapperSyntaxFlowScanStream) Send(r *ypb.SyntaxFlowScanResponse) error {
+	w.sendMutex.Lock()
+	defer w.sendMutex.Unlock()
+	return w.root.Send(r)
+}
+
+func (w *wrapperSyntaxFlowScanStream) Context() context.Context {
+	return w.ctx
+}
+
+func (s *Server) SyntaxFlowScan(stream ypb.Yak_SyntaxFlowScanServer) error {
+	rawConfig, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+
+	safeStream := newWrapperSyntaxFlowScanStream(stream.Context(), stream)
+
+	pause := atomic.Bool{}
+	go func() {
+		for {
+			rsp, err := stream.Recv()
+			if err != nil {
+				pause.Store(true)
+				return
+			}
+			if rsp.GetControlMode() == "pause" {
+				pause.Store(true)
+				return
+			}
+		}
+	}()
+
+	sendExecResult := func(taskId, status string, execResult *ypb.ExecResult) error {
+		execResult.RuntimeID = taskId
+		ret := &ypb.SyntaxFlowScanResponse{
+			TaskID:     taskId,
+			Status:     status,
+			ExecResult: execResult,
+		}
+		return safeStream.Send(ret)
+	}
+
+	err = syntaxflow_scan.Scan(safeStream.Context(),
+		ssaconfig.WithScanRaw(rawConfig),
+		syntaxflow_scan.WithPauseFunc(func() bool {
+			return pause.Load()
+		}),
+		syntaxflow_scan.WithProcessCallback(func(tid, s string, progress float64, info *syntaxflow_scan.RuleProcessInfoList) {
+			// update rule info
+			activeTasks := make([]*ypb.SyntaxFlowScanActiveTask, 0, len(info.Rules))
+			for _, rule := range info.Rules {
+				item := &ypb.SyntaxFlowScanActiveTask{
+					RuleName:    rule.RuleName,
+					ProgramName: rule.ProgramName,
+					Progress:    rule.Progress,
+					RunningTime: rule.UpdateTime - rule.StartTime,
+					Info:        rule.Info,
+				}
+
+				activeTasks = append(activeTasks, item)
+			}
+			if len(activeTasks) > 0 {
+				safeStream.Send(&ypb.SyntaxFlowScanResponse{
+					TaskID:     tid,
+					Status:     s,
+					ActiveTask: activeTasks,
+				})
+			}
+
+			// sendExecResult(tid, s, yaklib.NewYakitLogExecResult("code", info)) // 发送 rules info
+
+			// update progress
+			sendExecResult(tid, s, yaklib.NewYakitProgressExecResult("main", progress))
+			// status card
+			sendExecResult(tid, s, yaklib.NewYakitStatusCardExecResult("已执行规则", fmt.Sprintf("%d/%d", info.FinishedQuery, info.TotalQuery), "规则执行状态"))
+			sendExecResult(tid, s, yaklib.NewYakitStatusCardExecResult("已跳过规则", info.SkippedQuery, "规则执行状态"))
+			sendExecResult(tid, s, yaklib.NewYakitStatusCardExecResult("执行成功个数", info.SuccessQuery, "规则执行状态"))
+			sendExecResult(tid, s, yaklib.NewYakitStatusCardExecResult("执行失败个数", info.FailedQuery, "规则执行状态"))
+			sendExecResult(tid, s, yaklib.NewYakitStatusCardExecResult("检出漏洞/风险个数", info.RiskCount, "漏洞/风险状态"))
+		}),
+		syntaxflow_scan.WithScanResultCallback(func(sr *syntaxflow_scan.ScanResult) {
+			// 发送扫描结果
+			safeStream.Send(&ypb.SyntaxFlowScanResponse{
+				TaskID:   sr.TaskID,
+				Status:   sr.Status,
+				Result:   sr.Result.GetGRPCModelResult(),
+				SSARisks: sr.Result.GetGRPCModelRisk(),
+			})
+		}),
+		syntaxflow_scan.WithErrorCallback(func(taskid, status, format string, args ...any) {
+			// 发送错误信息
+			sendExecResult(taskid, status, yaklib.NewYakitLogExecResult("error", format, args...))
+		}),
+	)
+	return err
+}

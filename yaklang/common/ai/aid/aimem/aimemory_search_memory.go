@@ -1,0 +1,483 @@
+package aimem
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/ytoken"
+
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/bizhelper"
+)
+
+func (t *AIMemoryTriage) SearchMemory(origin any, tokenLimit int) (*aicommon.SearchMemoryResult, error) {
+	return t.searchMemoryWithAIOption(origin, tokenLimit, false)
+}
+
+func (t *AIMemoryTriage) SearchMemoryWithoutAI(origin any, tokenLimit int) (*aicommon.SearchMemoryResult, error) {
+	return t.searchMemoryWithAIOption(origin, tokenLimit, true)
+}
+
+func (t *AIMemoryTriage) SearchMemoryWithoutAIAndSemantics(origin any, tokenLimit int) (*aicommon.SearchMemoryResult, error) {
+	queryText := utils.InterfaceToString(origin)
+	if task, ok := origin.(aicommon.AIStatefulTask); ok {
+		queryText = strings.TrimSpace(task.GetUserInput())
+	}
+	return t.searchMemoryKeywordOnly(queryText, tokenLimit)
+}
+
+func (t *AIMemoryTriage) searchMemoryForAITask(task aicommon.AIStatefulTask, limit int, disableAI bool) (*aicommon.SearchMemoryResult, error) {
+	if task == nil {
+		return nil, errors.New("task is nil")
+	}
+
+	info := task.GetTaskRetrievalInfo()
+	var queryCandidates []string
+	var tags []string
+	if info != nil {
+		tags = append(tags, info.Tags...)
+		queryCandidates = append(queryCandidates, info.Questions...)
+		if strings.TrimSpace(info.Target) != "" {
+			queryCandidates = append(queryCandidates, info.Target)
+		}
+	}
+
+	userInput := strings.TrimSpace(task.GetUserInput())
+	if userInput != "" {
+		queryCandidates = append(queryCandidates, userInput)
+	}
+
+	queryCandidates = deduplicateTrimmedStrings(queryCandidates)
+	tags = deduplicateTrimmedStrings(tags)
+
+	if len(tags) == 0 && len(queryCandidates) == 0 {
+		return t.searchMemoryForText(userInput, limit, disableAI)
+	}
+
+	var allMemories []*aicommon.MemoryEntity
+	var searchSteps []string
+
+	if len(tags) > 0 {
+		tagMemories, err := t.SearchByTags(tags, false, 20)
+		if err != nil {
+			log.Warnf("failed to search task memories by tags: %v", err)
+			searchSteps = append(searchSteps, fmt.Sprintf("task tags search failed: %v", err))
+		} else {
+			allMemories = append(allMemories, tagMemories...)
+			searchSteps = append(searchSteps, fmt.Sprintf("found %d memories by task tags %v", len(tagMemories), tags))
+		}
+	}
+
+	for _, query := range queryCandidates {
+		semanticResults, err := t.SearchBySemantics(query, 15)
+		if err != nil {
+			log.Warnf("failed to search task memories by semantics for query %q: %v", utils.ShrinkString(query, 60), err)
+			searchSteps = append(searchSteps, fmt.Sprintf("semantic search failed for %q", utils.ShrinkString(query, 30)))
+			continue
+		}
+		for _, result := range semanticResults {
+			allMemories = append(allMemories, result.Entity)
+		}
+		searchSteps = append(searchSteps, fmt.Sprintf("found %d memories by semantic query %q", len(semanticResults), utils.ShrinkString(query, 30)))
+	}
+
+	if len(allMemories) == 0 {
+		primaryQuery := userInput
+		if primaryQuery == "" && len(queryCandidates) > 0 {
+			primaryQuery = queryCandidates[0]
+		}
+		result, err := t.searchMemoryForText(primaryQuery, limit, disableAI)
+		if err == nil && result != nil {
+			if result.SearchSummary != "" {
+				result.SearchSummary = strings.Join(append(searchSteps, result.SearchSummary), " -> ")
+			} else if len(searchSteps) > 0 {
+				result.SearchSummary = strings.Join(searchSteps, " -> ")
+			}
+		}
+		return result, err
+	}
+
+	uniqueMemories := t.deduplicateMemories(allMemories)
+	searchSteps = append(searchSteps, fmt.Sprintf("deduplicated to %d unique memories", len(uniqueMemories)))
+
+	rankQuery := strings.Join(append(append([]string{}, tags...), queryCandidates...), " ")
+	rankedMemories := t.rankMemoriesByRelevance(uniqueMemories, rankQuery)
+	searchSteps = append(searchSteps, "ranked memories by task retrieval info")
+
+	selectedMemories, totalContent, contentTokens := t.selectMemoriesByTokenLimit(rankedMemories, limit)
+	searchSteps = append(searchSteps, fmt.Sprintf("selected %d memories within %d token limit", len(selectedMemories), limit))
+
+	return &aicommon.SearchMemoryResult{
+		Memories:      selectedMemories,
+		TotalContent:  totalContent,
+		ContentTokens: contentTokens,
+		SearchSummary: strings.Join(searchSteps, " -> "),
+	}, nil
+}
+
+func (t *AIMemoryTriage) searchMemoryForText(queryText string, tokenLimit int, disableAI bool) (*aicommon.SearchMemoryResult, error) {
+
+	if strings.TrimSpace(queryText) == "" {
+		return &aicommon.SearchMemoryResult{
+			Memories:      []*aicommon.MemoryEntity{},
+			TotalContent:  "",
+			ContentTokens: 0,
+			SearchSummary: "empty query provided",
+		}, nil
+	}
+
+	log.Infof("searching memories for query: %s (token limit: %d)",
+		utils.ShrinkString(queryText, 100), tokenLimit)
+
+	var allMemories []*aicommon.MemoryEntity
+	var searchSteps []string
+
+	// 1. 使用 SelectTags 获取相关标签
+	ctx := context.Background()
+	var relevantTags []string
+	var err error
+	if !disableAI {
+		// AI 作用主要是在关键词搜索上可以更智能地选择标签
+		relevantTags, err = t.SelectTags(ctx, queryText)
+		if err != nil {
+			log.Warnf("failed to select tags: %v", err)
+			relevantTags = []string{} // 继续执行，但没有标签
+		}
+	}
+
+	searchSteps = append(searchSteps, fmt.Sprintf("selected %d relevant tags: %v", len(relevantTags), relevantTags))
+
+	// 2. 基于标签搜索记忆
+	if len(relevantTags) > 0 {
+		tagMemories, err := t.SearchByTags(relevantTags, false, 20) // 不要求全匹配，最多20个
+		if err != nil {
+			log.Warnf("failed to search by tags: %v", err)
+		} else {
+			allMemories = append(allMemories, tagMemories...)
+			searchSteps = append(searchSteps, fmt.Sprintf("found %d memories by tags", len(tagMemories)))
+		}
+	}
+
+	// 3. 基于语义搜索扩展
+	semanticResults, err := t.SearchBySemantics(queryText, 15) // 最多15个语义搜索结果
+	if err != nil {
+		log.Warnf("failed to search by semantics: %v", err)
+	} else {
+		for _, result := range semanticResults {
+			allMemories = append(allMemories, result.Entity)
+		}
+		searchSteps = append(searchSteps, fmt.Sprintf("found %d memories by semantics", len(semanticResults)))
+	}
+
+	// 4. 去重合并
+	uniqueMemories := t.deduplicateMemories(allMemories)
+	searchSteps = append(searchSteps, fmt.Sprintf("deduplicated to %d unique memories", len(uniqueMemories)))
+
+	// 5. 基于 C.O.R.E. P.A.C.T. 原则进行重排序和过滤
+	rankedMemories := t.rankMemoriesByRelevance(uniqueMemories, queryText)
+	searchSteps = append(searchSteps, "ranked memories by C.O.R.E. P.A.C.T. relevance")
+
+	// 6. select memories within token limit
+	selectedMemories, totalContent, contentTokens := t.selectMemoriesByTokenLimit(rankedMemories, tokenLimit)
+	searchSteps = append(searchSteps, fmt.Sprintf("selected %d memories within %d token limit", len(selectedMemories), tokenLimit))
+
+	searchSummary := strings.Join(searchSteps, " -> ")
+
+	log.Infof("memory search completed: %d memories, %d tokens content", len(selectedMemories), contentTokens)
+
+	return &aicommon.SearchMemoryResult{
+		Memories:      selectedMemories,
+		TotalContent:  totalContent,
+		ContentTokens: contentTokens,
+		SearchSummary: searchSummary,
+	}, nil
+}
+
+func (t *AIMemoryTriage) searchMemoryKeywordOnly(queryText string, tokenLimit int) (*aicommon.SearchMemoryResult, error) {
+	queryText = strings.TrimSpace(queryText)
+	if queryText == "" {
+		return &aicommon.SearchMemoryResult{
+			Memories:      []*aicommon.MemoryEntity{},
+			TotalContent:  "",
+			ContentTokens: 0,
+			SearchSummary: "empty query provided",
+		}, nil
+	}
+
+	db := t.GetDB()
+	if db == nil {
+		return nil, utils.Errorf("database connection is nil")
+	}
+
+	query := db.Model(&schema.AIMemoryEntity{}).Where("session_id = ?", t.sessionID)
+	query = bizhelper.FuzzSearchEx(query, []string{"content", "tags", "potential_questions"}, queryText, false)
+
+	var dbEntities []schema.AIMemoryEntity
+	if err := query.Order("created_at DESC").Limit(30).Find(&dbEntities).Error; err != nil {
+		return nil, utils.Errorf("keyword-only memory query failed: %v", err)
+	}
+
+	allMemories := make([]*aicommon.MemoryEntity, 0, len(dbEntities))
+	for _, dbEntity := range dbEntities {
+		allMemories = append(allMemories, memoryEntityFromDBEntity(dbEntity))
+	}
+
+	searchSteps := []string{
+		fmt.Sprintf("found %d memories by keyword-only LIKE query", len(allMemories)),
+		"semantic search disabled",
+	}
+
+	rankedMemories := t.rankMemoriesByRelevance(allMemories, queryText)
+	searchSteps = append(searchSteps, "ranked memories by keyword relevance")
+
+	selectedMemories, totalContent, contentTokens := t.selectMemoriesByTokenLimit(rankedMemories, tokenLimit)
+	searchSteps = append(searchSteps, fmt.Sprintf("selected %d memories within %d token limit", len(selectedMemories), tokenLimit))
+
+	return &aicommon.SearchMemoryResult{
+		Memories:      selectedMemories,
+		TotalContent:  totalContent,
+		ContentTokens: contentTokens,
+		SearchSummary: strings.Join(searchSteps, " -> "),
+	}, nil
+}
+
+func memoryEntityFromDBEntity(dbEntity schema.AIMemoryEntity) *aicommon.MemoryEntity {
+	return &aicommon.MemoryEntity{
+		Id:                 dbEntity.MemoryID,
+		CreatedAt:          dbEntity.CreatedAt,
+		Content:            dbEntity.Content,
+		Tags:               []string(dbEntity.Tags),
+		PotentialQuestions: []string(dbEntity.PotentialQuestions),
+		C_Score:            dbEntity.C_Score,
+		O_Score:            dbEntity.O_Score,
+		R_Score:            dbEntity.R_Score,
+		E_Score:            dbEntity.E_Score,
+		P_Score:            dbEntity.P_Score,
+		A_Score:            dbEntity.A_Score,
+		T_Score:            dbEntity.T_Score,
+		CorePactVector:     []float32(dbEntity.CorePactVector),
+	}
+}
+
+func (t *AIMemoryTriage) searchMemoryWithAIOption(origin any, tokenLimit int, disableAI bool) (*aicommon.SearchMemoryResult, error) {
+	queryText := utils.InterfaceToString(origin)
+	if task, ok := origin.(aicommon.AIStatefulTask); ok {
+		return t.searchMemoryForAITask(task, tokenLimit, disableAI)
+	}
+	return t.searchMemoryForText(queryText, tokenLimit, disableAI)
+}
+
+// deduplicateMemories 去重记忆列表
+func (t *AIMemoryTriage) deduplicateMemories(memories []*aicommon.MemoryEntity) []*aicommon.MemoryEntity {
+	seen := make(map[string]bool)
+	var unique []*aicommon.MemoryEntity
+
+	for _, memory := range memories {
+		if memory != nil && !seen[memory.Id] {
+			seen[memory.Id] = true
+			unique = append(unique, memory)
+		}
+	}
+
+	return unique
+}
+
+// rankMemoriesByRelevance 基于 C.O.R.E. P.A.C.T. 原则对记忆进行重排序
+// 现已集成改进的关键词系统
+func (t *AIMemoryTriage) rankMemoriesByRelevance(memories []*aicommon.MemoryEntity, query string) []*aicommon.MemoryEntity {
+	// 关键词匹配器在创建时已初始化
+
+	// 为每个记忆计算综合相关性分数
+	type ScoredMemory struct {
+		Memory         *aicommon.MemoryEntity
+		RelevanceScore float64
+	}
+
+	var scoredMemories []ScoredMemory
+
+	for _, memory := range memories {
+		// 基于 C.O.R.E. P.A.C.T. 计算综合分数
+		relevanceScore := t.calculateRelevanceScore(memory, query)
+		scoredMemories = append(scoredMemories, ScoredMemory{
+			Memory:         memory,
+			RelevanceScore: relevanceScore,
+		})
+	}
+
+	// 按相关性分数降序排序
+	sort.Slice(scoredMemories, func(i, j int) bool {
+		return scoredMemories[i].RelevanceScore > scoredMemories[j].RelevanceScore
+	})
+
+	// 过滤低分记忆（相关性分数低于0.3的记忆）
+	var rankedMemories []*aicommon.MemoryEntity
+	for _, scored := range scoredMemories {
+		if scored.RelevanceScore >= 0.3 {
+			rankedMemories = append(rankedMemories, scored.Memory)
+		}
+	}
+
+	log.Infof("ranked %d memories from %d, filtered threshold: 0.3", len(rankedMemories), len(scoredMemories))
+	return rankedMemories
+}
+
+// calculateRelevanceScore 基于 C.O.R.E. P.A.C.T. 原则计算记忆的相关性分数
+// 现已集成改进的关键词匹配系统
+func (t *AIMemoryTriage) calculateRelevanceScore(memory *aicommon.MemoryEntity, query string) float64 {
+	// 关键词匹配器在创建时已初始化，这里直接使用
+
+	// 权重设计基于搜索场景的重要性
+	weights := map[string]float64{
+		"R": 0.25, // Relevance - 最重要，直接影响搜索相关性
+		"C": 0.20, // Connectivity - 重要，关联度高的记忆更有价值
+		"T": 0.15, // Temporality - 时效性，新鲜的记忆更重要
+		"A": 0.15, // Actionability - 可操作性，能指导行为的记忆更有价值
+		"P": 0.10, // Preference - 个人偏好，个性化相关
+		"O": 0.10, // Origin - 来源可信度
+		"E": 0.05, // Emotion - 情感，在搜索中权重较低
+	}
+
+	// 计算加权分数
+	relevanceScore := weights["R"]*memory.R_Score +
+		weights["C"]*memory.C_Score +
+		weights["T"]*memory.T_Score +
+		weights["A"]*memory.A_Score +
+		weights["P"]*memory.P_Score +
+		weights["O"]*memory.O_Score +
+		weights["E"]*memory.E_Score
+
+	// 使用改进的关键词匹配系统计算内容相关性加成
+	contentBonus := t.calculateKeywordBonus(memory, query)
+
+	finalScore := relevanceScore + contentBonus
+
+	// 确保分数在0-1范围内
+	if finalScore > 1.0 {
+		finalScore = 1.0
+	}
+	if finalScore < 0.0 {
+		finalScore = 0.0
+	}
+
+	return finalScore
+}
+
+// calculateKeywordBonus 使用关键词系统计算匹配加成
+func (t *AIMemoryTriage) calculateKeywordBonus(memory *aicommon.MemoryEntity, query string) float64 {
+	if t.keywordMatcher == nil {
+		// 防御性编程：即使没有初始化，也返回0
+		return 0.0
+	}
+
+	contentBonus := 0.0
+
+	// 1. 内容关键词匹配分数 (权重: 0.1)
+	contentMatchScore := t.keywordMatcher.MatchScore(query, memory.Content)
+	contentBonus += contentMatchScore * 0.1
+
+	// 2. 标签关键词匹配 (权重: 0.08)
+	tagContent := strings.Join(memory.Tags, " ")
+	tagMatchScore := t.keywordMatcher.MatchScore(query, tagContent)
+	contentBonus += tagMatchScore * 0.08
+
+	// 3. 问题关键词匹配 (权重: 0.05)
+	questionContent := strings.Join(memory.PotentialQuestions, " ")
+	questionMatchScore := t.keywordMatcher.MatchScore(query, questionContent)
+	contentBonus += questionMatchScore * 0.05
+
+	// 4. 直接关键词包含检查 (权重: 0.05)
+	if t.keywordMatcher.ContainsKeyword(query, memory.Content) {
+		contentBonus += 0.05
+	}
+
+	// 5. 所有关键词都包含的奖励 (权重: 0.03)
+	if t.keywordMatcher.MatchAllKeywords(query, memory.Content) {
+		contentBonus += 0.03
+	}
+
+	// 限制加成不超过0.3
+	if contentBonus > 0.3 {
+		contentBonus = 0.3
+	}
+
+	log.Debugf("keyword bonus calculation for query '%s': content_match=%.3f, tag_match=%.3f, "+
+		"question_match=%.3f, has_keyword=%v, all_keywords=%v, total_bonus=%.3f",
+		utils.ShrinkString(query, 50),
+		contentMatchScore*0.1, tagMatchScore*0.08, questionMatchScore*0.05,
+		t.keywordMatcher.ContainsKeyword(query, memory.Content),
+		t.keywordMatcher.MatchAllKeywords(query, memory.Content),
+		contentBonus)
+
+	return contentBonus
+}
+
+// selectMemoriesByTokenLimit selects memories that fit within the given token limit.
+func (t *AIMemoryTriage) selectMemoriesByTokenLimit(memories []*aicommon.MemoryEntity, tokenLimit int) ([]*aicommon.MemoryEntity, string, int) {
+	if tokenLimit <= 0 {
+		return []*aicommon.MemoryEntity{}, "", 0
+	}
+
+	var selectedMemories []*aicommon.MemoryEntity
+	memoryTextMap := make(map[string]string)
+	totalTokens := 0
+
+	for _, memory := range memories {
+		var tagsBuilder strings.Builder
+		if len(memory.Tags) > 0 {
+			tagsBuilder.WriteString(" ")
+			for _, tag := range memory.Tags {
+				tagsBuilder.WriteString("#")
+				tagsBuilder.WriteString(tag)
+				tagsBuilder.WriteString(" ")
+			}
+		}
+
+		memoryText := fmt.Sprintf("- %s%s\n\n  %s\n\n",
+			memory.CreatedAt.Format("2006-01-02 15:04:05"),
+			tagsBuilder.String(),
+			memory.Content)
+
+		memoryTokens := ytoken.CalcTokenCount(memoryText)
+
+		if totalTokens+memoryTokens > tokenLimit {
+			if len(selectedMemories) == 0 && memoryTokens > tokenLimit {
+				headerText := fmt.Sprintf("- %s%s\n\n  ",
+					memory.CreatedAt.Format("2006-01-02 15:04:05"),
+					tagsBuilder.String())
+				availableTokens := tokenLimit - ytoken.CalcTokenCount(headerText)
+				if availableTokens > 10 {
+					truncatedContent := aicommon.ShrinkByTokens(memory.Content, availableTokens-5) + "..."
+					memoryText = headerText + truncatedContent + "\n\n"
+					selectedMemories = append(selectedMemories, memory)
+					memoryTextMap[memory.Id] = memoryText
+					totalTokens = ytoken.CalcTokenCount(memoryText)
+				}
+			}
+			break
+		}
+
+		selectedMemories = append(selectedMemories, memory)
+		memoryTextMap[memory.Id] = memoryText
+		totalTokens += memoryTokens
+	}
+
+	sort.Slice(selectedMemories, func(i, j int) bool {
+		return selectedMemories[i].CreatedAt.Before(selectedMemories[j].CreatedAt)
+	})
+
+	var sortedContentParts []string
+	for _, memory := range selectedMemories {
+		if text, ok := memoryTextMap[memory.Id]; ok {
+			sortedContentParts = append(sortedContentParts, text)
+		}
+	}
+
+	totalContent := strings.Join(sortedContentParts, "")
+	return selectedMemories, totalContent, totalTokens
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "report-file-created",
+    "description": "让模型生成一份 markdown 文件，并在事件中捕获生成文件路径",
+    "input": "请生成一份简短的测试markdown ，要求保存为 benchmark.md 文件。",
+    "pass": {
+      "eventMatch": "benchmark.md"
+    }
+  },
+  {
+    "name": "simple-stream-answer",
+    "description": "要求模型直接输出特定字符串，通过 stream 内容匹配判定通过",
+    "input": "请只输出字符串 STREAM_MATCH_OK，不要输出其他任何内容。",
+    "pass": {
+      "streamMatch": "STREAM_MATCH_OK"
+    }
+  }
+]

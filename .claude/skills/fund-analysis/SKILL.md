@@ -330,7 +330,7 @@ GROUP BY counterparty_bank ORDER BY accounts DESC
 
 ### 重要注意事项
 
-1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程
+1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel、自建入库流程、或编写 Python 脚本进行任何数据分析。所有分析指标和统计计算均通过 `excelcli query --sql` 执行 SQL 完成，团伙划分等复杂分析也不例外
 2. **必须先 inspect 再分析**：不同银行的数据格式差异很大，先 inspect 确认列名和数据格式
 3. **必须先 map 再 normalize**：normalize 依赖映射文件，map 生成的 JSON 文件是桥梁
 4. **标准化后使用英文标准列名**：`bank_transactions` 表使用上方列名对照表中的英文名，SQL 查询中禁止使用中文列名
@@ -432,35 +432,86 @@ GROUP BY counterparty_bank ORDER BY accounts DESC
 
 **子任务C1 — 基于设备信息的团伙划分**：
 
-IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件：
+IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件。以下所有操作均通过 `excelcli query --sql` 完成，禁止编写 Python 脚本。
 
-1. 从交易明细中提取所有支出方向（收付标志="出"）的交易记录
-2. 在出账记录中，统计每个IP/MAC地址涉及的"交易卡号"数量（即不同账户出账时使用同一设备）
-3. **关键**：只有在出账方向上共享同一IP/MAC的账户才视为设备关联
-4. 使用 Union-Find 算法：在出账记录中共享同一IP或MAC的账户归为同一团伙
-5. 输出每个团伙的成员、共享IP数、共享MAC数、与主体账户的交易金额
+**关键原则**：只有在出账方向（direction='out'）上共享同一IP/MAC的账户才视为设备关联。
+
+**步骤1 — 查找出账方向共享同一IP的账户组**：
+```sql
+SELECT ip, GROUP_CONCAT(DISTINCT account_no) as accounts,
+       COUNT(DISTINCT account_no) as account_count,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE direction='out' AND ip IS NOT NULL AND ip != ''
+GROUP BY ip HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+**步骤2 — 查找出账方向共享同一MAC的账户组**：
+```sql
+SELECT mac, GROUP_CONCAT(DISTINCT account_no) as accounts,
+       COUNT(DISTINCT account_no) as account_count,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE direction='out' AND mac IS NOT NULL AND mac != ''
+GROUP BY mac HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+**步骤3 — 在报告中归纳团伙**：根据上述 SQL 查询结果，将共享同一 IP 或 MAC 的账户归为同一团伙。如果两个 IP/MAC 查询结果中有重叠账户，手动合并为同一团伙。在报告中列出每个团伙的成员账户、共享设备信息、与主体账户的交易金额汇总
 
 **子任务C2 — 基于对手证件号前6位的地域聚合**：
 
-如交易明细中有"对手证件号"列：
-1. 提取对手证件号前6位（代表户籍所在地区划代码）
-2. 将相同前6位的对手账户归为同一地域团伙
-3. 身份证前6位相同意味着来自同一地区，在反洗钱场景中常与老乡团伙、地域性犯罪组织相关
-4. 统计每个地域组的成员数和与主体的交易金额
-5. 也可结合人员信息表中的"工作单位""单位地址"进行交叉验证
+如交易明细中有"对手证件号"列，通过 `excelcli query --sql` 执行以下查询。身份证前6位代表户籍所在地区划代码，相同前6位意味着来自同一地区，在反洗钱场景中常与老乡团伙、地域性犯罪组织相关。
+
+```sql
+SELECT SUBSTR(counterparty_id_no, 1, 6) as region_code,
+       COUNT(DISTINCT counterparty_account) as account_count,
+       GROUP_CONCAT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE counterparty_id_no IS NOT NULL AND counterparty_id_no != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY region_code HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+也可结合人员信息表中的"工作单位""单位地址"进行交叉验证，在报告中归纳地域团伙结论。
 
 **子任务C3 — 基于对手开户银行的聚类分析**：
 
-如交易明细中有"对手开户银行"列：
-1. 统计每个开户银行涉及的对手账户数和交易金额
-2. 集中在同一银行/网点开立的多个对手账户可能提示有组织的开户行为
+如交易明细中有"对手开户银行"列，通过 `excelcli query --sql` 执行以下查询。集中在同一银行/网点开立的多个对手账户可能提示有组织的开户行为。
+
+```sql
+SELECT counterparty_bank,
+       COUNT(DISTINCT counterparty_account) as account_count,
+       GROUP_CONCAT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE counterparty_bank IS NOT NULL AND counterparty_bank != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_bank HAVING account_count >= 3
+ORDER BY account_count DESC
+```
 
 **子任务C4 — 基于交易关系和身份特征的团伙拓展**：
 
-1. 同名账户关联：不同账户号但户名相同，视为同一人控制
-2. 稳定资金关系：高频次、大金额的固定交易对手
-3. 交易关键词关联：摘要中含"换汇""换钱"等关键词的对手账户
-4. 关联人员信息：通过证件号匹配人员信息表，分析对手的工作单位、单位地址是否集中
+通过 `excelcli query --sql` 完成以下分析，无需编写代码：
+
+1. **同名账户关联**：不同账户号但户名相同，视为同一人控制（使用前文 SQL 查询 #13 "同名多户控制人"）
+2. **稳定资金关系**：高频次、大金额的固定交易对手，通过以下 SQL 查询：
+```sql
+SELECT counterparty_account, counterparty_name, direction,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total,
+       ROUND(AVG(amount),2) as avg_amount
+FROM bank_transactions
+WHERE counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account, counterparty_name, direction
+HAVING txn_count >= 10 AND total >= 100000
+ORDER BY txn_count DESC
+```
+3. **交易关键词关联**：摘要中含"换汇""换钱"等关键词的对手账户（使用前文 SQL 查询 #11 "可疑关键词交易"）
+4. **关联人员信息**：通过证件号匹配人员信息表，分析对手的工作单位、单位地址是否集中
 
 **数据缺失处理**：
 - 如果交易明细中没有IP/MAC列：跳过C1，仅做C2-C4
@@ -530,11 +581,11 @@ IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件�
 - 对手证件号前6位地域高度集中
 - 对手开户银行集中度高
 
-匹配到模式后，在报告中按"四层模型"描述经营模式：
-1. **资金归集层**（收款阶段）：上游账户归集客户资金
-2. **资金中转层**（结算阶段）：核心账户整合与分配
-3. **资金分配层**（分配阶段）：向下游分发
-4. **变现层**（付款阶段）：现金取款或购汇
+匹配到模式后，在报告中基于阶段 A-D 的已有分析结果（无需额外编程或计算），按"四层模型"归纳描述经营模式：
+1. **资金归集层**（收款阶段）：根据阶段 B 的 TOP10 来源表，描述上游资金如何归集
+2. **资金中转层**（结算阶段）：根据阶段 A 的收支平衡度和快进快出指标，描述核心账户的整合与分配行为
+3. **资金分配层**（分配阶段）：根据阶段 B 的 TOP10 去向表，描述向下游分发的路径
+4. **变现层**（付款阶段）：根据阶段 A 的现金交易统计，描述现金取款或购汇行为
 
 ---
 

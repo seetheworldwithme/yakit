@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/js/bootstrap_5.3/bootstrap.min.css">
+    <link rel="icon" href="/static/favicon.ico">
+    <style>
+        .list-group-item:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .main-container {
+            width: 100%;
+            max-width: calc(100% - 20px);
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        @media (min-width: 768px) {
+            .main-container {
+                max-width: calc(100% - 40px);
+                padding: 0 20px;
+            }
+        }
+        @media (min-width: 1200px) {
+            .main-container {
+                max-width: calc(100% - 60px);
+                padding: 0 30px;
+            }
+        }
+        @media (min-width: 1600px) {
+            .main-container {
+                max-width: calc(100% - 600px);
+                padding: 0 30px;
+            }
+        }
+        #resultArea {
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #outputTextArea {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .result-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            white-space: pre-wrap;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .node-group {
+            margin-bottom: 15px;
+            background-color: white;
+            border-radius: 4px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .node-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 4px;
+        }
+        .reason-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        #reasonContent {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        #contextIdDisplay {
+            font-family: monospace;
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .result-textarea {
+            width: 100%;
+            min-height: 100px;
+            font-family: monospace;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            resize: vertical;
+        }
+        .node-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .auto-scroll-checkbox {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .auto-scroll-checkbox input {
+            margin-right: 5px;
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .btn-group {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid main-container">
+            <a class="navbar-brand" href="/static">Vulinbox - Agent</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" target="_blank" href="/">yaklang.io</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" target="_blank" href="/_/ws">WS Proto Agent</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" target="_blank" href="/_/submit-ai-practice">AI 训练集测试：AI-Knowledge-Base Practice</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div class="main-container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">代码提交</h3>
+        </div>
+        <div class="card-body">
+            <form>
+                <div class="mb-3">
+                    <label for="codeContent" class="form-label">代码内容</label>
+                    <textarea class="form-control" id="codeContent" rows="10" placeholder="请输入代码内容" 
+                        style="font-family: monospace; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="apiKey" class="form-label">API Key</label>
+                    <input type="password" class="form-control" id="apiKey" placeholder="请输入 API Key">
+                </div>
+                <div class="mb-3">
+                    <label for="collectKey" class="form-label">AI 素材提交 Key</label>
+                    <input type="password" class="form-control" id="collectKey" placeholder="请输入 AI 素材提交 Key">
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-secondary" onclick="submitToAI()" id="submitBtn">AI 样本生成</button>
+                    <button type="button" class="btn btn-danger" onclick="cancelAI()" id="cancelBtn" style="display: none;">取消生成</button>
+                </div>
+                <div id="resultArea" style="display: none;">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4>执行状态</h4>
+                            <div class="text-muted">
+                                <small>任务ID: <span id="contextIdDisplay">-</span></small>
+                            </div>
+                        </div>
+                        <div id="reasonContent" class="mt-2"></div>
+                    </div>
+                    <div id="outputTextArea">
+                        <h4>分析结果：</h4>
+                        <div id="textContent"></div>
+                    </div>
+                </div>
+                <script>
+                    let currentContextId = null;
+
+                    function updateContextId(id) {
+                        currentContextId = id;
+                        document.getElementById('contextIdDisplay').textContent = id || '-';
+                    }
+
+                    // 保存数据到 localStorage
+                    function saveToLocalStorage() {
+                        const code = document.getElementById('codeContent').value;
+                        const apiKey = document.getElementById('apiKey').value;
+                        const collectKey = document.getElementById('collectKey').value;
+                        
+                        localStorage.setItem('aiPractice_code', code);
+                        localStorage.setItem('aiPractice_apiKey', apiKey);
+                        localStorage.setItem('aiPractice_collectKey', collectKey);
+                    }
+
+                    // 从 localStorage 加载数据
+                    function loadFromLocalStorage() {
+                        const code = localStorage.getItem('aiPractice_code');
+                        const apiKey = localStorage.getItem('aiPractice_apiKey');
+                        const collectKey = localStorage.getItem('aiPractice_collectKey');
+                        
+                        if (code) {
+                            document.getElementById('codeContent').value = code;
+                        }
+                        if (apiKey) {
+                            document.getElementById('apiKey').value = apiKey;
+                        }
+                        if (collectKey) {
+                            document.getElementById('collectKey').value = collectKey;
+                        }
+                    }
+
+                    // 页面加载时自动加载数据
+                    document.addEventListener('DOMContentLoaded', loadFromLocalStorage);
+
+                    // 监听输入变化，自动保存
+                    document.getElementById('codeContent').addEventListener('input', saveToLocalStorage);
+                    document.getElementById('apiKey').addEventListener('input', saveToLocalStorage);
+                    document.getElementById('collectKey').addEventListener('input', saveToLocalStorage);
+
+                    async function cancelAI() {
+                        if (currentContextId) {
+                            try {
+                                const response = await fetch(`/_/cancel-ai-practice?id=${currentContextId}`);
+                                if (response.ok) {
+                                    document.getElementById('reasonContent').innerHTML = '<div class="reason-item">已取消生成</div>';
+                                }
+                            } catch (error) {
+                                console.error('Failed to cancel:', error);
+                            }
+                            updateContextId(null);
+                            document.getElementById('submitBtn').disabled = false;
+                            document.getElementById('cancelBtn').style.display = 'none';
+                        }
+                    }
+
+                    async function submitToAI() {
+                        const resultArea = document.getElementById('resultArea');
+                        const textContent = document.getElementById('textContent');
+                        const reasonContent = document.getElementById('reasonContent');
+                        const apiKey = document.getElementById('apiKey').value;
+                        const submitBtn = document.getElementById('submitBtn');
+                        const cancelBtn = document.getElementById('cancelBtn');
+                        
+                        if (!apiKey) {
+                            alert('请输入 API Key');
+                            return;
+                        }
+
+                        // 添加 loading 状态到提交按钮
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 分析中...';
+                        submitBtn.disabled = true;
+
+                        // 重置当前上下文ID
+                        updateContextId(null);
+                        
+                        const data = {
+                            code: document.getElementById('codeContent').value,
+                            apiKey: apiKey
+                        };
+
+                        resultArea.style.display = 'block';
+                        textContent.innerHTML = '<div class="result-item">正在分析中...</div>';
+                        reasonContent.innerHTML = '<div class="reason-item">初始化中...</div>';
+
+                        // 用于存储按 node_id 分组的输出
+                        const nodeOutputs = new Map();
+
+                        try {
+                            const response = await fetch('/_/ai-analyze', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            });
+
+                            const reader = response.body.getReader();
+                            const decoder = new TextDecoder();
+                            let buffer = '';
+                            while (true) {
+                                const {value, done} = await reader.read();
+                                if (done) break;
+                                
+                                buffer += decoder.decode(value, {stream: true});
+                                let newlineIndex;
+                                
+                                // 逐行处理缓冲区中的数据
+                                while ((newlineIndex = buffer.indexOf('\r\n')) !== -1) {
+                                    const line = buffer.slice(0, newlineIndex);
+                                    buffer = buffer.slice(newlineIndex + 2);
+                                    
+                                    if (!line.trim()) continue;
+                                    
+                                    try {
+                                        const result = JSON.parse(line);
+                                        
+                                        // 只在 currentContextId 为空时保存第一个 UUID
+                                        if (!currentContextId && result.context_id) {
+                                            updateContextId(result.context_id);
+                                        }
+                                        
+                                        if (result.output_reason) {
+                                            // 更新 reason 面板，只显示最新的内容
+                                            const reasonDiv = document.createElement('div');
+                                            reasonDiv.className = 'reason-item';
+                                            reasonDiv.textContent = result.output_reason;
+                                            reasonContent.innerHTML = ''; // 清除旧内容
+                                            reasonContent.appendChild(reasonDiv);
+                                        }
+
+                                        if (result.output_text) {
+                                            // 按 node_id 分组处理 output_text
+                                            const nodeId = result.output_node_id || 'default';
+                                            if (!nodeOutputs.has(nodeId)) {
+                                                nodeOutputs.set(nodeId, []);
+                                                // 创建新的节点组
+                                                const groupDiv = document.createElement('div');
+                                                groupDiv.className = 'node-group';
+                                                groupDiv.innerHTML = `
+                                                    <div class="node-title">节点 ${nodeId}</div>
+                                                    <div class="node-controls">
+                                                        <div class="auto-scroll-checkbox">
+                                                            <input type="checkbox" id="auto-scroll-${nodeId}" checked>
+                                                            <label for="auto-scroll-${nodeId}">自动滚动</label>
+                                                        </div>
+                                                    </div>
+                                                    <div id="node-${nodeId}-content"></div>
+                                                `;
+                                                textContent.appendChild(groupDiv);
+                                            }
+                                            
+                                            const nodeContent = document.getElementById(`node-${nodeId}-content`);
+                                            const outputs = nodeOutputs.get(nodeId);
+                                            outputs.push(result.output_text);
+                                            
+                                            // 清空现有内容
+                                            nodeContent.innerHTML = '';
+                                            
+                                            // 创建 textarea 显示内容
+                                            const textarea = document.createElement('textarea');
+                                            textarea.className = 'result-textarea';
+                                            textarea.readOnly = true;
+                                            textarea.value = outputs.join('');
+                                            nodeContent.appendChild(textarea);
+                                            
+                                            // 检查是否需要自动滚动
+                                            const autoScrollCheckbox = document.getElementById(`auto-scroll-${nodeId}`);
+                                            if (autoScrollCheckbox && autoScrollCheckbox.checked) {
+                                                textarea.scrollTop = textarea.scrollHeight;
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.info(line)
+                                        console.error('Failed to parse JSON:', e);
+                                    }
+                                }
+                            }
+                            
+                            // 处理最后可能剩余的不完整行
+                            if (buffer.trim()) {
+                                try {
+                                    const result = JSON.parse(buffer);
+                                    // 处理最后一行数据...
+                                } catch (e) {
+                                    console.error('Failed to parse final JSON:', e);
+                                }
+                            }
+                        } catch (error) {
+                            textContent.innerHTML += `<div class="result-item text-danger">错误: ${error.message}</div>`;
+                        } finally {
+                            // 恢复提交按钮状态
+                            submitBtn.innerHTML = 'AI 样本生成';
+                            submitBtn.disabled = false;
+                            cancelBtn.style.display = 'none';
+                            
+                            // 获取最终结果
+                            if (currentContextId) {
+                                fetchFinalResult(currentContextId);
+                            }
+                            
+                            updateContextId(null);
+                        }
+                    }
+
+                    async function fetchFinalResult(contextId) {
+                        try {
+                            const response = await fetch(`/_/ai-practice-result?id=${contextId}`);
+                            if (response.ok) {
+                                const result = await response.json();
+                                
+                                // 折叠过程结果
+                                const reasonContent = document.getElementById('reasonContent');
+                                reasonContent.innerHTML = '<div class="reason-item">分析已完成</div>';
+                                
+                                // 显示最终结果
+                                const textContent = document.getElementById('textContent');
+                                
+                                // 创建最终结果区域
+                                const finalResultDiv = document.createElement('div');
+                                finalResultDiv.className = 'node-group';
+                                finalResultDiv.innerHTML = `
+                                    <div class="node-title">最终结果</div>
+                                    <div id="final-result-content"></div>
+                                `;
+                                
+                                // 将最终结果添加到顶部
+                                if (textContent.firstChild) {
+                                    textContent.insertBefore(finalResultDiv, textContent.firstChild);
+                                } else {
+                                    textContent.appendChild(finalResultDiv);
+                                }
+                                
+                                const finalResultContent = document.getElementById('final-result-content');
+                                
+                                // 筛选数据
+                                let selectedData = null;
+                                let dataSource = '';
+                                
+                                // 优先检查 End_DrQn7F 节点
+                                if (result['End_DrQn7F']) {
+                                    selectedData = result['End_DrQn7F'];
+                                    dataSource = 'End_DrQn7F';
+                                } 
+                                // 其次检查 LLM_pBed 节点
+                                else if (result['LLM_pBed']) {
+                                    selectedData = result['LLM_pBed'];
+                                    dataSource = 'LLM_pBed';
+                                }
+                                // 最后检查其他 END_ 开头的节点
+                                else {
+                                    const endNodes = {};
+                                    for (const [key, value] of Object.entries(result)) {
+                                        if (key.startsWith('END_')) {
+                                            endNodes[key] = value;
+                                        }
+                                    }
+                                    
+                                    if (Object.keys(endNodes).length > 0) {
+                                        selectedData = Object.values(endNodes).join('\n\n');
+                                        dataSource = 'END_';
+                                    }
+                                }
+                                
+                                if (!selectedData) {
+                                    showResultModal('无可用数据', { error: '未找到 End_DrQn7F、LLM_pBed 或 END_ 开头的节点数据' });
+                                    return;
+                                }
+                                
+                                // 直接开始创建结果展示
+                                for (const [key, value] of Object.entries(result)) {
+                                    const sectionDiv = document.createElement('div');
+                                    sectionDiv.className = 'result-section mb-3';
+                                    
+                                    // 创建标题
+                                    const titleDiv = document.createElement('div');
+                                    titleDiv.className = 'result-section-title d-flex justify-content-between align-items-center';
+                                    
+                                    const titleText = document.createElement('span');
+                                    titleText.textContent = key;
+                                    titleText.style.fontWeight = 'bold';
+                                    titleText.style.color = '#0d6efd';
+                                    
+                                    const uploadButton = document.createElement('button');
+                                    uploadButton.className = 'btn btn-sm btn-outline-primary';
+                                    uploadButton.innerHTML = '<i class="bi bi-upload"></i> 上传此节点';
+                                    uploadButton.onclick = async () => {
+                                        const collectKey = document.getElementById('collectKey').value;
+                                        if (!collectKey) {
+                                            showResultModal('提交失败', { error: '请填写收集 Key' });
+                                            return;
+                                        }
+                                        
+                                        try {
+                                            await submitData(key, value);
+                                        } catch (error) {
+                                            console.error('上传节点数据失败:', error);
+                                            showResultModal('上传失败', { error: error.message });
+                                        }
+                                    };
+                                    
+                                    titleDiv.appendChild(titleText);
+                                    titleDiv.appendChild(uploadButton);
+                                    titleDiv.style.marginBottom = '8px';
+                                    sectionDiv.appendChild(titleDiv);
+                                    
+                                    // 创建内容
+                                    const contentTextarea = document.createElement('textarea');
+                                    contentTextarea.className = 'result-textarea';
+                                    contentTextarea.readOnly = true;
+                                    contentTextarea.value = value;
+                                    contentTextarea.style.minHeight = '120px';
+                                    sectionDiv.appendChild(contentTextarea);
+                                    
+                                    finalResultContent.appendChild(sectionDiv);
+                                }
+                                
+                                // 添加原始 JSON 数据（折叠状态）
+                                const rawJsonDiv = document.createElement('div');
+                                rawJsonDiv.className = 'mt-3';
+                                
+                                const rawJsonToggle = document.createElement('button');
+                                rawJsonToggle.className = 'btn btn-sm btn-outline-secondary mb-2';
+                                rawJsonToggle.textContent = '显示原始 JSON';
+                                rawJsonToggle.onclick = function() {
+                                    const rawJson = document.getElementById('raw-json-content');
+                                    if (rawJson.style.display === 'none') {
+                                        rawJson.style.display = 'block';
+                                        this.textContent = '隐藏原始 JSON';
+                                    } else {
+                                        rawJson.style.display = 'none';
+                                        this.textContent = '显示原始 JSON';
+                                    }
+                                };
+                                rawJsonDiv.appendChild(rawJsonToggle);
+                                
+                                const rawJsonContent = document.createElement('div');
+                                rawJsonContent.id = 'raw-json-content';
+                                rawJsonContent.style.display = 'none';
+                                
+                                const rawJsonTextarea = document.createElement('textarea');
+                                rawJsonTextarea.className = 'result-textarea';
+                                rawJsonTextarea.readOnly = true;
+                                rawJsonTextarea.value = JSON.stringify(result, null, 2);
+                                rawJsonContent.appendChild(rawJsonTextarea);
+                                
+                                rawJsonDiv.appendChild(rawJsonContent);
+                                finalResultContent.appendChild(rawJsonDiv);
+                                
+                                // 收集并提交节点数据
+                                collectAndSubmitEndNodes(result);
+                                
+                                // 折叠其他节点
+                                const nodeGroups = document.querySelectorAll('.node-group:not(:first-child)');
+                                nodeGroups.forEach(group => {
+                                    const title = group.querySelector('.node-title');
+                                    const content = group.querySelector('[id^="node-"]');
+                                    
+                                    // 添加折叠/展开功能
+                                    title.style.cursor = 'pointer';
+                                    title.innerHTML += ' <span class="toggle-icon">▼</span>';
+                                    
+                                    // 默认折叠
+                                    content.style.display = 'none';
+                                    title.querySelector('.toggle-icon').textContent = '▶';
+                                    
+                                    title.addEventListener('click', () => {
+                                        if (content.style.display === 'none') {
+                                            content.style.display = 'block';
+                                            title.querySelector('.toggle-icon').textContent = '▼';
+                                        } else {
+                                            content.style.display = 'none';
+                                            title.querySelector('.toggle-icon').textContent = '▶';
+                                        }
+                                    });
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch final result:', error);
+                        }
+                    }
+
+                    // 收集并提交节点数据
+                    async function collectAndSubmitEndNodes(result) {
+                        try {
+                            // 获取收集 Key
+                            const collectKey = document.getElementById('collectKey').value;
+                            if (!collectKey) {
+                                console.log('收集 Key 未填写，无法提交数据');
+                                showResultModal('提交失败', { error: '请填写收集 Key' });
+                                return;
+                            }
+                            
+                            // 筛选数据
+                            let selectedData = null;
+                            let dataSource = '';
+                            
+                            // 优先检查 End_DrQn7F 节点
+                            if (result['End_DrQn7F']) {
+                                selectedData = result['End_DrQn7F'];
+                                dataSource = 'End_DrQn7F';
+                            } 
+                            // 其次检查 LLM_pBed 节点
+                            else if (result['LLM_pBed']) {
+                                selectedData = result['LLM_pBed'];
+                                dataSource = 'LLM_pBed';
+                            }
+                            // 最后检查其他 END_ 开头的节点
+                            else {
+                                const endNodes = {};
+                                for (const [key, value] of Object.entries(result)) {
+                                    if (key.startsWith('END_')) {
+                                        endNodes[key] = value;
+                                    }
+                                }
+                                
+                                if (Object.keys(endNodes).length > 0) {
+                                    selectedData = Object.values(endNodes).join('\n\n');
+                                    dataSource = 'END_';
+                                }
+                            }
+                            
+                            if (!selectedData) {
+                                showResultModal('无可用数据', { error: '未找到 End_DrQn7F、LLM_pBed 或 END_ 开头的节点数据' });
+                                return;
+                            }
+                            
+                            // 显示确认对话框
+                            const modalDiv = document.createElement('div');
+                            modalDiv.innerHTML = `
+                                <div class="modal fade" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">确认上传</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>已找到${dataSource}数据，是否上传？</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                <button type="button" class="btn btn-primary" id="confirmUploadBtn">确认上传</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            document.body.appendChild(modalDiv);
+                            
+                            const modal = new bootstrap.Modal(modalDiv.querySelector('.modal'));
+                            modal.show();
+                            
+                            // 使用事件监听器处理确认上传
+                            const confirmBtn = document.getElementById('confirmUploadBtn');
+                            confirmBtn.addEventListener('click', async () => {
+                                // 添加 loading 状态
+                                confirmBtn.disabled = true;
+                                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 上传中...';
+                                
+                                try {
+                                    await submitData(dataSource, selectedData);
+                                } finally {
+                                    modal.hide();
+                                }
+                            });
+                            
+                            modalDiv.addEventListener('hidden.bs.modal', () => {
+                                document.body.removeChild(modalDiv);
+                            });
+                        } catch (error) {
+                            console.error('处理数据失败:', error);
+                            showResultModal('处理错误', { error: error.message });
+                        }
+                    }
+                    
+                    // 修改 submitData 函数，增加对单个节点的处理
+                    async function submitData(dataSource, content) {
+                        const uploadButtons = document.querySelectorAll('.btn-outline-primary');
+                        try {
+                            // 禁用所有上传按钮并显示 loading 状态
+                            uploadButtons.forEach(btn => {
+                                btn.disabled = true;
+                                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 上传中...';
+                            });
+
+                            const collectKey = document.getElementById('collectKey').value;
+                            
+                            let finalContent = content;
+                            if (dataSource.startsWith('END_') || dataSource === 'LLM_pBed') {
+                                finalContent = content;
+                            } else {
+                                finalContent = content;
+                            }
+                            
+                            const response = await fetch(`https://netutils.cc/api/ai/training/material/collect?key=${encodeURIComponent(collectKey)}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'text/plain'
+                                },
+                                body: finalContent
+                            });
+                            
+                            if (response.ok) {
+                                const responseData = await response.json();
+                                showResultModal('提交成功', {
+                                    source: dataSource,
+                                    response: responseData
+                                });
+                            } else {
+                                const errorText = await response.text();
+                                showResultModal('提交失败', { error: errorText, status: response.status });
+                            }
+                        } catch (error) {
+                            console.error('提交数据失败:', error);
+                            showResultModal('提交错误', { error: error.message });
+                        } finally {
+                            // 恢复所有上传按钮状态
+                            uploadButtons.forEach(btn => {
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="bi bi-upload"></i> 上传此节点';
+                            });
+                        }
+                    }
+                    
+                    // 显示结果弹框
+                    function showResultModal(title, data) {
+                        // 创建模态框
+                        const modalDiv = document.createElement('div');
+                        modalDiv.className = 'modal fade';
+                        modalDiv.id = 'resultModal';
+                        modalDiv.setAttribute('tabindex', '-1');
+                        modalDiv.setAttribute('aria-labelledby', 'resultModalLabel');
+                        modalDiv.setAttribute('aria-hidden', 'true');
+                        
+                        modalDiv.innerHTML = `
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="resultModalLabel">${title}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <textarea class="form-control result-textarea" style="min-height: 300px; font-family: monospace;" readonly>${JSON.stringify(data, null, 2)}</textarea>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">关闭</button>
+                                        <button type="button" class="btn btn-secondary" onclick="copyModalContent()">复制内容</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // 添加到 body
+                        document.body.appendChild(modalDiv);
+                        
+                        // 显示模态框
+                        const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+                        modal.show();
+                        
+                        // 模态框关闭后移除
+                        document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
+                            document.body.removeChild(modalDiv);
+                        });
+                    }
+                    
+                    // 复制模态框内容
+                    function copyModalContent() {
+                        const textarea = document.querySelector('#resultModal textarea');
+                        textarea.select();
+                        document.execCommand('copy');
+                        
+                        // 显示复制成功提示
+                        const copyBtn = document.querySelector('#resultModal .btn-secondary');
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = '已复制!';
+                        setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                        }, 2000);
+                    }
+
+                    function validateForm() {
+                        const code = document.getElementById('codeContent').value;
+                        
+                        if(code) {
+                            document.getElementById('submitBtn').disabled = false;
+                        } else {
+                            alert('请确保代码内容已填写!');
+                        }
+                    }
+                </script>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div style="height: 200px;"></div>
+
+<!-- 引入 Bootstrap JavaScript -->
+<script src="/static/js/bootstrap_5.3/popper.min.js"></script>
+<script src="/static/js/bootstrap_5.3/bootstrap.min.js"></script>
+</body>
+</html>

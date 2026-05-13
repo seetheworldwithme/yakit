@@ -75,3 +75,30 @@ ExcelCLI/db/
 ExcelCLI/target/
 ExcelCLI/report/
 test_data/
+
+# --- from yaklang/.gitignore ---
+*.yakc
+*.test
+*.out
+*.a
+yakmisc-*
+yaklang/gen/
+yaklang/gen/*
+yaklang/yak
+yaklang/build/
+yaklang/.cursor
+yaklang/.antlr/
+yaklang/.go-version
+yaklang/.gocache
+yaklang/.ace-tool/
+yaklang/common/xlic/*.gzip
+
+# gzip_embed generated archives
+yaklang/common/ai/aid/aitool/buildinaitools/yakscripttools/*.tar.gz
+yaklang/common/aiforge/*.tar.gz
+yaklang/common/coreplugin/*.tar.gz
+yaklang/common/syntaxflow/sfbuildin/*.tar.gz
+yaklang/common/yso/resources/*.tar.gz
+yaklang/common/yak/ssa2llvm/runtime/embed/*.tar.gz
+yaklang/common/yak/ssa2llvm/runtime/embed/ssa2llvm-runtime/
+yaklang/ssa2llvm

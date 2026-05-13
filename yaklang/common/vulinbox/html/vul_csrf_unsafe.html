@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="/static/js/bootstrap_5.3/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <div id="authcheck" class="row justify-content-center mt-5">
+        <div class="col-md-4">
+            <h2 class="text-center mb-4">修改信息</h2>
+            <div id="message" style="color: red;"></div>
+            <div class="mb-3">
+                <p class="lead">{{.Info}}</p>
+            </div>
+            <form id="registerForm" action="/csrf/unsafe" method="POST">
+                <div class="mb-3">
+                    <label for="info" class="form-label">信息</label>
+                    <input class="form-control" id="info" name="info" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">修改</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+yakit.AutoInitYakit()
+
+# Input your code!
+
+grainedMap = {
+    "UltraFine": 4 * 1024,
+    "Fine":10 * 1024,
+    "Medium":20 * 1024,
+    "Coarse":40 * 1024
+}
+
+filePath := cli.FileNames("files", cli.setVerboseName("分析文件"),cli.setRequired(true))
+kbName := cli.String("kbName", cli.setVerboseName("知识库名"),cli.setDefault("default"),cli.setRequired(true))
+prompt := cli.String("prompt", cli.setVerboseName("补充提示词"))
+entryLength := cli.Int("entrylen", cli.setVerboseName("知识条目长度限制"),cli.setDefault(1000))
+chunkGrained := cli.StringSlice("chunksize", cli.setVerboseName("切片粒度"),
+    cli.setHelp("针对纯文本的切片大小限制,默认: 中粒度 20k"),
+    cli.setSelectOption("超细粒度 4k", "UltraFine"),
+    cli.setSelectOption("细粒度 10k", "Fine"),
+    cli.setSelectOption("中粒度 20k", "Medium"),
+    cli.setSelectOption("粗粒度 40k", "Coarse"),
+)
+chunkSizeInput := cli.Int("chunk", cli.setVerboseName("自定义切片大小(字节)"), cli.setHelp("优先于粒度选择，未设置则使用粒度"))
+concurrency := cli.Int("concurrency", cli.setVerboseName("分析并发数"), cli.setDefault(20))
+khoplimit := cli.Int("klimit", cli.setVerboseName("实体子图数量限制"),cli.setDefault(300))
+k := cli.Int("k", cli.setVerboseName("实体子图跳数"))
+kmin := cli.Int("kmin",cli.setVerboseName("实体子图最小跳数"),cli.setDefault(2))
+kmax := cli.Int("kmax", cli.setVerboseName("实体子图最大跳数"),cli.setDefault(4))
+disableERM := cli.Bool("disableERM", cli.setVerboseName("禁用实体库构建"),cli.setDefault(false))
+
+cli.check()
+
+chunkSize  := 20 * 1024
+
+if chunkSizeInput > 0 {
+    chunkSize = chunkSizeInput
+} else if len(chunkGrained) > 0 {
+    yakit.Output(chunkGrained[0])
+    if grainedMap[chunkGrained[0]] != nil {
+        chunkSize = grainedMap[chunkGrained[0]]
+    }
+}
+
+yakit.Output(chunkSize)
+
+
+options := [
+    rag.ctx(context.Background()),
+    rag.statusCard(yakit.StatusCard),
+    rag.entryLength(entryLength),
+    rag.extraPrompt(prompt),
+    rag.log(yakit.Info),
+    rag.khopkMin(kmin),
+    rag.khopLimit(khoplimit),
+    rag.disableERM(disableERM),
+    rag.chunkSize(chunkSize),
+    rag.analyzeConcurrency(concurrency),
+]
+
+if kmax > kmin {
+    options = append(options, rag.khopkMax(kmax))
+}
+
+if k > 0 {
+    options = append(options, rag.khopk(k))
+}
+
+hasValidData := false
+
+for path in filePath {
+    yakit.StatusCard("building target", path)
+    fileReuslt,err :=  rag.BuildCollectionFromFile(kbName, path,options...)
+    if err != nil {
+        yakit.Error("Build collection for file [%s] fail: %v", path, err)
+        continue
+    }
+    for i in fileReuslt {
+        hasValidData = true
+        if i != nil {
+            yakit.Output(i.KnowledgeTitle)
+        }
+    }
+}
+
+if !hasValidData {
+    yakit.StatusCard("提示","为获取到有效知识库数据")
+    die("未获取到有效知识库数据")
+}

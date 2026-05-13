@@ -1,0 +1,654 @@
+package sfreport
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/lib/pq"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/yak/ssa/ssadb"
+	"github.com/yaklang/yaklang/common/yak/ssaapi"
+	"github.com/yaklang/yaklang/common/yak/yaklib/codec"
+)
+
+type DataFlowPath struct {
+	Description string      `json:"description"`
+	Nodes       []*NodeInfo `json:"nodes"`
+	Edges       []*EdgeInfo `json:"edges"`
+	DotGraph    string      `json:"dot_graph,omitempty"`
+}
+
+type NodeInfo struct {
+	NodeID          string            `json:"node_id"`
+	IRCode          string            `json:"ir_code"`
+	SourceCode      string            `json:"source_code,omitempty"`
+	SourceCodeStart int               `json:"source_code_start,omitempty"`
+	CodeRange       *ssaapi.CodeRange `json:"code_range,omitempty"`
+	IRSourceHash    string            `json:"ir_source_hash"`
+	StartOffset     int               `json:"start_offset"`
+	EndOffset       int               `json:"end_offset"`
+	IsEntryNode     bool              `json:"is_entry_node"`
+}
+
+type EdgeInfo struct {
+	EdgeID        string `json:"edge_id"`
+	FromNodeID    string `json:"from_node_id"`
+	ToNodeID      string `json:"to_node_id"`
+	EdgeType      string `json:"edge_type"`
+	AnalysisStep  int64  `json:"analysis_step"`
+	AnalysisLabel string `json:"analysis_label"`
+}
+
+// MarshalMinimalDataFlowPath converts a full DataFlowPath to a minimal
+// JSON representation for streaming by stripping heavy fields (DotGraph,
+// SourceCode, CodeRange). Returns nil for nil or empty paths.
+func MarshalMinimalDataFlowPath(p *DataFlowPath) ([]byte, error) {
+	if p == nil {
+		return nil, nil
+	}
+
+	nodes := make([]*NodeInfo, 0, len(p.Nodes))
+	for _, n := range p.Nodes {
+		if n == nil {
+			continue
+		}
+		nodes = append(nodes, &NodeInfo{
+			NodeID:       n.NodeID,
+			IRCode:       n.IRCode,
+			IRSourceHash: n.IRSourceHash,
+			StartOffset:  n.StartOffset,
+			EndOffset:    n.EndOffset,
+			IsEntryNode:  n.IsEntryNode,
+		})
+	}
+	edges := make([]*EdgeInfo, 0, len(p.Edges))
+	for _, e := range p.Edges {
+		if e == nil {
+			continue
+		}
+		edges = append(edges, &EdgeInfo{
+			EdgeID:        e.EdgeID,
+			FromNodeID:    e.FromNodeID,
+			ToNodeID:      e.ToNodeID,
+			EdgeType:      e.EdgeType,
+			AnalysisStep:  e.AnalysisStep,
+			AnalysisLabel: e.AnalysisLabel,
+		})
+	}
+
+	if len(nodes) == 0 && len(edges) == 0 {
+		return nil, nil
+	}
+
+	return json.Marshal(&DataFlowPath{
+		Description: p.Description,
+		Nodes:       nodes,
+		Edges:       edges,
+	})
+}
+
+func GenerateDataFlowAnalysis(risk *schema.SSARisk, minimal bool, values ...*ssaapi.Value) (*DataFlowPath, []string, error) {
+	if risk.ResultID == 0 || risk.Variable == "" {
+		return nil, nil, utils.Errorf("risk has no valid result ID or variable")
+	}
+
+	var value *ssaapi.Value
+	if len(values) > 0 {
+		value = values[0]
+	}
+
+	if utils.IsNil(value) {
+		var err error
+		value, err = GetValueByRisk(risk)
+		if err != nil {
+			return nil, nil, utils.Errorf("get value by risk failed: %v", err)
+		}
+	}
+	// 这儿行为图的产生是GraphKindShow而不是GraphKindDump
+	// 因此产生的图数据而直接存数据库的行为是不一致的
+	// 但是好像又不影响最后查看结果
+	dotGraph := ssaapi.NewDotGraph()
+	value.GenerateGraph(dotGraph)
+	nodes, edges, irSourceHashes := coverNodeAndEdgeInfos(dotGraph, value, minimal)
+
+	path := &DataFlowPath{
+		Description: generatePathDescription(risk),
+		Nodes:       nodes,
+		Edges:       edges,
+	}
+	if !minimal {
+		path.DotGraph = dotGraph.String()
+	}
+	return path, irSourceHashes, nil
+}
+
+func generatePathDescription(risk *schema.SSARisk) string {
+	return fmt.Sprintf("Data flow path for %s vulnerability in %s", risk.RiskType, risk.ProgramName)
+}
+
+func coverNodeAndEdgeInfos(graph *ssaapi.DotGraph, entryValue *ssaapi.Value, minimal bool) ([]*NodeInfo, []*EdgeInfo, []string) {
+	nodes := make([]*NodeInfo, 0, graph.NodeCount())
+	edges := make([]*EdgeInfo, 0)
+	irSourceHashes := make([]string, 0)
+	graph.ForEach(func(s string, v *ssaapi.Value) {
+		rng := v.GetRange()
+		if rng == nil {
+			return
+		}
+		nodeInfo := &NodeInfo{
+			NodeID:      s,
+			IRCode:      v.String(),
+			StartOffset: rng.GetStartOffset(),
+			EndOffset:   rng.GetEndOffset(),
+			IsEntryNode: entryValue != nil && v == entryValue,
+		}
+		if !minimal {
+			codeRange, source := ssaapi.CoverCodeRange(rng)
+			nodeInfo.SourceCode = source
+			nodeInfo.SourceCodeStart = 0
+			nodeInfo.CodeRange = codeRange
+		}
+		irSourceHash := rng.GetEditor().GetIrSourceHash()
+		nodeInfo.IRSourceHash = irSourceHash
+		irSourceHashes = append(irSourceHashes, irSourceHash)
+		nodes = append(nodes, nodeInfo)
+	})
+
+	edgeCache := make(map[string]struct{})
+	for edgeID, edge := range graph.Graph.GetAllEdges() {
+		if edge == nil {
+			continue
+		}
+
+		fromNode := edge.From()
+		toNode := edge.To()
+		if fromNode == nil || toNode == nil {
+			continue
+		}
+
+		hash := codec.Md5(fmt.Sprintf(
+			"%d-%d-%s",
+			fromNode.ID(),
+			toNode.ID(),
+			edge.Label,
+		))
+		if _, ok := edgeCache[hash]; ok {
+			continue
+		}
+		edgeCache[hash] = struct{}{}
+
+		typ := ssadb.ValidEdgeType(edge.Label)
+		edgeInfo := &EdgeInfo{
+			EdgeID:        fmt.Sprintf("e%d", edgeID),
+			EdgeType:      string(typ),
+			AnalysisLabel: edge.Label,
+		}
+		switch typ {
+		case ssadb.EdgeType_Predecessor:
+			edgeInfo.ToNodeID = nodeId(fromNode.ID())
+			edgeInfo.FromNodeID = nodeId(toNode.ID())
+		default:
+			edgeInfo.ToNodeID = nodeId(toNode.ID())
+			edgeInfo.FromNodeID = nodeId(fromNode.ID())
+		}
+		edges = append(edges, edgeInfo)
+	}
+
+	return nodes, edges, irSourceHashes
+}
+
+func nodeId(i int) string {
+	return fmt.Sprintf("n%d", i)
+}
+
+func (n *NodeInfo) ToAuditNode(riskHash string) *ssadb.AuditNode {
+	if n == nil {
+		return nil
+	}
+	an := ssadb.NewAuditNode()
+	an.AuditNodeStatus = ssadb.AuditNodeStatus{
+		RiskHash: riskHash,
+	}
+	an.IsEntryNode = n.IsEntryNode
+	an.IRCodeID = -1
+	an.TmpValue = n.IRCode
+	an.TmpValueFileHash = n.IRSourceHash
+	an.TmpStartOffset = n.StartOffset
+	an.TmpEndOffset = n.EndOffset
+	return an
+}
+
+func (e *EdgeInfo) ToAuditEdge(m map[string]string) *ssadb.AuditEdge {
+	if e == nil || m == nil {
+		return nil
+	}
+	from, ok1 := m[e.FromNodeID]
+	to, ok2 := m[e.ToNodeID]
+	if !ok1 || !ok2 {
+		return nil
+	}
+	return &ssadb.AuditEdge{
+		FromNode:      from,
+		ToNode:        to,
+		EdgeType:      ssadb.ValidEdgeType(e.EdgeType),
+		AnalysisLabel: e.AnalysisLabel,
+		AnalysisStep:  e.AnalysisStep,
+	}
+}
+
+type SaveDataFlowCtx struct {
+	db       *gorm.DB
+	nodeMap  map[string]string // nodeId -> nodeid
+	riskHash string
+}
+
+func NewSaveDataFlowCtx(db *gorm.DB, riskHash string) *SaveDataFlowCtx {
+	return &SaveDataFlowCtx{
+		db:       db,
+		nodeMap:  make(map[string]string),
+		riskHash: riskHash,
+	}
+}
+
+// tryBeginTx attempts to start a transaction; returns (tx, true) on success,
+// or (sc.db, false) if the transaction cannot be started.
+func (sc *SaveDataFlowCtx) tryBeginTx() (*gorm.DB, bool) {
+	tx := sc.db.Begin()
+	if tx == nil || tx.Error != nil {
+		return sc.db, false
+	}
+	return tx, true
+}
+
+func (sc *SaveDataFlowCtx) commitOrRollback(tx *gorm.DB) {
+	if err := tx.Commit().Error; err != nil {
+		_ = tx.Rollback().Error
+		log.Errorf("save dataflow commit failed: %v", err)
+	}
+}
+
+func (sc *SaveDataFlowCtx) SaveDataFlow(dp *DataFlowPath) {
+	if sc == nil || dp == nil || len(dp.Nodes) == 0 {
+		return
+	}
+	tx, isTx := sc.tryBeginTx()
+	sc.saveAuditNodes(tx, dp.Nodes, defaultDataflowBatchSize())
+	sc.saveAuditEdges(tx, dp.Edges, defaultDataflowBatchSize())
+	if isTx {
+		sc.commitOrRollback(tx)
+	}
+}
+
+func defaultDataflowBatchSize() int {
+	// Allow tuning without code changes.
+	// Example: SSA_STREAM_DATAFLOW_BATCH_SIZE=500
+	if raw := os.Getenv("SSA_STREAM_DATAFLOW_BATCH_SIZE"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+			if v > 5000 {
+				return 5000
+			}
+			return v
+		}
+	}
+	return 500
+}
+
+func (sc *SaveDataFlowCtx) saveAuditNodes(db *gorm.DB, nodes []*NodeInfo, batchSize int) error {
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	toInsert := make([]*ssadb.AuditNode, 0, len(nodes))
+	for _, n := range nodes {
+		if n == nil {
+			continue
+		}
+		if sc.nodeMap[n.NodeID] != "" {
+			continue
+		}
+		auditNode := n.ToAuditNode(sc.riskHash)
+		if auditNode == nil {
+			continue
+		}
+		sc.nodeMap[n.NodeID] = auditNode.NodeID
+		toInsert = append(toInsert, auditNode)
+	}
+
+	if len(toInsert) == 0 {
+		return nil
+	}
+
+	if err := insertAuditNodesMultiValues(db, toInsert, batchSize); err == nil {
+		return nil
+	}
+
+	// Fallback to row-by-row to preserve best-effort behavior.
+	for _, an := range toInsert {
+		if an == nil {
+			continue
+		}
+		if e := db.Create(an).Error; e != nil {
+			log.Errorf("save audit node failed: %v", e)
+		}
+	}
+	return nil
+}
+
+func (sc *SaveDataFlowCtx) saveAuditEdges(db *gorm.DB, edges []*EdgeInfo, batchSize int) error {
+	if len(edges) == 0 {
+		return nil
+	}
+
+	toInsert := make([]*ssadb.AuditEdge, 0, len(edges))
+	for _, e := range edges {
+		if e == nil {
+			continue
+		}
+		auditEdge := e.ToAuditEdge(sc.nodeMap)
+		if auditEdge == nil || auditEdge.FromNode == "" || auditEdge.ToNode == "" {
+			continue
+		}
+		toInsert = append(toInsert, auditEdge)
+	}
+	if len(toInsert) == 0 {
+		return nil
+	}
+
+	if err := insertAuditEdgesMultiValues(db, toInsert, batchSize); err == nil {
+		return nil
+	}
+
+	// Fallback to row-by-row.
+	for _, ae := range toInsert {
+		if ae == nil {
+			continue
+		}
+		if e := db.Create(ae).Error; e != nil {
+			log.Errorf("save audit edge failed: %v", e)
+		}
+	}
+	return nil
+}
+
+func insertAuditNodesMultiValues(db *gorm.DB, items []*ssadb.AuditNode, batchSize int) error {
+	if db == nil || len(items) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+
+	table := db.NewScope(&ssadb.AuditNode{}).TableName()
+	cols := []string{
+		"created_at",
+		"updated_at",
+		"task_id",
+		"result_id",
+		"result_variable",
+		"result_index",
+		"risk_hash",
+		"rule_name",
+		"rule_title",
+		"program_name",
+		"is_entry_node",
+		"ir_code_id",
+		"node_id",
+		"tmp_value",
+		"tmp_value_file_hash",
+		"tmp_start_offset",
+		"tmp_end_offset",
+		"verbose_name",
+	}
+
+	if raw := strings.TrimSpace(os.Getenv("SSA_STREAM_DATAFLOW_INSERT_MODE")); raw != "" {
+		if raw == "copy" || strings.EqualFold(raw, "copy") {
+			if err := insertAuditNodesCopyIn(db, table, cols, items, batchSize); err == nil {
+				return nil
+			} else {
+				log.Warnf("dataflow nodes copy-in failed, fallback to multi-values: %v", err)
+			}
+		}
+	}
+
+	now := time.Now()
+	for i := 0; i < len(items); i += batchSize {
+		j := i + batchSize
+		if j > len(items) {
+			j = len(items)
+		}
+		batch := items[i:j]
+		var sb strings.Builder
+		sb.Grow(256 + len(batch)*64)
+		sb.WriteString("INSERT INTO ")
+		sb.WriteString(table)
+		sb.WriteString(" (")
+		sb.WriteString(strings.Join(cols, ","))
+		sb.WriteString(") VALUES ")
+
+		args := make([]any, 0, len(batch)*18)
+		for idx, n := range batch {
+			if idx > 0 {
+				sb.WriteByte(',')
+			}
+			sb.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+			args = append(args,
+				now,
+				now,
+				n.TaskId,
+				n.ResultId,
+				n.ResultVariable,
+				n.ResultIndex,
+				n.RiskHash,
+				n.RuleName,
+				n.RuleTitle,
+				n.ProgramName,
+				n.IsEntryNode,
+				n.IRCodeID,
+				n.NodeID,
+				n.TmpValue,
+				n.TmpValueFileHash,
+				n.TmpStartOffset,
+				n.TmpEndOffset,
+				n.VerboseName,
+			)
+		}
+		if err := db.Exec(sb.String(), args...).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertAuditEdgesMultiValues(db *gorm.DB, items []*ssadb.AuditEdge, batchSize int) error {
+	if db == nil || len(items) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+
+	table := db.NewScope(&ssadb.AuditEdge{}).TableName()
+	cols := []string{
+		"created_at",
+		"updated_at",
+		"task_id",
+		"result_id",
+		"from_node",
+		"to_node",
+		"program_name",
+		"edge_type",
+		"analysis_step",
+		"analysis_label",
+	}
+
+	if raw := strings.TrimSpace(os.Getenv("SSA_STREAM_DATAFLOW_INSERT_MODE")); raw != "" {
+		if raw == "copy" || strings.EqualFold(raw, "copy") {
+			if err := insertAuditEdgesCopyIn(db, table, cols, items, batchSize); err == nil {
+				return nil
+			} else {
+				log.Warnf("dataflow edges copy-in failed, fallback to multi-values: %v", err)
+			}
+		}
+	}
+
+	now := time.Now()
+	for i := 0; i < len(items); i += batchSize {
+		j := i + batchSize
+		if j > len(items) {
+			j = len(items)
+		}
+		batch := items[i:j]
+		var sb strings.Builder
+		sb.Grow(256 + len(batch)*48)
+		sb.WriteString("INSERT INTO ")
+		sb.WriteString(table)
+		sb.WriteString(" (")
+		sb.WriteString(strings.Join(cols, ","))
+		sb.WriteString(") VALUES ")
+
+		args := make([]any, 0, len(batch)*10)
+		for idx, e := range batch {
+			if idx > 0 {
+				sb.WriteByte(',')
+			}
+			sb.WriteString("(?,?,?,?,?,?,?,?,?,?)")
+			args = append(args,
+				now,
+				now,
+				e.TaskId,
+				e.ResultId,
+				e.FromNode,
+				e.ToNode,
+				e.ProgramName,
+				string(e.EdgeType),
+				e.AnalysisStep,
+				e.AnalysisLabel,
+			)
+		}
+		if err := db.Exec(sb.String(), args...).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertAuditNodesCopyIn(db *gorm.DB, table string, cols []string, items []*ssadb.AuditNode, batchSize int) error {
+	if db == nil || len(items) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+	common := db.CommonDB()
+	if common == nil {
+		return utils.Errorf("nil CommonDB")
+	}
+	// COPY is significantly faster than multi-values INSERT for large batches.
+	for i := 0; i < len(items); i += batchSize {
+		j := i + batchSize
+		if j > len(items) {
+			j = len(items)
+		}
+		batch := items[i:j]
+		stmt, err := common.Prepare(pq.CopyIn(table, cols...))
+		if err != nil {
+			return err
+		}
+		now := time.Now()
+		for _, n := range batch {
+			if n == nil {
+				continue
+			}
+			if _, err := stmt.Exec(
+				now,
+				now,
+				n.TaskId,
+				n.ResultId,
+				n.ResultVariable,
+				n.ResultIndex,
+				n.RiskHash,
+				n.RuleName,
+				n.RuleTitle,
+				n.ProgramName,
+				n.IsEntryNode,
+				n.IRCodeID,
+				n.NodeID,
+				n.TmpValue,
+				n.TmpValueFileHash,
+				n.TmpStartOffset,
+				n.TmpEndOffset,
+				n.VerboseName,
+			); err != nil {
+				_ = stmt.Close()
+				return err
+			}
+		}
+		if _, err := stmt.Exec(); err != nil {
+			_ = stmt.Close()
+			return err
+		}
+		if err := stmt.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertAuditEdgesCopyIn(db *gorm.DB, table string, cols []string, items []*ssadb.AuditEdge, batchSize int) error {
+	if db == nil || len(items) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+	common := db.CommonDB()
+	if common == nil {
+		return utils.Errorf("nil CommonDB")
+	}
+	for i := 0; i < len(items); i += batchSize {
+		j := i + batchSize
+		if j > len(items) {
+			j = len(items)
+		}
+		batch := items[i:j]
+		stmt, err := common.Prepare(pq.CopyIn(table, cols...))
+		if err != nil {
+			return err
+		}
+		now := time.Now()
+		for _, e := range batch {
+			if e == nil {
+				continue
+			}
+			if _, err := stmt.Exec(
+				now,
+				now,
+				e.TaskId,
+				e.ResultId,
+				e.FromNode,
+				e.ToNode,
+				e.ProgramName,
+				string(e.EdgeType),
+				e.AnalysisStep,
+				e.AnalysisLabel,
+			); err != nil {
+				_ = stmt.Close()
+				return err
+			}
+		}
+		if _, err := stmt.Exec(); err != nil {
+			_ = stmt.Close()
+			return err
+		}
+		if err := stmt.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

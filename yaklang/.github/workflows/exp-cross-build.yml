@@ -1,0 +1,749 @@
+name: Cross-Build-Yak
+
+# 版本命名规则和 Build Tag 说明:
+# 
+# 版本类型              Build Tag              输出文件名前缀          示例
+# ------------------------------------------------------------------------------------------------
+# v1.3.0-yakit-beta     irify_exclude          yaklang_yakit_         yaklang_yakit_linux_amd64
+# v1.3.0-irify-beta     yakit_exclude          yaklang_irify_         yaklang_irify_linux_amd64
+# v1.3.0-beta/alpha     gzip_embed             yak_                   yak_linux_amd64
+#
+# 说明:
+# - yakit 版本: 排除 irify 功能，使用 irify_exclude build tag，文件名前缀为 yaklang_yakit_
+# - irify 版本: 排除 yakit 功能，使用 yakit_exclude build tag，文件名前缀为 yaklang_irify_
+# - 标准版本: 包含所有功能，使用默认 gzip_embed build tag，文件名前缀为 yak_
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - '.github/workflows/exp-cross-build.yml'
+
+jobs:
+  check_commit_msg:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check Commit Message
+        run: |
+          git clone https://github.com/yaklang/yaklang && cd yaklang
+          git fetch --all
+          
+          if [[ -n "$GITHUB_HEAD_REF" ]]; then
+            REF=$GITHUB_HEAD_REF
+          else
+            REF=${GITHUB_REF#refs/*/}
+          fi
+          git checkout $REF
+          echo "Switched to $REF"
+
+          git checkout $REF
+          echo "generate commit messages ... "
+          ./scripts/generate-commit.sh
+          echo "-------------"
+          # 检查 /tmp/raw_commit_message.txt 文件是否存在
+          if [ ! -f /tmp/raw_commit_message.txt ]; then
+            echo "Error: /tmp/raw_commit_message.txt does not exist."
+            exit 1
+          fi
+          echo "/tmp/raw_commit_message.txt is existed continue..."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: raw_commit_message.txt
+          path: /tmp/raw_commit_message.txt
+
+  build_and_upload_to_oss:
+    needs: check_commit_msg
+    outputs:
+      YAK_TAG: ${{ steps.get_tag.outputs.YAK_TAG}}
+    strategy:
+      matrix:
+        os:
+          - windows
+          - windows7
+          # macos amd64
+          - macos-15-intel
+          # macos arm64
+          - macos-15
+          - linux-amd64
+          - linux-arm64
+        include:
+          - os: windows
+            binary: yak_windows_amd64.exe
+            env: $env:GITHUB_ENV
+          - os: windows7
+            binary: yak_windows_legacy_amd64.exe
+            env: $env:GITHUB_ENV
+          - os: macos-15-intel
+            binary: yak_darwin_amd64
+            env: $GITHUB_ENV
+            CGO_ENABLED: 1
+            GOOS: darwin
+            GOARCH: amd64
+          - os: macos-15
+            binary: yak_darwin_arm64
+            env: $GITHUB_ENV
+            CGO_ENABLED: 1
+            GOOS: darwin
+            GOARCH: arm64
+          - os: linux-amd64
+            binary: yak_linux_amd64
+            env: $GITHUB_ENV
+            CGO_ENABLED: 1
+            GOOS: linux
+            GOARCH: amd64
+            CC: x86_64-linux-gnu-gcc
+          - os: linux-arm64
+            binary: yak_linux_arm64
+            env: $GITHUB_ENV
+            CGO_ENABLED: 1
+            GOOS: linux
+            GOARCH: arm64
+            CC: aarch64-linux-gnu-gcc
+    runs-on: ${{ contains(matrix.os, 'windows') && 'windows-latest' || 'macos-14' }}
+    steps:
+      # build
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "./go.mod"
+          cache: false
+        id: go
+
+      # - name: Cache Go modules
+      #   uses: actions/cache@v3
+      #   id: cache-go-modules
+      #   with:
+      #     path: ~/go/pkg/mod
+      #     key: go-modules-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+      #     restore-keys: |
+      #       go-modules-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Download Yak Binary (for repos-tag)
+        id: download_yak
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "::group::Downloading Yak binary from OSS"
+          
+          # 检测当前 runner 的操作系统和架构
+          # 我们需要下载与 runner 匹配的二进制，而不是与目标编译平台匹配的二进制
+          RUNNER_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          RUNNER_ARCH=$(uname -m)
+          
+          # 标准化 runner 架构名称
+          if [ "$RUNNER_ARCH" = "x86_64" ]; then
+            RUNNER_ARCH_NORM="amd64"
+          elif [ "$RUNNER_ARCH" = "amd64" ]; then
+            RUNNER_ARCH_NORM="amd64"
+          elif [ "$RUNNER_ARCH" = "aarch64" ] || [ "$RUNNER_ARCH" = "arm64" ]; then
+            RUNNER_ARCH_NORM="arm64"
+          else
+            RUNNER_ARCH_NORM="$RUNNER_ARCH"
+          fi
+          
+          # 标准化 runner OS 名称并构建二进制名称
+          if [ "$RUNNER_OS" = "darwin" ]; then
+            RUNNER_OS_NORM="darwin"
+            BINARY_NAME="yak_darwin_${RUNNER_ARCH_NORM}"
+            # macOS 也尝试下载 amd64 版本（Rosetta 2 支持）
+            BINARY_NAMES=("yak_darwin_${RUNNER_ARCH_NORM}" "yak_darwin_amd64")
+          elif [ "$RUNNER_OS" = "linux" ]; then
+            RUNNER_OS_NORM="linux"
+            BINARY_NAME="yak_linux_${RUNNER_ARCH_NORM}"
+            BINARY_NAMES=("yak_linux_${RUNNER_ARCH_NORM}")
+          elif echo "$RUNNER_OS" | grep -qi "mingw\|msys\|cygwin"; then
+            RUNNER_OS_NORM="windows"
+            BINARY_NAME="yak_windows_${RUNNER_ARCH_NORM}.exe"
+            BINARY_NAMES=("yak_windows_${RUNNER_ARCH_NORM}.exe")
+          else
+            RUNNER_OS_NORM="$RUNNER_OS"
+            BINARY_NAME="yak_${RUNNER_OS_NORM}_${RUNNER_ARCH_NORM}"
+            BINARY_NAMES=("yak_${RUNNER_OS_NORM}_${RUNNER_ARCH_NORM}")
+          fi
+          
+          echo "Runner: $RUNNER_OS_NORM/$RUNNER_ARCH_NORM"
+          echo "Will try to download binaries: ${BINARY_NAMES[*]}"
+          
+          # 尝试多个版本源：latest -> 从版本列表中获取第一个非 -yakit- 和 -irify- 的版本
+          VERSIONS_TO_TRY=("latest")
+          
+          # 尝试从版本列表获取可用版本（排除 -yakit- 和 -irify-）
+          if SELECTED_VERSION=$(bash ./scripts/get-yak-version.sh --quiet 2>/dev/null); then
+            # 如果找到合适的版本，添加到尝试列表
+            if [ -n "$SELECTED_VERSION" ]; then
+              echo "✅ Found suitable version: $SELECTED_VERSION"
+              VERSIONS_TO_TRY+=("$SELECTED_VERSION")
+            fi
+          fi
+          
+          echo "Will try versions: ${VERSIONS_TO_TRY[*]}"
+          
+          # 依次尝试下载每个二进制名称和版本
+          for BINARY_NAME in "${BINARY_NAMES[@]}"; do
+            for VERSION in "${VERSIONS_TO_TRY[@]}"; do
+              DOWNLOAD_URL="https://aliyun-oss.yaklang.com/yak/${VERSION}/${BINARY_NAME}"
+              echo "Trying to download from: $DOWNLOAD_URL"
+              
+              # 下载文件并捕获 HTTP 状态码和错误
+              TEMP_STDERR=$(mktemp)
+              HTTP_CODE=$(curl -w "%{http_code}" -sS -L "$DOWNLOAD_URL" -o yak 2>"$TEMP_STDERR")
+              CURL_ERROR=$(cat "$TEMP_STDERR")
+              rm -f "$TEMP_STDERR"
+              CURL_EXIT=$?
+              
+              # 检查 curl 是否成功
+              if [ $CURL_EXIT -ne 0 ]; then
+                echo "❌ curl failed with exit code: $CURL_EXIT"
+                if [ -n "$CURL_ERROR" ]; then
+                  echo "Error: $CURL_ERROR"
+                fi
+                rm -f yak
+                continue
+              fi
+              
+              # 检查 HTTP 状态码
+              if [ "$HTTP_CODE" != "200" ]; then
+                echo "❌ HTTP error: $HTTP_CODE"
+                if [ -n "$CURL_ERROR" ]; then
+                  echo "Response: $CURL_ERROR"
+                fi
+                rm -f yak
+                continue
+              fi
+              
+              # 检查文件是否存在且不为空
+              if [ ! -f "yak" ]; then
+                echo "❌ Downloaded file does not exist"
+                continue
+              fi
+              
+              if [ ! -s "yak" ]; then
+                echo "❌ Downloaded file is empty"
+                rm -f yak
+                continue
+              fi
+              
+              # 检查文件大小（至少应该大于 1MB）
+              FILE_SIZE=$(stat -f%z yak 2>/dev/null || stat -c%s yak 2>/dev/null || echo "0")
+              echo "Downloaded file size: ${FILE_SIZE} bytes"
+              if [ "$FILE_SIZE" -lt 1048576 ]; then
+                echo "❌ Downloaded file is too small: ${FILE_SIZE} bytes (expected > 1MB)"
+                echo "File content (first 200 chars):"
+                head -c 200 yak | cat -A || true
+                rm -f yak
+                continue
+              fi
+              
+              # 检查文件类型（应该是可执行文件）
+              FILE_TYPE=$(file yak 2>/dev/null || echo "unknown")
+              echo "File type: $FILE_TYPE"
+              
+              # 设置执行权限
+              chmod +x yak || true
+              
+              # 验证二进制文件是否可执行
+              echo "Verifying binary..."
+              VERSION_OUTPUT=$(./yak version 2>&1)
+              VERSION_EXIT=$?
+              
+              if [ $VERSION_EXIT -ne 0 ]; then
+                echo "❌ Downloaded binary failed version check (exit code: $VERSION_EXIT)"
+                echo "Version command output: $VERSION_OUTPUT"
+                rm -f yak
+                continue
+              fi
+              
+              echo "Version output: $VERSION_OUTPUT"
+              
+              # 将 yak 移动到 PATH 中，以便后续步骤可以直接使用 `yak` 命令
+              # 参考 diff-code-check.yml 的方式
+              if command -v sudo >/dev/null 2>&1; then
+                sudo mv yak /usr/local/bin/yak || sudo mv yak /usr/bin/yak || mv yak ~/.local/bin/yak
+              else
+                mv yak /usr/local/bin/yak 2>/dev/null || mv yak /usr/bin/yak 2>/dev/null || mv yak ~/.local/bin/yak
+              fi
+              
+              # 确保 yak 在 PATH 中
+              if ! command -v yak >/dev/null 2>&1; then
+                export PATH="$HOME/.local/bin:$PATH"
+              fi
+              
+              # 最终验证
+              if ! yak version >/dev/null 2>&1; then
+                echo "❌ Yak installation verification failed after moving to PATH"
+                rm -f /usr/local/bin/yak /usr/bin/yak ~/.local/bin/yak 2>/dev/null || true
+                continue
+              fi
+              
+              echo "✅ Successfully downloaded yak from version: $VERSION (file size: ${FILE_SIZE} bytes)"
+              echo "yak_downloaded=true" >> "$GITHUB_OUTPUT"
+              echo "yak_version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "yak_binary=$BINARY_NAME" >> "$GITHUB_OUTPUT"
+              echo "::endgroup::"
+              exit 0
+            done
+          done
+          
+          echo "::error::Failed to download yak from all attempted versions"
+          echo "Tried ${#BINARY_NAMES[@]} binary name(s) and ${#VERSIONS_TO_TRY[@]} version(s)"
+          echo "Binary names: ${BINARY_NAMES[*]}"
+          echo "Versions: ${VERSIONS_TO_TRY[*]}"
+          echo "yak_downloaded=false" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+          exit 1
+
+      - name: Get Repo tags
+        id: get_tag
+        shell: bash
+        run: |
+          # 统一使用 repos-tag 命令生成版本号，确保版本号格式一致（8位 hash）
+          # 优先使用下载的 yak（已在 PATH 中），否则 fallback 到编译
+          if [ "${{ steps.download_yak.outputs.yak_downloaded }}" = "true" ]; then
+            echo "Using downloaded yak binary for repos-tag"
+            # 确保 yak 在 PATH 中
+            if ! command -v yak >/dev/null 2>&1; then
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+            yak repos-tag -o tags.txt
+          else
+            echo "Building yak for repos-tag command"
+            go run common/yak/cmd/yak.go repos-tag -o tags.txt
+          fi
+          
+          echo "$(cat tags.txt)"
+          echo "YAK_TAG=$(cat tags.txt)" >> "$GITHUB_ENV"
+          echo "YAK_TAG=$(cat tags.txt)" >> "$GITHUB_OUTPUT"
+
+      # 根据版本类型确定 Build Tag 和输出文件名
+      # 版本命名规则:
+      #   - vx.x.x-yakit-*  → irify_exclude + yaklang_yakit_* 文件名
+      #   - vx.x.x-irify-*  → yakit_exclude + yaklang_irify_* 文件名
+      #   - vx.x.x-beta/alpha → gzip_embed + yak_* 文件名（标准版本）
+      - name: Determine Build Tags and Output Name
+        id: build_tags
+        shell: bash
+        run: |
+          YAK_TAG=$(cat tags.txt)
+          BUILD_TAGS="gzip_embed"
+          OUTPUT_BINARY="${{ matrix.binary }}"
+          
+          if [[ "$YAK_TAG" == *"-yakit-"* ]]; then
+            BUILD_TAGS="gzip_embed,irify_exclude"
+            OUTPUT_BINARY="${OUTPUT_BINARY/yak_/yaklang_yakit_}"
+          elif [[ "$YAK_TAG" == *"-irify-"* ]]; then
+            BUILD_TAGS="gzip_embed,yakit_exclude"
+            OUTPUT_BINARY="${OUTPUT_BINARY/yak_/yaklang_irify_}"
+          fi
+          
+          echo "BUILD_TAGS=$BUILD_TAGS" >> "$GITHUB_ENV"
+          echo "OUTPUT_BINARY=$OUTPUT_BINARY" >> "$GITHUB_ENV"
+
+      - name: Go Patch for Win7
+        if: matrix.os == 'windows7'
+        run: |
+          cd $(go env GOROOT)
+          Get-Content "${{ github.workspace }}\.github\patch_go122\693def151adff1af707d82d28f55dba81ceb08e1.diff" | patch --verbose -R -p 1 
+          Get-Content "${{ github.workspace }}\.github\patch_go122\7c1157f9544922e96945196b47b95664b1e39108.diff" | patch --verbose -R -p 1
+          Get-Content "${{ github.workspace }}\.github\patch_go122\48042aa09c2f878c4faa576948b07fe625c4707a.diff" | patch --verbose -R -p 1
+          cd ${{ github.workspace }}
+
+      - name: Download CrossBuild GCC(Linux x64)
+        if: matrix.os == 'linux-amd64'
+        run: |
+          brew uninstall --ignore-dependencies --force pkg-config@0.29.2 || true
+          brew list coreutils >/dev/null 2>&1 || brew install coreutils
+          brew list pkgconf  >/dev/null 2>&1 || brew install pkgconf
+          brew tap messense/macos-cross-toolchains
+          brew install x86_64-unknown-linux-gnu
+          x86_64-linux-gnu-gcc -v
+
+      - name: Download CrossBuild GCC(Linux arm64)
+        if: matrix.os == 'linux-arm64'
+        run: |
+          brew uninstall --ignore-dependencies --force pkg-config@0.29.2 || true
+          brew list coreutils >/dev/null 2>&1 || brew install coreutils
+          brew list pkgconf  >/dev/null 2>&1 || brew install pkgconf
+          brew tap messense/macos-cross-toolchains
+          brew install aarch64-unknown-linux-gnu
+          aarch64-linux-gnu-gcc -v
+
+      - name: Generate Document
+        run: go run -gcflags=all="-N -l" common/yak/yakdoc/generate_doc/generate_doc.go common/yak/yakdoc/doc/doc.gob.gzip
+
+      - name: Codec Methods Document
+        run: go run -gcflags=all="-N -l" common/yak/yaklib/codec/codegrpc/doc/codec_doc.go common/yak/yaklib/codec/codegrpc/codec.gob.gzip
+
+      - name: Sync Embed FS Hash to Code
+        shell: bash
+        run: |
+          # 使用下载的 yak（已在 PATH 中）
+          if ! command -v yak >/dev/null 2>&1; then
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          yak embed-fs-hash --override --all
+
+      - name: Install gzip-embed tool
+        run: go install ./common/utils/gzip_embed/gzip-embed
+
+      - name: Generate tar.gz resources
+        run: |
+          gzip-embed -cache --source ./common/ai/aid/aitool/buildinaitools/yakscripttools/yakscriptforai --gz ./common/ai/aid/aitool/buildinaitools/yakscripttools/yakscriptforai.tar.gz --no-embed
+          gzip-embed -cache --source ./common/ai/aid/aireact/skills --gz ./common/ai/aid/aireact/skills.tar.gz --root-path --no-embed
+          gzip-embed -cache --source ./common/yso/resources/static --gz ./common/yso/resources/static.tar.gz --no-embed --root-path
+          gzip-embed -cache --source ./common/coreplugin/base-yak-plugin --gz ./common/coreplugin/base-yak-plugin.tar.gz --root-path --no-embed
+          gzip-embed -cache --source ./common/syntaxflow/sfbuildin/buildin --gz ./common/syntaxflow/sfbuildin/buildin.tar.gz --root-path --no-embed
+          gzip-embed -cache --source ./common/aiforge/buildinforge --gz ./common/aiforge/buildinforge.tar.gz --root-path --no-embed
+
+      - name: Initialize License Machine
+        run: go run common/xlic/cmd/initializer.go --ak ${{ secrets.OSS_KEY_ID }} --sk ${{ secrets.OSS_KEY_SECRET }}
+
+      - name: Build
+        shell: bash
+        env:
+          BUILD_TAGS: ${{ env.BUILD_TAGS }}
+          OUTPUT_BINARY: ${{ env.OUTPUT_BINARY }}
+          YAK_TAG: ${{ env.YAK_TAG }}
+        run: |
+          # Set build environment variables
+          if [ -n "${{ matrix.CGO_ENABLED }}" ]; then
+            export CGO_ENABLED=1
+          fi
+          if [ -n "${{ matrix.GOOS }}" ]; then
+            export GOOS="${{ matrix.GOOS }}"
+          fi
+          if [ -n "${{ matrix.GOARCH }}" ]; then
+            export GOARCH="${{ matrix.GOARCH }}"
+          fi
+          if [ -n "${{ matrix.CC }}" ]; then
+            export CC="${{ matrix.CC }}"
+          fi
+          
+          # Verify environment variables are set
+          echo "BUILD_TAGS=${BUILD_TAGS}"
+          echo "OUTPUT_BINARY=${OUTPUT_BINARY}"
+          echo "YAK_TAG=${YAK_TAG}"
+          
+          # Validate required environment variables
+          if [ -z "${OUTPUT_BINARY}" ]; then
+            echo "Error: OUTPUT_BINARY is not set"
+            exit 1
+          fi
+          
+          # Build with proper tag handling
+          BUILD_CMD="go build"
+          if [ -n "${BUILD_TAGS}" ]; then
+            BUILD_CMD="${BUILD_CMD} -tags ${BUILD_TAGS}"
+          fi
+          BUILD_CMD="${BUILD_CMD} -ldflags \"-s -w -X 'main.goVersion=$(go version)' -X 'main.gitHash=$(git show -s --format=%H)' -X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.yakVersion=${YAK_TAG}'\""
+          BUILD_CMD="${BUILD_CMD} -o ./${OUTPUT_BINARY} -v common/yak/cmd/yak.go"
+          
+          echo "Executing: ${BUILD_CMD}"
+          eval "${BUILD_CMD}"
+          ls
+
+      - name: Validate signing secrets
+        if: ${{ contains(matrix.os, 'windows') && github.event_name != 'pull_request' }}
+        shell: pwsh
+        run: |
+          $missing = @()
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_URI }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_URI" }
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_APPLICATION_ID }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_APPLICATION_ID" }
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_DIRECTORY_ID }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_DIRECTORY_ID" }
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_CLIENT_SECRET }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_CLIENT_SECRET" }
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_CERT_NAME }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_CERT_NAME" }
+          if (-not "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_TIMESTAMP_URL }}") { $missing += "AZURE_YAK_CODE_SIGN_KEY_VAULT_TIMESTAMP_URL" }
+          if ($missing.Count -gt 0) {
+            throw ("Missing required secrets for signing: " + ($missing -join ", "))
+          }
+
+      - name: Set up .NET (for AzureSignTool)
+        if: ${{ contains(matrix.os, 'windows') && github.event_name != 'pull_request' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install AzureSignTool
+        if: ${{ contains(matrix.os, 'windows') && github.event_name != 'pull_request' }}
+        shell: pwsh
+        run: |
+          dotnet tool install --global AzureSignTool
+          "$env:USERPROFILE\\.dotnet\\tools" >> $env:GITHUB_PATH
+          AzureSignTool --version
+
+      - name: Sign Windows executable (Azure Key Vault)
+        if: ${{ contains(matrix.os, 'windows') && github.event_name != 'pull_request' }}
+        shell: pwsh
+        run: |
+          AzureSignTool sign `
+            -kvu "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_URI }}" `
+            -kvi "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_APPLICATION_ID }}" `
+            -kvt "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_DIRECTORY_ID }}" `
+            -kvs "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_CLIENT_SECRET }}" `
+            -kvc "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_CERT_NAME }}" `
+            -tr "${{ secrets.AZURE_YAK_CODE_SIGN_KEY_VAULT_TIMESTAMP_URL }}" `
+            -td sha256 `
+            -v `
+            ".\\${{ env.OUTPUT_BINARY }}"
+
+      - name: Verify signature
+        if: ${{ contains(matrix.os, 'windows') && github.event_name != 'pull_request' }}
+        shell: pwsh
+        run: |
+          Get-AuthenticodeSignature ".\\${{ env.OUTPUT_BINARY }}" | Format-List
+      # release
+      - name: Generate Checksums
+        shell: bash
+        run: |
+          # 使用下载的 yak（已在 PATH 中）
+          if ! command -v yak >/dev/null 2>&1; then
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          yak sha256 -f ${{ env.OUTPUT_BINARY }}
+          echo "SHA256=${{ env.OUTPUT_BINARY }}.sha256.txt" >> $GITHUB_ENV
+
+      - name: debug info
+        run: |
+          echo "env.YAK_TAG PRODUCT_BINARY=${{ env.OUTPUT_BINARY }}"
+          echo "env.YAK_TAG YAK_TAG=${{ env.YAK_TAG }}"
+          echo "env.YAK_TAG SHA256=${{ env.SHA256 }}"
+
+      - name: Show Current Dir
+        run: ls
+        if: runner.os != 'Windows'
+
+      - name: Upload Binaries To aliyun-oss
+        shell: bash
+        env:
+          OUTPUT_BINARY: ${{ env.OUTPUT_BINARY }}
+          SHA256: ${{ env.SHA256 }}
+          YAK_TAG: ${{ env.YAK_TAG }}
+        run: |
+          # Build file list for upload
+          UPLOAD_FILES="${OUTPUT_BINARY}:/yak/${YAK_TAG}/${OUTPUT_BINARY}"
+          
+          # Add SHA256 file if it exists
+          if [ -n "${SHA256}" ] && [ -f "${SHA256}" ]; then
+            UPLOAD_FILES="${UPLOAD_FILES};${SHA256}:/yak/${YAK_TAG}/${SHA256}"
+            echo "Including SHA256 file: ${SHA256}"
+          else
+            echo "SHA256 file not found or empty, skipping SHA256 upload"
+          fi
+          
+          echo "Uploading files: ${UPLOAD_FILES}"
+          # 使用下载的 yak（已在 PATH 中）
+          if ! command -v yak >/dev/null 2>&1; then
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          yak upload-oss --ak ${{ secrets.OSS_KEY_ID }} --sk ${{ secrets.OSS_KEY_SECRET }} -t 5 -f "${UPLOAD_FILES}"
+
+      # upload assets
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUTPUT_BINARY }}
+          path: ./${{ env.OUTPUT_BINARY }}
+
+      - name: Upload sha256 checksums artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SHA256 }}
+          path: ./${{ env.SHA256 }}
+
+  check_version_and_github_release:
+    runs-on: ubuntu-22.04
+    needs: build_and_upload_to_oss
+    steps:
+      - uses: actions/checkout@v2
+
+      # download assets
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: ${{ github.workspace }}
+
+      - name: Get Repo tags
+        shell: bash
+        run: |
+          pwd && ls -lh
+          # Find the linux_amd64 binary (could be yak_linux_amd64, yaklang_yakit_linux_amd64, or yaklang_irify_linux_amd64)
+          LINUX_BINARY=$(ls | grep -E "(yak|yaklang_(yakit|irify))_linux_amd64$" | head -n 1)
+          if [ -z "$LINUX_BINARY" ]; then
+            echo "Error: Could not find linux_amd64 binary"
+            exit 1
+          fi
+          chmod +x "./$LINUX_BINARY"
+          "./$LINUX_BINARY" repos-tag -o tags.txt
+          echo "YAK_TAG=$(cat tags.txt)" >> $GITHUB_ENV
+          echo "Using binary: $LINUX_BINARY"
+
+      - name: Checkout Tags Version
+        run: echo ${{ env.YAK_TAG }}
+
+      # 根据版本类型生成 GitHub Release 文件列表
+      # 文件列表会根据版本命名规则自动调整文件名前缀:
+      #   - yakit 版本: yaklang_yakit_*
+      #   - irify 版本: yaklang_irify_*
+      #   - 标准版本: yak_*
+      - name: Generate Release File List
+        id: release_files
+        shell: bash
+        run: |
+          YAK_TAG="${{ env.YAK_TAG }}"
+          FILE_LIST=""
+          
+          # Determine file prefix based on version type
+          if [[ "$YAK_TAG" == *"-yakit-"* ]]; then
+            PREFIX="yaklang_yakit_"
+            echo "Detected yakit version, using prefix: $PREFIX"
+          elif [[ "$YAK_TAG" == *"-irify-"* ]]; then
+            PREFIX="yaklang_irify_"
+            echo "Detected irify version, using prefix: $PREFIX"
+          else
+            PREFIX="yak_"
+            echo "Standard version, using prefix: $PREFIX"
+          fi
+          
+          # Generate file list using heredoc for multiline output
+          {
+            echo "${PREFIX}windows_amd64.exe"
+            echo "${PREFIX}windows_legacy_amd64.exe"
+            echo "${PREFIX}linux_amd64"
+            echo "${PREFIX}linux_arm64"
+            echo "${PREFIX}darwin_amd64"
+            echo "${PREFIX}darwin_arm64"
+            echo "${PREFIX}windows_amd64.exe.sha256.txt"
+            echo "${PREFIX}windows_legacy_amd64.exe.sha256.txt"
+            echo "${PREFIX}linux_amd64.sha256.txt"
+            echo "${PREFIX}linux_arm64.sha256.txt"
+            echo "${PREFIX}darwin_amd64.sha256.txt"
+            echo "${PREFIX}darwin_arm64.sha256.txt"
+          } > file_list.txt
+          
+          echo "Generated file list:"
+          cat file_list.txt
+          {
+            echo "FILE_LIST<<EOF"
+            cat file_list.txt
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Publish Release INFO
+        if: false  # temporarily disabled: AI release note generation (chatglm extractjson failure)
+        continue-on-error: true
+        run: |
+          # 定义文件路径
+          raw_commit_file="./raw_commit_message.txt"
+          
+          # 检查文件行数
+          line_count=$(wc -l < "$raw_commit_file")
+          
+          # Find the linux_amd64 binary
+          LINUX_BINARY=$(ls | grep -E "(yak|yaklang_(yakit|irify))_linux_amd64$" | head -n 1)
+          
+          # 如果行数超过3行，输出111
+          if [ "$line_count" -gt 3 ]; then
+            "./$LINUX_BINARY" ./scripts/output_release_info.yak --ai-type chatglm --apikey ${{ secrets.CHATGLM_APIKEY }} --filename ./raw_commit_message.txt --ai-model glm-4-long
+            ls | grep release
+          fi
+          
+          if [[ -f release_note.en.txt ]]; then
+            echo "Uploading release_note.en.txt to oss"
+            cat release_note.en.txt | head -n 100
+            "./$LINUX_BINARY" upload-oss -f 'release_note.en.txt:/yak/${{ env.YAK_TAG }}/release_note.en.txt' -ak ${{ secrets.OSS_KEY_ID }} -sk ${{ secrets.OSS_KEY_SECRET }} -t 5
+          fi
+
+          if [[ -f release_note.txt ]]; then
+            echo "Uploading release_note.txt to oss"
+            cat release_note.txt | head -n 100
+            "./$LINUX_BINARY" upload-oss -f 'release_note.txt:/yak/${{ env.YAK_TAG }}/release_note.txt' -ak ${{ secrets.OSS_KEY_ID }} -sk ${{ secrets.OSS_KEY_SECRET }} -t 5
+          fi
+      - name: Push Version Info to OSS
+        run: |
+          echo "start to handle versions"
+          if [ -f current_version.txt ]; then rm current_version.txt; fi
+          if [ -f new_history_versions.txt ]; then rm new_history_versions.txt; fi
+          
+          echo "${{ env.YAK_TAG }}" > current_version.txt
+          # check if history_versions.txt url 404 existed
+          HISTORY_URL="https://aliyun-oss.yaklang.com/yak/version-info/history_versions.txt"
+          if wget --spider --server-response "$HISTORY_URL" 2>&1 | grep 'HTTP/.* 200' >/dev/null; then
+            echo "Downloading history_versions.txt..."
+            wget -O history_versions.txt -q $HISTORY_URL
+            # 去重：当前版本置顶，历史版本中已存在的当前版本会被过滤，避免 rerun CI 产生重复
+            { cat ./current_version.txt; cat history_versions.txt; } | awk '!seen[$0]++' > new_history_versions.txt
+          else
+            echo "history_versions.txt not found or server did not return HTTP 200 for $HISTORY_URL, skipping download."
+            cat ./current_version.txt > new_history_versions.txt
+          fi
+          
+          echo "Uploading version.txt to oss"
+          cat new_history_versions.txt | head -n 100
+          cat new_history_versions.txt | head -n 100 > active_versions.txt
+          
+          LINUX_BINARY=$(ls | grep -E "(yak|yaklang_(yakit|irify))_linux_amd64$" | head -n 1)
+          "./$LINUX_BINARY" upload-oss -f 'new_history_versions.txt:/yak/version-info/history_versions.txt' -ak ${{ secrets.OSS_KEY_ID }} -sk ${{ secrets.OSS_KEY_SECRET }} -t 5
+          "./$LINUX_BINARY" upload-oss -f 'active_versions.txt:/yak/version-info/active_versions.txt' -ak ${{ secrets.OSS_KEY_ID }} -sk ${{ secrets.OSS_KEY_SECRET }} -t 5
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags') && !contains(env.YAK_TAG, 'alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          name: ${{ env.YAK_TAG }}
+          tag_name: ${{ env.YAK_TAG }}
+          body: |
+            Release ${{ env.YAK_TAG }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.release_files.outputs.FILE_LIST }}
+
+      - name: Build Docker Image(Tag)
+        shell: bash
+        run: |
+          echo "start to format tag name: ${{ env.YAK_TAG }}"
+          FORMATTEDTAG="${{ env.YAK_TAG }}"
+          formatted_tag="${FORMATTEDTAG//\//-}"
+          
+          echo "start to build docker image..."
+          # Find linux binaries (could be yak_*, yaklang_yakit_*, or yaklang_irify_*)
+          LINUX_AMD64=$(ls | grep -E "(yak|yaklang_(yakit|irify))_linux_amd64$" | head -n 1)
+          LINUX_ARM64=$(ls | grep -E "(yak|yaklang_(yakit|irify))_linux_arm64$" | head -n 1)
+          
+          if [ -z "$LINUX_AMD64" ] || [ -z "$LINUX_ARM64" ]; then
+            echo "Error: Could not find linux binaries"
+            exit 1
+          fi
+          
+          cp "./$LINUX_AMD64" ./common/yak/cmd/docker/ && cp "./$LINUX_ARM64" ./common/yak/cmd/docker/
+          echo "copy $LINUX_AMD64 and $LINUX_ARM64 to docker folder..."
+          
+          echo "start to check buildx env and create builder"
+          docker buildx ls && docker buildx create --name yaklang-builder --use
+          
+          echo "start to login docker"
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          
+          echo "start to build docker image..."
+          # Use repo root as context so COPY scripts/get-yak-version.sh in Dockerfile can find the script
+          docker buildx build -f common/yak/cmd/docker/Dockerfile --platform linux/amd64,linux/arm64 -t v1ll4n/yaklang:$formatted_tag --build-arg VERSION=${{ env.YAK_TAG }} . --push
+          
+          echo "Check if the latest label should be updated(formatted_tag is not start with dev)"
+          if [[ ! $formatted_tag == dev* ]]; then
+            echo "start to update latest tag"
+            docker buildx build -f common/yak/cmd/docker/Dockerfile --platform linux/amd64,linux/arm64 -t v1ll4n/yaklang:latest --build-arg VERSION=${{ env.YAK_TAG }} . --push
+          fi
+
+  update_syntaxflow_meta:
+    needs: build_and_upload_to_oss
+    uses: ./.github/workflows/update-syntaxflow-meta.yml
+    with:
+      update_version: ${{ needs.build_and_upload_to_oss.outputs.YAK_TAG }}
+      update_last: true
+    secrets: inherit

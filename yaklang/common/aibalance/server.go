@@ -1,0 +1,2236 @@
+package aibalance
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"text/template"
+	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/yaklang/yaklang/common/go-funk"
+
+	"github.com/yaklang/yaklang/common/aibalance/aiforwarder"
+	"github.com/yaklang/yaklang/common/utils/omap"
+
+	_ "github.com/yaklang/yaklang/common/ai"
+	"github.com/yaklang/yaklang/common/ai/aispec"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/lowhttp"
+)
+
+// LogLevel represents the logging level configuration
+type LogLevel struct {
+	Debug bool `json:"debug"` // Enable debug level logging
+	Info  bool `json:"info"`  // Enable info level logging
+	Warn  bool `json:"warn"`  // Enable warning level logging
+	Error bool `json:"error"` // Enable error level logging
+}
+
+// Key represents an API key with its permissions
+type Key struct {
+	Key           string
+	AllowedModels map[string]bool
+}
+
+// KeyManager manages API keys and their permissions
+type KeyManager struct {
+	keys map[string]*Key
+}
+
+// NewKeyManager creates a new key manager
+func NewKeyManager() *KeyManager {
+	return &KeyManager{
+		keys: make(map[string]*Key),
+	}
+}
+
+// Get retrieves a key from the manager
+func (k *KeyManager) Get(key string) (*Key, bool) {
+	v, ok := k.keys[key]
+	return v, ok
+}
+
+// KeyAllowedModels manages allowed models for each key
+type KeyAllowedModels struct {
+	allowedModels map[string]map[string]bool
+}
+
+// NewKeyAllowedModels creates a new key allowed models manager
+func NewKeyAllowedModels() *KeyAllowedModels {
+	return &KeyAllowedModels{
+		allowedModels: make(map[string]map[string]bool),
+	}
+}
+
+// Get retrieves allowed models for a key
+func (k *KeyAllowedModels) Get(key string) (map[string]bool, bool) {
+	v, ok := k.allowedModels[key]
+	return v, ok
+}
+
+// IsModelAllowed checks if a model is allowed for a key, supporting glob patterns
+// Patterns can include * as wildcard (e.g., "memfit-*" matches "memfit-standard", "memfit-pro")
+func (k *KeyAllowedModels) IsModelAllowed(key string, modelName string) bool {
+	allowedModels, ok := k.allowedModels[key]
+	if !ok {
+		return false
+	}
+
+	// First, try exact match
+	if allowed, exists := allowedModels[modelName]; exists && allowed {
+		return true
+	}
+
+	// Then, try glob pattern matching
+	for pattern := range allowedModels {
+		if matchGlobPattern(pattern, modelName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// matchGlobPattern matches a string against a glob pattern
+// Supports * as wildcard for any characters
+// Examples:
+//   - "memfit-*" matches "memfit-standard", "memfit-pro"
+//   - "*-free" matches "model1-free", "gpt-free"
+//   - "qwen*" matches "qwen2", "qwen3-max"
+func matchGlobPattern(pattern, str string) bool {
+	// If no wildcard, do exact match
+	if !strings.Contains(pattern, "*") {
+		return pattern == str
+	}
+
+	// Split pattern by *
+	parts := strings.Split(pattern, "*")
+
+	// Handle edge cases
+	if len(parts) == 0 {
+		return true
+	}
+
+	// Check if pattern starts with *
+	if pattern[0] != '*' && !strings.HasPrefix(str, parts[0]) {
+		return false
+	}
+
+	// Check if pattern ends with *
+	if pattern[len(pattern)-1] != '*' && !strings.HasSuffix(str, parts[len(parts)-1]) {
+		return false
+	}
+
+	// Check each part in sequence
+	searchStart := 0
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+
+		idx := strings.Index(str[searchStart:], part)
+		if idx == -1 {
+			return false
+		}
+
+		// First part must be at the beginning if pattern doesn't start with *
+		if i == 0 && pattern[0] != '*' && idx != 0 {
+			return false
+		}
+
+		searchStart += idx + len(part)
+	}
+
+	return true
+}
+
+// Keys returns all keys
+func (k *KeyAllowedModels) Keys() []string {
+	keys := make([]string, 0, len(k.allowedModels))
+	for k := range k.allowedModels {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// ModelManager manages AI models and their providers
+type ModelManager struct {
+	models map[string][]*Provider
+}
+
+// NewModelManager creates a new model manager
+func NewModelManager() *ModelManager {
+	return &ModelManager{
+		models: make(map[string][]*Provider),
+	}
+}
+
+// Get retrieves a model from the manager
+func (m *ModelManager) Get(name string) ([]*Provider, bool) {
+	v, ok := m.models[name]
+	return v, ok
+}
+
+// Entrypoints manages model providers
+type Entrypoints struct {
+	providers map[string][]*Provider
+}
+
+// NewEntrypoints creates a new entrypoints manager
+func NewEntrypoints() *Entrypoints {
+	return &Entrypoints{
+		providers: make(map[string][]*Provider),
+	}
+}
+
+// PeekProvider returns a provider for the given model based on latency-weighted random selection
+func (e *Entrypoints) PeekProvider(model string) *Provider {
+	providers, ok := e.providers[model]
+	if !ok || len(providers) == 0 {
+		return nil
+	}
+
+	// 过滤出健康的提供者（延迟小于10秒）
+	var healthyProviders []*Provider
+	var totalWeight float64
+	weights := make([]float64, 0, len(providers))
+
+	for _, p := range providers {
+		if p.DbProvider == nil {
+			continue
+		}
+
+		// 检查提供者是否健康（延迟小于10秒）
+		if p.DbProvider.IsHealthy && p.DbProvider.LastLatency > 0 && p.DbProvider.LastLatency < 10000 {
+			healthyProviders = append(healthyProviders, p)
+			// 使用延迟的倒数作为权重，延迟越低权重越高
+			weight := 1.0 / float64(p.DbProvider.LastLatency)
+			weights = append(weights, weight)
+			totalWeight += weight
+		}
+	}
+
+	// 如果没有健康的提供者，返回 nil
+	if len(healthyProviders) == 0 {
+		return nil
+	}
+
+	// 如果只有一个健康的提供者，直接返回
+	if len(healthyProviders) == 1 {
+		return healthyProviders[0]
+	}
+
+	// 生成随机数
+	r := utils.RandFloat64() * totalWeight
+
+	// 根据权重选择提供者
+	var cumulativeWeight float64
+	for i, weight := range weights {
+		cumulativeWeight += weight
+		if r <= cumulativeWeight {
+			return healthyProviders[i]
+		}
+	}
+
+	// 如果由于浮点数精度问题没有选中任何提供者，返回最后一个
+	return healthyProviders[len(healthyProviders)-1]
+}
+
+// PeekOrderedProviders returns providers for the given model in random order
+// Only returns providers with latency < 10s, randomly shuffled
+// If no low-latency providers are available but providers exist, triggers immediate health check
+//
+// 关键词: aibalance, PeekOrderedProviders, 随机洗牌
+// 等价于 PeekOrderedProvidersWithAffinity(model, "")，保留向后兼容
+func (e *Entrypoints) PeekOrderedProviders(model string) []*Provider {
+	return e.PeekOrderedProvidersWithAffinity(model, "")
+}
+
+// PeekOrderedProvidersWithAffinity returns providers for the given model with optional affinity routing.
+//
+// affinityKey 不为空时，启用"亲和性路由"：
+//   - 在健康 provider 集合中根据 hash(affinityKey) mod len(healthy) 选出"主 provider"，置于第一位
+//   - 其余 provider 仍然随机洗牌后跟随，保留失败重试时的负载均衡能力
+//   - 同一 affinityKey 在健康集合不变时稳定路由到同一 provider，让上游隐式缓存有机会被复用
+//
+// affinityKey 为空时，行为与原 PeekOrderedProviders 一致（完全随机洗牌）。
+//
+// 关键词: aibalance, 亲和性路由, 隐式缓存, sticky routing
+func (e *Entrypoints) PeekOrderedProvidersWithAffinity(model string, affinityKey string) []*Provider {
+	providers, ok := e.providers[model]
+	if !ok || len(providers) == 0 {
+		log.Debugf("No providers found for model: %s", model)
+		return nil
+	}
+
+	log.Infof("PeekOrderedProviders for model %s: found %d providers (affinity=%v)",
+		model, len(providers), affinityKey != "")
+
+	// 如果只有一个提供者，无论其健康状况如何，都直接返回
+	if len(providers) == 1 {
+		log.Infof("Only one provider found for model %s, returning it directly.", model)
+		return providers
+	}
+
+	// 过滤出延迟小于10秒的提供者
+	var validProviders []*Provider
+	var highLatencyProviders []*Provider // 跟踪高延迟或无延迟数据的提供者
+	for _, p := range providers {
+		if p.DbProvider == nil {
+			log.Debugf("Provider %s skipped (no DbProvider)", p.TypeName)
+			continue
+		}
+
+		// 只保留延迟小于10秒的提供者
+		if p.DbProvider.LastLatency > 0 && p.DbProvider.LastLatency < 10000 {
+			validProviders = append(validProviders, p)
+			log.Debugf("Provider %s accepted (latency: %dms, healthy: %v)",
+				p.TypeName, p.DbProvider.LastLatency, p.DbProvider.IsHealthy)
+		} else {
+			highLatencyProviders = append(highLatencyProviders, p)
+			log.Infof("Provider %s filtered out (latency: %dms >= 10s or no latency data)",
+				p.TypeName, p.DbProvider.LastLatency)
+		}
+	}
+
+	// 如果没有低延迟的提供者，但有高延迟或无数据的提供者，触发主动健康检测
+	if len(validProviders) == 0 && len(highLatencyProviders) > 0 {
+		log.Warnf("No low-latency providers found for model %s, triggering immediate health check for %d providers",
+			model, len(highLatencyProviders))
+
+		// 触发立即健康检查并获取可用的 providers
+		availableProviders := TriggerImmediateHealthCheckForModel(model, highLatencyProviders)
+
+		if len(availableProviders) > 0 {
+			log.Infof("After immediate health check, found %d available providers for model %s",
+				len(availableProviders), model)
+			// 使用健康检查后可用的提供者作为结果
+			validProviders = availableProviders
+		} else {
+			// 仍然没有可用的提供者，通知 LatencyWatcher 监控这些问题提供者
+			watcher := GetGlobalLatencyWatcher()
+			for _, p := range highLatencyProviders {
+				if p.DbProvider != nil {
+					watcher.MarkProviderAsProblematic(p.DbProvider.ID, p.DbProvider.WrapperName)
+				}
+			}
+			log.Warnf("No available providers found for model %s after health check", model)
+			return nil
+		}
+	}
+
+	if len(validProviders) == 0 {
+		log.Debugf("No valid providers found for model %s (all have latency >= 10s)", model)
+		return nil
+	}
+
+	log.Debugf("Found %d valid providers (latency < 10s) for model %s", len(validProviders), model)
+
+	// 选取主 provider 的索引：亲和性路由时由 affinityKey 决定，否则随机
+	// 关键词: 隐式缓存, 亲和性路由, 主 provider 选择
+	primaryIdx := -1
+	if affinityKey != "" && len(validProviders) >= 2 {
+		// 为了在健康集合内稳定选取，对集合做一次确定性排序后再 hash mod
+		// 排序键 = TypeName + DomainOrURL + APIKey 的 sha1，跨进程稳定
+		// 关键词: 亲和性路由, 健康集合稳定排序
+		stableSorted := make([]*Provider, len(validProviders))
+		copy(stableSorted, validProviders)
+		sortProvidersStably(stableSorted)
+		// 把 sorted 后的索引映射回 validProviders 的位置
+		picked := stableSorted[hashAffinityKey(affinityKey)%uint32(len(stableSorted))]
+		for i, p := range validProviders {
+			if p == picked {
+				primaryIdx = i
+				break
+			}
+		}
+		log.Debugf("Affinity routing: affinityKey=%s primary=%s", affinityKey, picked.TypeName)
+	}
+
+	// 使用 Fisher-Yates 洗牌算法完全随机打乱
+	shuffledProviders := make([]*Provider, len(validProviders))
+	copy(shuffledProviders, validProviders)
+
+	for i := len(shuffledProviders) - 1; i > 0; i-- {
+		j := int(utils.RandFloat64() * float64(i+1))
+		shuffledProviders[i], shuffledProviders[j] = shuffledProviders[j], shuffledProviders[i]
+	}
+
+	// 亲和性路由：把"主 provider"提到第一位，其余顺序保持洗牌后的随机
+	// 这样既保证缓存命中（首选确定），又保留了失败重试时的负载分散
+	// 关键词: 亲和性路由, 主 provider 置顶
+	if primaryIdx >= 0 {
+		// 在 shuffled 中找到 validProviders[primaryIdx] 对应的实例
+		target := validProviders[primaryIdx]
+		for i, p := range shuffledProviders {
+			if p == target {
+				if i != 0 {
+					shuffledProviders[0], shuffledProviders[i] = shuffledProviders[i], shuffledProviders[0]
+				}
+				break
+			}
+		}
+	}
+
+	// 输出排序结果
+	log.Debugf("Ordered providers for model %s (affinity=%v):", model, affinityKey != "")
+	for i, p := range shuffledProviders {
+		log.Debugf("  %d. %s (latency: %dms, healthy: %v)",
+			i+1, p.TypeName, p.DbProvider.LastLatency, p.DbProvider.IsHealthy)
+	}
+
+	return shuffledProviders
+}
+
+// sortProvidersStably 按 TypeName+DomainOrURL+APIKey 字典序排序，跨进程稳定
+// 关键词: 亲和性路由, 稳定排序
+func sortProvidersStably(in []*Provider) {
+	sort.Slice(in, func(i, j int) bool {
+		ki := in[i].TypeName + "|" + in[i].DomainOrURL + "|" + in[i].APIKey
+		kj := in[j].TypeName + "|" + in[j].DomainOrURL + "|" + in[j].APIKey
+		return ki < kj
+	})
+}
+
+// hashAffinityKey 将 affinityKey 哈希为 uint32，用于稳定的 mod 选择
+// 使用 FNV-1a 64-bit 后截断，速度快、分布均匀
+// 关键词: 亲和性路由, FNV hash
+func hashAffinityKey(key string) uint32 {
+	var h uint64 = 14695981039346656037
+	for i := 0; i < len(key); i++ {
+		h ^= uint64(key[i])
+		h *= 1099511628211
+	}
+	return uint32(h)
+}
+
+// BuildPromptAffinityKey 把 prompt 前缀 + apiKey + model 拼成稳定的 affinityKey
+// prompt 取前 prefixLen 字节足以代表"逻辑请求"的稳定特征：
+//   - 隐式缓存依赖前缀字节匹配，prompt 后段差异不影响 provider 选择
+//   - apiKey 不同 → 上游账号级隔离，必须分桶
+//   - model 不同 → 上游模型级隔离，必须分桶
+//
+// 关键词: 亲和性路由, prompt 前缀, BuildPromptAffinityKey
+func BuildPromptAffinityKey(prompt, apiKey, model string, prefixLen int) string {
+	if prefixLen <= 0 {
+		prefixLen = 2048
+	}
+	end := prefixLen
+	if end > len(prompt) {
+		end = len(prompt)
+	}
+	// 使用 sha1 16 位，足够抗碰撞且短
+	return utils.CalcSha1(prompt[:end], apiKey, model)
+}
+
+// serializeMessagesForAffinity 把 messages 数组按稳定 JSON 字节序列化，
+// 用于 affinity key 计算与统计。json.Marshal 在结构体 tag 顺序固定的情况下
+// 会输出确定字节序（map[string]any 有运行时排序保证），满足"逻辑相同 ->
+// 字节相同 -> 路由相同"的稳定性需求。
+//
+// 关键词: serializeMessagesForAffinity, messages 稳定序列化
+func serializeMessagesForAffinity(msgs []aispec.ChatDetail) string {
+	if len(msgs) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(msgs)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// BuildMessagesAffinityKey 基于 messages 数组前缀 + apiKey + model 计算稳定 affinityKey。
+// 与 BuildPromptAffinityKey 不同的是，它不再依赖被拍平的 prompt 字符串，
+// 而是用 messages 数组的 JSON 序列化前缀作为"逻辑请求指纹"。这样更贴近
+// 上游 LLM 实际看到的请求体字节序，有利于：
+//   - aibalance 把同一 messages 路由到同一上游 provider（亲和性）
+//   - 上游隐式缓存按 messages JSON 字节前缀做 LCP 匹配 -> 命中率提升
+//
+// 关键词: 亲和性路由, BuildMessagesAffinityKey, messages 前缀
+func BuildMessagesAffinityKey(msgs []aispec.ChatDetail, apiKey, model string, prefixLen int) string {
+	return BuildPromptAffinityKey(serializeMessagesForAffinity(msgs), apiKey, model, prefixLen)
+}
+
+// GetAllProviders returns all providers for the given model
+func (e *Entrypoints) GetAllProviders(model string) []*Provider {
+	return e.providers[model]
+}
+
+// Add adds providers to the model
+func (e *Entrypoints) Add(model string, providers []*Provider) {
+	if _, ok := e.providers[model]; !ok {
+		e.providers[model] = make([]*Provider, 0)
+	}
+	e.providers[model] = append(e.providers[model], providers...)
+}
+
+// LoadAPIKeysFromDB 从数据库加载API密钥到内存配置
+func (c *ServerConfig) LoadAPIKeysFromDB() error {
+	log.Info("Loading API keys from database...")
+
+	// 从数据库获取所有API密钥
+	apiKeys, err := GetAllAiApiKeys()
+	if err != nil {
+		return fmt.Errorf("failed to load API keys from database: %v", err)
+	}
+
+	// 获取所有提供者的 WrapperName
+	providers, err := GetAllAiProviders()
+	if err != nil {
+		return fmt.Errorf("failed to load providers from database: %v", err)
+	}
+
+	// 创建 WrapperName 映射
+	wrapperNames := make(map[string]bool)
+	for _, p := range providers {
+		if p.WrapperName != "" {
+			wrapperNames[p.WrapperName] = true
+		}
+	}
+
+	// Virtual models are permission-only entries that are not real AI providers
+	// but are used for access control (e.g., "web-search" controls access to /v1/web-search)
+	virtualModels := map[string]bool{
+		"web-search": true,
+	}
+
+	// 清空当前内存中的配置
+	c.KeyAllowedModels.allowedModels = make(map[string]map[string]bool)
+	c.Keys.keys = make(map[string]*Key) // 同时清空 Keys 结构
+
+	// 加载到内存配置
+	for _, key := range apiKeys {
+		// 解析允许的模型列表
+		modelNames := strings.Split(key.AllowedModels, ",")
+		modelMap := make(map[string]bool)
+		for _, model := range modelNames {
+			model = strings.TrimSpace(model)
+			if model == "" {
+				continue
+			}
+			// Allow the model if:
+			// 1. It's a known provider wrapper name (exact match)
+			// 2. It's a recognized virtual model (e.g., "web-search")
+			// 3. It contains glob wildcards (e.g., "*", "memfit-*") - these are patterns
+			//    used for matching and should be preserved for IsModelAllowed() to evaluate
+			if wrapperNames[model] || virtualModels[model] || strings.Contains(model, "*") {
+				modelMap[model] = true
+			}
+		}
+
+		// 添加到 KeyAllowedModels
+		c.KeyAllowedModels.allowedModels[key.APIKey] = modelMap
+
+		// 同时添加到 Keys 结构
+		c.Keys.keys[key.APIKey] = &Key{
+			Key:           key.APIKey,
+			AllowedModels: modelMap,
+		}
+
+		log.Infof("Loaded API key: %s with allowed models: %v", utils.ShrinkString(key.APIKey, 8), modelMap)
+	}
+
+	log.Infof("Successfully loaded %d API keys from database", len(apiKeys))
+	return nil
+}
+
+// ServerConfig represents the server configuration
+type ServerConfig struct {
+	Keys             *KeyManager
+	KeyAllowedModels *KeyAllowedModels
+	Models           *ModelManager
+	Entrypoints      *Entrypoints
+	Logging          LogLevel
+	AdminPassword    string          // 添加管理员密码配置
+	SessionManager   *SessionManager // 会话管理器
+	AuthMiddleware   *AuthMiddleware // 认证中间件
+	forwardRule      *omap.OrderedMap[string, *aiforwarder.Rule]
+	WebSearchProxy   string // Global proxy for web search requests
+
+	// Concurrent request counters (atomic)
+	concurrentChatRequests      int64 // current number of in-flight chat/completions requests
+	concurrentEmbeddingRequests int64 // current number of in-flight embedding requests
+	totalWebSearchCount         int64 // cumulative web-search request count (process lifetime)
+	totalAmapCount              int64 // cumulative amap request count (process lifetime)
+
+	// Rate limiter for free web-search users (Trace-ID based)
+	webSearchRateLimiter *WebSearchRateLimiter
+
+	// Rate limiter for free amap proxy users (Trace-ID based, sleep/wait mode)
+	amapRateLimiter       *AmapRateLimiter
+	amapHealthCheckStopCh chan struct{}
+
+	// RPM rate limiter for chat completions (per API key, with per-model overrides)
+	chatRateLimiter    *ChatRateLimiter
+	freeUserDelaySec   int64 // cached from DB; actual delay is N~2N seconds random
+
+	closeOnce sync.Once
+}
+
+// NewServerConfig creates a new server configuration
+func NewServerConfig() *ServerConfig {
+	config := &ServerConfig{
+		Keys:             NewKeyManager(),
+		KeyAllowedModels: NewKeyAllowedModels(),
+		Models:           NewModelManager(),
+		Entrypoints:      NewEntrypoints(),
+		Logging: LogLevel{
+			Debug: true,
+			Info:  true,
+			Warn:  true,
+			Error: true,
+		},
+		AdminPassword:  "admin", // 默认密码
+		SessionManager: NewSessionManager(),
+		forwardRule:    omap.NewOrderedMap[string, *aiforwarder.Rule](make(map[string]*aiforwarder.Rule)),
+	}
+	// Initialize auth middleware with default config
+	config.AuthMiddleware = NewAuthMiddleware(config, DefaultAuthConfig())
+	// Initialize web search rate limiter for free users
+	config.webSearchRateLimiter = NewWebSearchRateLimiter()
+	// Initialize amap rate limiter and health check stop channel
+	config.amapRateLimiter = NewAmapRateLimiter()
+	config.amapHealthCheckStopCh = make(chan struct{})
+	// Initialize chat RPM rate limiter
+	config.chatRateLimiter = NewChatRateLimiter()
+	config.freeUserDelaySec = 3
+	return config
+}
+
+func (c *ServerConfig) Close() {
+	if c == nil {
+		return
+	}
+
+	c.closeOnce.Do(func() {
+		if c.webSearchRateLimiter != nil {
+			c.webSearchRateLimiter.Stop()
+		}
+		if c.amapRateLimiter != nil {
+			c.amapRateLimiter.Stop()
+		}
+		if c.amapHealthCheckStopCh != nil {
+			close(c.amapHealthCheckStopCh)
+		}
+		if c.chatRateLimiter != nil {
+			c.chatRateLimiter.Stop()
+		}
+	})
+}
+
+// logDebug logs a debug message if debug logging is enabled
+func (c *ServerConfig) logDebug(format string, args ...interface{}) {
+	if c.Logging.Debug {
+		log.Debugf(format, args...)
+	}
+}
+
+// logInfo logs an info message if info logging is enabled
+func (c *ServerConfig) logInfo(format string, args ...interface{}) {
+	if c.Logging.Info {
+		log.Infof(format, args...)
+	}
+}
+
+// logWarn logs a warning message if warning logging is enabled
+func (c *ServerConfig) logWarn(format string, args ...interface{}) {
+	if c.Logging.Warn {
+		log.Warnf(format, args...)
+	}
+}
+
+// logError logs an error message if error logging is enabled
+func (c *ServerConfig) logError(format string, args ...interface{}) {
+	if c.Logging.Error {
+		log.Errorf(format, args...)
+	}
+}
+
+func (c *ServerConfig) getKeyFromRawRequest(req []byte) *Key {
+	header := lowhttp.GetHTTPPacketHeader(req, "Authorization")
+	key := strings.TrimPrefix(header, "Bearer ")
+	l, ok := c.Keys.Get(key)
+	if ok {
+		return l
+	}
+	return nil
+}
+
+func (c *ServerConfig) serveChatCompletions(conn net.Conn, rawPacket []byte) {
+	atomic.AddInt64(&c.concurrentChatRequests, 1)
+	concurrentReleased := false
+	releaseConcurrent := func() {
+		if !concurrentReleased {
+			concurrentReleased = true
+			atomic.AddInt64(&c.concurrentChatRequests, -1)
+		}
+	}
+	defer releaseConcurrent()
+	c.logInfo("Starting to handle new chat completion request")
+	// handle ai request
+	auth := ""
+	_, body := lowhttp.SplitHTTPPacket(rawPacket, func(method string, requestUri string, proto string) error {
+		c.logInfo("Request method: %s, URI: %s, Protocol: %s", method, requestUri, proto)
+		return nil
+	}, func(proto string, code int, codeMsg string) error {
+		return nil
+	}, func(line string) string {
+		k, v := lowhttp.SplitHTTPHeader(line)
+		if k == "Authorization" || k == "authorization" {
+			auth = v
+			c.logInfo("Retrieved authentication info from request header: %s", v)
+		}
+		return line
+	})
+	if string(body) == "" {
+		c.logError("Request body is empty")
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+		return
+	}
+
+	var bodyIns aispec.ChatMessage
+	err := json.Unmarshal(body, &bodyIns)
+	if err != nil {
+		c.logError("Failed to parse request body: %v", err)
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+		return
+	}
+
+	stream := bodyIns.Stream
+	log.Infof("user require stream flag: %v", stream)
+
+	modelName := bodyIns.Model
+	c.logInfo("Requested model: %s", modelName)
+	isFreeModel := strings.HasSuffix(modelName, "-free")
+	if isFreeModel {
+		c.logInfo("Request is for a free model, skipping key verification.")
+	}
+
+	// Check if this is a memfit model that requires TOTP authentication
+	if IsMemfitModel(modelName) {
+		c.logInfo("Memfit model detected, checking TOTP authentication...")
+		totpHeader := lowhttp.GetHTTPPacketHeader(rawPacket, "X-Memfit-OTP-Auth")
+		if totpHeader == "" {
+			c.logError("Memfit model requires TOTP authentication, but X-Memfit-OTP-Auth header is missing")
+			c.writeJSONResponse(conn, http.StatusUnauthorized, map[string]interface{}{
+				"error": map[string]string{
+					"message": "Memfit TOTP authentication required. Please provide X-Memfit-OTP-Auth header with base64 encoded TOTP code.",
+					"type":    "memfit_totp_auth_required",
+				},
+			})
+			return
+		}
+
+		verified, err := VerifyMemfitTOTP(totpHeader)
+		if err != nil || !verified {
+			c.logError("Memfit TOTP authentication failed: %v", err)
+			c.writeJSONResponse(conn, http.StatusUnauthorized, map[string]interface{}{
+				"error": map[string]string{
+					"message": "Memfit TOTP authentication failed. Please refresh your TOTP secret and try again.",
+					"type":    "memfit_totp_auth_failed",
+				},
+			})
+			return
+		}
+		c.logInfo("Memfit TOTP authentication successful for model: %s", modelName)
+	}
+
+	var key *Key
+	var apiKeyForStat string
+
+	if isFreeModel {
+		apiKeyForStat = "free-user"
+	} else {
+		value := strings.TrimPrefix(auth, "Bearer ")
+		c.logInfo("Extracted key from authentication info: %s", value)
+		if value == "" {
+			c.logError("No valid authentication info provided")
+			conn.Write([]byte("HTTP/1.1 401 Unauthorized\r\n\r\n"))
+			return
+		}
+
+		var ok bool
+		key, ok = c.Keys.Get(value)
+		if !ok {
+			c.logError("No matching key configuration found: %s", value)
+			conn.Write([]byte("HTTP/1.1 401 Unauthorized\r\n\r\n"))
+			return
+		}
+		apiKeyForStat = key.Key
+		c.logInfo("Successfully verified key: %s", key.Key)
+
+		// Check traffic limit before processing request
+		trafficAllowed, err := CheckAiApiKeyTrafficLimit(key.Key)
+		if err != nil {
+			c.logError("Failed to check traffic limit for key %s: %v", utils.ShrinkString(key.Key, 8), err)
+		} else if !trafficAllowed {
+			c.logError("API key %s has exceeded traffic limit", utils.ShrinkString(key.Key, 8))
+			c.writeJSONResponse(conn, http.StatusTooManyRequests, map[string]interface{}{
+				"error": map[string]string{
+					"message": "API key has exceeded traffic limit. Please contact administrator to increase limit or reset usage.",
+					"type":    "traffic_limit_exceeded",
+				},
+			})
+			return
+		}
+
+		// Authorization check with glob pattern support
+		allowedModels, ok := c.KeyAllowedModels.Get(key.Key)
+		if !ok {
+			c.logError("Key[%v] has no allowed models configured", key.Key)
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+
+		// Use IsModelAllowed which supports glob patterns
+		if !c.KeyAllowedModels.IsModelAllowed(key.Key, modelName) {
+			allowedModelKeys := make([]string, 0, len(allowedModels))
+			for k := range allowedModels {
+				allowedModelKeys = append(allowedModelKeys, k)
+			}
+			c.logError("Key[%v] requested model %s is not in allowed list (including glob patterns), allowed models/patterns: %v", key.Key, modelName, allowedModelKeys)
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+	}
+
+	// 日活记录：在 apiKeyForStat 已经定型、且本次请求确认会进入下游处理（限流前）后，
+	// 把客户端身份指纹去重落到 ai_daily_user_seen。
+	// 任何失败都仅 logWarn，绝不阻塞用户请求。
+	// 关键词: aibalance DAU, RecordDailyUserSeen, hot path 不阻塞
+	{
+		sourceKind, userHash := extractUserIdentity(rawPacket, conn, key, isFreeModel)
+		// 部署在 nginx / Cloudflare 反代后, free_ip 桶必须依赖 X-Forwarded-For /
+		// CF-Connecting-IP / X-Real-IP 等头才能拿到真实客户端 IP, 否则所有 free
+		// 用户被收敛成 1 个 nginx 内网 IP, free_ip DAU 永远 = 1。这里把识别出的
+		// 真实 IP 与 conn.RemoteAddr 一起 logInfo, 部署后能立即在日志里核对反代
+		// 头是否生效, 比 portal 上看 DAU 数字反馈更快。
+		// 关键词: free_ip 真实 IP 可观测性, nginx 反代 IP 修复 部署验证
+		if sourceKind == SourceKindFreeIP {
+			realIP := extractClientIP(rawPacket, conn)
+			rawAddr := ""
+			if conn != nil && conn.RemoteAddr() != nil {
+				rawAddr = conn.RemoteAddr().String()
+			}
+			c.logInfo("DAU free_ip identity: real_ip=%q conn_remote=%q user_hash=%s",
+				realIP, rawAddr, userHash)
+		}
+		if err := RecordDailyUserSeen(time.Now().Format("2006-01-02"), sourceKind, userHash); err != nil {
+			c.logWarn("RecordDailyUserSeen failed (source_kind=%s): %v", sourceKind, err)
+		}
+	}
+
+	// RPM rate limit check (per API key, with per-model overrides)
+	if c.chatRateLimiter != nil {
+		allowed, queueLen := c.chatRateLimiter.CheckRateLimit(apiKeyForStat, modelName)
+		if !allowed {
+			c.logWarn("RPM rate limit exceeded for key=%s model=%s, queue_length=%d",
+				utils.ShrinkString(apiKeyForStat, 8), modelName, queueLen)
+			c.writeRateLimitResponse(conn, queueLen)
+			return
+		}
+	}
+
+	// Free user pre-call delay: applied BEFORE forwarding to providers so
+	// the client perceives the throttle (post-call sleep was ineffective
+	// because the response had already been delivered). Per-model delay
+	// overrides win over the global free-user delay.
+	if isFreeModel && c.chatRateLimiter != nil {
+		delaySec := c.chatRateLimiter.GetEffectiveDelay(modelName, c.freeUserDelaySec)
+		if delaySec > 0 {
+			base := delaySec
+			jitter := time.Duration(base+(time.Now().UnixNano()%base+base)%base) * time.Second
+			c.logInfo("free user pre-call delay: sleeping %v before forwarding model %s", jitter, modelName)
+			time.Sleep(jitter)
+		}
+	}
+
+	// messages 处理：唯一路径——完整尊重 bodyIns.Messages 的顺序与 role/content 结构，
+	// 交给 GetAIClientWithRawMessages 透传给上游 LLM，用以最大化隐式缓存
+	// 前缀命中率。下面的 prompt buffer 仅用于 emptiness 校验、日志展示与
+	// 输入字节统计；image_url 单独提取也仅用于上面这两个目的（实际请求由
+	// messages 自带 content 数组承载）。
+	// 关键词: aibalance messages 透传, RawMessages, 不再拍平
+	var prompt bytes.Buffer
+	var imageContent []*aispec.ChatContent
+	for _, message := range bodyIns.Messages {
+		switch ret := message.Content.(type) {
+		case string:
+			log.Infof("Received text content: %s", utils.ShrinkString(ret, 200))
+			prompt.Write([]byte(ret))
+		default:
+			handleItem := func(element any) {
+				if utils.IsMap(element) {
+					generalMap := utils.InterfaceToGeneralMap(element)
+					typeName := utils.MapGetString(generalMap, `type`)
+					switch typeName {
+					case "image_url":
+						txt := utils.MapGetString(utils.MapGetMapRaw(generalMap, `image_url`), "url")
+						log.Infof("meet image_url.url with: %#v", utils.ShrinkString(txt, 200))
+						imageContent = append(imageContent, aispec.NewUserChatContentImageUrl(txt))
+					case "text":
+						txt := utils.MapGetString(generalMap, "text") + "\n"
+						log.Infof("meet text with: %#v", utils.ShrinkString(txt, 200))
+						prompt.Write([]byte(txt))
+					default:
+						log.Infof("unknown type: %s with %v", typeName, spew.Sdump(ret))
+					}
+				} else {
+					log.Infof("Received unknown content: %s", utils.ShrinkString(element, 300))
+					prompt.Write(utils.InterfaceToBytes(element))
+				}
+			}
+			if funk.IsIteratee(ret) {
+				funk.ForEach(ret, func(i any) {
+					handleItem(i)
+				})
+			} else {
+				log.Infof("Received unknown content: %s", utils.ShrinkString(ret, 300))
+				prompt.Write(utils.InterfaceToBytes(ret))
+			}
+		}
+	}
+
+	if len(imageContent) == 0 && prompt.Len() <= 0 && len(bodyIns.Messages) == 0 {
+		c.logError("Prompt is empty")
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\nX-Reason: empty prompt\r\n\r\n"))
+		return
+	}
+
+	c.logInfo("Built prompt length: %d with image content: %d (messages=%d)",
+		prompt.Len(), len(imageContent), len(bodyIns.Messages))
+
+	// Log at WARN level for production visibility when processing large requests
+	if len(imageContent) > 0 || prompt.Len() > 10000 {
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		log.Warnf("[REQUEST_START] model=%s images=%d prompt_len=%d goroutines=%d heap_mb=%d",
+			modelName, len(imageContent), prompt.Len(), runtime.NumGoroutine(), ms.HeapAlloc/1024/1024)
+	}
+
+	// 亲和性路由：把同一逻辑请求路由到同一 provider，让上游隐式缓存有机会被复用。
+	// 用 messages 数组的 JSON 序列化前缀作为指纹，与上游 LLM 实际看到的
+	// 请求体字节序对齐。
+	// 关键词: 亲和性路由, 隐式缓存, BuildMessagesAffinityKey
+	affinityKey := BuildMessagesAffinityKey(bodyIns.Messages, apiKeyForStat, modelName, 2048)
+
+	// 使用 PeekOrderedProvidersWithAffinity 获取按亲和性 + 负载均衡排序的提供者列表
+	providers := c.Entrypoints.PeekOrderedProvidersWithAffinity(modelName, affinityKey)
+	if len(providers) == 0 {
+		// 如果找不到，尝试从数据库重新加载
+		c.logWarn("No valid providers found for model %s, trying to reload from database...", modelName)
+		if err := LoadProvidersFromDatabase(c); err != nil {
+			c.logError("Failed to reload providers from database: %v", err)
+		} else {
+			c.logInfo("Successfully reloaded providers from database, retrying to find providers.")
+			providers = c.Entrypoints.PeekOrderedProvidersWithAffinity(modelName, affinityKey)
+		}
+	}
+
+	if len(providers) == 0 {
+		c.logError("No valid providers found for model %s (all providers have latency >= 10s)", modelName)
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 404 Not Found\r\nX-Reason: no valid provider found for %v, all providers have high latency\r\n\r\n", modelName)))
+		return
+	}
+
+	c.logInfo("Found %d valid providers for model %s, trying in order", len(providers), modelName)
+
+	// 尝试每个提供者，直到有一个成功
+	var successfulProvider *Provider
+	var lastError error
+	for i, provider := range providers {
+		c.logInfo("Trying provider %d/%d for model %s: %s", i+1, len(providers), modelName, provider.TypeName)
+		// selected provider 详细身份日志：在调用 GetAIClientWithRawMessages 之前打印
+		// type/model/domain/key shrink + affinityKey shrink，便于跨多轮请求肉眼判断
+		// affinity 路由是否稳定到同一 dashscope key（dashscope implicit cache 是
+		// per-API-key 的，路由跳变会显著拉低 cached_tokens 命中率）。
+		// 关键词: aibalance selected provider 日志, affinity 路由稳定性, dashscope per-key cache
+		c.logInfo("selected provider %d/%d: type=%s model=%s domain=%s key=%s (affinityKey=%s)",
+			i+1, len(providers),
+			provider.TypeName, provider.ModelName, provider.DomainOrURL,
+			utils.ShrinkString(provider.APIKey, 8),
+			utils.ShrinkString(affinityKey, 8))
+
+		sendHeaderOnce := sync.Once{}
+		sendHeader := func() {
+			c.logInfo("Successfully obtained AI client, starting to send response header")
+			var header = "HTTP/1.1 200 OK\r\n" +
+				"Content-Type: text/event-stream; charset=utf-8\r\n" +
+				"Cache-Control: no-cache\r\n" +
+				"Connection: keep-alive\r\n" +
+				"Transfer-Encoding: chunked\r\n" +
+				"\r\n"
+			_, err := conn.Write([]byte(header))
+			if err != nil {
+				c.logError("Failed to send response header: %v", err)
+			}
+			c.logInfo("Response header sent, bytes: %d", len(header))
+			utils.FlushWriter(conn)
+		}
+		pr, pw := utils.NewBufPipe(nil)
+		rr, rw := utils.NewBufPipe(nil)
+
+		writer := NewChatJSONChunkWriter(conn, apiKeyForStat, modelName)
+
+		// cleanupResources is a helper function to properly close all resources
+		// to prevent memory leaks when switching to next provider or on failure
+		cleanupResources := func() {
+			// Close pipe writers to unblock readers
+			pw.Close()
+			rw.Close()
+			// Close the writer to release its internal goroutine
+			writer.Close()
+			writer.Wait()
+			// Log at WARN level for production visibility
+			var ms runtime.MemStats
+			runtime.ReadMemStats(&ms)
+			log.Warnf("[RESOURCE_CLEANUP] provider=%s goroutines=%d heap_mb=%d heap_objects=%d",
+				provider.TypeName, runtime.NumGoroutine(), ms.HeapAlloc/1024/1024, ms.HeapObjects)
+		}
+
+		// client 构造统一走 GetAIClientWithRawMessages：把 bodyIns.Messages
+		// 完整透传给上游 LLM，image_url 已经在 messages 内的 content 数组里
+		// 携带，imageContent 仅用于日志统计；不再有 legacy 拍平回滚通道。
+		// 关键词: aibalance client 构造, GetAIClientWithRawMessages, RawMessages 透传
+		onOutputStream := func(reader io.Reader) {
+			defer func() {
+				pw.Close()
+				c.logInfo("Finished handling AI response stream(output)")
+			}()
+			c.logInfo("Start to handle AI response stream")
+			sendHeaderOnce.Do(sendHeader)
+			io.Copy(pw, reader)
+		}
+		onReasonStream := func(reader io.Reader) {
+			defer func() {
+				rw.Close()
+				c.logInfo("Finished handling AI response stream(reason)")
+			}()
+			c.logInfo("Start to handle AI response stream(reason)")
+			sendHeaderOnce.Do(sendHeader)
+			io.Copy(rw, reader)
+			utils.FlushWriter(writer.writerClose)
+		}
+		onToolCallForward := func(toolCalls []*aispec.ToolCall) {
+			c.logInfo("Received %d tool calls from AI provider, forwarding to client", len(toolCalls))
+			sendHeaderOnce.Do(sendHeader)
+			if err := writer.WriteToolCalls(toolCalls); err != nil {
+				c.logError("Failed to write tool calls to client: %v", err)
+			}
+		}
+
+		// onUsageForward 把上游 LLM 在 SSE 末帧返回的 token 用量
+		// （含 prompt_tokens_details.cached_tokens 隐式缓存命中）传给 writer，
+		// writer.Close 会按 OpenAI include_usage 规范在 [DONE] 之前发一帧给客户端。
+		//
+		// 日志策略：把 provider 身份（type/model/domain/key shrink）和上游 raw usage JSON
+		// 一起 log 出来，方便定位 cached_tokens=0 的真因：
+		//   - usage=nil  -> 上游根本没返 usage 帧（可能 stream_options 注入失败或上游不支持）
+		//   - cached=0 且 raw 中无 prompt_tokens_details.cached_tokens 字段 -> 上游账号未触发 implicit cache
+		//   - cached>0 -> 命中，writer.WriteUsage 会透传给客户端
+		//
+		// 关键词: aibalance onUsageForward, cached_tokens 透传, 上游 provider 身份, raw usage JSON
+		onUsageForward := func(usage *aispec.ChatUsage) {
+			if usage == nil {
+				c.logInfo("upstream usage: <nil> (provider=%s model=%s domain=%s key=%s)",
+					provider.TypeName, provider.ModelName, provider.DomainOrURL,
+					utils.ShrinkString(provider.APIKey, 8))
+				return
+			}
+			cached := 0
+			if usage.PromptTokensDetails != nil {
+				cached = usage.PromptTokensDetails.CachedTokens
+			}
+			rawUsage, _ := json.Marshal(usage)
+			c.logInfo("upstream usage: provider=%s model=%s domain=%s key=%s prompt=%d completion=%d total=%d cached=%d raw=%s",
+				provider.TypeName, provider.ModelName, provider.DomainOrURL,
+				utils.ShrinkString(provider.APIKey, 8),
+				usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, cached,
+				string(rawUsage))
+
+			// 把上游真实返回的 usage 同时落到「细粒度日 cache stats」与「日聚合快照」，
+			// 用以驱动 portal 的"日活与缓存" tab。任何失败仅 logWarn，绝不阻塞响应。
+			// 关键词: RecordDailyCacheStats, RecordDailySummaryDelta, onUsageForward 落库
+			if err := RecordDailyCacheStats(provider, modelName, usage); err != nil {
+				c.logWarn("RecordDailyCacheStats failed (model=%s provider=%s): %v",
+					modelName, provider.TypeName, err)
+			}
+			RecordDailySummaryDelta(usage)
+
+			writer.WriteUsage(usage)
+		}
+
+		// provider-aware cache_control 处理 (RewriteMessagesForProviderInstance):
+		//
+		// v2 路径在 v1 (RewriteMessagesForProvider) 之上多加一层 Provider 实例级
+		// 的 ActiveCacheControl Flag 优先判定, 让运维通过 portal.html 一键给任意
+		// provider 打开「主动 cache_control 注入」, 而不再绑死 tongyi+dashscope
+		// 白名单 model。
+		//
+		//   - **provider.ActiveCacheControl == true** (Flag-on): 任意 type/model
+		//     都按「客户端自带 cc -> pass-through; 客户端无 cc -> 给最末 system
+		//     注入 baseline ephemeral cc」处理, 跳过 dashscope 白名单 gate。
+		//     适合 anthropic / 自建 dashscope 中转 / tongyi 没在白名单的新 model。
+		//
+		//   - **provider.ActiveCacheControl == false** (Flag-off): 退化到老路径:
+		//     - tongyi + dashscope 白名单 model -> 注入 baseline 单 cc (legacy)
+		//     - tongyi 非白名单 model -> pass-through (零副作用)
+		//     - 其它所有 provider -> StripCacheControlFromMessages 强制移除 cc
+		//       (跨 provider 安全硬约束: 兼容部分 OpenAI 兼容层 400 / 避免
+		//       dashscope 风格 cc 透传到其他 provider 引发意料外计费)
+		//
+		// 这个分发让 aicache hijacker 可以"无脑给 system+user1 打双 cc",
+		// 跨 provider 安全由 aibalance 兜底剥离, 不需要 hijacker 知道下游
+		// 是不是 tongyi。
+		//
+		// 关键词: aibalance provider-aware cc 路由 v2, RewriteMessagesForProviderInstance,
+		//        ActiveCacheControl Flag, tongyi/anthropic 通用化, §7.7.7 职责重排
+		messagesForUpstream := RewriteMessagesForProviderInstance(bodyIns.Messages, provider)
+		if len(messagesForUpstream) > 0 && len(messagesForUpstream) == len(bodyIns.Messages) {
+			switch {
+			case provider.ActiveCacheControl:
+				c.logInfo("active cache_control baseline injected (flag=on): provider=%s model=%s msgs=%d",
+					provider.TypeName, provider.ModelName, len(messagesForUpstream))
+			case IsTongyiExplicitCacheModel(provider.TypeName, provider.ModelName):
+				c.logInfo("explicit cache_control baseline injected (legacy tongyi whitelist): provider=%s model=%s msgs=%d",
+					provider.TypeName, provider.ModelName, len(messagesForUpstream))
+			case !IsCacheControlAwareProvider(provider.TypeName) && messagesAlreadyHaveCacheControl(bodyIns.Messages):
+				c.logInfo("cache_control stripped (non-tongyi provider): provider=%s model=%s msgs=%d",
+					provider.TypeName, provider.ModelName, len(messagesForUpstream))
+			}
+		}
+
+		client, err := provider.GetAIClientWithRawMessages(
+			messagesForUpstream,
+			bodyIns.Tools,
+			bodyIns.ToolChoice,
+			bodyIns.EnableThinking,
+			onOutputStream,
+			onReasonStream,
+			onToolCallForward,
+			onUsageForward,
+		)
+		if err != nil {
+			c.logError("Failed to get AI client from provider %s: %v", provider.TypeName, err)
+			lastError = err
+			cleanupResources() // Clean up before trying next provider
+			continue           // 尝试下一个提供者
+		}
+
+		// 启动 AI 聊天请求：messages 已通过 RawMessages 携带，
+		// 底层 chatBaseChatCompletions 直接使用，client.Chat 的 prompt
+		// string 参数仅用于占位（被忽略）。
+		// 关键词: aibalance Chat, RawMessages 透传
+		chatCompleted := make(chan error, 1)
+		go func() {
+			c.logInfo("start to call ai chat interface (prompt_len=%d, messages=%d)",
+				prompt.Len(), len(bodyIns.Messages))
+			finalMsg, err := client.Chat("")
+			if err != nil {
+				c.logError("AI chat interface call failed: %v", err)
+				chatCompleted <- err
+				return
+			}
+			c.logInfo("AI chat interface call completed, final: %v.", utils.ShrinkString(finalMsg, 100))
+			chatCompleted <- nil
+		}()
+
+		wg := new(sync.WaitGroup)
+		wg.Add(2)
+
+		reasonWriter := writer.GetReasonWriter()
+		outputWriter := writer.GetOutputWriter()
+
+		// Handle reason stream
+		start := time.Now()
+		firstByteDuration := time.Duration(0)
+		fonce := sync.Once{}
+		totalBytes := new(int64)
+
+		go func() {
+			defer func() {
+				c.logInfo("Finished forwarding AI response stream(reason)")
+				wg.Done()
+			}()
+			c.logInfo("Start to handle reason mirror stream")
+			n, err := io.Copy(reasonWriter, io.TeeReader(rr, utils.FirstWriter(func(p []byte) {
+				fonce.Do(func() {
+					firstByteDuration = time.Since(start)
+				})
+			})))
+			if err != nil {
+				c.logError("Failed to copy reason stream: %v", err)
+			}
+			atomic.AddInt64(totalBytes, n)
+			c.logInfo("Reason stream copy completed, bytes: %d", n)
+		}()
+
+		// Handle output stream
+		go func() {
+			defer func() {
+				c.logInfo("Finished forwarding AI response stream(output)")
+				wg.Done()
+			}()
+			c.logInfo("Start to handle output mirror stream")
+			n, err := io.Copy(outputWriter, io.TeeReader(pr, utils.FirstWriter(func(p []byte) {
+				fonce.Do(func() {
+					firstByteDuration = time.Since(start)
+				})
+			})))
+			atomic.AddInt64(totalBytes, n)
+			if err != nil {
+				c.logError("Failed to copy output stream: %v", err)
+			}
+			c.logInfo("Output stream copy completed, bytes: %d", n)
+		}()
+
+		// CRITICAL FIX: Wait for AI chat to complete BEFORE wg.Wait()
+		// This prevents deadlock when AI provider stream hangs
+		// The previous logic had wg.Wait() before checking chatCompleted,
+		// but wg.Wait() depends on pipes being closed (which happens in stream handlers)
+		// If stream handlers never complete, wg.Wait() blocks forever
+
+		// Request timeout to prevent infinite blocking
+		const requestTimeout = 5 * time.Minute
+
+		var chatErr error
+		select {
+		case chatErr = <-chatCompleted:
+			c.logInfo("AI chat request completed")
+		case <-time.After(requestTimeout):
+			c.logError("AI chat request timeout after %v", requestTimeout)
+			chatErr = fmt.Errorf("request timeout after %v", requestTimeout)
+		}
+
+		// IMPORTANT: Close pipe writers BEFORE wg.Wait() to ensure
+		// the io.Copy goroutines can exit (they're blocked on pipe readers)
+		// This breaks the deadlock: pw.Close() -> pr.Read() returns EOF -> io.Copy exits -> wg.Done()
+		pw.Close()
+		rw.Close()
+
+		// Now safe to wait for stream processing goroutines
+		wg.Wait()
+		utils.FlushWriter(writer.writerClose)
+
+		if !stream {
+			body = writer.GetNotStreamBody()
+			cwr := httputil.NewChunkedWriter(conn)
+			cwr.Write(body)
+			cwr.Close()
+			utils.FlushWriter(cwr)
+			utils.FlushWriter(conn)
+		}
+
+		endDuration := time.Since(start)
+		total := atomic.LoadInt64(totalBytes)
+		requestSucceeded := total > 0 // Determine actual request success based on data received
+
+		// Check if chat request succeeded
+		if chatErr != nil {
+			c.logError("Provider %s chat failed: %v", provider.TypeName, chatErr)
+			lastError = chatErr
+			// Update failed provider status
+			latencyMs := firstByteDuration.Milliseconds()
+			go func() {
+				if err := provider.UpdateDbProvider(false, latencyMs); err != nil {
+					c.logError("Failed to update failed provider status: %v", err)
+				}
+			}()
+			cleanupResources() // Clean up before trying next provider
+			continue           // Try next provider
+		}
+
+		// Check if any data was received
+		if !requestSucceeded {
+			c.logWarn("No data received from provider %s for model %s", provider.TypeName, modelName)
+			lastError = fmt.Errorf("no data received from provider")
+			// Update failed provider status
+			latencyMs := firstByteDuration.Milliseconds()
+			go func() {
+				if err := provider.UpdateDbProvider(false, latencyMs); err != nil {
+					c.logError("Failed to update failed provider status: %v", err)
+				}
+			}()
+			cleanupResources() // Clean up before trying next provider
+			continue           // Try next provider
+		}
+
+		// 如果到达这里，说明当前提供者成功了
+		successfulProvider = provider
+		c.logInfo("Provider %s successfully handled the request for model %s", provider.TypeName, modelName)
+
+		// Update successful provider status
+		latencyMs := firstByteDuration.Milliseconds()
+		providerHealthy := firstByteDuration > 0 && firstByteDuration <= 10*time.Second
+		go func() {
+			if err := provider.UpdateDbProvider(providerHealthy, latencyMs); err != nil {
+				c.logError("Failed to update provider status: %v", err)
+			} else {
+				c.logInfo("Provider status updated: healthy=%v (based on <=10s first byte), latency=%dms. Actual request success: %v",
+					providerHealthy, latencyMs, requestSucceeded)
+			}
+		}()
+
+		// Update API Key statistics using actual success.
+		// 输入字节统计：用 messages 序列化字节数，与上游 LLM 实际收到的请求体
+		// 字节量对齐；当 messages 为空（极少数纯 prompt 入口）回落到 prompt 字节。
+		// 关键词: aibalance inputBytes 统计源, RawMessages 字节统计
+		inputBytes := int64(len(serializeMessagesForAffinity(bodyIns.Messages)))
+		if inputBytes <= 0 {
+			inputBytes = int64(prompt.Len())
+		}
+		outputBytes := total
+		if isFreeModel {
+			// 免费模型使用特殊的 free-user 统计
+			go func() {
+				if err := UpdateFreeUserStats(inputBytes, outputBytes, requestSucceeded); err != nil {
+					c.logError("Failed to update free user statistics: %v", err)
+				} else {
+					c.logInfo("Free user statistics updated: input=%d bytes, output=%d bytes, success=%v",
+						inputBytes, outputBytes, requestSucceeded)
+				}
+			}()
+		} else {
+			// Update API key statistics
+			go func() {
+				if err := UpdateAiApiKeyStats(key.Key, inputBytes, outputBytes, requestSucceeded); err != nil {
+					c.logError("Failed to update API key statistics: %v", err)
+				} else {
+					c.logInfo("API key statistics updated: key=%s, input=%d bytes, output=%d bytes, success=%v",
+						utils.ShrinkString(key.Key, 8), inputBytes, outputBytes, requestSucceeded)
+				}
+			}()
+
+			// Update traffic usage with model multiplier
+			go func() {
+				// Get the traffic multiplier for this model
+				multiplier := GetModelTrafficMultiplier(modelName)
+				totalTraffic := inputBytes + outputBytes
+				adjustedTraffic := int64(float64(totalTraffic) * multiplier)
+
+				if err := UpdateAiApiKeyTrafficUsed(key.Key, adjustedTraffic); err != nil {
+					c.logError("Failed to update traffic usage for key %s: %v", utils.ShrinkString(key.Key, 8), err)
+				} else {
+					c.logInfo("Traffic usage updated: key=%s, raw=%d bytes, multiplier=%.2f, adjusted=%d bytes",
+						utils.ShrinkString(key.Key, 8), totalTraffic, multiplier, adjustedTraffic)
+				}
+			}()
+		}
+
+		bandwidth := float64(0)
+		if endDuration.Seconds() > 0 {
+			bandwidth = float64(total) / endDuration.Seconds() / 1024
+		}
+		c.logInfo("Response completed (Success: %v), first byte duration: %v, end duration: %v, bandwidth: %.2fkbps, total bytes: %d",
+			requestSucceeded, firstByteDuration, endDuration, bandwidth, total)
+
+		writer.Close()
+		utils.FlushWriter(conn)
+		writer.Wait()
+
+		// Log at WARN level for production visibility
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		log.Warnf("[REQUEST_SUCCESS] model=%s provider=%s bytes=%d duration=%v goroutines=%d heap_mb=%d",
+			modelName, successfulProvider.TypeName, total, endDuration, runtime.NumGoroutine(), ms.HeapAlloc/1024/1024)
+
+		break // 成功处理，退出循环
+	}
+
+	// 如果所有提供者都失败了
+	if successfulProvider == nil {
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		log.Warnf("[REQUEST_FAILED] model=%s error=%v goroutines=%d heap_mb=%d",
+			modelName, lastError, runtime.NumGoroutine(), ms.HeapAlloc/1024/1024)
+		c.logError("All providers failed for model %s, last error: %v", modelName, lastError)
+		errorMsg := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\nX-Reason: all providers failed for %v, last error: %v\r\n\r\n", modelName, lastError)
+		conn.Write([]byte(errorMsg))
+		return
+	}
+
+	conn.Close()
+	c.logInfo("Connection closed for %s", conn.RemoteAddr())
+}
+
+// serveEmbeddings handles embedding requests
+func (c *ServerConfig) serveEmbeddings(conn net.Conn, rawPacket []byte) {
+	atomic.AddInt64(&c.concurrentEmbeddingRequests, 1)
+	defer atomic.AddInt64(&c.concurrentEmbeddingRequests, -1)
+	c.logInfo("Starting to handle new embedding request")
+
+	// Extract authorization header
+	auth := ""
+	_, body := lowhttp.SplitHTTPPacket(rawPacket, func(method string, requestUri string, proto string) error {
+		c.logInfo("Request method: %s, URI: %s, Protocol: %s", method, requestUri, proto)
+		return nil
+	}, func(proto string, code int, codeMsg string) error {
+		return nil
+	}, func(line string) string {
+		k, v := lowhttp.SplitHTTPHeader(line)
+		if k == "Authorization" || k == "authorization" {
+			auth = v
+			c.logInfo("Retrieved authentication info from request header: %s", v)
+		}
+		return line
+	})
+
+	if string(body) == "" {
+		c.logError("Request body is empty")
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+		return
+	}
+
+	// Parse request body
+	type EmbeddingRequest struct {
+		Input          string `json:"input"`
+		Model          string `json:"model"`
+		EncodingFormat string `json:"encoding_format,omitempty"`
+	}
+
+	var reqBody EmbeddingRequest
+	err := json.Unmarshal(body, &reqBody)
+	if err != nil {
+		c.logError("Failed to parse request body: %v", err)
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+		return
+	}
+
+	modelName := reqBody.Model
+	inputText := reqBody.Input
+	c.logInfo("Requested embedding model: %s, input length: %d", modelName, len(inputText))
+
+	if inputText == "" {
+		c.logError("Input text is empty")
+		conn.Write([]byte("HTTP/1.1 400 Bad Request\r\nX-Reason: empty input\r\n\r\n"))
+		return
+	}
+
+	// Check if it's a free model
+	isFreeModel := strings.HasSuffix(modelName, "-free")
+	if isFreeModel {
+		c.logInfo("Request is for a free embedding model, skipping key verification.")
+	}
+
+	// Check if this is a memfit model that requires TOTP authentication
+	if IsMemfitModel(modelName) {
+		c.logInfo("Memfit embedding model detected, checking TOTP authentication...")
+		totpHeader := lowhttp.GetHTTPPacketHeader(rawPacket, "X-Memfit-OTP-Auth")
+		if totpHeader == "" {
+			c.logError("Memfit model requires TOTP authentication, but X-Memfit-OTP-Auth header is missing")
+			c.writeJSONResponse(conn, http.StatusUnauthorized, map[string]interface{}{
+				"error": map[string]string{
+					"message": "Memfit TOTP authentication required. Please provide X-Memfit-OTP-Auth header with base64 encoded TOTP code.",
+					"type":    "memfit_totp_auth_required",
+				},
+			})
+			return
+		}
+
+		verified, err := VerifyMemfitTOTP(totpHeader)
+		if err != nil || !verified {
+			c.logError("Memfit TOTP authentication failed: %v", err)
+			c.writeJSONResponse(conn, http.StatusUnauthorized, map[string]interface{}{
+				"error": map[string]string{
+					"message": "Memfit TOTP authentication failed. Please refresh your TOTP secret and try again.",
+					"type":    "memfit_totp_auth_failed",
+				},
+			})
+			return
+		}
+		c.logInfo("Memfit TOTP authentication successful for embedding model: %s", modelName)
+	}
+
+	var key *Key
+
+	if !isFreeModel {
+		value := strings.TrimPrefix(auth, "Bearer ")
+		c.logInfo("Extracted key from authentication info: %s", value)
+		if value == "" {
+			c.logError("No valid authentication info provided")
+			conn.Write([]byte("HTTP/1.1 401 Unauthorized\r\n\r\n"))
+			return
+		}
+
+		var ok bool
+		key, ok = c.Keys.Get(value)
+		if !ok {
+			c.logError("No matching key configuration found: %s", value)
+			conn.Write([]byte("HTTP/1.1 401 Unauthorized\r\n\r\n"))
+			return
+		}
+		c.logInfo("Successfully verified key: %s", key.Key)
+
+		// Check traffic limit before processing request
+		trafficAllowed, err := CheckAiApiKeyTrafficLimit(key.Key)
+		if err != nil {
+			c.logError("Failed to check traffic limit for key %s: %v", utils.ShrinkString(key.Key, 8), err)
+		} else if !trafficAllowed {
+			c.logError("API key %s has exceeded traffic limit", utils.ShrinkString(key.Key, 8))
+			c.writeJSONResponse(conn, http.StatusTooManyRequests, map[string]interface{}{
+				"error": map[string]string{
+					"message": "API key has exceeded traffic limit. Please contact administrator to increase limit or reset usage.",
+					"type":    "traffic_limit_exceeded",
+				},
+			})
+			return
+		}
+
+		// Authorization check with glob pattern support
+		allowedModels, ok := c.KeyAllowedModels.Get(key.Key)
+		if !ok {
+			c.logError("Key[%v] has no allowed models configured", key.Key)
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+
+		// Use IsModelAllowed which supports glob patterns
+		if !c.KeyAllowedModels.IsModelAllowed(key.Key, modelName) {
+			allowedModelKeys := make([]string, 0, len(allowedModels))
+			for k := range allowedModels {
+				allowedModelKeys = append(allowedModelKeys, k)
+			}
+			c.logError("Key[%v] requested model %s is not in allowed list (including glob patterns), allowed models/patterns: %v", key.Key, modelName, allowedModelKeys)
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+	}
+
+	// Get providers for the model
+	providers := c.Entrypoints.PeekOrderedProviders(modelName)
+	if len(providers) == 0 {
+		// Try to reload from database
+		c.logWarn("No valid providers found for model %s, trying to reload from database...", modelName)
+		if err := LoadProvidersFromDatabase(c); err != nil {
+			c.logError("Failed to reload providers from database: %v", err)
+		} else {
+			c.logInfo("Successfully reloaded providers from database, retrying to find providers.")
+			providers = c.Entrypoints.PeekOrderedProviders(modelName)
+		}
+	}
+
+	if len(providers) == 0 {
+		c.logError("No valid providers found for embedding model %s", modelName)
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 404 Not Found\r\nX-Reason: no valid provider found for %v\r\n\r\n", modelName)))
+		return
+	}
+
+	c.logInfo("Found %d valid providers for embedding model %s, trying in order", len(providers), modelName)
+
+	// Try each provider until one succeeds
+	var successfulProvider *Provider
+	var lastError error
+	var embeddingResult []float32
+
+	for i, provider := range providers {
+		c.logInfo("Trying provider %d/%d for embedding model %s: %s", i+1, len(providers), modelName, provider.TypeName)
+
+		start := time.Now()
+
+		// Get embedding client
+		embClient, err := provider.GetEmbeddingClient()
+		if err != nil {
+			c.logError("Failed to get embedding client from provider %s: %v", provider.TypeName, err)
+			lastError = err
+			continue
+		}
+
+		// Call embedding
+		vectors, err := embClient.Embedding(inputText)
+		if err != nil {
+			c.logError("Embedding call failed for provider %s: %v", provider.TypeName, err)
+			lastError = err
+			latencyMs := time.Since(start).Milliseconds()
+			go func() {
+				if err := provider.UpdateDbProvider(false, latencyMs); err != nil {
+					c.logError("Failed to update failed provider status: %v", err)
+				}
+			}()
+			continue
+		}
+
+		// Success
+		embeddingResult = vectors
+		successfulProvider = provider
+		latencyMs := time.Since(start).Milliseconds()
+		c.logInfo("Provider %s successfully generated embedding (dimension: %d, latency: %dms)", provider.TypeName, len(vectors), latencyMs)
+
+		// Update provider status
+		providerHealthy := latencyMs < 10000
+		go func() {
+			if err := provider.UpdateDbProvider(providerHealthy, latencyMs); err != nil {
+				c.logError("Failed to update provider status: %v", err)
+			} else {
+				c.logInfo("Provider status updated: healthy=%v, latency=%dms", providerHealthy, latencyMs)
+			}
+		}()
+
+		// Update API Key statistics
+		inputBytesEmbed := int64(len(inputText))
+		outputBytesEmbed := int64(len(vectors) * 4) // float32 = 4 bytes
+		if isFreeModel {
+			// 免费模型使用特殊的 free-user 统计
+			go func() {
+				if err := UpdateFreeUserStats(inputBytesEmbed, outputBytesEmbed, true); err != nil {
+					c.logError("Failed to update free user statistics: %v", err)
+				} else {
+					c.logInfo("Free user statistics updated: input=%d bytes, output=%d bytes",
+						inputBytesEmbed, outputBytesEmbed)
+				}
+			}()
+		} else {
+			// Update API key statistics
+			go func() {
+				if err := UpdateAiApiKeyStats(key.Key, inputBytesEmbed, outputBytesEmbed, true); err != nil {
+					c.logError("Failed to update API key statistics: %v", err)
+				} else {
+					c.logInfo("API key statistics updated: key=%s, input=%d bytes, output=%d bytes",
+						utils.ShrinkString(key.Key, 8), inputBytesEmbed, outputBytesEmbed)
+				}
+			}()
+
+			// Update traffic usage with model multiplier
+			go func() {
+				multiplier := GetModelTrafficMultiplier(modelName)
+				totalTraffic := inputBytesEmbed + outputBytesEmbed
+				adjustedTraffic := int64(float64(totalTraffic) * multiplier)
+
+				if err := UpdateAiApiKeyTrafficUsed(key.Key, adjustedTraffic); err != nil {
+					c.logError("Failed to update traffic usage for key %s: %v", utils.ShrinkString(key.Key, 8), err)
+				} else {
+					c.logInfo("Traffic usage updated: key=%s, raw=%d bytes, multiplier=%.2f, adjusted=%d bytes",
+						utils.ShrinkString(key.Key, 8), totalTraffic, multiplier, adjustedTraffic)
+				}
+			}()
+		}
+
+		break // Success, exit loop
+	}
+
+	// If all providers failed
+	if successfulProvider == nil {
+		c.logError("All providers failed for embedding model %s, last error: %v", modelName, lastError)
+		errorMsg := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\nX-Reason: all providers failed for %v, last error: %v\r\n\r\n", modelName, lastError)
+		conn.Write([]byte(errorMsg))
+		return
+	}
+
+	// Build response in OpenAI format
+	type EmbeddingData struct {
+		Object    string    `json:"object"`
+		Embedding []float32 `json:"embedding"`
+		Index     int       `json:"index"`
+	}
+
+	type EmbeddingResponse struct {
+		Object string          `json:"object"`
+		Data   []EmbeddingData `json:"data"`
+		Model  string          `json:"model"`
+		Usage  struct {
+			PromptTokens int `json:"prompt_tokens"`
+			TotalTokens  int `json:"total_tokens"`
+		} `json:"usage"`
+	}
+
+	response := EmbeddingResponse{
+		Object: "list",
+		Data: []EmbeddingData{
+			{
+				Object:    "embedding",
+				Embedding: embeddingResult,
+				Index:     0,
+			},
+		},
+		Model: modelName,
+	}
+	response.Usage.PromptTokens = len(inputText)
+	response.Usage.TotalTokens = len(inputText)
+
+	// Marshal response
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		c.logError("Failed to marshal embedding response: %v", err)
+		conn.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
+		return
+	}
+
+	// Send response
+	header := fmt.Sprintf("HTTP/1.1 200 OK\r\n"+
+		"Content-Type: application/json; charset=utf-8\r\n"+
+		"Content-Length: %d\r\n"+
+		"\r\n", len(responseJSON))
+
+	conn.Write([]byte(header))
+	conn.Write(responseJSON)
+	c.logInfo("Embedding response sent successfully, %d bytes", len(responseJSON))
+}
+
+// isEmbeddingWrapper reports whether a wrapper should be excluded from GET /v1/models
+// (chat-oriented listing). True when the wrapper name suggests embedding or any provider
+// row is in embedding mode.
+func isEmbeddingWrapper(wrapperName string, providers []*Provider) bool {
+	if strings.Contains(strings.ToLower(wrapperName), "embedding") {
+		return true
+	}
+	for _, p := range providers {
+		if p != nil && strings.EqualFold(strings.TrimSpace(p.ProviderMode), "embedding") {
+			return true
+		}
+	}
+	return false
+}
+
+// 新增函数: 处理 /v1/models 请求，返回所有可用的 model 列表
+func (c *ServerConfig) serveModels(key *Key, conn net.Conn) {
+	c.logInfo("Serving models list")
+
+	// 定义模型信息结构，与 OpenAI API 格式一致
+	type ModelMeta struct {
+		ID      string `json:"id"`       // 模型ID（实际是 WrapperName）
+		Object  string `json:"object"`   // 固定为 "model"
+		Created int64  `json:"created"`  // 创建时间戳（Unix 时间）
+		OwnedBy string `json:"owned_by"` // 模型所有者
+	}
+
+	// 构建响应数据结构
+	type ModelsResponse struct {
+		Object string       `json:"object"` // 固定为 "list"
+		Data   []*ModelMeta `json:"data"`   // 使用指针切片与 ListChatModels 兼容
+	}
+
+	totalWrappers := len(c.Entrypoints.providers)
+	modelNames := make([]string, 0, totalWrappers)
+	for modelName, plist := range c.Entrypoints.providers {
+		if isEmbeddingWrapper(modelName, plist) {
+			continue
+		}
+		modelNames = append(modelNames, modelName)
+	}
+	afterEmbedding := len(modelNames)
+
+	filtered := make([]string, 0, len(modelNames))
+	for _, name := range modelNames {
+		isFreeModel := strings.HasSuffix(name, "-free")
+		if key == nil {
+			if !isFreeModel {
+				continue
+			}
+		} else {
+			if !isFreeModel && !c.KeyAllowedModels.IsModelAllowed(key.Key, name) {
+				continue
+			}
+		}
+		filtered = append(filtered, name)
+	}
+	afterAuth := len(filtered)
+
+	sort.Slice(filtered, func(i, j int) bool {
+		fi := strings.HasSuffix(filtered[i], "-free")
+		fj := strings.HasSuffix(filtered[j], "-free")
+		if fi != fj {
+			// non-free wrappers first
+			return !fi && fj
+		}
+		return filtered[i] < filtered[j]
+	})
+
+	if totalWrappers == 0 {
+		c.logWarn("No models available for listing")
+	} else {
+		c.logInfo("Models list: total_wrappers=%d after_embedding_exclusion=%d after_auth=%d",
+			totalWrappers, afterEmbedding, afterAuth)
+	}
+
+	response := ModelsResponse{
+		Object: "list",
+		Data:   make([]*ModelMeta, 0, len(filtered)),
+	}
+
+	now := time.Now().Unix()
+	for _, name := range filtered {
+		response.Data = append(response.Data, &ModelMeta{
+			ID:      name,
+			Object:  "model",
+			Created: now,
+			OwnedBy: "library",
+		})
+	}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		c.logError("Failed to marshal models response: %v", err)
+		errorResponse := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\n\r\nFailed to encode models: %v", err)
+		conn.Write([]byte(errorResponse))
+		return
+	}
+
+	header := fmt.Sprintf("HTTP/1.1 200 OK\r\n"+
+		"Content-Type: application/json; charset=utf-8\r\n"+
+		"Content-Length: %d\r\n"+
+		"\r\n", len(responseJSON))
+
+	conn.Write([]byte(header))
+	conn.Write(responseJSON)
+	c.logInfo("Models list response sent, %d bytes, models: %v", len(responseJSON), filtered)
+}
+
+// serveModelMeta serves model metadata
+func (c *ServerConfig) serveModelMeta(conn net.Conn, rawPacket []byte) {
+	c.logInfo("Serving model metadata")
+
+	// Parse query params to see if specific model is requested
+	// But standard lowhttp parsing in serveRequest only gives requestRaw
+	// We can use helper to parse URL
+
+	// Just return all for now or check URL path
+	// The caller might use /v1/model/meta?model=xxx
+
+	// We can reuse split packet logic if needed, but here simple response is enough
+	// Note: Authentication is NOT required for this endpoint as per requirements
+
+	allMetas, err := GetAllModelMetas()
+	if err != nil {
+		c.logError("Failed to get model metas: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n", true)
+		return
+	}
+
+	// Format response
+	type MetaResponse struct {
+		ModelName   string `json:"model_name"`
+		Description string `json:"description"`
+		Tags        string `json:"tags"`
+	}
+
+	var response []MetaResponse
+	for _, meta := range allMetas {
+		response = append(response, MetaResponse{
+			ModelName:   meta.ModelName,
+			Description: meta.Description,
+			Tags:        meta.Tags,
+		})
+	}
+
+	// Marshal response
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		c.logError("Failed to marshal meta response: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n", true)
+		return
+	}
+
+	// Send response
+	header := fmt.Sprintf("HTTP/1.1 200 OK\r\n"+
+		"Content-Type: application/json; charset=utf-8\r\n"+
+		"Access-Control-Allow-Origin: *\r\n"+
+		"Content-Length: %d\r\n"+
+		"\r\n", len(responseJSON))
+
+	conn.Write([]byte(header))
+	conn.Write(responseJSON)
+	c.logInfo("Model metadata response sent, %d bytes", len(responseJSON))
+}
+
+// serveMemfitTOTPUUID serves the TOTP UUID for Memfit model authentication
+// This endpoint is publicly accessible without authentication
+// Returns the TOTP UUID wrapped with MEMFIT-AI prefix/suffix
+func (c *ServerConfig) serveMemfitTOTPUUID(conn net.Conn) {
+	c.logInfo("Serving Memfit TOTP UUID request")
+
+	// Get the wrapped UUID
+	wrappedUUID := GetWrappedTOTPUUID()
+	if wrappedUUID == "" {
+		c.logError("TOTP secret not initialized")
+		c.writeJSONResponse(conn, http.StatusInternalServerError, map[string]string{
+			"error": "TOTP secret not initialized",
+		})
+		return
+	}
+
+	// Return the wrapped UUID
+	response := map[string]interface{}{
+		"uuid":   wrappedUUID,
+		"format": "MEMFIT-AI<uuid>MEMFIT-AI",
+	}
+
+	c.writeJSONResponse(conn, http.StatusOK, response)
+	c.logInfo("Memfit TOTP UUID response sent")
+}
+
+// serveQueryModelMetaInfo serves detailed model meta info with description and tags
+// This is a new endpoint that returns all model metadata with descriptions and tags
+// The caller might use /v1/query-model-meta-info or /v1/query-model-meta-info?name=xxx
+// The name parameter supports prefix matching (e.g., name=memfit- will match all models starting with "memfit-")
+func (c *ServerConfig) serveQueryModelMetaInfo(conn net.Conn, rawPacket []byte) {
+	c.logInfo("Serving query model meta info")
+
+	// Parse request to get query parameters
+	var nameFilter string
+	// Guard against nil or empty rawPacket to prevent panic in SplitHTTPPacket
+	if len(rawPacket) > 0 {
+		_, _ = lowhttp.SplitHTTPPacket(rawPacket, func(method string, requestUri string, proto string) error {
+			// Parse query parameters from URI
+			if idx := strings.Index(requestUri, "?"); idx != -1 {
+				queryStr := requestUri[idx+1:]
+				params, _ := url.ParseQuery(queryStr)
+				nameFilter = params.Get("name")
+			}
+			return nil
+		}, nil) // Remove nil hook parameters to prevent panic
+	}
+
+	if nameFilter != "" {
+		c.logInfo("Filtering model meta info by name prefix: %s", nameFilter)
+	}
+
+	// Get all model metadata
+	allMetas, err := GetAllModelMetas()
+	if err != nil {
+		c.logError("Failed to get model metas: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n", true)
+		return
+	}
+
+	// Get all providers to aggregate by model
+	providers, err := GetAllAiProviders()
+	if err != nil {
+		c.logError("Failed to get providers for query model meta: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n", true)
+		return
+	}
+
+	// Aggregate models
+	type ModelMetaInfo struct {
+		ModelName     string `json:"model_name"`
+		Description   string `json:"description"`
+		Tags          string `json:"tags"`
+		ProviderCount int    `json:"provider_count"`
+	}
+
+	modelCounts := make(map[string]int)
+	for _, p := range providers {
+		name := p.WrapperName
+		if name == "" {
+			name = p.ModelName
+		}
+		if name != "" {
+			modelCounts[name]++
+		}
+	}
+
+	// Build response with optional filtering
+	var response []ModelMetaInfo
+	for name, count := range modelCounts {
+		// Apply name filter if provided (prefix matching)
+		if nameFilter != "" && !strings.HasPrefix(name, nameFilter) {
+			continue
+		}
+
+		info := ModelMetaInfo{
+			ModelName:     name,
+			ProviderCount: count,
+		}
+		if meta, ok := allMetas[name]; ok {
+			info.Description = meta.Description
+			info.Tags = meta.Tags
+		}
+		response = append(response, info)
+	}
+
+	// Sort response by model name for stable ordering
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].ModelName < response[j].ModelName
+	})
+
+	// Marshal response
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		c.logError("Failed to marshal query model meta info response: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n", true)
+		return
+	}
+
+	// Send response
+	header := fmt.Sprintf("HTTP/1.1 200 OK\r\n"+
+		"Content-Type: application/json; charset=utf-8\r\n"+
+		"Access-Control-Allow-Origin: *\r\n"+
+		"Content-Length: %d\r\n"+
+		"\r\n", len(responseJSON))
+
+	conn.Write([]byte(header))
+	conn.Write(responseJSON)
+	c.logInfo("Query model meta info response sent, %d bytes", len(responseJSON))
+}
+
+// serveIndexPage serves a simple HTML index page.
+func (c *ServerConfig) serveIndexPage(conn net.Conn) {
+	c.logInfo("Serving index page")
+
+	var tmpl *template.Template
+	var err error
+
+	// Try to read template from filesystem first (consistent with portal.go)
+	if result := utils.GetFirstExistedFile(
+		"common/aibalance/templates/index.html",
+		"templates/index.html",
+		"../templates/index.html", // Added ../ for potential different execution paths
+	); result != "" {
+		rawTemp, ferr := os.ReadFile(result)
+		if ferr != nil {
+			c.logError("Failed to read index template from filesystem '%s': %v", result, ferr)
+			// Fallback to embedded if reading fails
+		} else {
+			tmpl, err = template.New("index").Parse(string(rawTemp))
+			if err != nil {
+				c.logError("Failed to parse index template from filesystem: %v", err)
+				// Fallback to embedded if parsing fails
+			}
+		}
+	}
+
+	// If filesystem read/parse failed or file not found, use embedded FS
+	if tmpl == nil {
+		tmpl, err = template.ParseFS(templatesFS, "templates/index.html")
+		if err != nil {
+			c.logError("Failed to parse embedded index template: %v", err)
+			errorResponse := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\n\r\nFailed to parse template: %v", err)
+			conn.Write([]byte(errorResponse))
+			return
+		}
+	}
+
+	// Create a buffer to save rendered HTML
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, nil) // Pass nil data as the template is static
+	if err != nil {
+		c.logError("Failed to execute index template: %v", err)
+		errorResponse := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\n\r\nFailed to render template: %v", err)
+		conn.Write([]byte(errorResponse))
+		return
+	}
+
+	// Build the HTTP response
+	response := fmt.Sprintf("HTTP/1.1 200 OK\r\n"+
+		"Content-Type: text/html; charset=utf-8\r\n"+
+		"Content-Length: %d\r\n"+
+		"\r\n%s", htmlBuffer.Len(), htmlBuffer.String())
+
+	// Send the response
+	_, err = conn.Write([]byte(response))
+	if err != nil {
+		c.logError("Failed to write index page response: %v", err)
+	} else {
+		c.logInfo("Index page response sent, %d bytes", len(response))
+	}
+}
+
+func (c *ServerConfig) Serve(conn net.Conn) {
+	//c.logInfo("Received new connection request, source: %s", conn.RemoteAddr())
+	defer conn.Close()
+	reader := bufio.NewReader(conn)
+
+	// Support HTTP/1.1 Keep-Alive (enabled by default)
+	// Handle multiple requests on the same connection
+	for {
+		// Set read deadline to avoid hanging connections
+		conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+
+		request, err := utils.ReadHTTPRequestFromBufioReader(reader)
+		if err != nil {
+			// Connection closed or timeout, this is normal for keep-alive
+			if err == io.EOF {
+				return
+			}
+			// EOF in error message is also normal (connection closed by client)
+			if strings.Contains(err.Error(), "EOF") {
+				c.logDebug("Connection closed by client: %v", err)
+				return
+			}
+			c.logError("Failed to read HTTP request: %v", err)
+			return
+		}
+
+		// HTTP/1.1 defaults to keep-alive, only close if explicitly requested
+		shouldClose := false
+		connectionHeader := request.Header.Get("Connection")
+
+		if request.ProtoMajor == 1 && request.ProtoMinor == 0 {
+			// HTTP/1.0 defaults to close unless keep-alive is specified
+			if connectionHeader == "" || !strings.EqualFold(connectionHeader, "keep-alive") {
+				shouldClose = true
+			}
+		} else {
+			// HTTP/1.1 defaults to keep-alive
+			// Only close if explicitly set to "close"
+			if strings.EqualFold(connectionHeader, "close") {
+				shouldClose = true
+			}
+			// Handle "Connection: upgrade" from nginx proxy
+			// If Connection is "upgrade" but no Upgrade header is present,
+			// this is not a real WebSocket upgrade request, so close the connection
+			// to avoid pending issues with nginx proxy
+			if strings.EqualFold(connectionHeader, "upgrade") {
+				upgradeHeader := request.Header.Get("Upgrade")
+				if upgradeHeader == "" {
+					// Not a real upgrade request, close connection after response
+					shouldClose = true
+				}
+			}
+		}
+
+		// Process the request
+		c.serveRequest(conn, request, shouldClose)
+
+		// If client requested connection close, break the loop
+		if shouldClose {
+			return
+		}
+	}
+}
+
+func (c *ServerConfig) serveRequest(conn net.Conn, request *http.Request, shouldClose bool) {
+	keys := make([]string, 0, len(request.Header))
+	for k := range request.Header {
+		keys = append(keys, k)
+	}
+	for _, k := range keys {
+		if http.CanonicalHeaderKey(k) == k {
+			continue
+		}
+		val, ok := request.Header[k]
+		if ok {
+			request.Header[http.CanonicalHeaderKey(k)] = val
+			delete(request.Header, k)
+		}
+	}
+
+	uriIns, err := url.ParseRequestURI(request.RequestURI)
+	if err != nil {
+		c.logError("Failed to parse request URI: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 400 Bad Request\r\n\r\n", shouldClose)
+		return
+	}
+
+	//c.logInfo("Request path: %s", uriIns.Path)
+	requestRaw, err := utils.DumpHTTPRequest(request, true)
+	if err != nil {
+		c.logError("Failed to serialize HTTP request: %v", err)
+		c.writeResponse(conn, "HTTP/1.1 400 Bad Request\r\n\r\n", shouldClose)
+		return
+	}
+
+	//c.logInfo("Raw request content:\n%s", string(requestRaw))
+
+	switch {
+	case strings.HasPrefix(uriIns.Path, "/forwarder/"):
+		//c.logInfo("Forwarder: registering with %s", uriIns.Path)
+		c.serveForwarder(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/chat/completions"):
+		c.serveChatCompletions(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/embeddings"):
+		c.serveEmbeddings(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/web-search"):
+		c.serveWebSearch(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/amap/"):
+		c.serveAmap(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/models"): // 新增：处理 /v1/models 请求
+		c.logInfo("Processing models list request")
+		key := c.getKeyFromRawRequest(requestRaw)
+		c.serveModels(key, conn)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/query-model-meta-info"):
+		c.serveQueryModelMetaInfo(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/model/meta"):
+		c.serveModelMeta(conn, requestRaw)
+		return
+	case strings.HasPrefix(uriIns.Path, "/v1/memfit-totp-uuid"):
+		c.logInfo("Processing Memfit TOTP UUID request")
+		c.serveMemfitTOTPUUID(conn)
+		return
+	case strings.HasPrefix(uriIns.Path, "/public/"):
+		c.servePublicAPI(conn, request, uriIns)
+		return
+	case strings.HasPrefix(uriIns.Path, "/ops"):
+		c.HandleOpsPortalRequest(conn, request, uriIns)
+		return
+	case strings.HasPrefix(uriIns.Path, "/portal"):
+		c.HandlePortalRequest(conn, request, uriIns)
+		return
+	case uriIns.Path == "/":
+		c.logInfo("Processing index page request for / ")
+		c.serveIndexPage(conn)
+		return
+	case uriIns.Path == "/index":
+		c.logInfo("Processing index page request for /index")
+		c.serveIndexPage(conn)
+		return
+	case strings.HasPrefix(uriIns.Path, "/register/forward"):
+		c.logInfo("Processing register forward request")
+		fallthrough
+	default:
+		c.logError("Unknown request path: %s", uriIns.Path)
+		c.writeResponse(conn, "HTTP/1.1 404 Not Found\r\n\r\n", shouldClose)
+		return
+	}
+}
+
+// writeRateLimitResponse sends a 429 response with X-AIBalance-Info header containing the queue length.
+func (c *ServerConfig) writeRateLimitResponse(conn net.Conn, queueLength int64) {
+	body := fmt.Sprintf(`{"error":{"message":"Rate limit exceeded. You are in queue position %d. Please retry after 10 seconds.","type":"rate_limit_exceeded","queue_length":%d}}`, queueLength, queueLength)
+	header := fmt.Sprintf(
+		"HTTP/1.1 429 Too Many Requests\r\n"+
+			"Content-Type: application/json; charset=utf-8\r\n"+
+			"X-AIBalance-Info: %d\r\n"+
+			"Retry-After: 10\r\n"+
+			"Content-Length: %d\r\n"+
+			"\r\n",
+		queueLength, len(body))
+	conn.Write([]byte(header))
+	conn.Write([]byte(body))
+}
+
+// writeResponse writes a response with appropriate Connection header for keep-alive support
+func (c *ServerConfig) writeResponse(conn net.Conn, response string, shouldClose bool) {
+	if shouldClose {
+		// Add Connection: close header if not already present
+		if !strings.Contains(response, "Connection:") {
+			lines := strings.Split(response, "\r\n")
+			if len(lines) > 0 {
+				var builder strings.Builder
+				builder.WriteString(lines[0])
+				builder.WriteString("\r\n")
+				builder.WriteString("Connection: close\r\n")
+				for i := 1; i < len(lines); i++ {
+					builder.WriteString(lines[i])
+					if i < len(lines)-1 {
+						builder.WriteString("\r\n")
+					}
+				}
+				conn.Write([]byte(builder.String()))
+				return
+			}
+		}
+	}
+	conn.Write([]byte(response))
+}

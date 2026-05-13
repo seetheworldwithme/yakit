@@ -1,0 +1,517 @@
+// =============================================================================
+// 通用 AI Benchmark Runner
+// 功能:
+// 1. 接受 JSON 配置中的 cases
+// 2. 使用 aim.InvokeReAct 执行 benchmark
+// 3. 在 aim.onEvent / aim.onStream 中按文本匹配判定 case 是否通过
+// 4. 将完整 JSON 报告和 Markdown 摘要落地到本地
+// =============================================================================
+
+configFile = cli.String("config", cli.setDefault(""), cli.setHelp("Benchmark 配置文件路径。支持根对象 { cases }，也支持根为 case JSON list"))
+outputDir = cli.String("output-dir", cli.setDefault("./benchmark-reports"), cli.setHelp("报告输出目录"))
+reportPrefix = cli.String("report-prefix", cli.setDefault("aim-benchmark"), cli.setHelp("报告文件名前缀"))
+
+timeoutSec = cli.Int("timeout", cli.setDefault(60*20), cli.setHelp("所有 case 的超时时间（秒）,默认20分钟"))
+maxIteration = cli.Int("max-iteration", cli.setDefault(12), cli.setHelp("所有 case 的最大迭代次数"))
+language = cli.String("language", cli.setDefault("zh"), cli.setHelp("所有 case 的语言"))
+
+varParams = cli.StringSlice("var", cli.setHelp("设置变量，格式: key=value，可多次使用，用于替换配置中的 {{key}} 占位符"))
+
+cli.check()
+
+globalVars = {}
+
+func isNil(value) {
+    return value == nil || value == undefined
+}
+
+func truncateText(raw, limit) {
+    if isNil(raw) {
+        return ""
+    }
+    text = sprintf("%v", raw)
+    if limit <= 0 {
+        return text
+    }
+    if len(text) <= limit {
+        return text
+    }
+    return text[:limit] + "..."
+}
+
+func parseGlobalVars() {
+    for varParam in varParams {
+        if str.Contains(varParam, "=") {
+            parts = str.SplitN(varParam, "=", 2)
+            if len(parts) == 2 {
+                key = str.TrimSpace(parts[0])
+                value = str.TrimSpace(parts[1])
+                if key != "" {
+                    globalVars[key] = value
+                    log.info("Variable set: %s=***", key)
+                }
+            }
+        } else {
+            log.warn("Invalid variable format (expected key=value): %s", varParam)
+        }
+    }
+}
+
+func replaceVariables(text) {
+    if isNil(text) {
+        return text
+    }
+
+    result = sprintf("%v", text)
+    for key, value in globalVars {
+        placeholder = sprintf("{{%s}}", key)
+        result = str.ReplaceAll(result, placeholder, value)
+    }
+    return result
+}
+
+func toCleanString(value) {
+    if isNil(value) {
+        return ""
+    }
+    return str.TrimSpace(sprintf("%v", value))
+}
+
+func normalizePassConfig(casePassConfig) {
+    return {
+        "eventMatch": toCleanString(casePassConfig["eventMatch"]),
+        "streamMatch": toCleanString(casePassConfig["streamMatch"]),
+    }
+}
+
+func normalizeCase(caseConfig, index) {
+    if isNil(caseConfig) {
+        die(sprintf("Invalid case at index %d: each case must be a JSON object", index))
+    }
+
+    caseName = toCleanString(caseConfig["name"])
+    if caseName == "" {
+        caseName = sprintf("case-%d", index + 1)
+    }
+
+    inputText = toCleanString(caseConfig["input"])
+    if inputText == "" {
+        inputText = toCleanString(caseConfig["initialInput"])
+    }
+    if inputText == "" {
+        inputText = toCleanString(caseConfig["target"])
+    }
+    if inputText == "" {
+        inputText = toCleanString(caseConfig["goal"])
+    }
+    if inputText == "" {
+        inputText = toCleanString(caseConfig["prompt"])
+    }
+    if inputText == "" {
+        inputText = toCleanString(caseConfig["taskPrompt"])
+    }
+    if inputText == "" {
+        die(sprintf("Case %s is missing input/prompt/taskPrompt", caseName))
+    }
+
+    passConfig = normalizePassConfig(caseConfig["pass"])
+    hasEventPass = passConfig["eventMatch"] != ""
+    hasStreamPass = passConfig["streamMatch"] != ""
+    if !hasEventPass && !hasStreamPass {
+        die(sprintf("Case %s must define pass.eventMatch or pass.streamMatch", caseName))
+    }
+
+    return {
+        "name": caseName,
+        "description": toCleanString(caseConfig["description"]),
+        "input": inputText,
+        "pass": passConfig,
+    }
+}
+
+func loadConfiguration() {
+    if configFile == "" {
+        die("Please provide --config")
+    }
+
+    content, err = file.ReadFile(configFile)
+    if err != nil {
+        die(sprintf("Failed to read config file: %v", err))
+    }
+
+    if len(globalVars) > 0 {
+        content = replaceVariables(content)
+    }
+
+    rawCases = json.loads(content)
+
+    if isNil(rawCases) || len(rawCases) == 0 {
+        die("No cases found in config. Please provide cases or a root JSON list.")
+    }
+
+    normalizedCases = []
+    idx := 0
+    for caseConfig in rawCases {
+        normalizedCases = append(normalizedCases, normalizeCase(caseConfig, idx))
+        idx++
+    }
+
+    return normalizedCases
+}
+
+func matchEvent(passConfig, contentText) {
+    token = passConfig["eventMatch"]
+    if token == "" {
+        return false
+    }
+    return str.Contains(contentText, token)
+}
+
+func matchStream(passConfig, contentText) {
+    token = passConfig["streamMatch"]
+    if token == "" {
+        return false
+    }
+    return str.Contains(contentText, token)
+}
+
+func appendRecentEvent(result, eventInfo) {
+    recentEvents = result["recentEvents"]
+    if len(recentEvents) >= 20 {
+        recentEvents = recentEvents[1:]
+    }
+    recentEvents = append(recentEvents, eventInfo)
+    result["recentEvents"] = recentEvents
+}
+
+func runSingleCase(caseConfig) {
+    runID = sprintf("%s-%d", caseConfig["name"], time.Now().UnixNano())
+    startAt = time.Now()
+
+    result = {
+        "runId": runID,
+        "caseName": caseConfig["name"],
+        "caseDescription": caseConfig["description"],
+        "input": caseConfig["input"],
+        "timeout": timeoutSec,
+        "maxIteration": maxIteration,
+        "language": language,
+        "yoloMode": true,
+        "allowUserInteract": false,
+        "passConfig": caseConfig["pass"],
+        "success": false,
+        "conditionMatched": false,
+        "passed": false,
+        "error": "",
+        "eventCount": 0,
+        "matchedEventCount": 0,
+        "matchedEvents": [],
+        "matchedStreamCount": 0,
+        "matchedStreams": [],
+        "recentEvents": [],
+        "startTime": startAt.Format("2006-01-02 15:04:05"),
+        "startUnix": startAt.Unix(),
+        "endTime": "",
+        "endUnix": 0,
+        "durationSec": 0,
+    }
+
+    opts = []
+
+    // AI 执行基础参数配置区。
+    // 如果要统一调整 benchmark 运行时行为，例如超时、最大迭代次数、语言、
+    // 是否允许交互、审批模式等，就在这里增删对应的 aim.xxx 选项。
+    opts = append(opts, aim.sessionID(str.RandStr(12)))
+    opts = append(opts, aim.timeout(timeoutSec))
+    opts = append(opts, aim.maxIteration(maxIteration))
+
+    if language != "" {
+        opts = append(opts, aim.language(language))
+    }
+    opts = append(opts, aim.yoloMode())
+    opts = append(opts, aim.allowUserInteract(false))
+
+    // Stream 回调配置区。
+    // 这里处理的是流式输出内容，当前使用 aim.onStreamContent，
+    // 直接拿回调传入的 data 做 streamMatch 判定。
+    // 如果之后需要改成更复杂的 stream 解析、累积、调试打印，都从这里扩展。
+    opts = append(opts, aim.onStreamContent(func(react, event, nodeId, data) {
+        if len(data) == 0 {
+            return
+        }
+
+        contentText = string(data)
+        if result["matchedStreamCount"] > 0 {
+            return
+        }
+
+        matched = matchStream(caseConfig["pass"], contentText)
+        if matched {
+            result["conditionMatched"] = true
+            result["matchedStreamCount"]++
+            matchedRecord = {
+                "contentPreview": truncateText(contentText, 600),
+            }
+            result["matchedStreams"] = append(result["matchedStreams"], matchedRecord)
+            log.info("Matched case=%s stream", caseConfig["name"])
+        }
+    }))
+
+    // Event 回调配置区。
+    // 这里处理的是普通事件内容，直接用 event.Content 做 eventMatch 判定。
+    // 如果以后要增加更多基于事件内容的 benchmark 逻辑，也优先在这里扩展。
+    opts = append(opts, aim.onEvent(func(react, event) {
+        eventType = string(event.Type)
+        contentText = string(event.Content)
+
+        result["eventCount"]++
+
+        eventInfo = {
+            "index": result["eventCount"],
+            "type": eventType,
+            "contentPreview": truncateText(contentText, 300),
+        }
+        appendRecentEvent(result, eventInfo)
+
+        matched = matchEvent(caseConfig["pass"], contentText)
+        if matched {
+            result["conditionMatched"] = true
+            result["matchedEventCount"]++
+            matchedRecord = {
+                "index": result["eventCount"],
+                "type": eventType,
+                "contentPreview": truncateText(contentText, 600),
+            }
+            result["matchedEvents"] = append(result["matchedEvents"], matchedRecord)
+            log.info("Matched case=%s event=%s", caseConfig["name"], eventType)
+        }
+    }))
+
+    log.info("Running case=%s", caseConfig["name"])
+    log.info("  timeout=%d maxIteration=%d", timeoutSec, maxIteration)
+
+    // Prompt 入口。
+    // 当前 benchmark 直接把 caseConfig["input"] 作为初始提示词传给 AI。
+    // 如果后续需要统一追加帮助信息、约束提示、前缀模板，或者对输入做包装，
+    // 就在 InvokeReAct 之前先构造一个新的 prompt，再传入。
+    err = aim.InvokeReAct(caseConfig["input"], opts...)
+    if err != nil {
+        result["error"] = sprintf("%v", err)
+    } else {
+        result["success"] = true
+    }
+
+    endAt = time.Now()
+    result["endTime"] = endAt.Format("2006-01-02 15:04:05")
+    result["endUnix"] = endAt.Unix()
+    result["durationSec"] = endAt.Unix() - startAt.Unix()
+    result["passed"] = result["success"] && result["conditionMatched"]
+
+    log.info("Completed case=%s success=%v matched=%v passed=%v events=%d",
+        caseConfig["name"],
+        result["success"],
+        result["conditionMatched"],
+        result["passed"],
+        result["eventCount"],
+    )
+
+    if result["error"] != "" {
+        log.warn("  error=%s", result["error"])
+    }
+
+    return result
+}
+
+func buildSummary(results) {
+    totalRuns = len(results)
+    successCount = 0
+    conditionMatchedCount = 0
+    passCount = 0
+    totalDuration = 0
+
+    caseSummaryMap = {}
+
+    for result in results {
+        if result["success"] {
+            successCount++
+        }
+        if result["conditionMatched"] {
+            conditionMatchedCount++
+        }
+        if result["passed"] {
+            passCount++
+        }
+        totalDuration += result["durationSec"]
+
+        caseKey = result["caseName"]
+        if isNil(caseSummaryMap[caseKey]) {
+            caseSummaryMap[caseKey] = {
+                "caseName": result["caseName"],
+                "totalRuns": 0,
+                "successCount": 0,
+                "conditionMatchedCount": 0,
+                "passCount": 0,
+            }
+        }
+        caseSummaryMap[caseKey]["totalRuns"]++
+        if result["success"] {
+            caseSummaryMap[caseKey]["successCount"]++
+        }
+        if result["conditionMatched"] {
+            caseSummaryMap[caseKey]["conditionMatchedCount"]++
+        }
+        if result["passed"] {
+            caseSummaryMap[caseKey]["passCount"]++
+        }
+    }
+
+    caseSummary = []
+    for _, item in caseSummaryMap {
+        if item["totalRuns"] > 0 {
+            item["passRate"] = float(item["passCount"]) / float(item["totalRuns"]) * 100
+            item["successRate"] = float(item["successCount"]) / float(item["totalRuns"]) * 100
+        } else {
+            item["passRate"] = 0.0
+            item["successRate"] = 0.0
+        }
+        caseSummary = append(caseSummary, item)
+    }
+
+    avgDuration = 0.0
+    if totalRuns > 0 {
+        avgDuration = float(totalDuration) / float(totalRuns)
+    }
+
+    passRate = 0.0
+    successRate = 0.0
+    conditionMatchedRate = 0.0
+    if totalRuns > 0 {
+        passRate = float(passCount) / float(totalRuns) * 100
+        successRate = float(successCount) / float(totalRuns) * 100
+        conditionMatchedRate = float(conditionMatchedCount) / float(totalRuns) * 100
+    }
+
+    return {
+        "totalRuns": totalRuns,
+        "successCount": successCount,
+        "conditionMatchedCount": conditionMatchedCount,
+        "passCount": passCount,
+        "totalDurationSec": totalDuration,
+        "avgDurationSec": avgDuration,
+        "successRate": successRate,
+        "conditionMatchedRate": conditionMatchedRate,
+        "passRate": passRate,
+        "cases": caseSummary,
+    }
+}
+
+func saveReports(cases, results) {
+    err = file.MkdirAll(outputDir)
+    if err != nil {
+        die(sprintf("Failed to create output dir: %v", err))
+    }
+
+    ts = time.Now().Format("20060102-150405")
+    jsonPath = file.Join(outputDir, sprintf("%s-%s.json", reportPrefix, ts))
+    mdPath = file.Join(outputDir, sprintf("%s-%s.md", reportPrefix, ts))
+
+    report = {
+        "reportType": "aim-event-benchmark",
+        "generatedAt": time.Now().Format("2006-01-02 15:04:05"),
+        "configFile": configFile,
+        "summary": buildSummary(results),
+        "cases": cases,
+        "results": results,
+    }
+
+    jsonText = json.dumps(report, json.withIndent("  "))
+    err = file.Save(jsonPath, jsonText)
+    if err != nil {
+        die(sprintf("Failed to save JSON report: %v", err))
+    }
+
+    summary = report["summary"]
+    markdown = ""
+    markdown += "# AI Benchmark Report\n\n"
+    markdown += sprintf("- Generated At: %s\n", report["generatedAt"])
+    markdown += sprintf("- Config File: `%s`\n", configFile)
+    markdown += sprintf("- Total Runs: %d\n", summary["totalRuns"])
+    markdown += sprintf("- Success Count: %d (%.1f%%)\n", summary["successCount"], summary["successRate"])
+    markdown += sprintf("- Condition Matched Count: %d (%.1f%%)\n", summary["conditionMatchedCount"], summary["conditionMatchedRate"])
+    markdown += sprintf("- Pass Count: %d (%.1f%%)\n", summary["passCount"], summary["passRate"])
+    markdown += sprintf("- Avg Duration: %.1fs\n\n", summary["avgDurationSec"])
+
+    markdown += "## Results\n\n"
+    markdown += "| Case | Success | Matched | Passed | Events | Match Hits | Duration(s) | Error |\n"
+    markdown += "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+    for result in results {
+        errorText = str.ReplaceAll(truncateText(result["error"], 80), "|", "/")
+        matchHits = result["matchedEventCount"] + result["matchedStreamCount"]
+        markdown += sprintf("| %s | %v | %v | %v | %d | %d | %d | %s |\n",
+            str.ReplaceAll(result["caseName"], "|", "/"),
+            result["success"],
+            result["conditionMatched"],
+            result["passed"],
+            result["eventCount"],
+            matchHits,
+            result["durationSec"],
+            errorText,
+        )
+    }
+
+    markdown += "\n## Case Summary\n\n"
+    markdown += "| Case | Total | Success | Matched | Passed | Pass Rate |\n"
+    markdown += "| --- | --- | --- | --- | --- | --- |\n"
+    for item in summary["cases"] {
+        markdown += sprintf("| %s | %d | %d | %d | %d | %.1f%% |\n",
+            str.ReplaceAll(item["caseName"], "|", "/"),
+            item["totalRuns"],
+            item["successCount"],
+            item["conditionMatchedCount"],
+            item["passCount"],
+            item["passRate"],
+        )
+    }
+
+    err = file.Save(mdPath, markdown)
+    if err != nil {
+        die(sprintf("Failed to save Markdown report: %v", err))
+    }
+
+    return jsonPath, mdPath, summary
+}
+
+func printSummary(summary) {
+    println("")
+    println("=" * 90)
+    println("AI Benchmark Summary")
+    println("=" * 90)
+    printf("%-30s %-10s %-10s %-10s %-12s\n", "Scope", "Total", "Success", "Matched", "Passed")
+    println("-" * 90)
+    printf("%-30s %-10d %-10d %-10d %-12d\n", "All Runs", summary["totalRuns"], summary["successCount"], summary["conditionMatchedCount"], summary["passCount"])
+    println("-" * 90)
+    println("")
+}
+
+parseGlobalVars()
+
+cases = loadConfiguration()
+
+log.info("Loaded %d cases", len(cases))
+log.info("Using default aim config")
+
+results = []
+totalRuns = len(cases)
+currentRun = 0
+
+for caseConfig in cases {
+    currentRun++
+    log.info("[%d/%d] case=%s", currentRun, totalRuns, caseConfig["name"])
+    results = append(results, runSingleCase(caseConfig))
+}
+
+jsonPath, mdPath, summary = saveReports(cases, results)
+printSummary(summary)
+
+log.info("JSON report saved to: %s", jsonPath)
+log.info("Markdown report saved to: %s", mdPath)

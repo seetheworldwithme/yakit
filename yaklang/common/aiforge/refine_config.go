@@ -1,0 +1,113 @@
+package aiforge
+
+import (
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
+	"github.com/yaklang/yaklang/common/ai/rag"
+	"github.com/yaklang/yaklang/common/ai/rag/entityrepos"
+	"github.com/yaklang/yaklang/common/consts"
+)
+
+type RefineConfig struct {
+	RefinePrompt         string
+	KnowledgeBaseName    string
+	KnowledgeBaseDesc    string
+	KnowledgeBaseType    string
+	KnowledgeEntryLength int
+	Strict               bool
+	FocusQuery           string
+	DisableBuildIndex    bool
+	DisableERMBuild      bool
+
+	Database *gorm.DB
+
+	*AnalysisConfig
+
+	ragSystemOptions []rag.RAGSystemConfigOption
+}
+
+func NewRefineConfig(opts ...any) *RefineConfig {
+	cfg := &RefineConfig{
+		RefinePrompt:         "",
+		KnowledgeBaseName:    uuid.New().String(),
+		KnowledgeEntryLength: 1000,
+		Strict:               false,
+		Database:             consts.GetGormProfileDatabase(),
+	}
+	otherOption := make([]any, 0)
+	for _, opt := range opts {
+		switch opt.(type) {
+		case rag.RAGSystemConfigOption:
+			cfg.ragSystemOptions = append(cfg.ragSystemOptions, opt.(rag.RAGSystemConfigOption))
+		case RefineOption:
+			opt.(RefineOption)(cfg)
+		default:
+			otherOption = append(otherOption, opt)
+		}
+	}
+	cfg.AnalysisConfig = NewAnalysisConfig(otherOption...)
+	cfg.ragSystemOptions = append(cfg.ragSystemOptions, rag.WithRAGCtx(cfg.Ctx))
+	return cfg
+}
+
+func (a *RefineConfig) KHopOption() []entityrepos.KHopQueryOption {
+	config := rag.NewRAGSystemConfig(a.ragSystemOptions...)
+	options := append(a.AnalysisConfig.KHopOption(), config.ConvertToKHopOptions()...)
+	return options
+}
+
+type RefineOption func(*RefineConfig)
+
+func RefineWithCustomizeDatabase(db *gorm.DB) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.Database = db
+	}
+}
+
+func RefineWithDisableBuildIndex(disable bool) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.DisableBuildIndex = disable
+	}
+}
+
+func RefineWithDisableERMBuild(disable bool) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.DisableERMBuild = disable
+	}
+}
+
+func RefineWithKnowledgeBaseDesc(desc string) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.KnowledgeBaseDesc = desc
+	}
+}
+
+func RefineWithKnowledgeBaseType(typ string) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.KnowledgeBaseType = typ
+	}
+}
+
+func _refine_WithRefinePrompt(prompt string) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.RefinePrompt = prompt
+	}
+}
+
+func RefineWithKnowledgeBaseName(name string) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.KnowledgeBaseName = name
+	}
+}
+
+func RefineWithKnowledgeEntryLength(length int) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.KnowledgeEntryLength = length
+	}
+}
+
+func _refine_WithStrict(strict bool) RefineOption {
+	return func(cfg *RefineConfig) {
+		cfg.Strict = strict
+	}
+}

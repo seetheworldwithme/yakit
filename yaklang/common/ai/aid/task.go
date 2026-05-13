@@ -1,0 +1,510 @@
+package aid
+
+import (
+	"bytes"
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/yaklang/yaklang/common/utils"
+
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool"
+
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/utils/omap"
+
+	"github.com/yaklang/yaklang/common/ai/aispec"
+)
+
+// TaskResponseCallback 定义Task执行过程中响应回调函数类型
+type TaskResponseCallback func(ctx *PromptContextProvider, details ...aispec.ChatDetail) (continueThinking bool, prompt string, err error)
+
+// TaskProgress 记录任务执行的进度信息
+type TaskProgress struct {
+	TotalTasks     int    `json:"total_tasks"`     // 总任务数
+	CompletedTasks int    `json:"completed_tasks"` // 已完成任务数
+	CurrentTask    string `json:"current_task"`    // 当前执行的任务
+	CurrentGoal    string `json:"current_goal"`    // 当前任务的目标
+}
+
+type AiTask struct {
+	*Coordinator
+
+	*aicommon.AIStatefulTaskBase
+	Index              string    `json:"index"`
+	Name               string    `json:"name"`
+	Goal               string    `json:"goal"`
+	SemanticIdentifier string    `json:"semantic_identifier"` // short identifier for directory naming, generated from Name or AI
+	ParentTask         *AiTask   `json:"parent_task"`
+	Subtasks           []*AiTask `json:"subtasks"`
+	DependsOn          []string  `json:"depends_on,omitempty"`
+
+	StatusSummary string `json:"status_summary"`
+	TaskSummary   string `json:"task_summary"`
+	ShortSummary  string `json:"short_summary"`
+	LongSummary   string `json:"long_summary"`
+
+	toolCallResultIds  *omap.OrderedMap[int64, *aitool.ToolResult]
+	taskTimelineDiffer *aicommon.TimelineDiffer // Timeline differ for tracking task execution timeline changes
+	taskStartTime      time.Time                // Task execution start time for duration calculation
+}
+
+// GetSemanticIdentifier returns the semantic identifier for directory naming.
+// Priority: SemanticIdentifier field > base semanticLabel > Name
+func (t *AiTask) GetSemanticIdentifier() string {
+	if t.SemanticIdentifier != "" {
+		return t.SemanticIdentifier
+	}
+	if t.AIStatefulTaskBase != nil {
+		if label := t.AIStatefulTaskBase.GetSemanticLabel(); label != "" {
+			return label
+		}
+	}
+	return t.Name
+}
+
+// SetSemanticIdentifier sets the semantic identifier for directory naming.
+func (t *AiTask) SetSemanticIdentifier(id string) {
+	t.SemanticIdentifier = id
+	if t.AIStatefulTaskBase != nil {
+		t.AIStatefulTaskBase.SetSemanticLabel(id)
+	}
+}
+
+func (t *AiTask) GetUserInput() string {
+	if utils.IsNil(t.ParentTask) {
+		if t.AIStatefulTaskBase == nil {
+			return ""
+		}
+		return t.AIStatefulTaskBase.GetUserInput()
+	}
+
+	// 收集父任务链的输入（不包括当前任务）
+	var collectParentInputs func(task *AiTask, depth int) []string
+	collectParentInputs = func(task *AiTask, depth int) []string {
+		if task == nil || task.ParentTask == nil || depth >= 20 {
+			return nil
+		}
+
+		var inputs []string
+		// 先收集更上层的父任务输入
+		if task.ParentTask.ParentTask != nil {
+			inputs = collectParentInputs(task.ParentTask, depth+1)
+		}
+
+		// 添加当前层父任务的输入
+		if task.ParentTask.AIStatefulTaskBase != nil {
+			input := task.ParentTask.AIStatefulTaskBase.GetUserInput()
+			if input != "" {
+				inputs = append(inputs, input)
+			}
+		}
+
+		return inputs
+	}
+
+	// 收集所有父任务的输入
+	var parentInputs []string
+	if !utils.IsNil(t.ParentTask) {
+		parentInputs = collectParentInputs(t, 0)
+	}
+
+	// 获取当前任务的输入
+	var currentInput string
+	if t.AIStatefulTaskBase != nil {
+		currentInput = t.AIStatefulTaskBase.GetUserInput()
+	}
+
+	var rawUserInput string
+	if t.Coordinator != nil {
+		rawUserInput = t.Coordinator.userInput
+	}
+
+	parentInputsJoined := strings.Join(parentInputs, "\n")
+
+	// nonce 反模式修复:
+	// 老实现是 nonce := strings.ToLower(utils.RandStringBytes(6))，每次调用
+	// PE-TASK 重新随机生成一次 nonce，让 <|PARENT_TASK_<nonce>|> /
+	// <|CURRENT_TASK_<nonce>|> / <|INSTRUCTION_<nonce>|> 三对标签每次都不同，
+	// 即使父任务链 + 当前任务 body 字节完全相同，整个 user-input 段也无法
+	// 被上游 prefix cache 命中。
+	//
+	// 新实现: 用 (rawUserInput, parentInputsJoined) 派生稳定 nonce，
+	// 让同一个 plan 周期内的所有 PE-TASK 子任务共用同一个 nonce。plan 重新
+	// 生成 / facts/document 演化时, parentInputsJoined 自然变化, nonce 随之
+	// 变化, 不会污染新 plan 的缓存。
+	//
+	// 关键词: task user input nonce, plan scoped nonce, prefix cache,
+	//        反 RandStringBytes 反模式
+	nonce := aicommon.PlanScopedNonce(rawUserInput+"\n"+parentInputsJoined, "task_user_input")
+
+	parentBlock := ""
+	if parentInputsJoined != "" {
+		parentBlock = utils.MustRenderTemplate(`<|PARENT_TASK_{{ .nonce }}|>
+{{ .ParentInputs }}
+<|PARENT_TASK_END_{{ .nonce }}|>
+
+`, map[string]any{
+			"nonce":        nonce,
+			"ParentInputs": parentInputsJoined,
+		})
+	}
+
+	templareString := `{{ .RawUserInput }}{{ .ParentBlock }}<|CURRENT_TASK_{{ .nonce }}|>
+{{ .CurrentInput }}
+<|CURRENT_TASK_END_{{ .nonce }}|>
+
+<|INSTRUCTION_{{ .nonce }}|>
+## 任务执行原则
+
+**核心要求**：请专注于完成 <|CURRENT_TASK_{{ .nonce }}|> 中定义的任务目标。
+
+**父任务的作用**：<|PARENT_TASK_{{ .nonce }}|> 中的信息仅作为上下文参考，帮助你理解当前任务在整个任务体系中的位置和背景。这些信息不应成为你的执行目标。
+
+**执行边界**：
+- 执行当前任务定义的具体目标和步骤
+- 参考父任务信息以更好地理解上下文
+- 不要尝试执行或修改父任务
+- 不要越界处理不属于当前任务范围的工作
+
+**行动指南**：始终以当前任务的目标为导向，将父任务信息视为辅助理解的背景材料，而非待执行的任务清单。
+<|INSTRUCTION_END_{{ .nonce }}|>`
+
+	return utils.MustRenderTemplate(templareString, map[string]any{
+		"nonce":        nonce,
+		"RawUserInput": rawUserInput,
+		"ParentBlock":  parentBlock,
+		"CurrentInput": currentInput,
+	})
+}
+
+// GetUserInputSplitForCache 实现 aicommon.CacheableUserInputProvider, 把
+// PE-TASK 子任务的"完整 user input 块"全部归类为 frozenUserContext, rawQuery
+// 留空。
+//
+// 为什么 rawQuery 留空 (而非按用户原话拆出来):
+//   - PE-TASK 子任务执行时, 真正"本 turn 可变" 的内容在 dynamic 段的
+//     ReactiveData (PROGRESS_TASK + iter info + feedback) 里, USER_QUERY
+//     段对子任务执行不再增量提供信息。
+//   - 把用户原话也包进 frozenUserContext 一并冻结后, dynamic 段只剩
+//     reactive_data + injected_memory + extra_capabilities, 体积大幅下降,
+//     缓存边界更清晰。
+//
+// 普通 ReAct 路径 (ParentTask == nil): 用户原话不属于"可冻结历史", 让 task
+// 走老语义即可, 这里返回 (root user input, "")。
+//
+// 关键词: GetUserInputSplitForCache, PE-TASK frozen user context,
+//        rawQuery 留空, prefix cache
+func (t *AiTask) GetUserInputSplitForCache() (rawQuery, frozenUserContext string) {
+	if utils.IsNil(t.ParentTask) {
+		// 普通 ReAct / root 任务: 用户原话保留在 dynamic 段, 不冻结
+		if t.AIStatefulTaskBase == nil {
+			return "", ""
+		}
+		return t.AIStatefulTaskBase.GetUserInput(), ""
+	}
+	// PE-TASK 子任务路径: 整个组合块 (RawUserInput + PARENT_TASK +
+	// CURRENT_TASK + INSTRUCTION) 一并冻结, dynamic 段不再渲染 USER_QUERY.
+	return "", t.GetUserInput()
+}
+
+func (t *AiTask) executed() bool {
+	if len(t.Subtasks) > 0 {
+		for _, subtask := range t.Subtasks {
+			if !subtask.executed() { // 子任务有没有已完成的，本任务也视为未完成
+				return false
+			}
+		}
+		return true
+	}
+	return t.GetStatus() == aicommon.AITaskState_Completed
+}
+
+func (t *AiTask) executing() bool {
+	if len(t.Subtasks) > 0 {
+		for _, subtask := range t.Subtasks {
+			if subtask.executing() || subtask.executed() { // 子任务有执行中或者完成的时候 本任务也为执行中
+				return true
+			}
+		}
+		return false
+	}
+	return t.GetStatus() == aicommon.AITaskState_Processing
+}
+
+func (t *AiTask) skiped() bool {
+	return t.GetStatus() == aicommon.AITaskState_Skipped
+}
+
+func (t *AiTask) SetID(id string) {
+	if t.AIStatefulTaskBase != nil {
+		t.AIStatefulTaskBase.SetID(id)
+	}
+}
+
+func (t *AiTask) GetSummary() string {
+	if t.TaskSummary != "" {
+		return t.TaskSummary
+	}
+	if t.ShortSummary != "" {
+		return t.ShortSummary
+	}
+	if t.LongSummary != "" {
+		return t.LongSummary
+	}
+	if t.StatusSummary != "" {
+		return t.StatusSummary
+	}
+	if t.AIStatefulTaskBase.GetSummary() != "" {
+		return t.AIStatefulTaskBase.GetSummary()
+	}
+	return ""
+}
+
+func (t *AiTask) GetSuccessCallCount() int {
+	count := 0
+	for _, v := range t.GetAllToolCallResults() {
+		if v.Success {
+			count++
+		}
+	}
+	return count
+}
+
+func (t *AiTask) GetFailCallCount() int {
+	count := 0
+	for _, v := range t.GetAllToolCallResults() {
+		if !v.Success {
+			count++
+		}
+	}
+	return count
+}
+
+func (t *AiTask) GetEmitter() *aicommon.Emitter {
+	if t.Emitter == nil {
+		return t.Coordinator.GetEmitter()
+	}
+	return t.Emitter
+
+}
+
+func (t *AiTask) GetProgressStatue() string {
+	var progress string
+	if t.executed() {
+		progress = string(aicommon.AITaskState_Completed)
+	} else if t.executing() {
+		progress = string(aicommon.AITaskState_Processing)
+	} else if t.GetStatus() == aicommon.AITaskState_Aborted {
+		progress = string(aicommon.AITaskState_Aborted)
+	} else if t.skiped() {
+		progress = string(aicommon.AITaskState_Skipped)
+	}
+	return progress
+}
+
+// MarshalJSON 实现自定义的JSON序列化，跳过AICallback字段
+func (t *AiTask) MarshalJSON() ([]byte, error) {
+	type TaskAlias AiTask // 创建一个别名类型以避免递归调用
+	progress := t.GetProgressStatue()
+
+	// 创建一个不包含AICallback的结构体
+	return json.Marshal(struct {
+		Index                string    `json:"index"`
+		Name                 string    `json:"name"`
+		Goal                 string    `json:"goal"`
+		Subtasks             []*AiTask `json:"subtasks,omitempty"`
+		Progress             string    `json:"progress"` // 添加进度字段
+		Summary              string    `json:"summary"`
+		StatusSummary        string    `json:"status_summary,omitempty"`
+		TaskSummary          string    `json:"task_summary,omitempty"`
+		ShortSummary         string    `json:"short_summary,omitempty"`
+		LongSummary          string    `json:"long_summary,omitempty"`
+		TotalToolCallCount   int64     `json:"total_tool_call_count"`
+		SuccessToolCallCount int       `json:"success_tool_call_count"`
+		FailToolCallCount    int       `json:"fail_tool_call_count"`
+	}{
+		Index:                t.Index,
+		Name:                 t.Name,
+		Goal:                 t.Goal,
+		Subtasks:             t.Subtasks,
+		Progress:             progress,
+		Summary:              t.GetSummary(),
+		StatusSummary:        t.StatusSummary,
+		TaskSummary:          t.TaskSummary,
+		ShortSummary:         t.ShortSummary,
+		LongSummary:          t.LongSummary,
+		TotalToolCallCount:   int64(len(t.GetAllToolCallResults())),
+		SuccessToolCallCount: t.GetSuccessCallCount(),
+		FailToolCallCount:    t.GetFailCallCount(),
+	})
+}
+
+// UnmarshalJSON 实现自定义的JSON反序列化，跳过AICallback字段
+func (t *AiTask) UnmarshalJSON(data []byte) error {
+	// 创建一个临时结构体，不包含AICallback
+	aux := struct {
+		Index    string    `json:"index"`
+		Name     string    `json:"name"`
+		Goal     string    `json:"goal"`
+		Subtasks []*AiTask `json:"subtasks,omitempty"`
+	}{}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	t.Index = aux.Index
+	t.Name = aux.Name
+	t.Goal = aux.Goal
+	t.Subtasks = aux.Subtasks
+	t.AIStatefulTaskBase = aicommon.NewStatefulTaskBase(
+		fmt.Sprintf("pe-task-%s", t.Index),
+		aux.Goal,
+		t.Ctx,
+		nil)
+	return nil
+}
+
+func ExtractPlan(c *Coordinator, rawResponse string) (*PlanResponse, error) {
+	at, err := ExtractTaskFromRawResponse(c, rawResponse)
+	if err != nil {
+		return nil, err
+	}
+	return &PlanResponse{RootTask: at}, nil
+}
+
+func ExtractNextPlanTaskFromRawResponse(c *Coordinator, rawResponse string) ([]*AiTask, error) {
+	action, err := aicommon.ExtractAction(rawResponse, "re-plan")
+	if err != nil {
+		return nil, err
+	}
+
+	var taskList []*AiTask
+	for _, params := range action.GetInvokeParamsArray("next_plans") {
+		taskList = append(taskList, c.generateAITask(params))
+	}
+	if len(taskList) <= 0 {
+		return nil, errors.New("no aiTask found in next-plan")
+	}
+	return taskList, nil
+}
+
+// _assignHierarchicalIndicesRecursive 递归地为任务及其子任务分配层级索引。
+// currentTask 是当前要处理的任务。
+// currentIndex 是为 currentTask 计算好的索引字符串 (例如 "1", "1-2", "1-2-3")。
+func _assignHierarchicalIndicesRecursive(currentTask *AiTask, currentIndex string) {
+	if currentTask == nil {
+		return
+	}
+	currentTask.Index = currentIndex
+	currentTask.SetID(currentIndex)
+
+	for i, subTask := range currentTask.Subtasks {
+		// 子任务的索引是父任务索引加上自己的序号 (1-based)
+		// 例如，如果父任务索引是 "1-2", 第一个子任务是 "1-2-1", 第二个是 "1-2-2"
+		subTaskIndex := fmt.Sprintf("%s-%d", currentIndex, i+1)
+		_assignHierarchicalIndicesRecursive(subTask, subTaskIndex)
+	}
+}
+
+// GenerateIndex 为任务树生成层级索引。
+// 调用此方法的任务 (a) 所在树的根节点索引将被设为 "1"。
+// 其子任务将相应地获得如 "1-1", "1-2" 等索引，孙任务如 "1-1-1" 等。
+func (t *AiTask) GenerateIndex() {
+	if t == nil {
+		return
+	}
+
+	root := t
+	// 向上遍历以找到树的实际根节点。
+	// 包含一个针对极深树或潜在循环依赖的安全中断。
+	for i := 0; i < 1000 && root.ParentTask != nil; i++ {
+		root = root.ParentTask
+	}
+
+	// 循环结束后，'root' 要么是真正的根节点 (ParentTask == nil)，
+	// 要么是经过1000次迭代后到达的节点。
+	// 从这个 'root' 开始进行索引。
+	// 根任务的索引被指定为 "1"。
+	_assignHierarchicalIndicesRecursive(root, "1")
+}
+
+// ExtractTaskFromRawResponse 从原始响应中提取Task
+func ExtractTaskFromRawResponse(c *Coordinator, rawResponse string) (retTask *AiTask, err error) {
+	defer func() {
+		if retTask == nil {
+			return
+		}
+		c.standardizeTaskTree(retTask)
+	}()
+	var extraReason bytes.Buffer
+	_ = extraReason
+	retTask = c.generateAITaskWithName("root-default", "root-default")
+	action, err := aicommon.ExtractAction(rawResponse, "plan")
+	if err != nil {
+		log.Errorf("extract action from plan data failed: %v", err)
+		return
+	}
+	switch action.ActionType() {
+	case "plan":
+		retTask = c.generateAITaskWithName(action.GetAnyToString("main_task"), action.GetAnyToString("main_task_goal"))
+		for _, subtask := range action.GetInvokeParamsArray("tasks") {
+			if subtask.GetAnyToString("subtask_name") == "" {
+				continue
+			}
+			retTask.Subtasks = append(retTask.Subtasks, c.generateAITask(subtask))
+		}
+		if retTask.Name == "" {
+			log.Errorf("plan action missing main_task")
+		}
+	}
+	if retTask == nil {
+		return nil, errors.New("no valid plan action found in response")
+	}
+
+	return
+}
+
+func (t *AiTask) SingleLineStatusSummary() string {
+	return strings.ReplaceAll(t.StatusSummary, "\n", " ")
+}
+
+func (t *AiTask) QuoteName() string {
+	return strconv.Quote(t.Name)
+}
+
+func (t *AiTask) QuoteGoal() string {
+	return strconv.Quote(t.Goal)
+}
+
+// ToolCallCount 返回工具调用次数
+func (t *AiTask) ToolCallCount() int {
+	if t == nil {
+		return 0
+	}
+	return len(t.GetAllToolCallResults())
+}
+
+// TaskContinueCount 返回任务继续执行的次数（从 ReActLoop 获取迭代次数）
+func (t *AiTask) TaskContinueCount() int {
+	if t == nil {
+		return 0
+	}
+	// 尝试从 ReActLoop 获取当前迭代次数
+	loop := t.GetReActLoop()
+	if loop == nil {
+		return 0
+	}
+	// 使用类型断言获取迭代次数（ReActLoopIF 接口中没有这个方法，需要类型断言）
+	// 如果无法获取，返回 0
+	if reactLoop, ok := loop.(interface{ GetCurrentIterationIndex() int }); ok {
+		return reactLoop.GetCurrentIterationIndex()
+	}
+	return 0
+}

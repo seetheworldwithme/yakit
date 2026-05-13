@@ -1,0 +1,1140 @@
+package aispec
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"io"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/yaklang/yaklang/common/utils/lowhttp/poc"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+
+	"github.com/yaklang/yaklang/common/utils/imageutils"
+
+	"github.com/h2non/filetype"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/yak/yaklib/codec"
+
+	"github.com/yaklang/yaklang/common/consts"
+	"github.com/yaklang/yaklang/common/log"
+)
+
+// RawHTTPRequestResponseCallback captures the raw request bytes, response debug data,
+// and the final usage info parsed from the response body/stream.
+// The response is exposed as header bytes plus a body preview because streaming responses
+// may not be fully buffered in memory.
+type RawHTTPRequestResponseCallback func(requestBytes []byte, responseHeaderBytes []byte, bodyPreview []byte, usageInfo *ChatUsage)
+type RawHTTPResponseHeaderCallback func(headerBytes []byte)
+
+type AIConfig struct {
+	// gateway network config
+	BaseURL        string `json:"base_url" app:"name:base_url,verbose:BaseURL,desc:BaseURL,id:3"`
+	Endpoint       string `json:"endpoint" app:"name:endpoint,verbose:Endpoint,desc:Endpoint,id:4"`
+	EnableEndpoint bool   `json:"enable_endpoint" app:"name:enable_endpoint,verbose:启用Endpoint,desc:启用Endpoint配置,id:5"`
+	Domain         string `json:"domain"`
+	NoHttps        bool   `json:"no_https"`
+
+	// basic model
+	Model    string  `json:"model" app:"name:model,verbose:模型名称,id:2,type:list,required:true"`
+	Timeout  float64 // `app:"name:请求超时时长"`
+	Deadline time.Time
+
+	APIKey  string `json:"api_key" app:"name:api_key,verbose:ApiKey,desc:APIKey / Token,required:true,id:1,type:list"`
+	Proxy   string `json:"proxy" app:"name:proxy,verbose:代理地址,id:6"`
+	APIType string `json:"api_type" app:"name:api_type,verbose:API类型,id:7,required:false,default:chat_completions"`
+	Host    string
+	Port    int
+
+	StreamHandler           func(io.Reader)
+	ReasonStreamHandler     func(reader io.Reader)
+	Type                    string `json:"Type"`
+	PreferredTier           consts.ModelTier
+	DisableProviderFallback bool
+	Context                 context.Context
+
+	FunctionCallRetryTimes int
+
+	HTTPErrorHandler func(error)
+
+	Images []*ImageDescription
+	// Videos 视频输入列表，用于 Qwen Omni 等多模态模型的 video_url 通路
+	// 关键词: AIConfig.Videos, 视频输入承载
+	Videos []*VideoDescription
+
+	Headers        []*ypb.KVPair
+	EnableThinking *bool
+	// 以下为可选模型采样/推理参数（与 ypb.ThirdPartyApplicationConfig 对齐）；nil 或空串表示不写入上游请求
+	MaxTokens        *int64   `json:"max_tokens,omitempty"`
+	Temperature      *float64 `json:"temperature,omitempty"`
+	TopP             *float64 `json:"top_p,omitempty"`
+	TopK             *int64   `json:"top_k,omitempty"`
+	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
+	ReasoningEffort  string   `json:"reasoning_effort,omitempty"`
+
+	// ToolCallCallback is called when the AI response contains tool_calls.
+	// If set, tool_calls will NOT be converted to <|TOOL_CALL...|> format in the output stream.
+	// If not set, the original behavior (converting to <|TOOL_CALL...|> format) is preserved.
+	ToolCallCallback func([]*ToolCall)
+
+	// Tools defines the available tools that the model may call
+	Tools []Tool
+	// ToolChoice controls which (if any) tool is called by the model
+	ToolChoice any
+
+	// ModelInfoCallback is invoked after gateway CheckValid succeeds but before Chat,
+	// providing the resolved provider type and model name as early as possible.
+	ModelInfoCallback func(provider, model string)
+	// ModelInfoConfirmCallback is invoked after Chat returns successfully,
+	// confirming the provider and model that actually produced the response.
+	ModelInfoConfirmCallback func(provider, model string)
+
+	// RawHTTPResponseCallback is called with the raw HTTP response header and body preview
+	// when an AI response completes. Used for debugging AI call failures.
+	RawHTTPResponseCallback func(headerBytes []byte, bodyPreview []byte)
+	// RawHTTPResponseHeaderCallback is called as soon as the raw HTTP response header
+	// has been fully received, before the response body is consumed.
+	RawHTTPResponseHeaderCallback RawHTTPResponseHeaderCallback
+	// RawHTTPRequestResponseCallback is called with the raw HTTP request bytes,
+	// response debug data, and final usage info when an AI response completes.
+	RawHTTPRequestResponseCallback RawHTTPRequestResponseCallback
+
+	// UsageCallback is invoked once after the AI streaming response finishes,
+	// carrying the final ChatUsage parsed from the OpenAI-compatible
+	// stream_options.include_usage payload (Qwen Omni etc.). Cb may be called
+	// with nil if the upstream did not return any usage block.
+	// 关键词: AIConfig.UsageCallback, token usage callback
+	UsageCallback func(*ChatUsage)
+
+	// RawMessages 用于完整透传客户端原始 messages 数组到上游 LLM，
+	// 而不是只透传一个 prompt 字符串。设置后，gateway 的 Chat(s) 会把这
+	// 个数组带入 ChatBaseContext.RawMessages，chatBaseChatCompletions 会
+	// 跳过"单 user 包装+ImageUrls/VideoUrls 合并"逻辑，直接使用本字段。
+	//
+	// 主要使用场景: aibalance 等中转层希望保留客户端 messages 的 role 顺
+	// 序与 content 结构，最大化上游隐式缓存的前缀命中率。
+	//
+	// 关键词: AIConfig.RawMessages, messages 完整透传, 隐式缓存前缀稳定
+	RawMessages []ChatDetail
+}
+
+func WithExtraHeader(headers map[string]string) AIConfigOption {
+	return func(c *AIConfig) {
+		for key, value := range headers {
+			key = strings.TrimSpace(key)
+			if key == "" {
+				continue
+			}
+			exists := false
+			for _, current := range c.Headers {
+				if current == nil {
+					continue
+				}
+				if current.GetKey() == key && current.GetValue() == value {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				c.Headers = append(c.Headers, &ypb.KVPair{
+					Key:   key,
+					Value: value,
+				})
+			}
+		}
+	}
+}
+
+func WithExtraHeaderString(key string, value string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Headers = append(c.Headers, &ypb.KVPair{
+			Key:   key,
+			Value: value,
+		})
+	}
+}
+
+func AppendCustomHeadersToPocOptions(opts []poc.PocConfigOption, headers map[string]string) []poc.PocConfigOption {
+	for key, value := range headers {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		opts = append(opts, poc.WithReplaceHttpPacketHeader(key, value))
+	}
+	return opts
+}
+
+func ExtraHeadersToMap(headers []*ypb.KVPair) map[string]string {
+	if len(headers) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(headers))
+	for _, header := range headers {
+		if header == nil {
+			continue
+		}
+		key := strings.TrimSpace(header.GetKey())
+		if key == "" {
+			continue
+		}
+		result[key] = header.GetValue()
+	}
+	return result
+}
+
+// WithEnableThinking 设置是否启用思考链相关请求体字段；仅写入 EnableThinking（*bool）。
+// nil 表示不在请求体中注入思考参数（由网关默认值等单独处理）；非 nil 时 true 为开启，false 为关闭。
+//
+// 参数：
+// - t(any): 思维链配置
+//
+// 返回值：
+// - r1(AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 示例 1: 基础用法 - 启用思维模式
+// println("=== 示例 1: 基础思维模式 ===")
+// response, err = ai.Chat(
+//
+//	"请分析 SQL 注入漏洞的原理和常见的防御方法",
+//	ai.type("volcengine"),
+//	ai.apiKey("你的API密钥"),  // 请替换为实际的 API Key
+//	ai.model("doubao-lite-4k"),  // 或使用其他豆包模型
+//	ai.thinking(true),  // 启用思维模式
+//
+// )
+//
+//	if err != nil {
+//	   die(err)
+//	}
+//
+// println("回答:", response)
+// println()
+// ```
+func WithEnableThinking(t any) AIConfigOption {
+	return func(config *AIConfig) {
+		if utils.IsNil(t) {
+			return
+		}
+		switch v := t.(type) {
+		case *bool:
+			if v == nil {
+				return
+			}
+			copied := *v
+			config.EnableThinking = &copied
+			return
+		case bool:
+			b := v
+			config.EnableThinking = &b
+			return
+		default:
+			b := parseThinkingToggleFromAny(t)
+			config.EnableThinking = &b
+		}
+	}
+}
+
+func parseThinkingToggleFromAny(t any) bool {
+	switch strings.ToLower(strings.TrimSpace(utils.InterfaceToString(t))) {
+	case "yes", "y", "true", "1", "enable", "on", "auto", "a", "enabled":
+		return true
+	default:
+		return false
+	}
+}
+
+func WithMaxTokens(n int64) AIConfigOption {
+	return func(c *AIConfig) {
+		v := n
+		c.MaxTokens = &v
+	}
+}
+
+func WithTemperature(v float64) AIConfigOption {
+	return func(c *AIConfig) {
+		x := v
+		c.Temperature = &x
+	}
+}
+
+func WithTopP(v float64) AIConfigOption {
+	return func(c *AIConfig) {
+		x := v
+		c.TopP = &x
+	}
+}
+
+func WithTopK(n int64) AIConfigOption {
+	return func(c *AIConfig) {
+		v := n
+		c.TopK = &v
+	}
+}
+
+func WithFrequencyPenalty(v float64) AIConfigOption {
+	return func(c *AIConfig) {
+		x := v
+		c.FrequencyPenalty = &x
+	}
+}
+
+func WithReasoningEffort(s string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ReasoningEffort = strings.TrimSpace(s)
+	}
+}
+
+func WithHost(h string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Host = h
+	}
+}
+
+func WithPort(p int) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Port = p
+	}
+}
+
+func WithNoHTTPS(b bool) AIConfigOption {
+	return func(c *AIConfig) {
+		c.NoHttps = b
+	}
+}
+
+func NewDefaultAIConfig(opts ...AIConfigOption) *AIConfig {
+	c := &AIConfig{
+		Timeout:                120,
+		FunctionCallRetryTimes: 5,
+		HTTPErrorHandler: func(err error) {
+			log.Debugf("ai request failed: %s", err)
+		},
+	}
+	// 加载Type参数
+	for _, p := range opts {
+		p(c)
+	}
+
+	// 加载默认参数
+	if c.Type != "" {
+		loaded := false
+		if tiered := consts.GetTieredAIConfig(); tiered != nil {
+			candidates := append(append([]*ypb.AIModelConfig{}, tiered.IntelligentConfigs...), tiered.LightweightConfigs...)
+			candidates = append(candidates, tiered.VisionConfigs...)
+			for _, modelCfg := range candidates {
+				if modelCfg == nil || modelCfg.GetProvider() == nil {
+					continue
+				}
+				if !strings.EqualFold(strings.TrimSpace(modelCfg.GetProvider().GetType()), strings.TrimSpace(c.Type)) {
+					continue
+				}
+				for _, opt := range BuildOptionsFromConfig(modelCfg) {
+					opt(c)
+				}
+				loaded = true
+				break
+			}
+		}
+		if !loaded {
+			err := consts.GetThirdPartyApplicationConfig(c.Type, c)
+			if err != nil {
+				log.Debug(err)
+			}
+		}
+	}
+
+	// 加载用户参数
+	for _, p := range opts {
+		p(c)
+	}
+	return c
+}
+
+type AIConfigOption func(*AIConfig)
+
+func WithContext(ctx context.Context) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Context = ctx
+	}
+}
+
+// WithBaseURL 设置 AI 服务的基础 URL，用于自定义 API 端点或使用代理服务。
+//
+// 参数：
+// - baseURL(string): API 基础 URL
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 使用自定义 API 地址
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.baseURL("https://xxx.com/v1"),
+//
+// )
+// ```
+func WithBaseURL(baseURL string) AIConfigOption {
+	return func(c *AIConfig) {
+		if baseURL != "" {
+			c.BaseURL = baseURL
+		}
+	}
+}
+
+func WithEndpoint(endpoint string) AIConfigOption {
+	return func(c *AIConfig) {
+		if endpoint != "" {
+			c.Endpoint = endpoint
+		}
+	}
+}
+
+func WithEnableEndpoint(enable bool) AIConfigOption {
+	return func(c *AIConfig) {
+		c.EnableEndpoint = enable
+	}
+}
+
+func WithStreamAndConfigHandler(h func(reader io.Reader, cfg *AIConfig)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.StreamHandler = func(reader io.Reader) {
+			h(reader, c)
+		}
+	}
+}
+
+// WithReasonStreamHandler 设置推理过程的流式输出回调，用于获取 AI 的思考过程。
+//
+// 参数：
+// - h(func(io.Reader)): 推理流处理回调函数
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// response = ai.Chat(
+//
+//	"介绍一下 SQL 注入",
+//	ai.onReasonStream(fn(reader) {
+//	    io.ReadEvery1s(
+//	        context.New(),
+//	        reader,
+//	        func(data) {
+//	            println(string(data))
+//	            return true
+//	        },
+//	    )
+//	}),
+//
+// )~
+// ```
+func WithReasonStreamHandler(h func(io.Reader)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ReasonStreamHandler = h
+	}
+}
+
+// WithStreamHandler 设置流式输出的回调函数，用于实时接收 AI 响应数据。
+//
+// 参数：
+// - h(func(io.Reader)): 流式数据处理回调函数
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// response = ai.Chat(
+//
+//	"介绍一下 SQL 注入",
+//	ai.onStream(fn(reader) {
+//	    io.ReadEvery1s(
+//	        context.New(),
+//	        reader,
+//	        func(data) {
+//	            println(string(data))
+//	            return true
+//	        },
+//	    )
+//	}),
+//
+// )~
+// ```
+func WithStreamHandler(h func(io.Reader)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.StreamHandler = h
+	}
+}
+
+// WithDebugStream 启用流式输出调试模式，用于开发调试。
+//
+// 参数：
+// - h(...bool): 是否启用调试（默认 true）
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 启用调试模式
+// response = ai.Chat("测试消息", ai.debugStream(true))~
+// // 输出内容将包含调试信息 TTFT(Time to First Token) first byte(token) delay in second
+// println(response)
+// ```
+func WithDebugStream(h ...bool) AIConfigOption {
+	return func(c *AIConfig) {
+		if len(h) <= 0 || h[0] {
+			c.StreamHandler = func(r io.Reader) {
+				start := time.Now()
+				reader := bufio.NewReader(r)
+				_, err := reader.ReadByte()
+				if err == nil {
+					log.Infof("first byte(token) delay: %v", time.Since(start))
+				}
+				reader.UnreadByte()
+				io.Copy(os.Stdout, reader)
+			}
+		} else {
+			c.StreamHandler = nil
+		}
+	}
+}
+
+// WithDomain 设置服务域名，用于某些特定的 AI 服务提供商。
+//
+// 参数：
+// - domain(string): 域名字符串
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.domain("api.openai.com"),
+//
+// )
+// ```
+func WithDomain(domain string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Domain = domain
+	}
+}
+
+// WithModel 指定要使用的 AI 模型名称。
+//
+// 参数：
+// - model(string): 模型名称（如 "gpt-4"、"gpt-3.5-turbo"）
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 使用 GPT-4
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.model("gpt-4"),
+//
+// )
+//
+// // 使用 GPT-3.5
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.model("gpt-3.5-turbo"),
+//
+// )
+// ```
+func WithModel(model string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Model = model
+	}
+}
+
+func WithChatImageContent(image ...any) AIConfigOption {
+	return func(c *AIConfig) {
+		for _, i := range image {
+			switch v := i.(type) {
+			case string:
+				if utils.GetFirstExistedFile(v) != "" {
+					log.Infof("add image_url.url with: %v", utils.ShrinkString(v, 200))
+					WithImageFile(v)(c)
+				} else if strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") {
+					log.Infof("add image_url.url with: %v", utils.ShrinkString(v, 200))
+					c.Images = append(c.Images, &ImageDescription{
+						Url: v,
+					})
+				} else if utils.MatchAllOfGlob(v, `data:image/*;base64*`) {
+					log.Infof("add image_url.url with: %v", utils.ShrinkString(v, 200))
+					c.Images = append(c.Images, &ImageDescription{
+						Url: v,
+					})
+				} else {
+					log.Warnf("invalid image: %s", v)
+				}
+			case *ImageDescription:
+				if v.Url != "" {
+					log.Infof("add image_url.url with: %v", utils.ShrinkString(v.Url, 200))
+					c.Images = append(c.Images, v)
+				} else {
+					log.Warnf("invalid image %v", v)
+				}
+			case *ChatContent:
+				if v.Type == "image_url" {
+					log.Infof("add image_url.url with: %v", utils.ShrinkString(v.ImageUrl, 200))
+					c.Images = append(c.Images, &ImageDescription{
+						Url: utils.MapGetString(utils.InterfaceToGeneralMap(v.ImageUrl), "url"),
+					})
+				} else {
+					log.Warnf("invalid chat content image: %v", v)
+				}
+			case ChatContent:
+				if v.Type == "image_url" {
+					c.Images = append(c.Images, &ImageDescription{
+						Url: utils.MapGetString(utils.InterfaceToGeneralMap(v.ImageUrl), "url"),
+					})
+				} else {
+					log.Warnf("invalid chat content image: %v", v)
+				}
+			default:
+				log.Warnf("unsupported image type: %T, value: %v", i, i)
+			}
+		}
+
+	}
+}
+
+// WithType 指定 AI 服务提供商类型。
+//
+// 参数：
+// - t(string): 服务类型（如 "openai"、"chatglm"、"moonshot" 等）
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 使用 OpenAI
+// response, err = ai.Chat("你好",
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.type("openai"),
+//
+// )
+//
+// // 使用 ChatGLM
+// response, err = ai.Chat("你好",
+//
+//	ai.apiKey("your-key"),
+//	ai.type("chatglm"),
+//
+// )
+// ```
+func WithType(t string) AIConfigOption {
+	return func(config *AIConfig) {
+		config.Type = t
+	}
+}
+
+func WithPreferredTier(tier consts.ModelTier) AIConfigOption {
+	return func(config *AIConfig) {
+		config.PreferredTier = tier
+	}
+}
+
+func WithDisableProviderFallback(disable bool) AIConfigOption {
+	return func(config *AIConfig) {
+		config.DisableProviderFallback = disable
+	}
+}
+
+func WithSpeedPriority() AIConfigOption {
+	return WithPreferredTier(consts.TierLightweight)
+}
+
+func WithQualityPriority() AIConfigOption {
+	return WithPreferredTier(consts.TierIntelligent)
+}
+
+func WithVisionPriority() AIConfigOption {
+	return WithPreferredTier(consts.TierVision)
+}
+
+// WithTimeout 设置请求超时时间（单位：秒）。
+//
+// 参数：
+// - timeout(float64): 超时时间（秒）
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 设置 60 秒超时
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.timeout(60),
+//
+// )
+//
+// // 长时间任务设置更长超时
+// response = ai.Chat(
+//
+//	"生成一个完整的渗透测试报告",
+//	ai.apiKey("sk-xxx"),
+//	ai.timeout(180),  // 3 分钟
+//
+// )~
+// ```
+func WithTimeout(timeout float64) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Timeout = timeout
+	}
+}
+
+// WithProxy 设置 HTTP 代理服务器，用于网络请求。
+//
+// 参数：
+// - p(string): 代理服务器地址（支持 http/https/socks5）
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // HTTP 代理
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.proxy("http://127.0.0.1:7890"),
+//
+// )
+//
+// // SOCKS5 代理
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxx"),
+//	ai.proxy("socks5://127.0.0.1:1080"),
+//
+// )
+// ```
+func WithProxy(p string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Proxy = p
+	}
+}
+
+func WithAPIType(apiType string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.APIType = strings.TrimSpace(apiType)
+	}
+}
+
+// WithAPIKey 设置 AI 服务的 API 密钥，这是访问 AI 服务的必需凭证。
+//
+// 参数：
+// - k(string): API 密钥字符串
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// client = ai.OpenAI(
+//
+//	ai.apiKey("sk-xxxxxxxxxxxxxxxx"),
+//
+// )
+// ```
+func WithAPIKey(k string) AIConfigOption {
+	return func(c *AIConfig) {
+		c.APIKey = strings.TrimSpace(k)
+	}
+}
+
+// WithImageFile 传入图片文件路径，自动读取并发送给 AI 进行分析。
+//
+// 参数：
+// - i(string): 图片文件路径
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 分析本地图片
+// response = ai.Chat(
+//
+//	"这张图片中有什么漏洞特征？",
+//	ai.imageFile("/path/to/screenshot.png"),
+//
+// )~
+// println(response)
+//
+// // 分析验证码
+// response = ai.Chat(
+//
+//	   "识别这个验证码",
+//		ai.imageFile("./captcha.jpg"),
+//
+// )~
+// println(response)
+// ```
+func WithImageFile(i string) AIConfigOption {
+	return func(config *AIConfig) {
+		if utils.GetFirstExistedFile(i) == "" {
+			log.Warnf("file: %v is not existed", i)
+			return
+		}
+
+		data, err := os.ReadFile(i)
+		if err != nil {
+			log.Warnf("file: %v read error: %v", i, err)
+			return
+		}
+
+		name, err := filetype.Image(data)
+		if err != nil {
+			log.Warnf("file: %v is not image: %v", i, err)
+			return
+		}
+
+		var buf bytes.Buffer
+		buf.WriteString("data:")
+		buf.WriteString(name.MIME.Value)
+		buf.WriteString(";")
+		buf.WriteString("base64,")
+		buf.WriteString(codec.EncodeBase64(data))
+		config.Images = append(config.Images, &ImageDescription{
+			Url: buf.String(),
+		})
+	}
+}
+
+// WithImageBase64 传入 Base64 编码的图片数据，用于图像识别场景。
+//
+// 参数：
+// - b64(string): 传入 Base64 编码的图片数据，支持纯 base64 字符串或data:image/ 格式。
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 从网络获取图片并分析
+// rsp, req, err = poc.Get("https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5929730761/p529185.jpg")
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// imageBytes = rsp.GetBody()
+// dump(imageBytes)
+// b64ImageBytes = codec.EncodeBase64(imageBytes)
+//
+// response, err = ai.Chat("分析这张图片", ai.imageBase64(b64ImageBytes))
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// println(response)
+// ```
+func WithImageBase64(b64 string) AIConfigOption {
+	return func(config *AIConfig) {
+		if strings.HasPrefix(b64, "data:image/") {
+			for img := range imageutils.ExtractImage(b64) {
+				b64 = img.Base64()
+			}
+		}
+
+		raw, err := codec.DecodeBase64(b64)
+		if err != nil {
+			log.Warnf("decode error: %v", err)
+			return
+		}
+		name, err := filetype.Image(raw)
+		if err != nil {
+			log.Warnf("input is not image: %v", err)
+			return
+		}
+
+		var buf bytes.Buffer
+		buf.WriteString("data:")
+		buf.WriteString(name.MIME.Value)
+		buf.WriteString(";")
+		buf.WriteString("base64,")
+		buf.WriteString(b64)
+		config.Images = append(config.Images, &ImageDescription{
+			Url: buf.String(),
+		})
+	}
+}
+
+// WithImageRaw 传入原始图片字节数据，用于图像识别场景。
+//
+// 参数：
+// - raw([]byte): 图片的原始字节数据
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 从网络获取图片并分析
+// rsp, req, err = poc.Get("https://help-static-aliyun-doc.aliyuncs.com/assets/img/zh-CN/5929730761/p529185.jpg")
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// imageBytes = rsp.GetBody()
+// dump(imageBytes)
+//
+// response, err = ai.Chat("分析这张图片", ai.imageRaw(imageBytes))
+//
+//	if err != nil{
+//	   die(err)
+//	}
+//
+// println(response)
+// ```
+func WithImageRaw(raw []byte) AIConfigOption {
+	return func(config *AIConfig) {
+		name, err := filetype.Image(raw)
+		if err != nil {
+			log.Warnf("input is not image: %v", err)
+			return
+		}
+
+		var buf bytes.Buffer
+		buf.WriteString("data:")
+		buf.WriteString(name.MIME.Value)
+		buf.WriteString(";")
+		buf.WriteString("base64,")
+		buf.WriteString(codec.EncodeBase64(raw))
+		config.Images = append(config.Images, &ImageDescription{
+			Url: buf.String(),
+		})
+	}
+}
+
+// 视频输入关键词: WithVideoUrl, WithVideoBase64, WithVideoRaw, omni 视频输入
+
+// WithVideoUrl 传入视频 URL（http(s) 或 data:video/...;base64,...），用于 Qwen Omni 类模型。
+// 关键词: ai.videoUrl, omni 视频 URL 输入
+func WithVideoUrl(u string) AIConfigOption {
+	return func(config *AIConfig) {
+		if u == "" {
+			return
+		}
+		log.Infof("add video_url with: %v", utils.ShrinkString(u, 200))
+		config.Videos = append(config.Videos, &VideoDescription{
+			Url: u,
+		})
+	}
+}
+
+// WithVideoBase64 传入 Base64 编码的视频数据，自动包装为 data URI。
+// 注意阿里云百炼 omni 模型的 base64 上限为 10MB，调用方需自行控制。
+// omni 模型 video_url 的 base64 要求 data URI 不携带 mime type，
+// 即 data:;base64,xxxx 形式。
+// 关键词: ai.videoBase64, omni base64 视频输入
+func WithVideoBase64(b64 string) AIConfigOption {
+	return func(config *AIConfig) {
+		if b64 == "" {
+			return
+		}
+		// 已是 data URI 直接放进去
+		if strings.HasPrefix(b64, "data:") {
+			config.Videos = append(config.Videos, &VideoDescription{Url: b64})
+			return
+		}
+		var buf bytes.Buffer
+		buf.WriteString("data:;base64,")
+		buf.WriteString(b64)
+		config.Videos = append(config.Videos, &VideoDescription{Url: buf.String()})
+	}
+}
+
+// WithVideoRaw 传入视频原始字节，自动 base64 包装为 data URI。
+// omni 模型 video_url 的 base64 要求 data URI 不携带 mime type。
+// 关键词: ai.videoRaw, omni 视频原始字节输入
+func WithVideoRaw(raw []byte) AIConfigOption {
+	return func(config *AIConfig) {
+		if len(raw) == 0 {
+			return
+		}
+		b64 := codec.EncodeBase64(raw)
+		var buf bytes.Buffer
+		buf.WriteString("data:;base64,")
+		buf.WriteString(b64)
+		config.Videos = append(config.Videos, &VideoDescription{Url: buf.String()})
+	}
+}
+
+// WithNoHttps 禁用 HTTPS，使用 HTTP 协议进行通信。
+//
+// 参数：
+// - b(bool): true 表示禁用 HTTPS
+//
+// 返回值：
+// - r1(AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+// // 本地测试环境使用 HTTP
+// client = ai.OpenAI(
+//
+//	ai.apiKey("test-key"),
+//	ai.baseURL("localhost:8080"),
+//	ai.noHttps(true),
+//
+// )
+// ```
+func WithNoHttps(b bool) AIConfigOption {
+	return func(c *AIConfig) {
+		c.NoHttps = b
+	}
+}
+
+// WithFunctionCallRetryTimes 设置函数调用失败时的重试次数。
+//
+// 参数：
+// - times(int): 重试次数
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+//
+// Example:
+// ```go
+//
+//	funcs = {
+//	   "searchVulnerability": func(keyword) {
+//	      return {"result": sprintf("搜索漏洞: %s", keyword)}
+//	    },
+//	   "scanTarget": func(target, port) {
+//	     return {"target": target, "port": port, "status": "scanning"}
+//	  },
+//	}
+//
+// // 设置重试 3 次
+// result = ai.FunctionCall(
+//
+//	"扫描目标 127.0.0.1:8080",
+//	funcs,
+//	ai.funcCallRetryTimes(3),
+//
+// )~
+// dump(result)
+// ```
+func WithFunctionCallRetryTimes(times int) AIConfigOption {
+	return func(c *AIConfig) {
+		c.FunctionCallRetryTimes = times
+	}
+}
+
+func WithHTTPErrorHandler(h func(error)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.HTTPErrorHandler = h
+	}
+}
+
+// WithToolCallCallback 设置 tool_calls 回调函数，用于在 AI 响应中包含 tool_calls 时接管其处理逻辑。启用后，tool_calls 将不再以默认的占位标记形式输出，而是直接通过回调函数返回解析后的 ToolCall 对象。 目前只在项目内部测试脚本使用
+// 参数：
+// - cb(func([]*ToolCall)): 当 AI 响应中包含 tool_calls 时触发的回调函数
+//
+// 返回值：
+// - r1(aispec.AIConfigOption): AI 配置选项
+func WithToolCallCallback(cb func([]*ToolCall)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ToolCallCallback = cb
+	}
+}
+
+// WithTools sets the available tools that the model may call
+func WithTools(tools []Tool) AIConfigOption {
+	return func(c *AIConfig) {
+		c.Tools = tools
+	}
+}
+
+// WithToolChoice controls which (if any) tool is called by the model
+// Can be "none", "auto", "required", or a specific function: {"type": "function", "function": {"name": "my_function"}}
+func WithToolChoice(choice any) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ToolChoice = choice
+	}
+}
+
+func WithModelInfoCallback(cb func(provider, model string)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ModelInfoCallback = cb
+	}
+}
+
+func WithModelInfoConfirmCallback(cb func(provider, model string)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.ModelInfoConfirmCallback = cb
+	}
+}
+
+func WithRawHTTPResponseCallback(cb func(headerBytes []byte, bodyPreview []byte)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.RawHTTPResponseCallback = cb
+	}
+}
+
+func WithRawHTTPResponseHeaderCallback(cb RawHTTPResponseHeaderCallback) AIConfigOption {
+	return func(c *AIConfig) {
+		c.RawHTTPResponseHeaderCallback = cb
+	}
+}
+
+func WithRawHTTPRequestResponseCallback(cb RawHTTPRequestResponseCallback) AIConfigOption {
+	return func(c *AIConfig) {
+		c.RawHTTPRequestResponseCallback = cb
+	}
+}
+
+// WithUsageCallback registers a callback that receives the final token usage
+// (prompt/completion/total) parsed from the streaming response. Useful for
+// downstream cost accounting. The callback may receive nil if the upstream
+// did not surface a usage block.
+//
+// 关键词: AIConfig WithUsageCallback, 视频蒸馏 token 用量回调
+func WithUsageCallback(cb func(*ChatUsage)) AIConfigOption {
+	return func(c *AIConfig) {
+		c.UsageCallback = cb
+	}
+}
+
+// WithRawMessages 让上层把客户端原始的 messages 数组完整透传到上游 LLM，
+// 不再被 gateway 拍平为单条 user 消息。
+//
+// 行为：当 RawMessages 非空时，gateway 的 Chat(s) 会把它带入
+// ChatBaseContext.RawMessages，chatBaseChatCompletions 跳过单 user 包装，
+// 直接以 RawMessages 作为最终请求体的 messages 字段。
+//
+// 主要使用场景: aibalance 等中转层希望保留客户端 messages 的 role 顺序与
+// content 结构，最大化上游隐式缓存的前缀命中率。
+//
+// 关键词: WithRawMessages, messages 完整透传, 隐式缓存前缀稳定
+func WithRawMessages(msgs []ChatDetail) AIConfigOption {
+	return func(c *AIConfig) {
+		c.RawMessages = msgs
+	}
+}

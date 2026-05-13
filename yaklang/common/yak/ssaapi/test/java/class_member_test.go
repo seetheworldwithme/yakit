@@ -1,0 +1,268 @@
+package java
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yaklang/yaklang/common/utils/filesys"
+	"github.com/yaklang/yaklang/common/yak/ssaapi"
+	"github.com/yaklang/yaklang/common/yak/ssaapi/ssaconfig"
+	"github.com/yaklang/yaklang/common/yak/ssaapi/test/ssatest"
+)
+
+func Test_CrossClass_SideEffect_Exec_Case(t *testing.T) {
+	tests := []struct {
+		name   string
+		equal  bool
+		expect []string
+		code   string
+	}{
+		{"aTaintCase022", false, []string{"Parameter-cmd", "Undefined-Runtime"},
+			`/**
+   * 字段/元素级别->对象字段->对象元素
+   * case应该被检出
+   */
+  @PostMapping(value = "case022")
+  public Map<String, Object> aTaintCase022(@RequestParam String cmd) {
+      Map<String, Object> modelMap = new HashMap<>();
+      try {
+          CmdObject simpleBean = new CmdObject();
+          simpleBean.setCmd(cmd);
+          simpleBean.setCmd2("cd /");
+          Runtime.getRuntime().exec(simpleBean.getCmd());
+          modelMap.put("status", "success");
+      } catch (Exception e) {
+          modelMap.put("status", "error");
+      }
+      return modelMap;
+  }`},
+		{"aTaintCase022_2", true, []string{"\"cd /\"", "Undefined-Runtime"}, ` /**
+		  * 字段/元素级别->对象字段->对象元素
+		  * case不应被检出
+		  */
+		 @PostMapping(value = "case022-2")
+		 public Map<String, Object> aTaintCase022_2(@RequestParam String cmd) {
+		     Map<String, Object> modelMap = new HashMap<>();
+		     try {
+		         CmdObject simpleBean = new CmdObject();
+		         simpleBean.setCmd(cmd);
+		         simpleBean.setCmd2("cd /");
+		         Runtime.getRuntime().exec(simpleBean.getCmd2());
+		         modelMap.put("status", "success");
+		     } catch (Exception e) {
+		         modelMap.put("status", "error");
+		     }
+		     return modelMap;
+		 }
+		`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.code = createCmdObject(tt.code)
+			testExecTopDef(t, &TestCase{
+				Code:    tt.code,
+				Contain: !tt.equal,
+				Expect: map[string][]string{
+					"target": tt.expect,
+				},
+			})
+		})
+	}
+}
+
+func createCmdObject(code string) string {
+	CmdUtilCode := fmt.Sprintf(`package com.sast.astbenchmark.model;
+
+public class CmdObject {
+    private String cmd1;
+    private String cmd2;
+
+    public void setCmd(String s) {
+        this.cmd1 = s;
+    }
+
+    public void setCmd2(String s) {
+        this.cmd2 = s;
+    }
+
+    public String getCmd() {
+        return this.cmd1;
+    }
+
+    public String getCmd2() {
+        return this.cmd2;
+    }
+}
+@RestController()
+public class AstTaintCase001 {
+%v
+}`, code)
+	return CmdUtilCode
+}
+
+func TestJavaMemberCallRealDataFlow(t *testing.T) {
+	vf := filesys.NewVirtualFs()
+	vf.AddFile("Main.java", `
+package org.example;
+
+public class Main {
+
+private final Flags flags = new Flags();
+
+@GetMapping("/challenge/7/reset-password/{link}")
+  public ResponseEntity<String> resetPassword(@PathVariable(value = "link") String link) {
+    if (link.equals(ADMIN_PASSWORD_LINK)) {
+      ResponseEntity result = flags.getFlag(7);
+	  return result;
+    }
+  }
+}
+`)
+	vf.AddFile("Flags.java", `package org.example;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.IntStream;
+
+public class Flags {
+    private final Map<Integer, String> FLAGS = new HashMap<>();
+
+    public Flags() {
+        IntStream.range(1, 10).forEach(i -> FLAGS.put(i, UUID.randomUUID().toString()));
+    }
+
+    public String getFlag(int flagNumber) {
+        return FLAGS.get(flagNumber);
+    }
+}
+`)
+	ssatest.CheckWithFS(vf, t, func(programs ssaapi.Programs) error {
+		programs.Show()
+		// 数据流不应该追踪到参数link
+		values, err := programs.SyntaxFlowWithError(`
+		link?{opcode:param} as $link
+		result #{until:<<<UNTIL
+		* & $link
+UNTIL}-> as $result`)
+
+		require.NoError(t, err)
+
+		result := values.GetValues("result").Show()
+		require.Empty(t, result)
+		return nil
+	}, ssaapi.WithLanguage(ssaconfig.JAVA))
+
+}
+
+func TestJava_FieldOverwriteBeforeSink(t *testing.T) {
+	code := `
+class Obj { String data; }
+public class S11 {
+	void clean(Obj o) { o.data = "safe"; }
+	void test() {
+		Obj o = new Obj();
+		o.data = getSecret();
+		clean(o);
+		sink(o.data);
+	}
+}
+`
+
+	t.Run("sink arg is the side effect after clean", func(t *testing.T) {
+		ssatest.CheckSyntaxFlow(t, code, `sink(* as $arg)`, map[string][]string{
+			"arg": {`side-effect("safe", o.data)`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+
+	t.Run("member view keeps both history and overwritten value", func(t *testing.T) {
+		ssatest.CheckSyntaxFlow(t, code, `o.data as $member`, map[string][]string{
+			"member": {
+				`"safe"`,
+				`Undefined-getSecret()`,
+				`side-effect("safe", o.data)`,
+			},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+
+	t.Run("top def from sink resolves to safe", func(t *testing.T) {
+		ssatest.CheckSyntaxFlowContain(t, code, `sink(* #-> as $data)`, map[string][]string{
+			"data": {`"safe"`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+}
+
+// TestJava_ThisFieldOverwriteBeforeSink：与 TestJava_FieldOverwriteBeforeSink 对称，
+// 覆盖「实例方法通过 this 写字段、再 sink(this.data)」路径；用于放宽/校验 this 上的 SideEffect 传播。
+func TestJava_ThisFieldOverwriteBeforeSink(t *testing.T) {
+	code := `
+public class A02 {
+	String data;
+
+	void setClean() {
+		this.data = "clean";
+	}
+
+	void test() {
+		this.data = getSecret();
+		setClean();
+		sink(this.data);
+	}
+}
+`
+
+	t.Run("sink arg is the side effect after setClean on this", func(t *testing.T) {
+		ssatest.CheckSyntaxFlow(t, code, `sink(* as $arg)`, map[string][]string{
+			"arg": {`side-effect("clean", this.data)`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+
+	t.Run("member view on this.data keeps history and overwritten value", func(t *testing.T) {
+		ssatest.CheckSyntaxFlow(t, code, `this.data as $member`, map[string][]string{
+			"member": {
+				`"clean"`,
+				`Undefined-getSecret()`,
+				`side-effect("clean", this.data)`,
+			},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+
+	t.Run("top def from sink resolves to clean literal", func(t *testing.T) {
+		ssatest.CheckSyntaxFlowContain(t, code, `sink(* #-> as $data)`, map[string][]string{
+			"data": {`"clean"`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+}
+
+// TestJava_StaticMethodCallWithoutPrefix_ShouldNotInjectThis:
+// 无前缀调用 static 方法时，不应走 this 成员方法调用路径，也不应把 this.data 误判为被覆盖。
+func TestJava_StaticMethodCallWithoutPrefix_ShouldNotInjectThis(t *testing.T) {
+	code := `
+public class A03 {
+	String data;
+
+	static String setClean(String in) {
+		return "clean";
+	}
+
+	void test() {
+		this.data = getSecret();
+		setClean(this.data);
+		sink(this.data);
+	}
+}
+`
+
+	t.Run("sink arg keeps original taint from getSecret", func(t *testing.T) {
+		ssatest.CheckSyntaxFlow(t, code, `sink(* as $arg)`, map[string][]string{
+			"arg": {`Undefined-getSecret()`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+
+	t.Run("top def still resolves to getSecret source", func(t *testing.T) {
+		ssatest.CheckSyntaxFlowContain(t, code, `sink(* #-> as $data)`, map[string][]string{
+			"data": {`Undefined-getSecret`},
+		}, ssaapi.WithLanguage(ssaconfig.JAVA))
+	})
+}

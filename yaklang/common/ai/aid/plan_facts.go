@@ -1,0 +1,559 @@
+package aid
+
+import (
+	"fmt"
+	"io"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
+	"unicode"
+
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon/aitag"
+)
+
+const (
+	planFactsPersistentKey    = "plan_facts"
+	planEvidencePersistentKey = "plan_evidence"
+	planDocumentPersistentKey = "plan_document"
+	planEvidenceTokenBudget   = 15000
+)
+
+var (
+	planFactsAITags    = []string{"FACTS", "PLAN_FACTS"}
+	planEvidenceAITags = []string{"EVIDENCE", "PLAN_EVIDENCE"}
+	planDocumentAITags = []string{"DOCUMENT", "PLAN_DOCUMENT"}
+	planContextGapRE   = regexp.MustCompile(`\n{3,}`)
+)
+
+type discoveredAITagBlock struct {
+	TagName string
+	Nonce   string
+	Start   int
+	End     int
+}
+
+func buildFactsBlock(facts string) string {
+	return buildPlanContextBlock("FACTS", facts)
+}
+
+func buildEvidenceBlock(evidence string) string {
+	return buildPlanContextBlock("EVIDENCE", evidence)
+}
+
+func buildDocumentBlock(document string) string {
+	return buildPlanContextBlock("DOCUMENT", document)
+}
+
+// buildPlanContextBlock 构造 <|TAG_<nonce>|>...<|TAG_END_<nonce>|> 块。
+//
+// 缓存优化: nonce 由 (tag, content) 通过 aicommon.StablePromptNonce 派生，
+// 同样的 content 跨多次调用必产出相同 nonce，避免老反模式
+// utils.RandStringBytes(6) 让相同 FACTS/DOCUMENT/EVIDENCE body 在每次重渲染
+// 时都换 nonce，从而打破上游的 prefix cache。
+//
+// content 一旦变化 (例如 plan 演化新增 facts), nonce 自然变化, 这是预期
+// 行为, 让旧缓存自然失效。
+//
+// 关键词: buildPlanContextBlock, plan facts/document/evidence nonce 稳定,
+//        反 RandStringBytes 反模式, prefix cache
+func buildPlanContextBlock(tag string, content string) string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return ""
+	}
+	nonce := aicommon.StablePromptNonce("plan-context", tag, content)
+	return fmt.Sprintf("<|%s_%s|>\n%s\n<|%s_END_%s|>", tag, nonce, content, tag, nonce)
+}
+
+func prependPlanFactsToRenderedPlan(base string, facts string) string {
+	return prependPlanContextDocsToRenderedPlan(base, facts, "", "")
+}
+
+func prependPlanContextDocsToRenderedPlan(base string, facts string, document string, evidence string) string {
+	facts = strings.TrimSpace(facts)
+	document = strings.TrimSpace(document)
+	evidence = strings.TrimSpace(evidence)
+	if facts == "" && document == "" && evidence == "" {
+		return base
+	}
+	blocks := make([]string, 0, 3)
+	if facts != "" {
+		blocks = append(blocks, buildFactsBlock(facts))
+	}
+	if document != "" {
+		blocks = append(blocks, buildDocumentBlock(document))
+	}
+	if evidence != "" {
+		blocks = append(blocks, buildEvidenceBlock(evidence))
+	}
+	joinedBlocks := strings.Join(blocks, "\n\n")
+	if strings.TrimSpace(base) == "" {
+		return joinedBlocks
+	}
+	return joinedBlocks + "\n\n" + base
+}
+
+func extractPlanFactsFromText(content string) string {
+	return extractPlanContextFromText(content, planFactsAITags...)
+}
+
+func extractPlanEvidenceFromText(content string) string {
+	return extractPlanContextFromText(content, planEvidenceAITags...)
+}
+
+func extractPlanDocumentFromText(content string) string {
+	return extractPlanContextFromText(content, planDocumentAITags...)
+}
+
+func extractPlanContextFromText(content string, tagNames ...string) string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return ""
+	}
+	blocks := discoverAITagBlocks(content, tagNames...)
+	if len(blocks) == 0 {
+		return ""
+	}
+
+	results := make([]string, len(blocks))
+	options := make([]aitag.ParseOption, 0, len(blocks))
+	var mu sync.Mutex
+	for index, block := range blocks {
+		index := index
+		block := block
+		options = append(options, aitag.WithCallback(block.TagName, block.Nonce, func(reader io.Reader) {
+			contentBytes, err := io.ReadAll(reader)
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			results[index] = strings.TrimSpace(string(contentBytes))
+			mu.Unlock()
+		}))
+	}
+	if err := aitag.Parse(strings.NewReader(content), options...); err != nil {
+		return ""
+	}
+	for _, result := range results {
+		if result != "" {
+			return result
+		}
+	}
+	return ""
+}
+
+func stripPlanContextBlocks(content string) string {
+	content = strings.TrimSpace(content)
+	allTags := make([]string, 0, len(planFactsAITags)+len(planDocumentAITags)+len(planEvidenceAITags))
+	allTags = append(allTags, planFactsAITags...)
+	allTags = append(allTags, planDocumentAITags...)
+	allTags = append(allTags, planEvidenceAITags...)
+	blocks := discoverAITagBlocks(content, allTags...)
+	if len(blocks) == 0 {
+		return content
+	}
+
+	var builder strings.Builder
+	last := 0
+	for _, block := range blocks {
+		if block.Start > last {
+			builder.WriteString(content[last:block.Start])
+		}
+		if block.End > last {
+			last = block.End
+		}
+	}
+	if last < len(content) {
+		builder.WriteString(content[last:])
+	}
+	cleaned := strings.TrimSpace(builder.String())
+	return planContextGapRE.ReplaceAllString(cleaned, "\n\n")
+}
+
+func discoverAITagBlocks(content string, tagNames ...string) []discoveredAITagBlock {
+	if content == "" || len(tagNames) == 0 {
+		return nil
+	}
+	allowedTags := make(map[string]struct{}, len(tagNames))
+	for _, tagName := range tagNames {
+		if tagName == "" {
+			continue
+		}
+		allowedTags[tagName] = struct{}{}
+	}
+	if len(allowedTags) == 0 {
+		return nil
+	}
+
+	blocks := make([]discoveredAITagBlock, 0, 4)
+	for offset := 0; offset < len(content); {
+		startOffset := strings.Index(content[offset:], "<|")
+		if startOffset < 0 {
+			break
+		}
+		start := offset + startOffset
+		tagCloseOffset := strings.Index(content[start:], "|>")
+		if tagCloseOffset < 0 {
+			break
+		}
+		tagClose := start + tagCloseOffset + 2
+		tagName, nonce, ok := parseAITagStartToken(content[start+2 : tagClose-2])
+		if !ok {
+			offset = tagClose
+			continue
+		}
+		if _, exists := allowedTags[tagName]; !exists {
+			offset = tagClose
+			continue
+		}
+
+		endTag := fmt.Sprintf("<|%s_END_%s|>", tagName, nonce)
+		endOffset := strings.Index(content[tagClose:], endTag)
+		if endOffset < 0 {
+			offset = tagClose
+			continue
+		}
+		end := tagClose + endOffset + len(endTag)
+		blocks = append(blocks, discoveredAITagBlock{
+			TagName: tagName,
+			Nonce:   nonce,
+			Start:   start,
+			End:     end,
+		})
+		offset = end
+	}
+	return blocks
+}
+
+func parseAITagStartToken(token string) (string, string, bool) {
+	if token == "" || strings.Contains(token, "_END_") {
+		return "", "", false
+	}
+	underscore := strings.LastIndex(token, "_")
+	if underscore <= 0 || underscore >= len(token)-1 {
+		return "", "", false
+	}
+	tagName := token[:underscore]
+	nonce := token[underscore+1:]
+	for _, ch := range tagName {
+		if !unicode.IsLetter(ch) && !unicode.IsDigit(ch) && ch != '_' {
+			return "", "", false
+		}
+	}
+	return tagName, nonce, true
+}
+
+func getTaskPlanFacts(task *AiTask) string {
+	return getTaskPlanPersistentMarkdown(task, planFactsPersistentKey, extractPlanFactsFromText)
+}
+
+func getTaskPlanEvidence(task *AiTask) string {
+	return getTaskPlanPersistentMarkdown(task, planEvidencePersistentKey, extractPlanEvidenceFromText)
+}
+
+func getTaskPlanDocument(task *AiTask) string {
+	return getTaskPlanPersistentMarkdown(task, planDocumentPersistentKey, extractPlanDocumentFromText)
+}
+
+func getTaskPlanPersistentMarkdown(task *AiTask, key string, extractor func(string) string) string {
+	if task == nil {
+		return ""
+	}
+	if task.Coordinator != nil && task.Coordinator.ContextProvider != nil {
+		if content, ok := task.Coordinator.ContextProvider.GetPersistentData(key); ok {
+			content = strings.TrimSpace(content)
+			if content != "" {
+				return content
+			}
+		}
+	}
+	root := task
+	for root.ParentTask != nil {
+		root = root.ParentTask
+	}
+	if root.AIStatefulTaskBase != nil {
+		if content := extractor(root.AIStatefulTaskBase.GetUserInput()); content != "" {
+			return content
+		}
+	}
+	return ""
+}
+
+func mergePlanContextDocuments(existing string, incoming string) string {
+	existing = strings.TrimSpace(existing)
+	incoming = strings.TrimSpace(incoming)
+	if incoming == "" {
+		return existing
+	}
+	if existing == "" {
+		return incoming
+	}
+	if strings.Contains(existing, incoming) {
+		return existing
+	}
+	if strings.Contains(incoming, existing) {
+		return incoming
+	}
+	return strings.TrimSpace(existing + "\n\n" + incoming)
+}
+
+func appendTaskPlanEvidence(task *AiTask, incoming string) (string, bool) {
+	incoming = aicommon.NormalizeConcreteEvidenceMarkdown(incoming)
+	if task == nil || incoming == "" {
+		return getTaskPlanEvidence(task), false
+	}
+	existing := getTaskPlanEvidence(task)
+	merged := mergePlanContextDocuments(existing, incoming)
+	merged = strings.TrimSpace(aicommon.ShrinkTextBlockByTokens(merged, planEvidenceTokenBudget))
+	if merged == existing {
+		return merged, false
+	}
+	if task.Coordinator != nil && task.Coordinator.ContextProvider != nil {
+		task.Coordinator.ContextProvider.SetPersistentData(planEvidencePersistentKey, merged)
+	}
+	syncRootTaskPlanContextDocs(task)
+	return merged, true
+}
+
+func buildTaskPlanVerificationCarryoverMarkdown(task *AiTask, reasoning string, outputFiles []string) string {
+	sections := make([]string, 0, 3)
+	taskLabel := formatTaskPlanEvidenceLabel(task)
+	reasoning = strings.TrimSpace(reasoning)
+
+	if reasoning != "" {
+		parts := []string{fmt.Sprintf("## %s 核实结果", taskLabel)}
+		parts = append(parts, "### 判定", reasoning)
+		sections = append(sections, strings.TrimSpace(strings.Join(parts, "\n\n")))
+	}
+
+	normalizedFiles := normalizeTaskPlanOutputFiles(outputFiles)
+	if len(normalizedFiles) > 0 {
+		lines := make([]string, 0, len(normalizedFiles)+1)
+		lines = append(lines, fmt.Sprintf("## %s 交付文件", taskLabel))
+		for _, filePath := range normalizedFiles {
+			lines = append(lines, "- "+filePath)
+		}
+		sections = append(sections, strings.TrimSpace(strings.Join(lines, "\n")))
+	}
+
+	return strings.TrimSpace(strings.Join(sections, "\n\n"))
+}
+
+func buildTaskPlanSummaryCarryoverMarkdown(task *AiTask, summary string) string {
+	summary = strings.TrimSpace(summary)
+	if summary == "" {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprintf("## %s 任务总结\n\n%s", formatTaskPlanEvidenceLabel(task), summary))
+}
+
+func formatTaskPlanEvidenceLabel(task *AiTask) string {
+	if task == nil {
+		return "当前任务"
+	}
+	index := strings.TrimSpace(task.GetIndex())
+	name := strings.TrimSpace(task.GetName())
+	if index == "" && name == "" {
+		return "当前任务"
+	}
+	if index == "" {
+		return name
+	}
+	if name == "" {
+		return "子任务 " + index
+	}
+	return fmt.Sprintf("子任务 %s %s", index, name)
+}
+
+func normalizeTaskPlanOutputFiles(outputFiles []string) []string {
+	if len(outputFiles) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(outputFiles))
+	seen := make(map[string]struct{}, len(outputFiles))
+	for _, filePath := range outputFiles {
+		normalizedPath := sanitizeTaskPlanOutputFilePath(filePath)
+		if normalizedPath == "" {
+			continue
+		}
+		if _, exists := seen[normalizedPath]; exists {
+			continue
+		}
+		seen[normalizedPath] = struct{}{}
+		result = append(result, normalizedPath)
+	}
+	return result
+}
+
+func sanitizeTaskPlanOutputFilePath(filePath string) string {
+	cleaned := strings.TrimSpace(filePath)
+	if cleaned == "" {
+		return ""
+	}
+	cleaned = strings.NewReplacer("\r", "", "\n", "", "\t", " ").Replace(cleaned)
+	cleaned = strings.TrimSpace(cleaned)
+	if cleaned == "" {
+		return ""
+	}
+	base := filepath.Base(cleaned)
+	if strings.HasPrefix(base, "ai_bash_script_") && strings.HasSuffix(base, ".sh") {
+		return ""
+	}
+	return cleaned
+}
+
+// syncRootTaskPlanContextDocs 把 root task 的 FACTS + DOCUMENT 同步嵌入到
+// root user input 前缀, 让所有子任务通过 GetUserInput / parentInputs 链路看到
+// 这两份 plan 周期级稳定文档。
+//
+// EVIDENCE 故意不再嵌入: 历史上曾把 EVIDENCE 作为第三份 prefix 嵌入, 但 EVIDENCE
+// 由 EvidenceOps 增量演化, 每次写入都会让 root user input 字节变化, 进而让
+// PlanContext (PARENT_TASK + CURRENT_TASK + INSTRUCTION 三联块, 内部依赖父链
+// user input) 跨子任务剧烈抖动, 破坏 prompt 缓存命中。现 EVIDENCE 统一由
+// SessionPromptState 渲染 (SESSION_EVIDENCE 段, 位于 timeline-open), 单一
+// 数据源, 不再污染 root user input。
+//
+// 关键词: syncRootTaskPlanContextDocs, FACTS + DOCUMENT 嵌入,
+//        EVIDENCE 已剥离, PlanContext 抖动修复, SessionPromptState 单源
+func syncRootTaskPlanContextDocs(task *AiTask) {
+	if task == nil {
+		return
+	}
+	root := task
+	for root.ParentTask != nil {
+		root = root.ParentTask
+	}
+	if root.AIStatefulTaskBase == nil {
+		return
+	}
+	base := stripPlanContextBlocks(root.AIStatefulTaskBase.GetUserInput())
+	root.SetUserInput(prependPlanContextDocsToRenderedPlan(base, getTaskPlanFacts(root), getTaskPlanDocument(root), ""))
+}
+
+func buildVerificationCarryoverEvidenceOps(task *AiTask, reasoning string, outputFiles []string) []aicommon.EvidenceOperation {
+	var ops []aicommon.EvidenceOperation
+	taskLabel := formatTaskPlanEvidenceLabel(task)
+
+	reasoning = strings.TrimSpace(reasoning)
+	if reasoning != "" {
+		ops = append(ops, aicommon.EvidenceOperation{
+			Op:      "add",
+			ID:      fmt.Sprintf("verify-%s", task.GetIndex()),
+			Content: fmt.Sprintf("[%s] 核实: %s", taskLabel, reasoning),
+		})
+	}
+
+	normalizedFiles := normalizeTaskPlanOutputFiles(outputFiles)
+	if len(normalizedFiles) > 0 {
+		fileList := strings.Join(normalizedFiles, ", ")
+		ops = append(ops, aicommon.EvidenceOperation{
+			Op:      "add",
+			ID:      fmt.Sprintf("files-%s", task.GetIndex()),
+			Content: fmt.Sprintf("[%s] 交付文件: %s", taskLabel, fileList),
+		})
+	}
+	return ops
+}
+
+func buildSummaryEvidenceOps(task *AiTask, summary string) []aicommon.EvidenceOperation {
+	summary = strings.TrimSpace(summary)
+	if summary == "" {
+		return nil
+	}
+	taskLabel := formatTaskPlanEvidenceLabel(task)
+	return []aicommon.EvidenceOperation{
+		{
+			Op:      "add",
+			ID:      fmt.Sprintf("summary-%s", task.GetIndex()),
+			Content: fmt.Sprintf("[%s] 总结: %s", taskLabel, summary),
+		},
+	}
+}
+
+func applyTaskPlanEvidenceOps(task *AiTask, ops []aicommon.EvidenceOperation) (string, bool) {
+	if task == nil || len(ops) == 0 {
+		return getTaskPlanEvidence(task), false
+	}
+
+	existing := getTaskPlanEvidence(task)
+	lines := parseEvidenceLines(existing)
+
+	for _, op := range ops {
+		id := strings.TrimSpace(op.ID)
+		content := strings.TrimSpace(op.Content)
+		switch strings.ToLower(strings.TrimSpace(op.Op)) {
+		case "add":
+			if content == "" {
+				continue
+			}
+			if id != "" {
+				if idx := findEvidenceLineByID(lines, id); idx >= 0 {
+					lines[idx] = formatEvidenceLine(id, content)
+					continue
+				}
+			}
+			lines = append(lines, formatEvidenceLine(id, content))
+		case "update":
+			if id == "" || content == "" {
+				continue
+			}
+			if idx := findEvidenceLineByID(lines, id); idx >= 0 {
+				lines[idx] = formatEvidenceLine(id, content)
+			} else {
+				lines = append(lines, formatEvidenceLine(id, content))
+			}
+		case "delete":
+			if id == "" {
+				continue
+			}
+			if idx := findEvidenceLineByID(lines, id); idx >= 0 {
+				lines = append(lines[:idx], lines[idx+1:]...)
+			}
+		}
+	}
+
+	merged := strings.TrimSpace(strings.Join(lines, "\n"))
+	merged = strings.TrimSpace(aicommon.ShrinkTextBlockByTokens(merged, planEvidenceTokenBudget))
+	if merged == existing {
+		return merged, false
+	}
+	if task.Coordinator != nil && task.Coordinator.ContextProvider != nil {
+		task.Coordinator.ContextProvider.SetPersistentData(planEvidencePersistentKey, merged)
+	}
+	syncRootTaskPlanContextDocs(task)
+	return merged, true
+}
+
+func parseEvidenceLines(content string) []string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil
+	}
+	raw := strings.Split(content, "\n")
+	lines := make([]string, 0, len(raw))
+	for _, line := range raw {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			lines = append(lines, trimmed)
+		}
+	}
+	return lines
+}
+
+func findEvidenceLineByID(lines []string, id string) int {
+	prefix := fmt.Sprintf("- [%s] ", id)
+	for i, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			return i
+		}
+	}
+	return -1
+}
+
+func formatEvidenceLine(id, content string) string {
+	if id == "" {
+		return "- " + content
+	}
+	return fmt.Sprintf("- [%s] %s", id, content)
+}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登不上的后台</title>
+    <!-- 引入 Bootstrap CSS -->
+    <link href="/static/js/bootstrap_5.3/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <div id="authcheck" class="row justify-content-center mt-5">
+        <div class="col-md-4">
+            <h2 class="text-center mb-4">登录</h2>
+                <div class="mb-3">
+                    <label for="username" class="form-label">用户名</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">密码</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" onclick="load()">提交</button>
+        </div>
+        <div class="text-center" style="padding-top: 50px;">
+            <strong>注意：</strong>后端是通过正则提取payload中的dnslog模拟fastjson解析过程，使用不在范围内的dnslog不会触发<br>
+            <strong>提取正则：(\w+\.)+((dnslog\.cn)|(ceye\.io)|(vcap\.me)|(vcap\.io)|(xip\.io)|(burpcollaborator\.net)|(dgrh3\.cn))</strong><br>
+            后台并不会真正执行exp，触发exp特征即可，不需要登录后台（Jackson后端案例不存在漏洞）
+        </div>
+        <div id="response" class="text-center" style="padding-top: 50px;"></div>
+    </div>
+    <script>
+        $script
+    </script>
+</div>
+
+<!-- 引入 Bootstrap JavaScript -->
+<script src="/static/js/jquery_1.10.2/jquery.min.js"></script>
+<script src="/static/js/bootstrap_5.3/popper.min.js"></script>
+<script src="/static/js/bootstrap_5.3/bootstrap.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+name: new-yak-engine-test
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'common/yak/antlr4yak/**'
+
+jobs:
+
+  test:
+    name: Test
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Cache YakLang Project
+      uses: actions/cache@v3
+      id: cache-project
+      with:
+          path: |
+            ~/yakit-projects
+            ${{ github.workspace }}
+          key: go-${{ github.sha }}
+
+    - name: Check out code into the Go module directory
+      if: steps.cache-project.outputs.cache-hit != 'true'
+      uses: actions/checkout@v3
+      with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: "./go.mod"
+        cache: false
+      id: go
+
+    # - name: Cache Go modules
+    #   uses: actions/cache@v3
+    #   id: cache-go-modules
+    #   with:
+    #     path: ~/go/pkg/mod
+    #     key: go-modules-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+    #     restore-keys: |
+    #       go-modules-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+    - name: Init Module
+      run: |
+          go mod tidy
+
+    - name: Test
+      run: go test -timeout 30m -tags ./common/yak/antlr4yak ./common/yak/antlr4yak -v -count=1

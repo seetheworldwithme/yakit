@@ -1,0 +1,728 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BIN_DIR="${TEST_BIN_DIR:-./test_binaries}"
+TEST_LOG_DIR="${TEST_LOG_DIR:-$BIN_DIR}"
+
+# 过滤：只运行包路径包含该正则的二进制（读取 .package）
+PACKAGE_FILTER_REGEX="${PACKAGE_FILTER_REGEX:-.*}"   # 例如 '^./common/ai/' 只跑 AI
+# 运行细节 - 默认值（可被包级别配置覆盖）
+TEST_TIMEOUT="${TEST_TIMEOUT:-2m}"      # -test.timeout
+TEST_VERBOSE="${TEST_VERBOSE:-1}"       # 1=开启 -test.v
+TEST_PARALLEL="${TEST_PARALLEL:-}"      # -test.parallel（包内并发，留空则不设置）
+TEST_RUN_PATTERN="${TEST_RUN_PATTERN:-}"  # -test.run（用来选择子集）
+TEST_SKIP_PATTERN="${TEST_SKIP_PATTERN:-}"  # -test.skip（用来跳过某些测试）
+
+# 包级别配置文件路径
+TEST_CONFIG="${TEST_CONFIG:-}"  # JSON格式的测试配置文件
+
+# 构建包路径到二进制文件的映射
+declare -a ALL_TEST_BINS=()
+declare -a ALL_TEST_PKGS=()
+
+build_package_map() {
+  echo "Building package to binary mapping..."
+  local skipped_entries=0
+  local bin=""
+
+  while IFS= read -r bin; do
+    pkg_file="${bin}.package"
+    if [[ ! -f "$pkg_file" ]]; then
+      echo "WARNING: Skipping binary because package metadata is missing: $(basename "$bin").package"
+      ((++skipped_entries))
+      continue
+    fi
+    pkg_path="$(cat "$pkg_file")"
+    
+    # 应用过滤器
+    if ! [[ "$pkg_path" =~ $PACKAGE_FILTER_REGEX ]]; then
+      continue
+    fi
+    
+    ALL_TEST_BINS+=("$bin")
+    ALL_TEST_PKGS+=("$pkg_path")
+  done < <(
+    find "$BIN_DIR" -maxdepth 1 -type f -name "test_*" ! -name "*.log" ! -name "*.package" ! -name ".*" | sort
+  )
+  
+  echo "Found ${#ALL_TEST_BINS[@]} test binaries"
+  if [[ $skipped_entries -gt 0 ]]; then
+    echo "Skipped $skipped_entries invalid binary entrie(s)"
+  fi
+}
+
+# 检查包是否匹配配置的包模式
+pkg_matches_pattern() {
+  local pkg="$1"
+  local pattern="$2"
+  
+  # 精确匹配
+  if [[ "$pkg" == "$pattern" ]]; then
+    return 0
+  fi
+  
+  # 通配符匹配：pattern 以 /... 结尾
+  if [[ "$pattern" == */... ]]; then
+    local prefix="${pattern%/...}"
+    # 检查 pkg 是否位于 prefix 目录树下（任意深度）或等于 prefix
+    if [[ "$pkg" == "$prefix" ]] || [[ "${pkg#"$prefix"/}" != "$pkg" ]]; then
+      return 0
+    fi
+  fi
+  
+  # /. 结尾的精确匹配
+  if [[ "$pattern" == */. ]]; then
+    local exact="${pattern%/.}"
+    if [[ "$pkg" == "$exact" ]]; then
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
+# 找到匹配配置的所有测试二进制
+pkg_matches_any_exclude() {
+  local pkg="$1"
+  local exclude_patterns="$2"
+  local pattern=""
+
+  while IFS= read -r pattern; do
+    [[ -z "$pattern" ]] && continue
+    if pkg_matches_pattern "$pkg" "$pattern"; then
+      return 0
+    fi
+  done <<< "$exclude_patterns"
+
+  return 1
+}
+
+find_matching_tests() {
+  local pattern="$1"
+  local exclude_patterns="${2:-}"
+  local -a matched_indices=()
+  
+  for i in "${!ALL_TEST_PKGS[@]}"; do
+    if ! pkg_matches_pattern "${ALL_TEST_PKGS[$i]}" "$pattern"; then
+      continue
+    fi
+    if pkg_matches_any_exclude "${ALL_TEST_PKGS[$i]}" "$exclude_patterns"; then
+      continue
+    fi
+    matched_indices+=("$i")
+  done
+  
+  # 安全地输出数组（避免 unbound variable 错误）
+  if [[ ${#matched_indices[@]} -gt 0 ]]; then
+    echo "${matched_indices[@]}"
+  fi
+}
+
+if [[ ! -d "$BIN_DIR" ]]; then
+  echo " Binary dir not found: $BIN_DIR"
+  exit 1
+fi
+
+mkdir -p "$TEST_LOG_DIR"
+
+# 构建包到二进制的映射
+build_package_map
+
+echo "=== Run Compiled Tests ==="
+echo "Binary Dir : $BIN_DIR"
+echo "Filter     : $PACKAGE_FILTER_REGEX"
+echo "Default Timeout    : $TEST_TIMEOUT"
+[[ -n "$TEST_PARALLEL" ]] && echo "Default Parallel   : $TEST_PARALLEL"
+echo "Verbose    : $TEST_VERBOSE"
+[[ -n "$TEST_RUN_PATTERN" ]] && echo "Default Run Pattern: $TEST_RUN_PATTERN"
+[[ -n "$TEST_SKIP_PATTERN" ]] && echo "Default Skip Pattern: $TEST_SKIP_PATTERN"
+[[ -n "$TEST_CONFIG" ]] && echo "Config File: $TEST_CONFIG (config-driven mode)"
+echo ""
+
+# 运行单个测试（带重试机制）
+run_test() {
+  local bin="$1"
+  local pkg_path="$2"
+  local timeout="$3"
+  local run_pattern="$4"
+  local skip_pattern="$5"
+  local parallel="$6"
+  local retry="$7"          # 重试次数
+  local retry_delay="$8"    # 重试延迟（秒）
+  local config_source="$9"  # "default" 或 "config:pattern"
+  
+  local name="$(basename "$bin")"
+  local log="${TEST_LOG_DIR}/${name}.run.log"
+  
+  # 默认重试参数
+  local max_retries="${retry:-0}"
+  local delay="${retry_delay:-5}"
+  
+  # 构建测试参数
+  local args=( "-test.timeout=$timeout" )
+  [[ -n "$parallel" ]] && args+=("-test.parallel=$parallel")
+  [[ "$TEST_VERBOSE" = "1" ]] && args+=("-test.v")
+  [[ -n "$run_pattern" ]] && args+=("-test.run=$run_pattern")
+  [[ -n "$skip_pattern" ]] && args+=("-test.skip=$skip_pattern")
+  
+  # 计算包的实际源码目录
+  local pkg_dir="$pkg_path"
+  pkg_dir="${pkg_dir%/...}"
+  pkg_dir="${pkg_dir%/.}"
+  
+  if [[ ! -d "$pkg_dir" ]]; then
+    echo "WARNING: Package directory not found: $pkg_dir, using current directory"
+    pkg_dir="."
+  fi
+  
+  # 重试循环
+  local attempt=0
+  local success=0
+  
+  while [[ $attempt -le $max_retries ]]; do
+    if [[ $attempt -gt 0 ]]; then
+      echo ""
+      echo " 重试测试 (尝试 $((attempt + 1))/$((max_retries + 1))): $name"
+      sleep "$delay"
+    fi
+    
+    # 创建一个临时函数来同时输出到屏幕和日志
+    exec 3>&1  # 保存原始 stdout
+    
+    # 启动后台计时器 - 异步更新最后一行显示状态和已过时间
+    local timer_pid=""
+    local start_time=$(date +%s)
+    
+    # 启动计时器 - 输出到 stderr
+    (
+      while true; do
+        local elapsed=$(( $(date +%s) - start_time ))
+        local mins=$(( elapsed / 60 ))
+        local secs=$(( elapsed % 60 ))
+        # 使用 \r 回到行首，始终覆盖同一行（如果是 TTY）
+        # 如果不是 TTY，\r 会被忽略，每次都输出新行（也可以看到进度）
+        printf "\r⏱️  [%02d:%02d] Running: %s (Package: %s)..." "$mins" "$secs" "$name" "$pkg_path" >&2
+        sleep 1
+      done
+    ) &
+    timer_pid=$!
+    
+    # 使用子shell而不是代码块，这样可以正确捕获exit code
+    (
+      # 第一行：最重要的信息 - 运行命令
+      echo "Command: (cd $pkg_dir && $bin ${args[*]})"
+      echo "Test: $name | Package: $pkg_path"
+      [[ "$config_source" != "default" ]] && echo "Config: $config_source"
+      [[ $max_retries -gt 0 ]] && echo "Retry: enabled (max=$max_retries, delay=${delay}s, attempt=$((attempt + 1)))"
+      echo "----"
+      
+      # 在子shell中，exit会退出子shell而不是整个脚本
+      cd "$pkg_dir" && "$bin" "${args[@]}"
+    ) 2>&1 | tee -a "$log" | {
+      # 过滤输出：优先显示失败/panic信息，如果没有则显示关键的运行信息
+      grep -E -A10 -B10 "(FAIL|--- FAIL|panic:|test timed out)" || \
+      grep -E "(PASS|RUN|=== RUN|--- PASS|TestTemplate|panic:|goroutine.*\[(running|sleep)\]|testing\..*panic|recovered)" "$log"
+    } >&3
+    
+    local code=${PIPESTATUS[0]}
+    
+    # 停止计时器
+    if [[ -n "$timer_pid" ]]; then
+      kill "$timer_pid" 2>/dev/null || true
+      wait "$timer_pid" 2>/dev/null || true
+    fi
+    
+    # 清除计时器行并显示最终时间
+    printf "\r\033[K" >&2  # 清除计时器行（如果是 TTY 会清除，否则只是换行）
+    
+    local final_elapsed=$(( $(date +%s) - start_time ))
+    local final_mins=$(( final_elapsed / 60 ))
+    local final_secs=$(( final_elapsed % 60 ))
+    
+    if [[ $code -eq 0 ]]; then
+      echo "✅ Completed in ${final_mins}m${final_secs}s"
+    else
+      echo "❌ Failed after ${final_mins}m${final_secs}s (exit code: $code)"
+      {
+        echo "FAIL: $name (exit=$code, attempt=$((attempt + 1))/$((max_retries + 1)))"
+        echo "FAIL_ELAPSED: ${final_mins}m${final_secs}s"
+      } >> "$log"
+    fi
+    
+    exec 3>&-  # 关闭文件描述符
+    
+    if [[ $code -eq 0 ]]; then
+      echo "PASS: $name"
+      [[ $attempt -gt 0 ]] && echo " 重试成功！(在第 $((attempt + 1)) 次尝试)"
+      success=1
+      break
+    else
+      echo "FAIL: $name (exit=$code, attempt=$((attempt + 1))/$((max_retries + 1)))"
+      
+      # 如果还有重试机会，显示详细日志摘要
+      if [[ $attempt -lt $max_retries ]]; then
+        echo "失败日志摘要："
+        grep -aE "(FAIL|--- FAIL|panic:|test timed out|TLS handshake error)" "$log" | head -20 | sed 's/^/  /'
+      fi
+    fi
+    
+    ((++attempt))
+  done
+  
+  if [[ $success -eq 0 ]]; then
+    echo ""
+    echo "测试失败，已尝试 $((max_retries + 1)) 次: $name"
+    echo "完整日志: $log"
+    return 1
+  fi
+  
+  return 0
+}
+
+rc=0
+declare -a processed_indices=()
+
+# 配置驱动模式：如果有配置文件，按配置执行
+if [[ -n "$TEST_CONFIG" && -f "$TEST_CONFIG" ]]; then
+  echo "=== Config-Driven Mode ==="
+  echo "Processing test configurations..."
+  echo ""
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo " ERROR: jq is required for config-driven mode but not found"
+    echo " Please install jq or remove TEST_CONFIG to use default mode"
+    exit 1
+  fi
+  
+  # 读取配置并执行匹配的测试
+  config_count=$(jq 'length' "$TEST_CONFIG")
+  echo "Found $config_count config rules"
+  echo ""
+  
+  for ((idx=0; idx<config_count; idx++)); do
+    pattern=$(jq -r ".[$idx].package" "$TEST_CONFIG")
+    timeout=$(jq -r ".[$idx].timeout // empty" "$TEST_CONFIG")
+    run_pattern=$(jq -r ".[$idx].run // empty" "$TEST_CONFIG")
+    skip_pattern=$(jq -r ".[$idx].skip // empty" "$TEST_CONFIG")
+    exclude_packages=$(jq -r ".[$idx].exclude_packages[]? // empty" "$TEST_CONFIG")
+    parallel=$(jq -r ".[$idx].parallel // empty" "$TEST_CONFIG")
+    retry=$(jq -r ".[$idx].retry // empty" "$TEST_CONFIG")
+    retry_delay=$(jq -r ".[$idx].retry_delay // empty" "$TEST_CONFIG")
+    
+    # 使用默认值填充空配置
+    [[ -z "$timeout" ]] && timeout="$TEST_TIMEOUT"
+    # 注意：run_pattern、skip_pattern、parallel、retry、retry_delay 如果配置中没设置，就保持空值
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Config Rule #$((idx+1)): $pattern"
+    [[ "$timeout" != "$TEST_TIMEOUT" ]] && echo "  Timeout: $timeout"
+    [[ -n "$run_pattern" ]] && echo "  Run: $run_pattern"
+    [[ -n "$skip_pattern" ]] && echo "  Skip: $skip_pattern"
+    [[ -n "$exclude_packages" ]] && echo "  Exclude Packages: $(echo "$exclude_packages" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+    [[ -n "$parallel" ]] && echo "  Parallel: $parallel"
+    [[ -n "$retry" ]] && echo "  Retry: $retry (delay: ${retry_delay:-5}s)"
+    
+    # 查找匹配的测试
+    matched=$(find_matching_tests "$pattern" "$exclude_packages")
+    
+    if [[ -z "$matched" ]]; then
+      echo "  No matching tests found"
+      echo ""
+      continue
+    fi
+    
+    matched_array=($matched)
+    echo "  Found ${#matched_array[@]} matching test(s)"
+    
+    # 执行匹配的测试
+    for test_idx in "${matched_array[@]}"; do
+      processed_indices+=("$test_idx")
+      run_test "${ALL_TEST_BINS[$test_idx]}" "${ALL_TEST_PKGS[$test_idx]}" \
+               "$timeout" "$run_pattern" "$skip_pattern" "$parallel" \
+               "$retry" "$retry_delay" "config:$pattern" || rc=1
+    done
+    
+    echo ""
+  done
+  
+  # 检查是否所有编译的测试都被配置覆盖
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Verifying test coverage..."
+  echo ""
+  
+  uncovered_count=0
+  declare -a uncovered_tests=()
+  for i in "${!ALL_TEST_BINS[@]}"; do
+    # 检查是否已处理
+    is_processed=0
+    for pi in "${processed_indices[@]}"; do
+      if [[ "$i" == "$pi" ]]; then
+        is_processed=1
+        break
+      fi
+    done
+    
+    if [[ $is_processed -eq 0 ]]; then
+      ((++uncovered_count))
+      uncovered_tests+=("${ALL_TEST_PKGS[$i]}")
+    fi
+  done
+  
+  if [[ $uncovered_count -eq 0 ]]; then
+    echo " All tests are covered by config rules"
+  else
+    echo " WARNING: Found $uncovered_count test(s) not covered by config:"
+    for pkg in "${uncovered_tests[@]}"; do
+      echo "  - $pkg"
+    done
+    echo ""
+    echo "This should not happen if TEST_CONFIG was used during compilation."
+    echo "Either:"
+    echo "  1. Add these packages to TEST_CONFIG"
+    echo "  2. Or they were compiled from test group dirs but not in config"
+  fi
+  
+else
+  # 默认模式：按顺序执行所有测试
+  echo "=== Default Mode (no config) ==="
+  echo ""
+  
+  for i in "${!ALL_TEST_BINS[@]}"; do
+    run_test "${ALL_TEST_BINS[$i]}" "${ALL_TEST_PKGS[$i]}" \
+             "$TEST_TIMEOUT" "$TEST_RUN_PATTERN" "$TEST_SKIP_PATTERN" "$TEST_PARALLEL" \
+             "" "" "default" || rc=1
+  done
+fi
+
+echo ""
+echo "=== Test Summary ==="
+echo "Total tests: ${#ALL_TEST_BINS[@]}"
+
+extract_failed_test_names() {
+  local log="$1"
+  grep -aE '^--- FAIL: ' "$log" | sed -E 's/^--- FAIL: ([^ ]+).*/\1/' | sort -u | paste -sd ', ' - || true
+}
+
+sanitize_summary_line() {
+  local line="$1"
+  printf '%s\n' "$line" \
+    | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g; s/^[[:space:]]+//; s/[[:space:]]+$//'
+}
+
+truncate_summary_line() {
+  local line="$1"
+  local max_len="${2:-240}"
+
+  if [[ ${#line} -le $max_len ]]; then
+    printf '%s\n' "$line"
+    return 0
+  fi
+
+  printf '%s...\n' "${line:0:max_len-3}"
+}
+
+reason_is_low_signal() {
+  local reason="$1"
+
+  if [[ -z "$reason" ]]; then
+    return 0
+  fi
+
+  if [[ "$reason" =~ ^FAIL:\  || "$reason" =~ ^---\ FAIL: ]]; then
+    return 0
+  fi
+
+  if [[ "$reason" == *"RequestQuotedJson:"* || "$reason" == *"ResponseQuotedJson:"* || "$reason" == *"&{Model:"* ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+extract_panic_reason() {
+  local log="$1"
+  grep -aom1 -E 'panic:.*|fatal error:.*' "$log" | sed -E 's/.*(panic:.*|fatal error:.*)/\1/' || true
+}
+
+extract_panic_test_name() {
+  local log="$1"
+  grep -aom1 -E 'panic: .* after [^ ]+ has completed' "$log" | sed -E 's/.* after ([^ ]+) has completed/\1/' || true
+}
+
+extract_panic_location() {
+  local log="$1"
+  awk '
+    /panic:|fatal error:/ { capture=1; next }
+    capture {
+      line=$0
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line == "") {
+        next
+      }
+      if (line ~ /\/testing\/testing\.go:/ || line ~ /github\.com\/stretchr\/testify\//) {
+        next
+      }
+      if (line ~ /\.go:[0-9]+/) {
+        print line
+        exit
+      }
+      if (line ~ /^created by /) {
+        exit
+      }
+    }
+  ' "$log" || true
+}
+
+extract_failure_reason() {
+  local log="$1"
+  local reason=""
+
+  reason=$(extract_panic_reason "$log")
+  if [[ -z "$reason" ]]; then
+    reason=$(grep -aE 'test timed out|Error:[[:space:]].*|should have.*|first record does not look like a TLS handshake.*|connection reset by peer.*|context deadline exceeded.*|testing:.*|flag provided but not defined.*|invalid value.*|Usage of .*' "$log" | tail -n 1 || true)
+  fi
+  if [[ -z "$reason" ]]; then
+    reason=$(grep -aE '^--- FAIL: .*' "$log" | tail -n 1 || true)
+  fi
+  if [[ -z "$reason" ]]; then
+    reason=$(grep -aE '^FAIL: .*' "$log" | tail -n 1 || true)
+  fi
+  if [[ -z "$reason" ]]; then
+    reason=$(grep -aE '^[[:space:]]*[[:alnum:]_.-]+_test\.go:[0-9]+: .*' "$log" | tail -n 1 || true)
+  fi
+  if [[ -z "$reason" ]]; then
+    reason=$(grep -aE '^> .+' "$log" | tail -n 1 || true)
+  fi
+  if [[ -z "$reason" ]]; then
+    reason=$(awk '
+      function trim(s) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+        return s
+      }
+      {
+        lines[NR] = $0
+      }
+      END {
+        for (i = NR; i >= 1; i--) {
+          line = lines[i]
+          gsub(/\x1B\[[0-9;]*[[:alpha:]]/, "", line)
+          line = trim(line)
+          if (line == "" || line ~ /^(Command:|Test:|Config:|Retry:|----|PASS$|FAIL$|FAIL: |FAIL_ELAPSED:|完整日志:|测试失败，已尝试|失败日志摘要：|重试测试|[[:space:]]*$)/) {
+            continue
+          }
+          print line
+          exit
+        }
+      }
+    ' "$log" || true)
+  fi
+
+  reason="$(sanitize_summary_line "$reason")"
+  truncate_summary_line "$reason" 240
+}
+
+extract_failure_context() {
+  local log="$1"
+  awk '
+    function trim(s) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+      return s
+    }
+    function ignored(s) {
+      return s == "" ||
+        s ~ /^(Command:|Test:|Config:|Retry:|----|PASS$|FAIL$|FAIL: |FAIL_ELAPSED:|完整日志:|测试失败，已尝试|失败日志摘要：|重试测试|preparing for end iteration|cumulative_summary:|@action: object|Result: SOME FAILED|Failed tests:|=== Test Summary ===|Total tests:|Verifying test coverage\.\.\.|All tests are covered by config rules|<<+|-{5,}|━━━━━━━━|⏱|✅|❌)/
+    }
+    {
+      lines[NR] = $0
+      if ($0 ~ /^FAIL$/ || $0 ~ /^FAIL: /) {
+        fail_line = NR
+      }
+    }
+    END {
+      if (fail_line == 0) {
+        fail_line = NR + 1
+      }
+      start = fail_line - 20
+      if (start < 1) {
+        start = 1
+      }
+      count = 0
+      for (i = start; i < fail_line; i++) {
+        line = lines[i]
+        gsub(/\x1B\[[0-9;]*[[:alpha:]]/, "", line)
+        line = trim(line)
+        if (ignored(line)) {
+          continue
+        }
+        if (line ~ /^--- PASS:/ || line ~ /^PASS: /) {
+          continue
+        }
+        candidates[++count] = line
+      }
+      begin = count - 2
+      if (begin < 1) {
+        begin = 1
+      }
+      for (i = begin; i <= count; i++) {
+        print candidates[i]
+      }
+    }
+  ' "$log" || true
+}
+
+extract_failure_elapsed() {
+  local log="$1"
+  grep -aom1 -E '^FAIL_ELAPSED: .*' "$log" | sed -E 's/^FAIL_ELAPSED: //' || true
+}
+
+extract_timeout_running_tests() {
+  local log="$1"
+  awk '
+    /running tests:/ { capture=1; next }
+    capture {
+      line=$0
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line == "") {
+        next
+      }
+      if (line ~ /^goroutine / || line ~ /^created by / || line ~ /^\//) {
+        exit
+      }
+      print line
+    }
+  ' "$log" | head -20
+}
+
+extract_failed_case_details() {
+  local log="$1"
+  awk '
+    function trim(s) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+      return s
+    }
+    {
+      lines[NR] = $0
+    }
+    /^--- FAIL: / {
+      name = $3
+      sub(/\(.*/, "", name)
+      if (!(name in seen)) {
+        seen[name] = 1
+        order[++count] = name
+      }
+    }
+    END {
+      for (i = 1; i <= count; i++) {
+        name = order[i]
+        reason = ""
+        fail_line = 0
+
+        for (j = 1; j <= NR; j++) {
+          if (lines[j] ~ ("^--- FAIL: " name "([[:space:]]|$)")) {
+            fail_line = j
+            break
+          }
+        }
+
+        if (fail_line > 0) {
+          start = fail_line - 20
+          if (start < 1) {
+            start = 1
+          }
+          for (j = fail_line - 1; j >= start; j--) {
+            if (lines[j] ~ /panic:|Error:[[:space:]]*|Received unexpected error|should have|not greater than|testing:|flag provided but not defined|invalid value|context deadline exceeded|first record does not look like a TLS handshake|connection reset by peer/) {
+              reason = trim(lines[j])
+              break
+            }
+          }
+        }
+
+        print name "|" reason
+      }
+    }
+  ' "$log"
+}
+
+if [[ $rc -eq 0 ]]; then
+  echo "Result: ALL PASSED"
+else
+  echo "Result: SOME FAILED"
+  echo ""
+  echo "Failed tests:"
+  # 列出所有包含失败标记的日志
+  while IFS= read -r log; do
+    if grep -aEq "^FAIL:|^--- FAIL:|^FAIL$|test timed out|panic:|fatal error:" "$log"; then
+      test_name="$(basename "$log" .run.log)"
+      failed_cases="$(extract_failed_test_names "$log")"
+      failure_reason="$(extract_failure_reason "$log")"
+      failure_context="$(extract_failure_context "$log")"
+      failure_elapsed="$(extract_failure_elapsed "$log")"
+      panic_reason="$(extract_panic_reason "$log")"
+
+      if [[ -n "$panic_reason" ]]; then
+        panic_case="$(extract_panic_test_name "$log")"
+        panic_location="$(extract_panic_location "$log")"
+        if [[ -n "$panic_case" ]]; then
+          echo "  - ${test_name} :: ${panic_case}"
+        else
+          echo "  - ${test_name}"
+        fi
+        echo "    reason: ${panic_reason}"
+        [[ -n "$panic_location" ]] && echo "    location: ${panic_location}"
+        [[ -n "$failure_elapsed" ]] && echo "    elapsed: ${failure_elapsed}"
+        continue
+      fi
+
+      if grep -aEq 'test timed out' "$log"; then
+        echo "  - ${test_name}"
+        [[ -n "$failure_reason" ]] && echo "    reason: ${failure_reason}"
+        [[ -n "$failure_elapsed" ]] && echo "    elapsed: ${failure_elapsed}"
+        printed_running_tests=0
+        while IFS= read -r running_test; do
+          [[ -z "$running_test" ]] && continue
+          if [[ $printed_running_tests -ne 1 ]]; then
+            echo "    running tests:"
+            printed_running_tests=1
+          fi
+          echo "      ${running_test}"
+        done < <(extract_timeout_running_tests "$log")
+        printed_running_tests=0
+        continue
+      fi
+
+      emitted_case_details=0
+      while IFS='|' read -r failed_case case_reason; do
+        [[ -z "$failed_case" ]] && continue
+        emitted_case_details=1
+        echo "  - ${test_name} :: ${failed_case}"
+        [[ -n "$case_reason" ]] && echo "    reason: ${case_reason}"
+      done < <(extract_failed_case_details "$log")
+
+      if [[ $emitted_case_details -eq 1 ]]; then
+        [[ -n "$failure_elapsed" ]] && echo "    elapsed: ${failure_elapsed}"
+        continue
+      fi
+
+      echo "  - ${test_name}"
+      [[ -n "$failed_cases" ]] && echo "    failed cases: ${failed_cases}"
+      if ! reason_is_low_signal "$failure_reason"; then
+        echo "    reason: ${failure_reason}"
+      fi
+      printed_context=0
+      while IFS= read -r context_line; do
+        [[ -z "$context_line" ]] && continue
+        context_line="$(truncate_summary_line "$(sanitize_summary_line "$context_line")" 180)"
+        [[ -z "$context_line" ]] && continue
+        [[ "$context_line" == "$failure_reason" ]] && continue
+        if [[ $printed_context -ne 1 ]]; then
+          echo "    context:"
+          printed_context=1
+        fi
+        echo "      ${context_line}"
+      done < <(printf '%s\n' "$failure_context")
+      [[ -n "$failure_elapsed" ]] && echo "    elapsed: ${failure_elapsed}"
+    fi
+  done < <(find "$TEST_LOG_DIR" -maxdepth 1 -type f -name "test_*.run.log" | sort)
+fi
+
+exit $rc

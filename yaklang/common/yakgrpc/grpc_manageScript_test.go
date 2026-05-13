@@ -1,0 +1,791 @@
+package yakgrpc
+
+import (
+	"context"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/yaklang/yaklang/common/log"
+
+	"github.com/jinzhu/gorm"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/yaklang/yaklang/common/consts"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/yakgrpc/yakit"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+func TestQueryYakScriptRiskDetailByCWE(t *testing.T) {
+	test := assert.New(t)
+	client, err := NewLocalClient()
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	_, err = client.QueryYakScriptRiskDetailByCWE(context.Background(), &ypb.QueryYakScriptRiskDetailByCWERequest{CWEId: "502"})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestYakScriptRiskTypeList(t *testing.T) {
+	test := assert.New(t)
+	client, err := NewLocalClient()
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	_, err = client.YakScriptRiskTypeList(context.Background(), &ypb.Empty{})
+}
+
+func TestImportYakScript(t *testing.T) {
+	test := assert.New(t)
+
+	client, err := NewLocalClient()
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	s, err := client.ImportYakScript(context.Background(), &ypb.ImportYakScriptRequest{Dirs: []string{"/Users/limin/Downloads/yak_script"}})
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	_ = s
+}
+
+func TestServer_Cli_YakSript(t *testing.T) {
+	type TestCase struct {
+		param  bool
+		script *schema.YakScript
+	}
+	check := func(t *testing.T, scriptRequest *ypb.QueryYakScriptRequest, want []string, db *gorm.DB) {
+		_, scripts, err := yakit.QueryYakScript(db, scriptRequest)
+		require.NoError(t, err)
+		var names []string
+		for _, script := range scripts {
+			names = append(names, script.ScriptName)
+		}
+		for _, s := range want {
+			require.True(t, lo.Contains(names, s))
+		}
+	}
+	checkNotContains := func(t *testing.T, scriptRequest *ypb.QueryYakScriptRequest, scriptName string, db *gorm.DB) {
+		_, scripts, err := yakit.QueryYakScript(db, scriptRequest)
+		require.NoError(t, err)
+		var names []string
+		for _, script := range scripts {
+			names = append(names, script.ScriptName)
+		}
+		require.False(t, lo.Contains(names, scriptName))
+	}
+	t.Run("test", func(t *testing.T) {
+		client, err := NewLocalClient()
+		require.NoError(t, err)
+		_ = client
+		createHandler := func(scripts ...*TestCase) {
+			for _, script := range scripts {
+				err = yakit.CreateOrUpdateYakScriptByID(consts.GetGormProfileDatabase().Debug(), 0, script.script)
+				require.NoError(t, err)
+			}
+		}
+		testcases := []*TestCase{
+			{
+				script: &schema.YakScript{
+					ScriptName: "test-nuclei-cli",
+					Type:       "nuclei",
+					Params:     "[{\"Field\":\"scan-url\",\"TypeVerbose\":\"text\",\"FieldVerbose\":\"请输入扫描目标\",\"Required\":true,\"MethodType\":\"text\"},{\"Field\":\"file-path\",\"TypeVerbose\":\"upload-path\",\"FieldVerbose\":\"请输入字典路径\",\"MethodType\":\"file\"}]",
+				},
+				param: false},
+			{script: &schema.YakScript{
+				ScriptName: "test-port-scan-cli",
+				Type:       "port-scan",
+				Params:     "[{\"Field\":\"scan-url\",\"TypeVerbose\":\"text\",\"FieldVerbose\":\"请输入扫描目标\",\"Required\":true,\"MethodType\":\"text\"},{\"Field\":\"file-path\",\"TypeVerbose\":\"upload-path\",\"FieldVerbose\":\"请输入字典路径\",\"MethodType\":\"file\"}]",
+			},
+				param: false},
+			{script: &schema.YakScript{
+				ScriptName: "test-mitm-cli",
+				Type:       "mitm",
+				Params:     "[{\"Field\":\"scan-url\",\"TypeVerbose\":\"text\",\"FieldVerbose\":\"请输入扫描目标\",\"Required\":true,\"MethodType\":\"text\"},{\"Field\":\"file-path\",\"TypeVerbose\":\"upload-path\",\"FieldVerbose\":\"请输入字典路径\",\"MethodType\":\"file\"}]",
+			},
+				param: true},
+			{script: &schema.YakScript{
+				ScriptName: "test-mitm-no-cli",
+				Type:       "mitm",
+				Params:     "",
+			},
+				param: false},
+			{script: &schema.YakScript{
+				ScriptName: "test-mitm-empty-array-cli",
+				Type:       "mitm",
+				Params:     "\"[]\"",
+			},
+				param: false}}
+		defer func() {
+			lo.ForEach(testcases, func(item *TestCase, index int) {
+				require.NoError(t, yakit.DeleteYakScriptByName(consts.GetGormProfileDatabase(), item.script.ScriptName))
+			})
+		}()
+		createHandler(testcases...)
+
+		//filter mitm has cli
+		check(t, &ypb.QueryYakScriptRequest{
+			Type:               "mitm,port-scan,nuclei",
+			IsMITMParamPlugins: 2,
+		}, []string{"test-mitm-no-cli", "test-mitm-empty-array-cli", "test-port-scan-cli", "test-nuclei-cli"}, consts.GetGormProfileDatabase())
+
+		check(t, &ypb.QueryYakScriptRequest{
+			Type:               "mitm",
+			IsMITMParamPlugins: 1,
+		},
+			[]string{"test-mitm-cli"}, consts.GetGormProfileDatabase())
+		checkNotContains(t, &ypb.QueryYakScriptRequest{
+			Type:               "mitm",
+			IsMITMParamPlugins: 1,
+		}, "test-mitm-empty-array-cli", consts.GetGormProfileDatabase())
+		checkNotContains(t, &ypb.QueryYakScriptRequest{
+			Type:               "mitm",
+			IsMITMParamPlugins: 1,
+		}, "test-mitm-no-cli", consts.GetGormProfileDatabase())
+
+		check(t, &ypb.QueryYakScriptRequest{
+			Type:               "mitm,port-scan,nuclei",
+			IsMITMParamPlugins: 0,
+		},
+			[]string{"test-nuclei-cli", "test-port-scan-cli", "test-mitm-cli", "test-mitm-no-cli"}, consts.GetGormProfileDatabase(),
+		)
+	})
+}
+
+func TestServer_QueryYakSript_ByImportance(t *testing.T) {
+	type TestCase struct {
+		param  bool
+		script *schema.YakScript
+	}
+
+	checkByOrder := func(t *testing.T, scriptRequest *ypb.QueryYakScriptRequest, db *gorm.DB) {
+		_, scripts, err := yakit.QueryYakScript(db, scriptRequest)
+		require.NoError(t, err)
+		for _, s := range scripts {
+			log.Infof("scripts:%s", s.ScriptName)
+		}
+		for i := 0; i < len(scripts)-1; i++ {
+			if !scripts[i].IsCorePlugin && scripts[i+1].IsCorePlugin {
+				t.Fatalf("test failed: %s is not corePlugin,but its next plugin %s is  corePlugin", scripts[i].ScriptName, scripts[i+1].ScriptName)
+			}
+			if !scripts[i].IsCorePlugin && !scripts[i+1].IsCorePlugin {
+				if !scripts[i].OnlineOfficial && scripts[i+1].OnlineOfficial {
+					t.Fatalf("test failed: %s is not onlineOfficial,but its next plugin %s is onlineOfficial", scripts[i].ScriptName, scripts[i+1].ScriptName)
+				}
+			}
+		}
+	}
+
+	createScript := func(scripts ...*TestCase) {
+		for _, script := range scripts {
+			err := yakit.CreateOrUpdateYakScriptByID(consts.GetGormProfileDatabase(), 0, script.script)
+			require.NoError(t, err)
+		}
+	}
+
+	testcases := []*TestCase{
+		{
+			script: &schema.YakScript{
+				ScriptName:   "test-script-1",
+				Type:         "nuclei",
+				Params:       "[{\"Field\":\"scan-url\",\"TypeVerbose\":\"text\",\"FieldVerbose\":\"请输入扫描目标\",\"Required\":true,\"MethodType\":\"text\"},{\"Field\":\"file-path\",\"TypeVerbose\":\"upload-path\",\"FieldVerbose\":\"请输入字典路径\",\"MethodType\":\"file\"}]",
+				IsCorePlugin: true,
+			},
+			param: false},
+		{script: &schema.YakScript{
+			ScriptName:     "test-script-2",
+			Type:           "port-scan",
+			Params:         "[{\"Field\":\"scan-url\",\"TypeVerbose\":\"text\",\"FieldVerbose\":\"请输入扫描目标\",\"Required\":true,\"MethodType\":\"text\"},{\"Field\":\"file-path\",\"TypeVerbose\":\"upload-path\",\"FieldVerbose\":\"请输入字典路径\",\"MethodType\":\"file\"}]",
+			OnlineOfficial: true,
+		},
+			param: false},
+		{script: &schema.YakScript{
+			ScriptName: "test-script-3",
+			Type:       "mitm",
+			Params:     "",
+		},
+			param: false}}
+
+	createScript(testcases...)
+	defer func() {
+		lo.ForEach(testcases, func(item *TestCase, index int) {
+			require.NoError(t, yakit.DeleteYakScriptByName(consts.GetGormProfileDatabase(), item.script.ScriptName))
+		})
+	}()
+
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+	_ = client
+	checkByOrder(t, &ypb.QueryYakScriptRequest{
+		Pagination: &ypb.Paging{
+			Page:     1,
+			Limit:    30,
+			OrderBy:  "",
+			Order:    "",
+			RawOrder: "is_core_plugin desc,online_official desc",
+		},
+	}, consts.GetGormProfileDatabase())
+
+}
+func TestServer_QueryYakScript(t *testing.T) {
+	client, err := NewLocalClient()
+	if err != nil {
+		panic(err)
+	}
+	script, err := client.SaveNewYakScript(context.Background(),
+		&ypb.SaveNewYakScriptRequest{
+			Params: []*ypb.YakScriptParam{{
+				Field:        "target",
+				DefaultValue: "1",
+				TypeVerbose:  "text",
+				Required:     true,
+			}},
+			Type: "mitm",
+			Content: `target = cli.String("target")
+cli.check()
+
+
+mirrorNewWebsitePathParams = func(isHttps /*bool*/, url /*string*/, req /*[]byte*/, rsp /*[]byte*/, body /*[]byte*/) {
+    dump(target)
+    yakit_output(target)
+    poc.Get(target)~
+}
+`,
+			ScriptName: "query_plugins",
+		})
+	if err != nil {
+		panic(err)
+	}
+	id, err := client.GetYakScriptById(context.Background(), &ypb.GetYakScriptByIdRequest{Id: script.Id})
+	if err != nil {
+		panic(err)
+	}
+	client.DeleteYakScript(context.Background(), &ypb.DeleteYakScriptRequest{
+		Id: script.Id,
+	})
+	assert.True(t, len(id.Params) == 1)
+}
+
+// TestSaveNewYakScript_ClearParamsWhenCliRemoved 验证：新建 yak 规则带 cli 保存后读取有参数，删除 cli 后 SaveNewYakScript 再读取确保 Params 已清空
+func TestSaveNewYakScript_ClearParamsWhenCliRemoved(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	scriptName := uuid.NewString()
+	contentWithCli := `target = cli.String("target", cli.setDefault("http://example.com"))
+cli.check()
+yakit.Info("target: " + target)
+`
+	contentWithoutCli := `yakit.AutoInitYakit()
+yakit.Info("no cli params")
+`
+
+	// 1. 新建带 cli 的 yak 规则并保存
+	script, err := client.SaveNewYakScript(context.Background(), &ypb.SaveNewYakScriptRequest{
+		ScriptName: scriptName,
+		Type:       "yak",
+		Content:    contentWithCli,
+		Params: []*ypb.YakScriptParam{{
+			Field:        "target",
+			DefaultValue: "http://example.com",
+			TypeVerbose:  "text",
+			Required:     true,
+		}},
+	})
+	require.NoError(t, err)
+	defer client.DeleteYakScript(context.Background(), &ypb.DeleteYakScriptRequest{Id: script.Id})
+
+	// 2. 读取并验证有参数
+	got, err := client.GetYakScriptById(context.Background(), &ypb.GetYakScriptByIdRequest{Id: script.Id})
+	require.NoError(t, err)
+	require.Len(t, got.Params, 1, "保存 cli 后应从数据库读取到 1 个参数")
+
+	// 3. 使用 SaveNewYakScript 删除 cli 部分（content 改为无 cli，Params 仍传旧的以模拟编辑器未重解析）
+	_, err = client.SaveNewYakScript(context.Background(), &ypb.SaveNewYakScriptRequest{
+		Id:         script.Id,
+		ScriptName: scriptName,
+		Type:       "yak",
+		Content:    contentWithoutCli,
+		Params:     nil, // 模拟客户端
+	})
+	require.NoError(t, err)
+
+	// 4. 再次读取，确保 Params 已清空
+	got2, err := client.GetYakScriptById(context.Background(), &ypb.GetYakScriptByIdRequest{Id: script.Id})
+	require.NoError(t, err)
+	require.Len(t, got2.Params, 0, "删除 cli 后 SaveNewYakScript 应清空 Params，数据库应无参数")
+}
+
+func TestSaveYakScript_UpdateAIFields(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	scriptName := uuid.NewString()
+	initial := &schema.YakScript{
+		ScriptName:  scriptName,
+		Type:        "yak",
+		Content:     `yakit.AutoInitYakit()`,
+		EnableForAI: true,
+		AIDesc:      "old ai desc",
+		AIKeywords:  "old,keywords",
+		AIUsage:     "old usage",
+	}
+	require.NoError(t, yakit.CreateOrUpdateYakScriptByName(consts.GetGormProfileDatabase(), scriptName, initial))
+	defer func() {
+		require.NoError(t, yakit.DeleteYakScriptByName(consts.GetGormProfileDatabase(), scriptName))
+	}()
+
+	existing, err := yakit.GetYakScriptByName(consts.GetGormProfileDatabase(), scriptName)
+	require.NoError(t, err)
+
+	_, err = client.SaveYakScript(context.Background(), &ypb.YakScript{
+		Id:          int64(existing.ID),
+		ScriptName:  scriptName,
+		Type:        "yak",
+		Content:     `yakit.AutoInitYakit()`,
+		EnableForAI: false,
+		AIDesc:      "new ai desc",
+		AIKeywords:  "new,keywords",
+		AIUsage:     "new usage",
+	})
+	require.NoError(t, err)
+
+	updated, err := yakit.GetYakScriptByName(consts.GetGormProfileDatabase(), scriptName)
+	require.NoError(t, err)
+	require.False(t, updated.EnableForAI, "SaveYakScript 应允许更新 EnableForAI=false")
+	require.Equal(t, "new ai desc", updated.AIDesc)
+	require.Equal(t, "new,keywords", updated.AIKeywords)
+	require.Equal(t, "new usage", updated.AIUsage)
+}
+
+func TestSaveYakScript_PreserveProtectedMetadataFields(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	db := consts.GetGormProfileDatabase()
+	scriptName := uuid.NewString()
+	origin := &schema.YakScript{
+		ScriptName:         scriptName,
+		Type:               "yak",
+		Content:            `yakit.AutoInitYakit()`,
+		Params:             "\"[]\"",
+		Help:               "old help",
+		Tags:               "old-tag",
+		Author:             "keep-author",
+		FromLocal:          true,
+		LocalPath:          "/tmp/local/plugin.yak",
+		ForceInteractive:   true,
+		FromStore:          true,
+		IsBatchScript:      true,
+		IsExternal:         true,
+		OnlineId:           9527,
+		OnlineScriptName:   "online-script",
+		OnlineContributors: "alice,bob",
+		OnlineIsPrivate:    true,
+		UserId:             1024,
+		Uuid:               uuid.NewString(),
+		HeadImg:            "https://example.com/avatar.png",
+		OnlineBaseUrl:      "https://example.com/plugins",
+		BaseOnlineId:       8848,
+		OnlineOfficial:     true,
+		OnlineGroup:        "official",
+		CollaboratorInfo:   "[]",
+		SkipUpdate:         true,
+	}
+	require.NoError(t, db.Create(origin).Error)
+	t.Cleanup(func() {
+		require.NoError(t, yakit.DeleteYakScriptByName(db, scriptName))
+	})
+
+	_, err = client.SaveYakScript(context.Background(), &ypb.YakScript{
+		Id:         int64(origin.ID),
+		ScriptName: scriptName,
+		Type:       "yak",
+		Content: `yakit.AutoInitYakit()
+yakit.Info("updated")
+`,
+		Help: "new help",
+		Tags: "new-tag",
+	})
+	require.NoError(t, err)
+
+	updated, err := yakit.GetYakScript(db, int64(origin.ID))
+	require.NoError(t, err)
+	require.Equal(t, "new help", updated.Help)
+	require.Equal(t, "new-tag", updated.Tags)
+	require.Contains(t, updated.Content, "updated")
+
+	require.Equal(t, origin.Author, updated.Author)
+	require.Equal(t, origin.FromLocal, updated.FromLocal)
+	require.Equal(t, origin.LocalPath, updated.LocalPath)
+	require.Equal(t, origin.ForceInteractive, updated.ForceInteractive)
+	require.Equal(t, origin.FromStore, updated.FromStore)
+	require.Equal(t, origin.IsBatchScript, updated.IsBatchScript)
+	require.Equal(t, origin.IsExternal, updated.IsExternal)
+	require.Equal(t, origin.OnlineId, updated.OnlineId)
+	require.Equal(t, origin.OnlineScriptName, updated.OnlineScriptName)
+	require.Equal(t, origin.OnlineContributors, updated.OnlineContributors)
+	require.Equal(t, origin.OnlineIsPrivate, updated.OnlineIsPrivate)
+	require.Equal(t, origin.UserId, updated.UserId)
+	require.Equal(t, origin.Uuid, updated.Uuid)
+	require.Equal(t, origin.HeadImg, updated.HeadImg)
+	require.Equal(t, origin.OnlineBaseUrl, updated.OnlineBaseUrl)
+	require.Equal(t, origin.BaseOnlineId, updated.BaseOnlineId)
+	require.Equal(t, origin.OnlineOfficial, updated.OnlineOfficial)
+	require.Equal(t, origin.OnlineGroup, updated.OnlineGroup)
+	require.Equal(t, origin.CollaboratorInfo, updated.CollaboratorInfo)
+	require.Equal(t, origin.SkipUpdate, updated.SkipUpdate)
+}
+
+func TestSaveYakScript_RejectDuplicateScriptNameOnCreateAndUpdate(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	db := consts.GetGormProfileDatabase()
+	existingName := uuid.NewString()
+	anotherName := uuid.NewString()
+
+	require.NoError(t, yakit.CreateOrUpdateYakScriptByName(db, existingName, &schema.YakScript{
+		ScriptName: existingName,
+		Type:       "yak",
+		Content:    `yakit.AutoInitYakit()`,
+		Help:       "existing-help",
+	}))
+	require.NoError(t, yakit.CreateOrUpdateYakScriptByName(db, anotherName, &schema.YakScript{
+		ScriptName: anotherName,
+		Type:       "yak",
+		Content:    `yakit.AutoInitYakit()`,
+		Help:       "another-help",
+	}))
+	t.Cleanup(func() {
+		require.NoError(t, yakit.DeleteYakScriptByName(db, existingName))
+		require.NoError(t, yakit.DeleteYakScriptByName(db, anotherName))
+	})
+
+	existing, err := yakit.GetYakScriptByName(db, existingName)
+	require.NoError(t, err)
+	another, err := yakit.GetYakScriptByName(db, anotherName)
+	require.NoError(t, err)
+
+	t.Run("create_should_fail_when_script_name_exists", func(t *testing.T) {
+		_, err := client.SaveYakScript(context.Background(), &ypb.YakScript{
+			Id:         0,
+			ScriptName: existingName,
+			Type:       "yak",
+			Content:    `yakit.AutoInitYakit()`,
+			Help:       "should-not-create",
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "保存失败：插件名")
+		require.Contains(t, err.Error(), existingName)
+	})
+
+	t.Run("update_should_fail_when_renaming_to_existing_script_name", func(t *testing.T) {
+		_, err := client.SaveYakScript(context.Background(), &ypb.YakScript{
+			Id:         int64(another.ID),
+			ScriptName: existingName,
+			Type:       "yak",
+			Content:    `yakit.AutoInitYakit()`,
+			Help:       "should-not-update",
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "保存失败：插件名")
+		require.Contains(t, err.Error(), existingName)
+
+		stillExisting, getErr := yakit.GetYakScript(db, int64(existing.ID))
+		require.NoError(t, getErr)
+		require.Equal(t, existingName, stillExisting.ScriptName)
+		require.Equal(t, "existing-help", stillExisting.Help)
+
+		stillAnother, getErr := yakit.GetYakScript(db, int64(another.ID))
+		require.NoError(t, getErr)
+		require.Equal(t, anotherName, stillAnother.ScriptName)
+		require.Equal(t, "another-help", stillAnother.Help)
+	})
+}
+
+func TestExportLocalYakScriptStream(t *testing.T) {
+	test := assert.New(t)
+
+	client, err := NewLocalClient()
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	s, err := client.ExportLocalYakScriptStream(context.Background(), &ypb.ExportLocalYakScriptRequest{
+		OutputDir:       "/Users/limin/Downloads/",
+		OutputPluginDir: "",
+		YakScriptIds:    nil,
+		Keywords:        "",
+		Type:            "",
+		UserName:        "",
+		Tags:            "",
+	})
+	if err != nil {
+		test.FailNow(err.Error())
+	}
+	_ = s
+}
+
+func TestTempYakScriptQuery(t *testing.T) {
+	scriptName, clearFunc, err := yakit.CreateAndClearTemporaryYakScript("yak", "")
+	require.NoError(t, err)
+	defer clearFunc()
+
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	res, err := client.QueryYakScript(context.Background(), &ypb.QueryYakScriptRequest{
+		Keyword:  scriptName,
+		IsIgnore: true,
+	})
+	require.NoError(t, err)
+
+	require.Lenf(t, res.Data, 1, "just keyword query err, len(res)[%d] != 1", len(res.Data))
+
+	res, err = client.QueryYakScript(context.Background(), &ypb.QueryYakScriptRequest{
+		Keyword: scriptName,
+	})
+	require.NoError(t, err)
+	require.Lenf(t, res.Data, 0, "ignore is ineffective, len(res)[%d] != 1", len(res.Data))
+}
+
+func TestQueryYakScript(t *testing.T) {
+	type TestCase struct {
+		script *schema.YakScript
+	}
+	createScript := func(scripts ...*TestCase) {
+		for _, script := range scripts {
+			err := yakit.CreateOrUpdateYakScriptByID(consts.GetGormProfileDatabase(), 0, script.script)
+			require.NoError(t, err)
+		}
+	}
+
+	testcases := []*TestCase{
+		{
+			script: &schema.YakScript{
+				ScriptName: "fileKeywords-test-script-1",
+				Type:       "yak",
+				Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// 测试",
+			},
+		},
+		{script: &schema.YakScript{
+			ScriptName: "fileKeywords-script-2",
+			Type:       "yak",
+			Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// fileKeywords-测试-2",
+		},
+		},
+		{script: &schema.YakScript{
+			ScriptName: "fileKeywords-test-3",
+			Type:       "yak",
+			Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// -fileKeywords-script-3",
+		},
+		}}
+
+	createScript(testcases...)
+	defer func() {
+		lo.ForEach(testcases, func(item *TestCase, index int) {
+			require.NoError(t, yakit.DeleteYakScriptByName(consts.GetGormProfileDatabase(), item.script.ScriptName))
+		})
+	}()
+
+	tests := []struct {
+		filedKeywords string
+		count         int
+	}{
+		{
+			filedKeywords: "fileKeywords-test",
+			count:         2,
+		},
+		{
+			filedKeywords: "fileKeywords-script",
+			count:         1,
+		},
+		{
+			filedKeywords: "",
+			count:         3,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.filedKeywords, func(t *testing.T) {
+			var count int
+			db := consts.GetGormProfileDatabase().Model(&schema.YakScript{})
+			db = yakit.FilterYakScript(db, &ypb.QueryYakScriptRequest{
+				FieldKeywords: tc.filedKeywords,
+			})
+			db.Count(&count)
+			if tc.filedKeywords == "" {
+				if count < tc.count {
+					t.Errorf("yakScript  not found for filedKeywords=%s", tc.filedKeywords)
+				}
+			} else if tc.count != count {
+				t.Errorf("yakScript  not found for filedKeywords=%s", tc.filedKeywords)
+			}
+		})
+
+	}
+}
+
+func TestYakScriptDelete(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	create := func(corePlugin bool) int64 {
+		name := uuid.NewString()
+		err := yakit.CreateOrUpdateYakScriptByID(consts.GetGormProfileDatabase(), 0, &schema.YakScript{
+			Type:         "mitm",
+			Content:      `target = cli.String("target")`,
+			ScriptName:   name,
+			IsCorePlugin: corePlugin,
+		})
+		require.NoError(t, err)
+		script, err := yakit.GetYakScriptByName(consts.GetGormProfileDatabase(), name)
+		require.NoError(t, err)
+		return int64(script.ID)
+	}
+
+	delete := func(ids ...int64) {
+		req := &ypb.DeleteYakScriptRequest{}
+		if len(ids) == 1 {
+			req.Id = ids[0]
+		} else {
+			req.Ids = ids
+		}
+		_, err := client.DeleteYakScript(context.Background(), req)
+		require.NoError(t, err)
+	}
+
+	query := func(id int64) (*ypb.YakScript, error) {
+		return client.GetYakScriptById(context.Background(), &ypb.GetYakScriptByIdRequest{Id: id})
+	}
+
+	t.Run("test query", func(t *testing.T) {
+		id := create(false)
+		script, err := query(id)
+		require.NoError(t, err)
+		require.NotNil(t, script)
+	})
+
+	t.Run("test delete", func(t *testing.T) {
+		id := create(false)
+		log.Infof("id:%d", id)
+		delete(id)
+		_, err := query(id)
+		require.Error(t, err)
+	})
+
+	t.Run("test delete multiple", func(t *testing.T) {
+		id1 := create(false)
+		id2 := create(false)
+		delete(id1, id2)
+		_, err := query(id1)
+		require.Error(t, err)
+		_, err = query(id2)
+		require.Error(t, err)
+	})
+
+	t.Run("con't delete core plugin", func(t *testing.T) {
+		id1 := create(false)
+		id2 := create(true)
+		delete(id1, id2)
+		_, err := query(id1)
+		require.Error(t, err)
+		script2, err := query(id2)
+		require.NoError(t, err)
+		require.NotNil(t, script2)
+	})
+
+}
+
+func TestYakScriptSkipUpdate(t *testing.T) {
+	client, err := NewLocalClient()
+	require.NoError(t, err)
+
+	type TestCase struct {
+		script *schema.YakScript
+	}
+
+	createScript := func(scripts ...*TestCase) {
+		for _, script := range scripts {
+			err := yakit.CreateOrUpdateYakScriptByID(consts.GetGormProfileDatabase(), 0, script.script)
+			require.NoError(t, err)
+		}
+	}
+
+	deleteScript := func(scripts ...*TestCase) {
+		for _, script := range scripts {
+			require.NoError(t, yakit.DeleteYakScriptByName(consts.GetGormProfileDatabase(), script.script.ScriptName))
+		}
+	}
+
+	querySkipUpdate := func(scriptName string) bool {
+		resp, err := client.QueryYakScriptSkipUpdate(context.Background(), &ypb.QueryYakScriptRequest{
+			IncludedScriptNames: []string{scriptName},
+		})
+		require.NoError(t, err)
+		return resp.SkipUpdate
+	}
+
+	setSkipUpdate := func(scriptName string, skipUpdate bool) {
+		req := &ypb.SetYakScriptSkipUpdateRequest{
+			Field:      &ypb.QueryYakScriptRequest{IncludedScriptNames: []string{scriptName}},
+			SkipUpdate: skipUpdate,
+		}
+		_, err := client.SetYakScriptSkipUpdate(context.Background(), req)
+		require.NoError(t, err)
+	}
+
+	testcases := []*TestCase{
+		{
+			script: &schema.YakScript{
+				ScriptName: "fileKeywords-test-script-1",
+				Type:       "yak",
+				Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// 测试",
+			},
+		},
+		{
+			script: &schema.YakScript{
+				ScriptName: "fileKeywords-script-2",
+				Type:       "yak",
+				Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// fileKeywords-测试-2",
+			},
+		},
+		{
+			script: &schema.YakScript{
+				ScriptName: "fileKeywords-test-3",
+				Type:       "yak",
+				Content:    "yakit.AutoInitYakit()\n\n# Input your code!\n\n// -fileKeywords-script-3",
+			},
+		},
+	}
+
+	createScript(testcases...)
+	defer deleteScript(testcases...)
+
+	t.Run("test query skip update by name", func(t *testing.T) {
+		for _, tc := range testcases {
+			skipUpdate := querySkipUpdate(tc.script.ScriptName)
+			require.False(t, skipUpdate)
+		}
+	})
+
+	t.Run("test set skip update by name", func(t *testing.T) {
+		for _, tc := range testcases {
+			setSkipUpdate(tc.script.ScriptName, true)
+			skipUpdate := querySkipUpdate(tc.script.ScriptName)
+			require.True(t, skipUpdate)
+		}
+	})
+
+	t.Run("test unset skip update by name", func(t *testing.T) {
+		for _, tc := range testcases {
+			setSkipUpdate(tc.script.ScriptName, true)
+			require.True(t, querySkipUpdate(tc.script.ScriptName))
+
+			setSkipUpdate(tc.script.ScriptName, false)
+			require.False(t, querySkipUpdate(tc.script.ScriptName))
+		}
+	})
+}

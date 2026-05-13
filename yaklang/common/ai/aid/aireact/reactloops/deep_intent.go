@@ -1,0 +1,279 @@
+package reactloops
+
+import (
+	"strings"
+	"time"
+
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon/aiskillloader"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+)
+
+// DeepIntentResult holds the output from a deep intent recognition sub-loop.
+type DeepIntentResult struct {
+	IntentAnalysis    string
+	RecommendedTools  string
+	RecommendedForges string
+	ContextEnrichment string
+
+	MatchedToolNames          string // comma-separated, e.g. "tool1,tool2"
+	MatchedForgeNames         string // comma-separated, e.g. "forge1,forge2"
+	MatchedSkillNames         string // comma-separated, e.g. "skill1,skill2"
+	MatchedCapabilityMentions *CapabilityNameMatchResult
+}
+
+// ExecuteDeepIntentRecognition invokes the loop_intent sub-loop for deep
+// intent analysis. It creates a sub-task, runs the intent loop, and extracts
+// structured results. Returns nil on any failure (non-fatal).
+func ExecuteDeepIntentRecognition(r aicommon.AIInvokeRuntime, loop *ReActLoop, task aicommon.AIStatefulTask) *DeepIntentResult {
+	totalStart := time.Now()
+	userInput := task.GetUserInput()
+
+	intentTask := aicommon.NewStatefulTaskBase(
+		task.GetId()+"_intent",
+		userInput,
+		r.GetConfig().GetContext(),
+		r.GetConfig().GetEmitter(),
+	)
+
+	originOptions := r.GetConfig().OriginOptions()
+	var opts []any
+	for _, option := range originOptions {
+		opts = append(opts, option)
+	}
+
+	var intentLoop *ReActLoop
+	opts = append(opts, WithOnLoopInstanceCreated(func(l *ReActLoop) {
+		intentLoop = l
+	}), WithNoEndLoadingStatus(true), WithUseSpeedPriorityAICallback(true))
+
+	executeLoopStart := time.Now()
+	_, err := r.ExecuteLoopTaskIF(schema.AI_REACT_LOOP_NAME_INTENT, intentTask, opts...)
+	if err != nil {
+		log.Warnf("deep intent recognition failed: %v", err)
+		return nil
+	}
+	if intentLoop == nil {
+		log.Warnf("deep intent recognition: intent loop reference is nil")
+		return nil
+	}
+	setWorkspaceDebugDuration(intentLoop, intentDebugExecuteLoopDurationKey, time.Since(executeLoopStart))
+	setWorkspaceDebugDuration(intentLoop, intentDebugTotalDurationKey, time.Since(totalStart))
+
+	result := &DeepIntentResult{
+		IntentAnalysis:    intentLoop.Get("intent_analysis"),
+		RecommendedTools:  intentLoop.Get("recommended_tools"),
+		RecommendedForges: intentLoop.Get("recommended_forges"),
+		ContextEnrichment: intentLoop.Get("context_enrichment"),
+		MatchedToolNames:  intentLoop.Get("matched_tool_names"),
+		MatchedForgeNames: intentLoop.Get("matched_forge_names"),
+		MatchedSkillNames: intentLoop.Get("matched_skill_names"),
+	}
+
+	retrievalTags := intentLoop.Get("task_retrieval_tags")
+	retrievalQuestions := intentLoop.Get("task_retrieval_questions")
+	retrievalTarget := intentLoop.Get("task_retrieval_target")
+
+	ApplyTaskRetrievalInfoToTask(loop.GetCurrentTask(), retrievalTags, retrievalQuestions, retrievalTarget)
+
+	log.Infof("deep intent recognition completed: analysis=%d bytes, tools=%d bytes, forges=%d bytes, enrichment=%d bytes",
+		len(result.IntentAnalysis), len(result.RecommendedTools),
+		len(result.RecommendedForges), len(result.ContextEnrichment))
+
+	writeIntentRecognitionDebugMarkdown(r, intentLoop, result)
+
+	return result
+}
+
+// ApplyDeepIntentResult injects deep intent recognition results into the loop
+// context and populates ExtraCapabilitiesManager with resolved tools, forges,
+// skills, and focus modes.
+func ApplyDeepIntentResult(r aicommon.AIInvokeRuntime, loop *ReActLoop, result *DeepIntentResult) {
+	if result == nil {
+		return
+	}
+
+	loop.Set("intent_hint", "deep_analysis")
+	loop.Set("intent_scale", "medium_or_large")
+
+	if result.IntentAnalysis != "" {
+		loop.Set("intent_analysis", result.IntentAnalysis)
+		r.AddToTimeline("intent_analysis", "意图识别："+CompactIntentSummary(result.IntentAnalysis))
+	}
+	if result.RecommendedTools != "" {
+		loop.Set("intent_recommended_tools", result.RecommendedTools)
+		r.AddToTimeline("intent_recommended_tools", "推荐工具："+CompactCapabilityNames(result.MatchedToolNames, 3))
+	}
+	if result.RecommendedForges != "" {
+		loop.Set("intent_recommended_forges", result.RecommendedForges)
+		r.AddToTimeline("intent_recommended_forges", "推荐蓝图："+CompactCapabilityNames(result.MatchedForgeNames, 3))
+	}
+	if result.ContextEnrichment != "" {
+		loop.Set("intent_context_enrichment", result.ContextEnrichment)
+		r.AddToTimeline("intent_context_enrichment", "已补充能力上下文")
+	}
+
+	PopulateExtraCapabilitiesFromDeepIntent(r, loop, result)
+
+	if result.MatchedToolNames != "" && strings.Contains(result.MatchedToolNames, "web_search") {
+		r.AddToTimeline("web_search_recommended",
+			"建议使用 web_search，避免重复知识增强重试。")
+	}
+
+	if emitter := loop.GetEmitter(); emitter != nil {
+		_, _ = emitter.EmitIntentRecognition(
+			"intent-recognition",
+			result.IntentAnalysis,
+			result.RecommendedTools,
+			result.RecommendedForges,
+			result.MatchedToolNames,
+			result.MatchedForgeNames,
+			result.MatchedSkillNames,
+			result.ContextEnrichment,
+		)
+	}
+
+	log.Infof("deep intent results applied to loop context")
+}
+
+// PopulateExtraCapabilitiesFromDeepIntent resolves matched names to actual
+// objects and adds them to the loop's ExtraCapabilitiesManager.
+func PopulateExtraCapabilitiesFromDeepIntent(r aicommon.AIInvokeRuntime, loop *ReActLoop, result *DeepIntentResult) {
+	ecm := loop.GetExtraCapabilities()
+	if ecm == nil {
+		return
+	}
+
+	cfg := r.GetConfig()
+
+	if result.MatchedToolNames != "" {
+		toolNames := splitAndTrimNames(result.MatchedToolNames)
+		toolMgr := cfg.GetAiToolManager()
+		if toolMgr != nil {
+			for _, name := range toolNames {
+				tool, err := toolMgr.GetToolByName(name)
+				if err != nil {
+					log.Debugf("extra capabilities: skip tool %q: %v", name, err)
+					continue
+				}
+				ecm.AddTools(tool)
+			}
+		}
+	}
+
+	if result.MatchedForgeNames != "" {
+		forgeNames := splitAndTrimNames(result.MatchedForgeNames)
+		type forgeManagerProvider interface {
+			GetAIForgeManager() aicommon.AIForgeFactory
+		}
+		if provider, ok := cfg.(forgeManagerProvider); ok {
+			forgeMgr := provider.GetAIForgeManager()
+			if forgeMgr != nil {
+				for _, name := range forgeNames {
+					forge, err := forgeMgr.GetAIForge(name)
+					if err != nil {
+						log.Debugf("extra capabilities: skip forge %q: %v", name, err)
+						continue
+					}
+					ecm.AddForges(ExtraForgeInfo{
+						Name:        forge.ForgeName,
+						VerboseName: forge.ForgeVerboseName,
+						Description: forge.Description,
+					})
+				}
+			}
+		}
+	}
+
+	if result.MatchedSkillNames != "" {
+		skillNames := splitAndTrimNames(result.MatchedSkillNames)
+		type skillLoaderProvider interface {
+			GetSkillLoader() aiskillloader.SkillLoader
+		}
+		if provider, ok := cfg.(skillLoaderProvider); ok {
+			skillLoader := provider.GetSkillLoader()
+			if skillLoader != nil && skillLoader.HasSkills() {
+				for _, name := range skillNames {
+					meta, err := aiskillloader.LookupSkillMeta(skillLoader, name)
+					if err != nil || meta == nil {
+						log.Debugf("deep_intent: skip skill %q: %v", name, err)
+						continue
+					}
+					ecm.AddSkills(ExtraSkillInfo{
+						Name:        meta.Name,
+						Description: meta.Description,
+					})
+				}
+			}
+		}
+	}
+
+	if ecm.HasCapabilities() {
+		log.Infof("extra capabilities populated from deep intent: %d tools, %d forges, %d skills",
+			ecm.ToolCount(), len(ecm.ListForges()), len(ecm.ListSkills()))
+	}
+}
+
+func splitAndTrimNames(s string) []string {
+	return normalizeCapabilityNames(s)
+}
+
+func ApplyTaskRetrievalInfoToTask(task aicommon.AIStatefulTask, tagsRaw, questionsRaw, target string) {
+	if task == nil {
+		return
+	}
+	existing := task.GetTaskRetrievalInfo()
+	var tags []string
+	var questions []string
+	if existing != nil {
+		tags = append(tags, existing.Tags...)
+		questions = append(questions, existing.Questions...)
+		if strings.TrimSpace(target) == "" {
+			target = existing.Target
+		}
+	}
+	tags = append(tags, splitTaskRetrievalItems(tagsRaw)...)
+	questions = append(questions, splitTaskRetrievalItems(questionsRaw)...)
+	tags = deduplicateTaskRetrievalItems(tags)
+	questions = deduplicateTaskRetrievalItems(questions)
+	target = strings.TrimSpace(target)
+	if len(tags) == 0 && len(questions) == 0 && target == "" {
+		return
+	}
+	task.SetTaskRetrievalInfo(&aicommon.AITaskRetrievalInfo{
+		Tags:      tags,
+		Questions: questions,
+		Target:    target,
+	})
+}
+
+func splitTaskRetrievalItems(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	return deduplicateTaskRetrievalItems(strings.Split(raw, "\n"))
+}
+
+func deduplicateTaskRetrievalItems(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}

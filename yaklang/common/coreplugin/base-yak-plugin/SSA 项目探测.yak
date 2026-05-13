@@ -1,0 +1,693 @@
+yakit.AutoInitYakit()
+
+target = cli.String("target", cli.setRequired(true))
+languages = cli.StringSlice(
+    "language", 
+    cli.setMultipleSelect(false), 
+    cli.setSelectOption("Java", "java"), 
+    cli.setSelectOption("PHP", "php"), 
+    cli.setSelectOption("Yaklang", "yak"), 
+    cli.setSelectOption("JavaScript", "js"), 
+    cli.setSelectOption("TypeScript", "ts"), 
+    cli.setSelectOption("Golang", "go"), 
+    cli.setSelectOption("C", "c"), 
+)
+
+compile_immediately := cli.Bool(
+    "compile-immediately", 
+    cli.setDefault(false), 
+    cli.setVerboseName("是否立即编译"), 
+    cli.setHelp("探测完成后是否立即编译项目"), 
+    cli.setCliGroup("compile"), 
+)
+
+concurrency := cli.Int("concurrency", cli.setVerboseName("并发数"), cli.setCliGroup("compile"), cli.setDefault(10), cli.setHelp("编译时，同时进行编译的文件数量"))
+
+proxy = cli.String("proxy", cli.setHelp("remote url proxy"))
+timeout = 3
+
+// Git/SVN 认证配置（JSON Schema 形式，支持条件渲染）
+authConfig = cli.Json(
+    "auth-config",
+    cli.setVerboseName("认证配置"),
+    cli.setCliGroup("auth"),
+    cli.setDefault("{}"),
+    cli.setHelp("Git/SVN 仓库认证配置，支持密码和SSH密钥两种方式。不填则无需认证。"),
+    cli.setJsonSchema(<<<JSON
+{
+  "type": "object",
+  "properties": {
+    "source_type": {
+      "title": "代码源类型",
+      "type": "string",
+      "enum": ["git", "svn"],
+      "description": "选择代码源类型",
+      "default": "git"
+    },
+    "auth_kind": {
+      "title": "凭证类型",
+      "type": "string",
+      "enum": ["", "password", "ssh_key"],
+      "enumNames": ["无需认证", "用户名密码", "SSH密钥"],
+      "description": "选择认证凭证类型",
+      "default": ""
+    }
+  },
+  "dependencies": {
+    "auth_kind": {
+      "oneOf": [
+        {
+          "title": "用户名密码认证",
+          "properties": {
+            "auth_kind": {
+              "enum": ["password"]
+            },
+            "username": {
+              "title": "用户名",
+              "type": "string",
+              "description": "Git/SVN 认证用户名"
+            },
+            "password": {
+              "title": "密码/Token",
+              "type": "string",
+              "description": "密码或访问令牌（如GitHub Token）"
+            }
+          },
+          "required": ["username", "password"]
+        },
+        {
+          "title": "SSH密钥认证",
+          "properties": {
+            "auth_kind": {
+              "enum": ["ssh_key"]
+            },
+            "username": {
+              "title": "用户名",
+              "type": "string",
+              "description": "Git/SVN 认证用户名（通常为git）",
+              "default": "git"
+            }
+          },
+          "required": ["username"],
+          "oneOf": [
+            {
+              "title": "使用本地私钥文件",
+              "properties": {
+                "ssh_key_path": {
+                  "title": "SSH私钥路径",
+                  "type": "string",
+                  "yakit_type": "file",
+                  "description": "SSH私钥文件路径，例如: ~/.ssh/id_rsa"
+                }
+              },
+              "required": ["ssh_key_path"]
+            },
+            {
+              "title": "直接输入私钥内容",
+              "properties": {
+                "key_content": {
+                  "title": "SSH私钥内容",
+                  "type": "string",
+                  "format": "textarea",
+                  "description": "直接粘贴SSH私钥内容（PEM格式，包含 BEGIN/END 标记和换行）"
+                }
+              },
+              "required": ["key_content"]
+            }
+          ]
+        },
+        {
+          "properties": {
+            "auth_kind": {
+              "enum": [""]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+JSON
+    ),
+)
+
+peepholeSizes := cli.StringSlice(
+    "peephole", 
+    cli.setHelp("将项目切分为多个小项目，以提高编译速度。精度随数字增高。"), 
+    cli.setVerboseName("项目分片"), 
+    cli.setSelectOption("关闭，精度IV", "0"), 
+    cli.setSelectOption("慢速，精度III", "40"), 
+    cli.setSelectOption("中速，精度II", "10"), 
+    cli.setSelectOption("快速，精度I", "1"), 
+)
+
+programName := cli.String("programName", cli.setVerboseName("项目名"), cli.setCliGroup("information"))
+description := cli.Text("description", cli.setVerboseName("项目描述"), cli.setCliGroup("information"))
+excludeFile := cli.String(
+    "excludeFile", 
+    cli.setVerboseName("排除文件/文件夹"), 
+    cli.setHelp("使用相对路径 可用Glob匹配 逗号分割"),
+    cli.setCliGroup("compile"), 
+)
+
+filePerformanceLog := cli.Bool("filePerformanceLog", cli.setDefault(false), cli.setVerboseName("文件性能日志"), cli.setHelp("启用文件级别编译性能日志"), cli.setCliGroup("compile"))
+
+// 增量编译选项
+enableIncrementalCompile := cli.Bool(
+    "incremental-compile", 
+    cli.setDefault(false), 
+    cli.setVerboseName("启用增量编译"), 
+    cli.setHelp("启用增量编译模式。首次编译时作为基础程序；后续编译时基于基础程序进行差量编译，只编译变更的文件，提高编译速度。"), 
+    cli.setCliGroup("compile"), 
+)
+baseProgramName := cli.String(
+    "base-program-name", 
+    cli.setVerboseName("基础程序名称"), 
+    cli.setHelp("增量编译的基础程序名称。必须已存在于数据库中。如果不提供，当前编译将作为基础程序（首次增量编译）。"), 
+    cli.setCliGroup("compile"), 
+)
+
+jarRecursiveParse := cli.Bool("jar-recursive-parse", cli.setDefault(true), cli.setVerboseName("Jar递归解析"), cli.setHelp("是否递归解析Jar文件中的嵌套Jar。默认开启，项目太大时可关闭以提高性能。"), cli.setCliGroup("compile"))
+
+// {{ compile option
+entry := cli.FileNames("entry", cli.setVerboseName("项目入口文件"), cli.setCliGroup("compile"))
+strictMode = cli.Bool(
+    "StrictMode", 
+    cli.setVerboseName("严格模式"), 
+    cli.setHelp("如果取消严格模式将会忽略编译错误的文件。将可能导致编译结果缺失部分文件。"), 
+    cli.setCliGroup("compile"), 
+    cli.setDefault(false), 
+)
+reCompile := cli.Bool("re-compile", cli.setVerboseName("是否重新编译"), cli.setCliGroup("compile"), cli.setDefault(true))
+
+cli.check()
+target = target.Trim(" ", "\n", "\t")
+origin = target
+proxy = str.TrimSpace(proxy.Lower())
+javaDir = []
+// jsDir = ["node_modules"]
+jsFiles = ["package-lock.json", "package.json", "yarn.lock", "tsconfig.json"]
+phpFiles = ["index.php", "composer.json", "composer.lock", "wp-config.php", "config.php"]
+javaFiles = ["web.xml", "pom.xml", "application.properties", "struts.xml", "application.yml", "log4j2.xml", "log4j.properties", "shiro.ini"]
+// 后缀名 -> 语言，用于统一从文件扩展名推断语言
+extToLanguage = {"js": "js", "mjs": "js", "cjs": "js", "ts": "ts", "tsx": "ts", "php": "php", "java": "java", "go": "go", "yak": "yak"}
+var countMap = map[string]int{"php": 0, "go": 0, "java": 0, "yak": 0, "js": 0, "ts": 0}
+
+params = {"program_name": "", "project_name": "", "language": "", "info": {"kind": "", "local_file": "", "url": "", "proxy": {"proxy": false, "url": ""}, "branch": "", "path": ""}, "description": "", "file_count": 0, "error": {"kind": "", "msg": ""}, "compile_immediately": false}
+func setLanguage(language) {
+    if params.language == "" {
+        params.language = language
+    }
+    
+
+    return
+}
+
+// check cli parameter
+
+if proxy != "" {
+    params.info.proxy.proxy = true
+    params.info.proxy.url = proxy
+}
+
+
+if len(languages) > 0 {
+    setLanguage(languages[0])
+}
+
+
+peepholeSize = 0
+if len(peepholeSizes) > 0 {
+    i, err = atoi(peepholeSizes[0])
+    if err == nil {
+        peepholeSize = i
+    }
+}
+
+
+if programName != "" {
+    params.program_name = programName
+}
+
+
+func detectiveType(data) {
+    return data == codec.DecodeHex("504b0304")~
+}
+func newConnectException(err) {
+    params.error.kind = "connectFailException"
+    params.error.msg = err
+}
+func newFileTypeException(err) {
+    params.error.kind = "fileTypeException"
+    params.error.msg = err
+}
+func newFileNotFoundExcption(err) {
+    params.error.kind = "fileNotFoundException"
+    params.error.msg = err
+}
+func newLanguageNeedSelectException(err) {
+    if params.error.kind != "" {
+        return
+    }
+    
+
+    params.error.kind = "languageNeedSelectException"
+    params.error.msg = err
+}
+
+func generateFileName(kind, filename) {
+    if params.program_name != "" {
+        return
+    }
+
+//转换为合格的file格式
+    filename2 = str.Split(filename, "/")[-1]
+    filename2 = str.Split(filename2, "\\")[-1]
+    name := sprintf("%s(%s)", filename2, time.Now().Format("2006-01-02 15:04:05"))
+    params.program_name = name
+    params.project_name = filename2
+}
+func AutoParseLanguage() {
+    maxinfo = {"key": "", "value": 0}
+    for key, value := range countMap {
+        if maxinfo.value < value {
+            maxinfo.key = key
+            maxinfo.value = value
+        }
+    }
+    
+
+    if maxinfo.value != 0 {
+        setLanguage(maxinfo.key)
+    } else {
+        newLanguageNeedSelectException(f`${params.info.kind} 无法自动检测项目的语言，请手动指定语言。`)
+    }
+}
+func generateDesc() {
+    params.description = f`desc: ${description}
+compile from [${params.info.kind}]${params.info.url}${params.info.local_file}
+    `
+}
+
+//获取zip中的信息，确定语言（使用后缀名 extToLanguage 映射）
+func getZipinfo(basePath) {
+    if params.language != "" {
+        return
+    }
+
+    err = zip.Recursive(
+        basePath,
+        (dir, path, info) => {
+            if !info.IsDir() {
+                params.file_count++
+            }
+
+            ext = file.GetExt(path).Lower().TrimLeft(".")
+            if ext in extToLanguage {
+                lang = extToLanguage[ext]
+                countMap[lang] = countMap[lang] + 1
+            }
+
+            if params.language == "" {
+                if info.IsDir() {
+                    if info.Name().Lower() in javaDir {
+                        setLanguage(ssa.Java)
+                    }
+                } else {
+                    if info.Name().Lower() in javaFiles {
+                        setLanguage(ssa.Java)
+                    }
+                    if info.Name().Lower() in phpFiles {
+                        setLanguage(ssa.PHP)
+                    }
+                    if info.Name().Lower() in jsFiles {
+                        setLanguage(ssa.Javascript)
+                    }
+                }
+            }
+        },
+    )
+    if err != nil {
+        newLanguageNeedSelectException(sprintf("遍历 zip 失败: %v", err))
+    }
+}
+
+func getLocalInfo(localFile) {
+    if !file.IsExisted(localFile) {
+        newFileNotFoundExcption(sprintf(
+            "not found this file in local,check path: %s", 
+            localFile, 
+        ))
+        return
+    }
+    
+
+    ext := file.GetExt(localFile).Lower()
+    switch ext {
+    case ".jar", ".war":
+        params.info.kind = "jar"
+        params.info.local_file = localFile
+        setLanguage("java")
+        generateFileName("jar", localFile)
+    case ".zip":
+        params.info.kind = "compression"
+        params.info.local_file = localFile
+        generateFileName("compression", localFile)
+        getZipinfo(localFile)
+    default:
+        params.info.kind = "local"
+        if !file.IsDir(localFile) {
+            newFileTypeException(sprint("文件存在，但仅支持jar、war、zip压缩格式。"))
+            return
+        }
+        
+
+        params.info.local_file = localFile
+        filesys.Recursive(
+            localFile, 
+            filesys.onDirStat(func(path, info) {
+                if params.language == "" {
+                    switch  {
+                    case info.Name().Lower() in javaDir:
+                        setLanguage(ssa.Java)
+                    }
+                }
+            }), 
+            filesys.onFileStat(func(path, info) {
+                params.file_count++
+                ext = file.GetExt(path).Lower().TrimLeft(".")
+                if ext in extToLanguage {
+                    lang = extToLanguage[ext]
+                    countMap[lang] = countMap[lang] + 1
+                }
+
+                if params.language == "" {
+                    switch  {
+                    case info.Name().Lower() in javaFiles:
+                        setLanguage(ssa.Java)
+                    case info.Name().Lower() in phpFiles:
+                        setLanguage(ssa.PHP)
+                    case info.Name().Lower() in jsFiles:
+                        setLanguage(ssa.Javascript)
+                    }
+                }
+            }), 
+        )
+        generateFileName("local", file.Abs(localFile))
+    }
+}
+
+//尝试获取git仓库的根路径
+func tryGetRepoRootPath(target) {
+    treeIndex = str.Index(target, "tree")
+    if treeIndex == -1 {
+        return target
+    }
+    
+
+    if len(target) <= treeIndex + 5 {
+        return target[:treeIndex]
+    }
+    
+
+    branchUri = target[treeIndex + 5:]
+    branchIndex = str.Index(branchUri, "/")
+    if branchIndex == -1 {
+        return target
+    }
+    
+
+    params.info.branch = branchUri[:branchIndex]
+    params.info.path = str.PathJoin(branchUri[branchIndex:])
+    return target[:treeIndex]
+}
+func getHttpInfo(target) {
+    httpUrl = ""
+    if target.HasPrefix("http://") {
+        httpUrl = target[7:]
+    } else {
+        httpUrl = target[8:]
+    }
+    
+
+    if !target.HasSuffix("/") {
+        target += "/"
+    }
+    
+    // 构建探测请求选项（包含代理和认证）
+    pocOpts = [poc.connectTimeout(timeout), poc.timeout(timeout)]
+    if proxy != "" {
+        pocOpts = append(pocOpts, poc.proxy(proxy))
+    }
+    
+    // 如果配置了密码认证，添加 HTTP Basic Auth 用于探测
+    // 注意：SSH 密钥认证无法用于 HTTP 探测，但不影响后续 clone
+    if authConfig != nil && authConfig != undefined {
+        authKind = authConfig["auth_kind"]
+        if authKind == "password" {
+            username = authConfig["username"]
+            password = authConfig["password"]
+            if username != nil && username != "" && password != nil && password != "" {
+                pocOpts = append(pocOpts, poc.replaceBasicAuth(username, password))
+                yakit.Info("探测时使用密码认证: %s", username)
+            }
+        } else if authKind == "ssh_key" {
+            yakit.Warn("探测阶段无法使用 SSH 密钥认证，如果是私有仓库可能探测失败，但不影响后续 clone")
+        }
+    }
+
+    gitUrl = target + "info/refs?service=git-upload-pack"
+    rsp, req, err = poc.Get(gitUrl, pocOpts...)
+    if err == nil && rsp.GetStatusCode() == 200 {
+        params.info.kind = "git"
+        params.info.url = tryGetRepoRootPath(target)
+        generateFileName("git", httpUrl)
+        return
+    }
+    
+
+    rsp, req, err = poc.Get(tryGetRepoRootPath(target), pocOpts...)
+    if err == nil && rsp.GetStatusCode() == 200 {
+        params.info.kind = "git"
+        params.info.url = tryGetRepoRootPath(target)
+        generateFileName("git", httpUrl)
+        return
+    }
+    
+
+    if err != nil || rsp.GetStatusCode() != 200 {
+        res, req, err2 = poc.Get(origin, pocOpts...)
+        if err2 != nil || res.GetStatusCode() != 200 {
+            generateFileName("http", target)
+            if err2 == nil {
+                newConnectException(sprintf("连接URL: %s 失败，状态码:%d", target, res.GetStatusCode()))
+            } else {
+                newConnectException(sprintf("连接URL: %s 失败:%s", target, err2.Error()))
+            }
+            
+
+            return
+        }
+        
+
+        if str.MatchAllOfSubString(res.GetContentType(), "jar") {
+            params.info.kind = "jar"
+            params.info.url = target
+            setLanguage(ssa.Java)
+            generateFileName("jar", httpUrl)
+        } else if res.GetBody() != nil && len(res.GetBody()) >= 4 && detectiveType(res.GetBody()[:4]) {
+            params.info.kind = "compression"
+            params.info.url = target
+            generateFileName("compression", httpUrl)
+        } else {
+            newFileTypeException(sprint("连接成功，但未找到匹配的文件类型。"))
+        }
+    }
+}
+
+if target.HasPrefix("git://") {
+    // git:// 协议（较少使用）
+    gitUrl = target[6:]
+    params.info.kind = "git"
+    params.info.url = target
+    generateFileName("git", gitUrl)
+    if params.language == "" {
+        newLanguageNeedSelectException("git 无法自动检测项目的语言，请手动指定语言。")
+    }
+} else if target.HasPrefix("ssh://") {
+    // ssh:// 协议: ssh://git@github.com/user/repo.git
+    params.info.kind = "git"
+    params.info.url = target
+    generateFileName("git", target[6:])
+    if params.language == "" {
+        newLanguageNeedSelectException("git 无法自动检测项目的语言，请手动指定语言。")
+    }
+} else if target.HasPrefix("http://") || target.HasPrefix("https://") {
+    // HTTP(S) 协议，可能是 Git 仓库或普通 HTTP 资源
+    getHttpInfo(target)
+} else if target.HasPrefix("git@") && target.Contains(":") {
+    // SSH 格式的 Git URL: git@github.com:user/repo.git
+    params.info.kind = "git"
+    params.info.url = target
+    generateFileName("git", target)
+    if params.language == "" {
+        newLanguageNeedSelectException("git 无法自动检测项目的语言，请手动指定语言。")
+    }
+} else {
+    // 本地文件或文件夹
+    getLocalInfo(target)
+}
+
+
+if params.program_name == "" {
+    generateFileName(params.info.kind, target)
+}
+
+
+if params.language == "" {
+    AutoParseLanguage()
+}
+
+
+params.compile_immediately = compile_immediately
+generateDesc()
+
+path = ""
+if params.info.local_file != "" {
+    path = params.info.local_file
+} else {
+    path = params.info.url
+}
+
+
+var projectExists = false
+var config
+existingSSAProject, err = ssa.GetSSAProjectByNameAndURL(params.project_name, path)
+if err == nil && existingSSAProject != nil {
+    projectExists = true
+    config, err = existingSSAProject.GetConfig()
+    if err != nil || config == nil {
+        if err != nil {
+            yakit.Warn("获取已存在项目配置失败: %v，将创建新配置", err)
+        } else {
+            yakit.Warn("获取已存在项目配置返回 nil，将创建新配置")
+        }
+    }
+}
+
+
+options = [
+    ssa.withProgramName(params.program_name),
+    ssa.withProjectName(params.project_name),
+    ssa.withProjectDescription(description),
+    ssa.withLanguage(params.language),
+    ssa.withCodeSourceKind(params.info.kind),
+    ssa.withCodeSourceLocalFile(params.info.local_file),
+    ssa.withCodeSourceURL(params.info.url),
+    ssa.withCodeSourceBranch(params.info.branch),
+    ssa.withCodeSourcePath(params.info.path),
+    ssa.withExcludeFile(excludeFile),
+    ssa.withReCompile(reCompile),
+    ssa.withConcurrency(concurrency),
+    ssa.withStrictMode(strictMode),
+    ssa.withDescription(description),
+    ssa.withEntryFile(entry...),
+    ssa.withFilePerformanceLog(filePerformanceLog),
+    ssa.withCodeSourceJarRecursiveParse(jarRecursiveParse),
+]
+
+// 添加认证配置（从 JSON Schema 配置中提取）
+if authConfig != nil && authConfig != undefined {
+    authKind = authConfig["auth_kind"]
+    
+    if authKind != nil && authKind != "" {
+        options = append(options, ssa.withCodeSourceAuthKind(authKind))
+        
+        username = authConfig["username"]
+        if username != nil && username != "" {
+            options = append(options, ssa.withCodeSourceAuthUserName(username))
+        }
+        
+        password = authConfig["password"]
+        if password != nil && password != "" {
+            options = append(options, ssa.withCodeSourceAuthPassword(password))
+        }
+        
+        sshKeyPath = authConfig["ssh_key_path"]
+        if sshKeyPath != nil && sshKeyPath != "" {
+            options = append(options, ssa.withCodeSourceAuthKeyPath(sshKeyPath))
+        }
+        
+        keyContent = authConfig["key_content"]
+        if keyContent != nil && keyContent != "" {
+            options = append(options, ssa.withCodeSourceAuthKeyContent(keyContent))
+        }
+        
+        sourceType = authConfig["source_type"]
+        if sourceType != nil && sourceType != "" {
+            yakit.Info("已配置 %s 认证: 凭证类型=%s, 用户名=%s", sourceType, authKind, username)
+        } else {
+            yakit.Info("已配置认证: 凭证类型=%s, 用户名=%s", authKind, username)
+        }
+    }
+}
+
+// 添加增量编译配置
+if enableIncrementalCompile {
+    // 启用增量编译时，JSON 中勾选重新编译（与 SSA 项目编译 逻辑一致）
+    options = append(options, ssa.withEnableIncrementalCompile(true), ssa.withReCompile(true))
+    // 如果提供了基础程序名称，设置基础程序名称
+    if baseProgramName != "" {
+        options = append(options, ssa.withBaseProgramName(baseProgramName))
+        yakit.Info("已启用增量编译，基础程序: %s", baseProgramName)
+    } else {
+        yakit.Info("已启用增量编译（第一次编译，将作为基础程序）")
+    }
+}
+
+// 如果项目不存在或获取已有配置失败，创建新配置；否则更新已有配置
+if config == nil {
+    config, err = ssa.NewConfig(ssa.ModeAll, options...)
+    if err != nil {
+        yakit.Error("创建 SSAConfig 失败: %v", err)
+        return
+    }
+} else {
+    err := config.Update(options...)
+    if err != nil {
+        yakit.Error("更新 SSAConfig 失败: %v", err)
+        return
+    }
+    yakit.Info("更新 SSAConfig 成功")
+}
+
+// 确保 config 不为 nil（防御性检查，帮助静态分析器识别）
+if config == nil {
+    yakit.Error("配置对象为 nil，无法继续")
+    return
+}
+
+// 将 SSAConfig 转换为 JSON 字符串
+configJSON, err = config.ToJSONString()
+if err != nil {
+    yakit.Error("转换 JSON 失败: %v", err)
+    return
+}
+
+// 创建返回对象，添加额外信息，用来给前端做后续处理提供依据
+result = json.loads(configJSON)
+result["error"] = params.error
+result["file_count"] = params.file_count
+// 前端会根据是否立即编译来决定是否调用【项目编译】脚本
+result["compile_immediately"] = params.compile_immediately
+result["kind"] = params.info.kind
+// 前端会根据项目是否存在来觉得是否调用CreateSSAProject
+result["project_exists"] = projectExists
+
+// 转换为 JSON 字符串再返回
+resultJSON = json.dumps(result)
+yakit.Code(resultJSON)
+if params.error.kind != "" {
+    return
+}
+yakit.Info("项目探测完成。")

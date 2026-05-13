@@ -1,0 +1,47 @@
+package yakgrpc
+
+import (
+	"context"
+	"github.com/pkg/errors"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/xlic"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+func (s *Server) GetLicense(ctx context.Context, _ *ypb.Empty) (_ *ypb.GetLicenseResponse, unexpectedError error) {
+	defer func() {
+		if err := recover(); err != nil {
+			unexpectedError = errors.Errorf("fetch license error: %v", err)
+		}
+	}()
+	req, err := xlic.GetLicenseRequest()
+	if err != nil {
+		return nil, err
+	}
+	return &ypb.GetLicenseResponse{License: req}, nil
+}
+
+func (s *Server) CheckLicense(ctx context.Context, r *ypb.CheckLicenseRequest) (_ *ypb.Empty, unexpectedError error) {
+	defer func() {
+		if err := recover(); err != nil {
+			unexpectedError = errors.Errorf("CheckLicense error: %v", err)
+		}
+	}()
+
+	if len(r.GetLicenseActivation()) == 0 {
+		return nil, utils.Errorf("license is empty")
+	}
+
+	lic := r.GetLicenseActivation()
+	rsp, err := xlic.Machine.VerifyLicense(lic)
+	if err != nil {
+		return nil, err
+	}
+	if r.CompanyVersion != "" && rsp != nil && rsp.Params != nil {
+		companyVersion := rsp.Params["company_version"]
+		if companyVersion != "" && companyVersion != r.CompanyVersion {
+			return nil, err
+		}
+	}
+	return &ypb.Empty{}, nil
+}

@@ -1,0 +1,29 @@
+endian: big
+unit: byte
+Package:
+  TPKT:
+    Version: uint8
+    Reserved: uint8
+    PacketLength: uint16
+    length-from-field: PacketLength
+    TPDU: raw
+  X224:
+    Length: uint8
+    Flag: uint8
+    Destination: uint16
+    Source: uint16
+    Class: uint8
+    length-from-field: Length
+    length-for-start-field: Flag
+    VariableData: raw
+  Negotiation:
+    endian: little
+    Type: uint8
+    Flag: uint8
+    Length: uint16
+    Protocol: uint32
+  Challenge: Challenge
+  Authentication: Authentication
+
+Challenge: "import:application-layer/ntlm.yaml;node:ChallengeMessage"
+Authentication: "import:application-layer/ntlm.yaml;node:AuthenticationMessage"

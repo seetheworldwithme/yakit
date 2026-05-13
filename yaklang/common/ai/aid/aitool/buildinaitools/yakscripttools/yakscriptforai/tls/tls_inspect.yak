@@ -1,0 +1,29 @@
+__DESC__ = "用于检查指定域名的TLS证书信息，尝试不同的协议版本进行扫描，并打印证书详情。"
+__VERBOSE_NAME__ = "TLS证书检查"
+__KEYWORDS__ = "security,https,ssl,加密,网络安全,证书详情,安全工具,certificate validation,encryption,certificate authority,domain verification,tls证书,域名扫描,tls certificates,domain inspection,network security,web security,证书检查"
+
+__USAGE__ = <<<USAGE_BLOCK
+TLS Certificate Inspect Tool - Parameter Description for JSON Tool Calls
+
+Required Parameters:
+  domain          (string)  Target domain to inspect TLS certificates.
+                            Example: "www.example.com".
+USAGE_BLOCK
+
+// domain := "www.example.com"
+domain = cli.String("domain", cli.setHelp("the domain u want to check tls certificates"), cli.setRequired(true))
+cli.check()
+
+for inspectCall in [tls.Inspect, tls.InspectForceHttp1_1, tls.InspectForceHttp2] {
+    result, err = tls.Inspect(domain)
+    if err != nil {
+        yakit.Error("tls check failed: %v", err)
+    }
+
+    if result.Len() > 0 {
+        for i in result {
+            yakit.Info("RESULT: %#v", i.String())
+        }
+        return
+    }
+}

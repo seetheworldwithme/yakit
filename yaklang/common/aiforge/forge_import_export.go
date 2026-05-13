@@ -1,0 +1,1052 @@
+package aiforge
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/jinzhu/gorm"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon/aiskillloader"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool/buildinaitools/yakscripttools"
+	"github.com/yaklang/yaklang/common/consts"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/filesys"
+	fi "github.com/yaklang/yaklang/common/utils/filesys/filesys_interface"
+	"github.com/yaklang/yaklang/common/yak/yaklib/codec"
+	"github.com/yaklang/yaklang/common/yakgrpc/yakit"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+// ForgeExportOption customizes export behavior.
+type ForgeExportOption func(*forgeExportOptions)
+
+type forgeExportOptions struct {
+	progress func(percent float64, message string, messageType string)
+	password string
+	output   string
+}
+
+// WithExportProgress registers a progress callback (percent 0-100) for export.
+func WithExportProgress(cb func(percent float64, message string, messageType string)) ForgeExportOption {
+	return func(o *forgeExportOptions) {
+		o.progress = cb
+	}
+}
+
+// WithExportPassword sets password to encrypt the export zip (SM4-CBC).
+func WithExportPassword(password string) ForgeExportOption {
+	return func(o *forgeExportOptions) {
+		o.password = password
+	}
+}
+
+// WithExportOutputName sets the output zip base name (without extension).
+func WithExportOutputName(name string) ForgeExportOption {
+	return func(o *forgeExportOptions) {
+		o.output = name
+	}
+}
+
+func applyExportOptions(opts ...ForgeExportOption) *forgeExportOptions {
+	cfg := &forgeExportOptions{}
+	for _, o := range opts {
+		if o != nil {
+			o(cfg)
+		}
+	}
+	return cfg
+}
+
+// ForgeImportOption customizes import behavior.
+type ForgeImportOption func(*forgeImportOptions)
+
+type forgeImportOptions struct {
+	progress  func(percent float64, message string)
+	overwrite bool
+	newName   string
+	password  string
+}
+
+// WithImportProgress registers a progress callback (percent 0-100) for import.
+func WithImportProgress(cb func(percent float64, message string)) ForgeImportOption {
+	return func(o *forgeImportOptions) {
+		o.progress = cb
+	}
+}
+
+// WithImportOverwrite controls whether existing forge is overwritten.
+func WithImportOverwrite(overwrite bool) ForgeImportOption {
+	return func(o *forgeImportOptions) {
+		o.overwrite = overwrite
+	}
+}
+
+// WithImportNewName overrides the forge name when a single forge is imported.
+func WithImportNewName(name string) ForgeImportOption {
+	return func(o *forgeImportOptions) {
+		o.newName = name
+	}
+}
+
+// WithImportPassword sets password to decrypt the import zip (SM4-CBC).
+func WithImportPassword(password string) ForgeImportOption {
+	return func(o *forgeImportOptions) {
+		o.password = password
+	}
+}
+
+func applyImportOptions(opts ...ForgeImportOption) *forgeImportOptions {
+	cfg := &forgeImportOptions{}
+	for _, o := range opts {
+		if o != nil {
+			o(cfg)
+		}
+	}
+	return cfg
+}
+
+// ExportAIForgesToZip exports one or more forges matched by explicit names and/or filter
+// (plus optional AI tools) into a zip package.
+// Each forge will be placed in its own directory under the archive.
+// For config/json type, the package layout follows buildinforges (e.g. buildinforge/hostscan).
+// For yak type, only forge_cfg.json and <name>.yak are included.
+func ExportAIForgesToZip(ctx context.Context, db *gorm.DB, filter *ypb.AIForgeFilter, toolNames []string, targetPath string, opts ...ForgeExportOption) (string, error) {
+	if db == nil {
+		return "", utils.Error("db is required")
+	}
+
+	opt := applyExportOptions(opts...)
+
+	tmpDir, err := os.MkdirTemp("", "aiforge-export-*")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	progress := func(percent float64, msg string, messageType string) {
+		if opt.progress != nil {
+			opt.progress(percent, msg, messageType)
+		}
+	}
+	progress(0, "start export", "info")
+
+	total, err := yakit.CountAIForges(db, filter)
+	if err != nil {
+		return "", utils.Wrapf(err, "count forges failed")
+	}
+
+	progressStep := func(done int, name string, messageType string) {
+		if total == 0 {
+			return
+		}
+		progress(float64(done)/float64(total)*100, name, messageType)
+	}
+
+	exported := 0
+	progressErrorMsg := func(msg string) {
+		progressStep(exported, "[Error]: "+msg, "error")
+	}
+	resolveForgeName := []string{}
+
+	for forge := range yakit.YieldAIForges(ctx, db, filter) {
+		if forge == nil {
+			log.Errorf("empty forge name detected")
+			progressErrorMsg("empty forge name detected")
+			continue
+		}
+		effectiveName := forge.ForgeName
+		resolveForgeName = append(resolveForgeName, effectiveName)
+		forgeDir := filepath.Join(tmpDir, effectiveName)
+		if err := dumpForgeToDir(forge, forgeDir, effectiveName); err != nil {
+			log.Errorf("failed to export forge %s: %v", effectiveName, err)
+			progressErrorMsg(fmt.Sprintf("failed to export forge %s: %v", effectiveName, err))
+			continue
+		}
+		exported++
+		progressStep(exported, fmt.Sprintf("exported forge %s", effectiveName), "info")
+	}
+
+	for _, name := range toolNames {
+		if strings.TrimSpace(name) == "" {
+			log.Errorf("empty tool name detected")
+			progressErrorMsg("empty tool name detected")
+			continue
+		}
+		tool, err := yakit.GetAIYakTool(db, name)
+		if err != nil {
+			log.Errorf("failed to get tool %s: %v", name, err)
+			progressErrorMsg(fmt.Sprintf("failed to get tool %s: %v", name, err))
+			continue
+		}
+		toolDir := filepath.Join(tmpDir, "tools", tool.Name)
+		if err := dumpAIToolToDir(tool, toolDir); err != nil {
+			log.Errorf("failed to dump tool %s to dir: %v", tool.Name, err)
+			progressErrorMsg(fmt.Sprintf("failed to dump tool %s to dir: %v", tool.Name, err))
+			continue
+		}
+		exported++
+		progressStep(exported, fmt.Sprintf("exported tool %s", tool.Name), "info")
+	}
+
+	if opt.output == "" {
+		if total == 1 && len(toolNames) == 0 {
+			opt.output = resolveForgeName[0]
+		} else {
+			opt.output = "aiforge-package"
+		}
+	}
+	finalName := opt.output + ".zip"
+	if opt.password != "" {
+		finalName += ".enc"
+	}
+	if targetPath == "" {
+		targetPath = filepath.Join(consts.GetDefaultYakitProjectsDir(), finalName)
+	}
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return "", err
+	}
+
+	zipBytes, err := createZipFromDir(tmpDir, tmpDir)
+	if err != nil {
+		return "", err
+	}
+	if opt.password != "" {
+		zipBytes, err = codec.SM4EncryptCBCWithPKCSPadding(
+			codec.PKCS7Padding([]byte(opt.password)),
+			zipBytes,
+			codec.PKCS7Padding([]byte(opt.password)),
+		)
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := os.WriteFile(targetPath, zipBytes, 0o644); err != nil {
+		return "", err
+	}
+	progress(100, "export completed", "success")
+	return targetPath, nil
+}
+
+type AIForgesArchiveInfo struct {
+	AIForges   []*schema.AIForge
+	AIYakTools []*schema.AIYakTool
+}
+
+// LoadAIForgesFromZip loads one or more forges (and optional AI tools) from a zip package.
+// This function only parses and returns the data without saving to database.
+func LoadAIForgesFromZip(zipPath string, opts ...ForgeImportOption) (*AIForgesArchiveInfo, error) {
+	if zipPath == "" {
+		return nil, utils.Error("zip path is required")
+	}
+	opt := applyImportOptions(opts...)
+
+	progress := func(percent float64, msg string) {
+		if opt.progress != nil {
+			opt.progress(percent, msg)
+		}
+	}
+	progress(0, "start loading")
+
+	rootDir := ""
+	if utils.IsDir(zipPath) {
+		if opt.password != "" {
+			return nil, utils.Error("password is not supported when importing from directory")
+		}
+		rootDir = zipPath
+	} else {
+		if exist, _ := utils.PathExists(zipPath); !exist {
+			return nil, utils.Errorf("zip path not exists: %s", zipPath)
+		}
+
+		tmpDir, err := os.MkdirTemp("", "aiforge-import-*")
+		if err != nil {
+			return nil, err
+		}
+		defer os.RemoveAll(tmpDir)
+
+		fileBytes, err := os.ReadFile(zipPath)
+		if err != nil {
+			return nil, err
+		}
+		if opt.password != "" {
+			fileBytes, err = codec.SM4DecryptCBCWithPKCSPadding(
+				codec.PKCS7Padding([]byte(opt.password)),
+				fileBytes,
+				codec.PKCS7Padding([]byte(opt.password)),
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := extractZipBytes(fileBytes, tmpDir); err != nil {
+			return nil, err
+		}
+		rootDir = tmpDir
+	}
+
+	cfgPaths, err := findAllForgeCfg(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	toolCfgPaths, err := findAllAIToolCfg(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	skillPaths, err := findAllSkillMD(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	// Filter skill directories that are already represented by forge_cfg.json.
+	cfgDirSet := make(map[string]struct{}, len(cfgPaths))
+	for _, p := range cfgPaths {
+		cfgDirSet[filepath.Dir(p)] = struct{}{}
+	}
+	skillDirs := make([]string, 0, len(skillPaths))
+	seenSkillDir := make(map[string]struct{}, len(skillPaths))
+	for _, p := range skillPaths {
+		dir := filepath.Dir(p)
+		if _, ok := cfgDirSet[dir]; ok {
+			continue
+		}
+		if _, ok := seenSkillDir[dir]; ok {
+			continue
+		}
+		seenSkillDir[dir] = struct{}{}
+		skillDirs = append(skillDirs, dir)
+	}
+	if len(cfgPaths) == 0 && len(toolCfgPaths) == 0 && len(skillDirs) == 0 {
+		return nil, utils.Error("neither forge_cfg.json nor tool_cfg.json nor SKILL.md found in package")
+	}
+
+	total := len(cfgPaths) + len(toolCfgPaths) + len(skillDirs)
+	current := 0
+	progressStep := func(msg string) {
+		current++
+		progress(float64(current)/float64(total)*100, msg)
+	}
+
+	var forges []*schema.AIForge
+	for _, p := range cfgPaths {
+		effectiveName := ""
+		if opt.newName != "" && len(cfgPaths) == 1 && len(skillDirs) == 0 {
+			effectiveName = opt.newName
+		}
+		forge, err := parseForgeFromDir(filepath.Dir(p), effectiveName)
+		if err != nil {
+			return nil, err
+		}
+		forges = append(forges, forge)
+		progressStep(fmt.Sprintf("loaded forge %s", forge.ForgeName))
+	}
+	for _, dir := range skillDirs {
+		effectiveName := ""
+		if opt.newName != "" && len(cfgPaths) == 0 && len(skillDirs) == 1 {
+			effectiveName = opt.newName
+		}
+		forge, err := loadSkillForgeFromDir(dir, effectiveName)
+		if err != nil {
+			return nil, err
+		}
+		forges = append(forges, forge)
+		progressStep(fmt.Sprintf("loaded skill %s", forge.ForgeName))
+	}
+
+	var tools []*schema.AIYakTool
+	for _, p := range toolCfgPaths {
+		tool, err := parseAIToolFromDir(filepath.Dir(p))
+		if err != nil {
+			return nil, err
+		}
+		tools = append(tools, tool)
+		progressStep(fmt.Sprintf("loaded tool %s", tool.Name))
+	}
+
+	progress(100, "load completed")
+	return &AIForgesArchiveInfo{
+		AIForges:   forges,
+		AIYakTools: tools,
+	}, nil
+}
+
+// ImportAIForgesFromZip imports one or more forges (and optional AI tools) from a zip package.
+// This function loads the data and saves it to database.
+func ImportAIForgesFromZip(db *gorm.DB, zipPath string, opts ...ForgeImportOption) ([]*schema.AIForge, error) {
+	if db == nil {
+		return nil, utils.Error("db is required")
+	}
+
+	opt := applyImportOptions(opts...)
+
+	// 修改进度回调以适配 LoadAIForgesFromZip 和数据库保存阶段
+	originalProgress := opt.progress
+	loadProgress := func(percent float64, msg string) {
+		if originalProgress != nil {
+			// 加载阶段占 50%
+			originalProgress(percent*0.5, msg)
+		}
+	}
+
+	// 创建加载选项
+	loadOpts := make([]ForgeImportOption, 0, len(opts))
+	for _, optFunc := range opts {
+		loadOpts = append(loadOpts, optFunc)
+	}
+	// 替换进度回调
+	loadOpts = append(loadOpts, WithImportProgress(loadProgress))
+
+	// 加载数据
+	archiveInfo, err := LoadAIForgesFromZip(zipPath, loadOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	progress := func(percent float64, msg string) {
+		if originalProgress != nil {
+			// 数据库保存阶段占 50%，从 50% 开始
+			originalProgress(50+percent*0.5, msg)
+		}
+	}
+	progress(0, "start importing to database")
+
+	total := len(archiveInfo.AIForges) + len(archiveInfo.AIYakTools)
+	current := 0
+	progressStep := func(msg string) {
+		current++
+		progress(float64(current)/float64(total)*100, msg)
+	}
+
+	// 保存 forges 到数据库
+	var importedForges []*schema.AIForge
+	for _, forge := range archiveInfo.AIForges {
+		if !opt.overwrite {
+			if _, err := yakit.GetAIForgeByName(db, forge.ForgeName); err == nil {
+				return nil, utils.Errorf("forge %s already exists", forge.ForgeName)
+			}
+		}
+
+		if err := yakit.CreateOrUpdateAIForgeByName(db, forge.ForgeName, forge); err != nil {
+			return nil, err
+		}
+		importedForges = append(importedForges, forge)
+		progressStep(fmt.Sprintf("imported forge %s", forge.ForgeName))
+	}
+
+	// 保存 tools 到数据库
+	for _, tool := range archiveInfo.AIYakTools {
+		if !opt.overwrite {
+			if _, err := yakit.GetAIYakTool(db, tool.Name); err == nil {
+				return nil, utils.Errorf("tool %s already exists", tool.Name)
+			}
+		}
+
+		if existing, err := yakit.GetAIYakTool(db, tool.Name); err == nil {
+			tool.ID = existing.ID
+			tool.CreatedAt = existing.CreatedAt
+			if _, err := yakit.UpdateAIYakToolByID(db, tool); err != nil {
+				return nil, err
+			}
+		} else {
+			if _, err := yakit.CreateAIYakTool(db, tool); err != nil {
+				return nil, err
+			}
+		}
+		progressStep(fmt.Sprintf("imported tool %s", tool.Name))
+	}
+
+	progress(100, "import completed")
+	return importedForges, nil
+}
+
+func detectForgeType(forge *schema.AIForge) string {
+	forgeType := normalizeForgeType(forge.ForgeType)
+	if forgeType != "" {
+		return forgeType
+	}
+	if forge.InitPrompt != "" || forge.PersistentPrompt != "" || forge.PlanPrompt != "" || forge.ResultPrompt != "" {
+		return schema.FORGE_TYPE_Config
+	}
+	return schema.FORGE_TYPE_YAK
+}
+
+func normalizeForgeType(raw string) string {
+	ft := strings.ToLower(strings.TrimSpace(raw))
+	switch ft {
+	case "":
+		return ""
+	case "json", schema.FORGE_TYPE_Config:
+		return schema.FORGE_TYPE_Config
+	case schema.FORGE_TYPE_YAK:
+		return schema.FORGE_TYPE_YAK
+	case schema.FORGE_TYPE_SkillMD:
+		return schema.FORGE_TYPE_SkillMD
+	default:
+		return ft
+	}
+}
+
+func writePromptFiles(dir string, forge *schema.AIForge) error {
+	prompts := map[string]string{
+		"init.txt":       forge.InitPrompt,
+		"persistent.txt": forge.PersistentPrompt,
+		"plan.txt":       forge.PlanPrompt,
+		"result.txt":     forge.ResultPrompt,
+	}
+	for filename, content := range prompts {
+		if err := os.WriteFile(filepath.Join(dir, filename), []byte(content), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func findAllForgeCfg(root string) ([]string, error) {
+	var res []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "forge_cfg.json" {
+			res = append(res, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func findAllSkillMD(root string) ([]string, error) {
+	var res []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "SKILL.md" {
+			res = append(res, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+type aiToolPackageConfig struct {
+	Name              string `json:"name,omitempty"`
+	VerboseName       string `json:"verbose_name,omitempty"`
+	Description       string `json:"description,omitempty"`
+	Keywords          string `json:"keywords,omitempty"`
+	Params            string `json:"params,omitempty"`
+	Path              string `json:"path,omitempty"`
+	EnableAIOutputLog int    `json:"enable_ai_output_log,omitempty"`
+}
+
+func findAllAIToolCfg(root string) ([]string, error) {
+	var res []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "tool_cfg.json" {
+			res = append(res, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func loadPromptFiles(dir string) (string, string, string, string) {
+	return readFileIfExists(filepath.Join(dir, "init.txt")),
+		readFileIfExists(filepath.Join(dir, "persistent.txt")),
+		readFileIfExists(filepath.Join(dir, "plan.txt")),
+		readFileIfExists(filepath.Join(dir, "result.txt"))
+}
+
+func readYakContent(dir, forgeName string) (string, error) {
+	defaultYak := filepath.Join(dir, fmt.Sprintf("%s.yak", forgeName))
+	if data, err := os.ReadFile(defaultYak); err == nil {
+		return string(data), nil
+	}
+	var yakPath string
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		if filepath.Ext(info.Name()) == ".yak" {
+			yakPath = path
+			return io.EOF
+		}
+		return nil
+	})
+	if yakPath == "" {
+		return "", utils.Error("yak file not found in package")
+	}
+	data, err := os.ReadFile(yakPath)
+	return string(data), err
+}
+
+func readFileIfExists(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+func dumpForgeToDir(forge *schema.AIForge, forgeDir string, effectiveName string) error {
+	forgeType := detectForgeType(forge)
+
+	if err := os.MkdirAll(forgeDir, 0o755); err != nil {
+		return err
+	}
+
+	cfg := NewYakForgeBlueprintConfigFromSchemaForge(forge)
+	cfg.ForgeType = forgeType
+	if cfg.Author == "" {
+		cfg.Author = forge.Author
+	}
+	if effectiveName != "" {
+		cfg.Name = effectiveName
+	}
+	cfgBytes, err := json.MarshalIndent(cfg, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(forgeDir, "forge_cfg.json"), cfgBytes, 0o644); err != nil {
+		return err
+	}
+
+	yakName := forge.ForgeName
+	if effectiveName != "" {
+		yakName = effectiveName
+	}
+	if forgeType != schema.FORGE_TYPE_SkillMD {
+		if err := os.WriteFile(filepath.Join(forgeDir, fmt.Sprintf("%s.yak", yakName)), []byte(forge.ForgeContent), 0o644); err != nil {
+			return err
+		}
+	}
+
+	if forgeType == schema.FORGE_TYPE_Config {
+		if err := writePromptFiles(forgeDir, forge); err != nil {
+			return err
+		}
+	}
+	if forgeType == schema.FORGE_TYPE_SkillMD {
+		if err := dumpSkillForgeToDir(forge, forgeDir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func dumpAIToolToDir(tool *schema.AIYakTool, dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	cfg := aiToolPackageConfig{
+		Name:              tool.Name,
+		VerboseName:       tool.VerboseName,
+		Description:       tool.Description,
+		Keywords:          tool.Keywords,
+		Params:            tool.Params,
+		Path:              tool.Path,
+		EnableAIOutputLog: tool.EnableAIOutputLog,
+	}
+	cfgBytes, err := json.MarshalIndent(cfg, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tool_cfg.json"), cfgBytes, 0o644); err != nil {
+		return err
+	}
+
+	yakName := tool.Name
+	if yakName == "" {
+		yakName = filepath.Base(dir)
+	}
+	if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("%s.yak", yakName)), []byte(tool.Content), 0o644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func dumpSkillForgeToDir(forge *schema.AIForge, dir string) error {
+	if forge == nil {
+		return utils.Error("forge is nil")
+	}
+	loaded, err := aiskillloader.AIForgeToLoadedSkill(forge)
+	if err != nil {
+		return utils.Wrapf(err, "convert forge %q to skill failed", forge.ForgeName)
+	}
+	if _, err := filesys.CopyToRefLocal(loaded.FileSystem, dir); err != nil {
+		return utils.Wrapf(err, "materialize skill filesystem failed: %s", forge.ForgeName)
+	}
+	return nil
+}
+
+func buildSkillFSFromDir(skillDir string) (fi.FileSystem, error) {
+	localFS := filesys.NewRelLocalFs(skillDir)
+	vfs := filesys.NewVirtualFs()
+	err := filesys.Recursive(".",
+		filesys.WithFileSystem(localFS),
+		filesys.WithStat(func(isDir bool, pathname string, info fs.FileInfo) error {
+			rel := strings.Trim(strings.TrimPrefix(strings.ReplaceAll(pathname, "\\", "/"), "./"), "/")
+			if rel == "" || rel == "." {
+				return nil
+			}
+			if !isDir && (rel == "forge_cfg.json" || rel == "tool_cfg.json") {
+				return nil
+			}
+			if isDir {
+				vfs.AddDir(rel)
+				return nil
+			}
+			content, err := localFS.ReadFile(pathname)
+			if err != nil {
+				return utils.Wrapf(err, "read skill file failed: %s", pathname)
+			}
+			vfs.AddFile(rel, string(content))
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return vfs, nil
+}
+
+func loadSkillForgeFromDir(skillDir string, overrideName string) (*schema.AIForge, error) {
+	skillMDPath := filepath.Join(skillDir, "SKILL.md")
+	content, err := os.ReadFile(skillMDPath)
+	if err != nil {
+		return nil, err
+	}
+	meta, err := aiskillloader.ParseSkillMeta(string(content))
+	if err != nil {
+		return nil, utils.Wrapf(err, "parse skill markdown failed: %s", skillMDPath)
+	}
+	if overrideName != "" {
+		meta.Name = overrideName
+	}
+	fsys, err := buildSkillFSFromDir(skillDir)
+	if err != nil {
+		return nil, err
+	}
+	loaded := &aiskillloader.LoadedSkill{
+		Meta:           meta,
+		FileSystem:     fsys,
+		SkillMDContent: string(content),
+	}
+	return aiskillloader.LoadedSkillToAIForge(loaded)
+}
+
+func applySkillForgeOverridesFromConfig(forge *schema.AIForge, cfg *YakForgeBlueprintConfig) {
+	if forge == nil || cfg == nil {
+		return
+	}
+	if forge.ForgeVerboseName == "" {
+		forge.ForgeVerboseName = cfg.VerboseName
+	}
+	if forge.Description == "" {
+		forge.Description = cfg.Description
+	}
+	if forge.Tools == "" {
+		forge.Tools = cfg.Tools
+	}
+	if forge.ToolKeywords == "" {
+		forge.ToolKeywords = cfg.ToolKeywords
+	}
+	if forge.Actions == "" {
+		forge.Actions = cfg.Actions
+	}
+	if forge.Tags == "" {
+		forge.Tags = cfg.Tags
+	}
+	if forge.ParamsUIConfig == "" {
+		forge.ParamsUIConfig = cfg.ParamsUIConfig
+	}
+	if forge.Params == "" {
+		forge.Params = cfg.CLIParameterRuleYaklangCode
+	}
+	if forge.UserPersistentData == "" {
+		forge.UserPersistentData = cfg.UserPersistentData
+	}
+	if forge.Author == "" {
+		forge.Author = cfg.Author
+	}
+}
+
+// parseForgeFromDir parses forge configuration from directory without database operations.
+func parseForgeFromDir(cfgDir string, overrideName string) (*schema.AIForge, error) {
+	cfgPath := filepath.Join(cfgDir, "forge_cfg.json")
+	cfgBytes, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	var cfg YakForgeBlueprintConfig
+	if err := json.Unmarshal(cfgBytes, &cfg); err != nil {
+		return nil, err
+	}
+
+	forgeName := cfg.Name
+	if forgeName == "" {
+		forgeName = filepath.Base(cfgDir)
+	}
+	if overrideName != "" {
+		forgeName = overrideName
+	}
+
+	forgeType := normalizeForgeType(cfg.ForgeType)
+	initPrompt, persistentPrompt, planPrompt, resultPrompt := loadPromptFiles(cfgDir)
+	if initPrompt == "" {
+		initPrompt = cfg.InitPrompt
+	}
+	if persistentPrompt == "" {
+		persistentPrompt = cfg.PersistentPrompt
+	}
+	if planPrompt == "" {
+		planPrompt = cfg.PlanPrompt
+	}
+	if resultPrompt == "" {
+		resultPrompt = cfg.ResultPrompt
+	}
+
+	if forgeType == schema.FORGE_TYPE_SkillMD {
+		if skillForge, err := loadSkillForgeFromDir(cfgDir, overrideName); err == nil {
+			applySkillForgeOverridesFromConfig(skillForge, &cfg)
+			return skillForge, nil
+		}
+	}
+
+	yakContent, yakErr := readYakContent(cfgDir, forgeName)
+	if yakErr != nil && cfg.ForgeContent == "" && forgeType != schema.FORGE_TYPE_SkillMD {
+		return nil, yakErr
+	}
+
+	if forgeType == "" {
+		if initPrompt != "" || persistentPrompt != "" || planPrompt != "" || resultPrompt != "" {
+			forgeType = schema.FORGE_TYPE_Config
+		} else {
+			forgeType = schema.FORGE_TYPE_YAK
+		}
+	}
+
+	forge := &schema.AIForge{
+		ForgeName:          forgeName,
+		ForgeVerboseName:   cfg.VerboseName,
+		ForgeContent:       yakContent,
+		ForgeType:          forgeType,
+		Author:             cfg.Author,
+		ParamsUIConfig:     cfg.ParamsUIConfig,
+		Params:             cfg.CLIParameterRuleYaklangCode,
+		UserPersistentData: cfg.UserPersistentData,
+		Description:        cfg.Description,
+		Tools:              cfg.Tools,
+		ToolKeywords:       cfg.ToolKeywords,
+		Actions:            cfg.Actions,
+		Tags:               cfg.Tags,
+		FSBytes:            append([]byte(nil), cfg.FSBytes...),
+		InitPrompt:         initPrompt,
+		PersistentPrompt:   persistentPrompt,
+		PlanPrompt:         planPrompt,
+		ResultPrompt:       resultPrompt,
+	}
+	if forge.ForgeContent == "" {
+		forge.ForgeContent = cfg.ForgeContent
+	}
+
+	return forge, nil
+}
+
+// loadForgeFromDir loads forge from directory and saves to database.
+func loadForgeFromDir(db *gorm.DB, cfgDir string, overrideName string, opt *forgeImportOptions) (*schema.AIForge, error) {
+	forge, err := parseForgeFromDir(cfgDir, overrideName)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt != nil {
+		if !opt.overwrite {
+			if _, err := yakit.GetAIForgeByName(db, forge.ForgeName); err == nil {
+				return nil, utils.Errorf("forge %s already exists", forge.ForgeName)
+			}
+		}
+	}
+
+	if err := yakit.CreateOrUpdateAIForgeByName(db, forge.ForgeName, forge); err != nil {
+		return nil, err
+	}
+	return forge, nil
+}
+
+// parseAIToolFromDir parses AI tool configuration from directory without database operations.
+func parseAIToolFromDir(cfgDir string) (*schema.AIYakTool, error) {
+	cfgPath := filepath.Join(cfgDir, "tool_cfg.json")
+	cfgBytes, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	var cfg aiToolPackageConfig
+	if err := json.Unmarshal(cfgBytes, &cfg); err != nil {
+		return nil, err
+	}
+	toolName := cfg.Name
+	if toolName == "" {
+		toolName = filepath.Base(cfgDir)
+	}
+	content, err := readYakContent(cfgDir, toolName)
+	if err != nil {
+		return nil, err
+	}
+	tool := &schema.AIYakTool{
+		Name:              toolName,
+		VerboseName:       cfg.VerboseName,
+		Description:       cfg.Description,
+		Keywords:          cfg.Keywords,
+		Content:           content,
+		Params:            cfg.Params,
+		Path:              cfg.Path,
+		EnableAIOutputLog: cfg.EnableAIOutputLog,
+	}
+	if tool.EnableAIOutputLog == 0 {
+		tool.EnableAIOutputLog = yakscripttools.ParseAIToolEnableAIOutputLog(tool.Content)
+	}
+
+	return tool, nil
+}
+
+// loadAIToolFromDir loads AI tool from directory and saves to database.
+func loadAIToolFromDir(db *gorm.DB, cfgDir string, opt *forgeImportOptions) (*schema.AIYakTool, error) {
+	tool, err := parseAIToolFromDir(cfgDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt != nil && !opt.overwrite {
+		if _, err := yakit.GetAIYakTool(db, tool.Name); err == nil {
+			return nil, utils.Errorf("tool %s already exists", tool.Name)
+		}
+	}
+
+	if existing, err := yakit.GetAIYakTool(db, tool.Name); err == nil {
+		tool.ID = existing.ID
+		tool.CreatedAt = existing.CreatedAt
+		if _, err := yakit.UpdateAIYakToolByID(db, tool); err != nil {
+			return nil, err
+		}
+		return tool, nil
+	}
+
+	if _, err := yakit.CreateAIYakTool(db, tool); err != nil {
+		return nil, err
+	}
+	return tool, nil
+}
+
+func createZipFromDir(srcDir, baseRoot string) ([]byte, error) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(baseRoot, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.ToSlash(rel)
+		if info.IsDir() {
+			header.Name += "/"
+		}
+		w, err := zw.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(w, f)
+		return err
+	})
+	if err != nil {
+		_ = zw.Close()
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func extractZipBytes(data []byte, dst string) error {
+	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return err
+	}
+	for _, f := range r.File {
+		target := filepath.Join(dst, f.Name)
+		if !strings.HasPrefix(target, filepath.Clean(dst)+string(os.PathSeparator)) {
+			return utils.Errorf("invalid path in zip: %s", f.Name)
+		}
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
+		if err != nil {
+			rc.Close()
+			return err
+		}
+		_, err = io.Copy(out, rc)
+		rc.Close()
+		out.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

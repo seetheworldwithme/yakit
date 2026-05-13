@@ -1,0 +1,42 @@
+name: ManualBuildWithTarget
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: "System to build"
+        required: true
+        type: choice
+        options:
+          - windows
+          - windows7
+          - darwin-amd64 
+          - darwin-arm64
+          - linux-amd64
+          - linux-arm64
+      build_type:
+        description: "Build type"
+        required: true
+        type: choice
+        options:
+          - full
+          - yakit
+          - irify
+        default: full
+      ee:
+        type: boolean
+        description: whether to build ee version
+        default: false
+      sign:
+        type: boolean
+        description: whether to sign windows executable
+        default: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/reuse-build.yml
+    with:
+      os: ${{ inputs.os }}
+      build_type: ${{ inputs.build_type }}
+      ee: ${{ inputs.ee }}
+      sign: ${{ inputs.sign && contains(inputs.os, 'windows') }}
+    secrets: inherit

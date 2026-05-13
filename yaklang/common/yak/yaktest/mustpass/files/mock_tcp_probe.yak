@@ -1,0 +1,44 @@
+host, port = tcp.MockTCPProtocol("rdp")
+
+maxRetries := 2
+
+checked = false
+
+// TCP scan with retries
+for in maxRetries {
+    for result in servicescan.Scan(host, string(port),
+        servicescan.proto(["tcp"]...),
+        servicescan.maxProbes(5),
+        servicescan.probeTimeout(1),
+        servicescan.all(),
+     )~ {
+        println("tcp")
+        dump(result)
+        if result.Fingerprint.ServiceName == "rdp" {
+            checked = true
+        }
+    }
+    if checked {
+        break
+    }
+}
+
+if !checked {
+    die("Under TCP scanning, the RDP protocol fingerprint must be detected.")
+}
+
+// UDP scan with retries
+for in maxRetries {
+    for result in servicescan.Scan(host, string(port),
+        servicescan.proto(["udp"]...),
+        servicescan.maxProbes(5),
+        servicescan.probeTimeout(1),
+    )~ {
+        if !result.IsOpen() {
+            continue
+        }
+        if result.Fingerprint.ServiceName == "rdp" {
+            die("Under UDP scanning, the RDP protocol fingerprint must not be detected.")
+        }
+    }
+}

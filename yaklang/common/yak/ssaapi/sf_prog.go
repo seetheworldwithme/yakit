@@ -1,0 +1,620 @@
+package ssaapi
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+
+	"github.com/yaklang/yaklang/common/jsonpath"
+	"github.com/yaklang/yaklang/common/utils/memedit"
+	regexp_utils "github.com/yaklang/yaklang/common/utils/regexp-utils"
+	"github.com/yaklang/yaklang/common/yak/yaklib/codec"
+
+	"github.com/gobwas/glob"
+	"github.com/samber/lo"
+	"github.com/yaklang/yaklang/common/syntaxflow/sfvm"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/yak/ssa"
+	"github.com/yaklang/yaklang/common/yak/ssa/ssadb"
+)
+
+var _ sfvm.ValueOperator = &Program{}
+
+func (p *Program) CompareConst(comparator *sfvm.ConstComparator) bool {
+	return false
+}
+
+func (p *Program) ShouldUseConditionCandidate() bool {
+	return true
+}
+
+func (p *Program) NewConst(i any, rng ...*memedit.Range) sfvm.ValueOperator {
+	return p.NewConstValue(i, rng...)
+}
+
+func (p *Program) CompareOpcode(opcodeItems *sfvm.OpcodeComparator) (sfvm.Values, []bool) {
+	ctx := opcodeItems.Context
+	var res Values = lo.FilterMap(
+		ssa.MatchInstructionByOpcodes(ctx, p.Program, opcodeItems.Opcodes...),
+		func(i ssa.Instruction, _ int) (*Value, bool) {
+			val, err := p.NewValue(i)
+			if err != nil {
+				log.Errorf("CompareOpcode: new value failed: %v", err)
+				return val, false
+			}
+			return val, true
+		},
+	)
+	// Return matched values; VM will normalize bool mask against source width.
+	return ToSFVMValues(res), nil
+}
+
+func (p *Program) CompareString(comparator *sfvm.StringComparator) (sfvm.Values, []bool) {
+	var res []sfvm.ValueOperator
+	ctx := comparator.Context
+
+	matchCallByString := func(condition *sfvm.StringCondition) sfvm.Values {
+		callMatcher := sfvm.NewStringComparator(sfvm.MatchHave, ctx)
+		callMatcher.Conditions = []*sfvm.StringCondition{condition}
+		var out []sfvm.ValueOperator
+		for _, inst := range ssa.MatchInstructionByOpcodes(ctx, p.Program, ssa.SSAOpcodeCall) {
+			val, err := p.NewValue(inst)
+			if err != nil || val == nil {
+				continue
+			}
+			names := getValueNames(val)
+			names = append(names, codec.AnyToString(val.String()))
+			if callMatcher.Matches(names...) {
+				out = append(out, val)
+			}
+		}
+		return sfvm.NewValues(out)
+	}
+	matchConstByString := func(condition *sfvm.StringCondition) sfvm.Values {
+		matchMode := ssadb.ConstType
+		switch condition.FilterMode {
+		case sfvm.GlobalConditionFilter:
+			_, out, _ := p.GlobMatch(ctx, matchMode, condition.Pattern)
+			return out
+		case sfvm.RegexpConditionFilter:
+			_, out, _ := p.RegexpMatch(ctx, matchMode, condition.Pattern)
+			return out
+		case sfvm.ExactConditionFilter:
+			_, out, _ := p.RegexpMatch(ctx, matchMode, fmt.Sprintf(".*%s.*", regexp.QuoteMeta(condition.Pattern)))
+			return out
+		default:
+			return sfvm.NewEmptyValues()
+		}
+	}
+
+	matchValue := func(condition *sfvm.StringCondition) sfvm.Values {
+		var v sfvm.Values
+		matchMode := ssadb.NameMatch
+		switch condition.FilterMode {
+		case sfvm.GlobalConditionFilter:
+			_, v, _ = p.GlobMatch(ctx, matchMode, condition.Pattern)
+		case sfvm.RegexpConditionFilter:
+			_, v, _ = p.RegexpMatch(ctx, matchMode, condition.Pattern)
+		case sfvm.ExactConditionFilter:
+			_, v, _ = p.RegexpMatch(ctx, matchMode, fmt.Sprintf(".*%s.*", regexp.QuoteMeta(condition.Pattern)))
+		}
+		callMatches := matchCallByString(condition)
+		constMatches := matchConstByString(condition)
+		if v.IsEmpty() {
+			return sfvm.MergeValues(callMatches, constMatches)
+		}
+		return sfvm.MergeValues(v, callMatches, constMatches)
+	}
+
+	switch comparator.MatchMode {
+	case sfvm.MatchHave:
+		set := sfvm.NewValueSet()
+		for i, condition := range comparator.Conditions {
+			matched := matchValue(condition)
+			if matched == nil {
+				continue
+			}
+			otherSet := sfvm.NewValueSet()
+			matched.Recursive(func(vo sfvm.ValueOperator) error {
+				if ret, ok := vo.(ssa.GetIdIF); ok {
+					id := ret.GetId()
+					if i == 0 {
+						set.Add(id, vo)
+					} else {
+						otherSet.Add(id, vo)
+					}
+				}
+				return nil
+			})
+			if i != 0 {
+				set = set.And(otherSet)
+			}
+		}
+		res = set.List()
+	case sfvm.MatchHaveAny:
+		for _, condition := range comparator.Conditions {
+			matched := matchValue(condition)
+			if !matched.IsEmpty() {
+				res = append(res, matched...)
+			}
+		}
+	}
+	// Return matched values; VM will normalize bool mask against source width.
+	return sfvm.NewValues(res), nil
+}
+
+func (p *Program) String() string {
+	return p.Program.GetProgramName()
+}
+func (p *Program) IsMap() bool { return false }
+
+func (p *Program) IsEmpty() bool {
+	return p == nil || p.Program == nil
+}
+
+func (p *Program) GetAnchorBitVector() *utils.BitVector {
+	return nil
+}
+
+func (p *Program) SetAnchorBitVector(*utils.BitVector) {}
+
+func (p *Program) AppendPredecessor(sfvm.ValueOperator, ...sfvm.AnalysisContextOption) error {
+	// return nil will not change the predecessor
+	// no not return any error here!!!!!
+	return nil
+}
+
+func (p *Program) GetFields() (sfvm.Values, error) {
+	return sfvm.NewEmptyValues(), nil
+}
+
+func (p *Program) IsList() bool {
+	//TODO implement me
+	return false
+}
+
+func (p *Program) GetOpcode() string {
+	return ssa.SSAOpcode2Name[ssa.SSAOpcodeUnKnow]
+}
+
+func (p *Program) GetBinaryOperator() string {
+	return ssa.SSAOpcode2Name[ssa.SSAOpcodeUnKnow]
+}
+
+func (p *Program) GetUnaryOperator() string {
+	return ssa.SSAOpcode2Name[ssa.SSAOpcodeUnKnow]
+}
+
+func (p *Program) Recursive(f func(operator sfvm.ValueOperator) error) error {
+	return f(p)
+}
+
+func (p *Program) ExactMatch(ctx context.Context, mod ssadb.MatchMode, s string) (bool, sfvm.Values, error) {
+	return p.matchVariable(ctx, ssadb.ExactCompare, mod, s)
+}
+
+func (p *Program) GlobMatch(ctx context.Context, mod ssadb.MatchMode, g string) (bool, sfvm.Values, error) {
+	return p.matchVariable(ctx, ssadb.GlobCompare, mod, g)
+}
+
+func (p *Program) RegexpMatch(ctx context.Context, mod ssadb.MatchMode, re string) (bool, sfvm.Values, error) {
+	return p.matchVariable(ctx, ssadb.RegexpCompare, mod, re)
+}
+
+func (p *Program) matchVariable(ctx context.Context, compareMode ssadb.CompareMode, mod ssadb.MatchMode, pattern string) (bool, sfvm.Values, error) {
+	return p.matchVariableWithExcludeFiles(ctx, compareMode, mod, pattern, nil)
+}
+
+// appendPointerClosurePhisFromValue 从任意 SSA 值出发，沿 GetPointer() 做闭包展开补齐嵌套 phi。
+//
+// 为避免结果污染，默认约束在“同名 + 同函数”的 phi 集合内；起点没有 name/func 时则只做最小化过滤。
+func appendPointerClosurePhisFromValue(p *Program, start ssa.Value, seen map[int64]struct{}, out *Values) {
+	if p == nil || p.Program == nil || utils.IsNil(start) {
+		return
+	}
+
+	startName := start.GetName()
+	startFn := start.GetFunc()
+	startFnID := int64(0)
+	if startFn != nil {
+		startFnID = startFn.GetId()
+	}
+
+	queue := []ssa.PointerIF{start}
+	queued := make(map[int64]struct{}, 8)
+	queued[start.GetId()] = struct{}{}
+
+	for qi := 0; qi < len(queue); qi++ {
+		cur := queue[qi]
+		if cur == nil {
+			continue
+		}
+		for _, ptr := range cur.GetPointer() {
+			if utils.IsNil(ptr) {
+				continue
+			}
+			phi, ok := ssa.ToPhi(ptr)
+			if !ok || phi == nil {
+				continue
+			}
+			if startName != "" && phi.GetName() != startName {
+				continue
+			}
+			if startFnID != 0 {
+				pf := phi.GetFunc()
+				if pf == nil || pf.GetId() != startFnID {
+					continue
+				}
+			}
+			pid := phi.GetId()
+			if _, dup := seen[pid]; !dup {
+				nv, err := p.NewValue(phi)
+				if err == nil && nv != nil {
+					seen[pid] = struct{}{}
+					*out = append(*out, nv)
+				}
+			}
+			if _, ok := queued[pid]; ok {
+				continue
+			}
+			queued[pid] = struct{}{}
+			queue = append(queue, phi)
+		}
+	}
+
+}
+
+// appendPointerLinkedPhisFromParameters 对每个匹配到的形式参数：
+// 沿 GetPointer() 做闭包展开补齐嵌套 phi（不扫描全函数，也不沿 GetUsers BFS）。
+func (p *Program) appendPointerLinkedPhisFromParameters(values Values) Values {
+	if p == nil || len(values) == 0 {
+		return values
+	}
+	seen := make(map[int64]struct{}, len(values)*2)
+	for _, v := range values {
+		if v != nil {
+			seen[v.GetId()] = struct{}{}
+		}
+	}
+	out := append(Values(nil), values...)
+	for _, v := range values {
+		if v == nil {
+			continue
+		}
+		inst := v.getInstruction()
+		start, ok := ssa.ToValue(inst)
+		if !ok || utils.IsNil(start) {
+			continue
+		}
+		appendPointerClosurePhisFromValue(p, start, seen, &out)
+	}
+	return out
+}
+
+// matchVariableWithExcludeFiles 搜索变量，支持排除指定文件
+// excludeFiles: 要排除的文件路径列表（规范化后的路径，如 "/test.go"）
+func (p *Program) matchVariableWithExcludeFiles(ctx context.Context, compareMode ssadb.CompareMode, mod ssadb.MatchMode, pattern string, excludeFiles []string) (bool, sfvm.Values, error) {
+	var values Values = lo.FilterMap(
+		ssa.MatchInstructionsByVariableWithExcludeFiles(ctx, p.Program, compareMode, mod, pattern, excludeFiles),
+		func(i ssa.Instruction, _ int) (*Value, bool) {
+			if v, err := p.NewValue(i); err != nil {
+				log.Errorf("matchVariable: new value failed: %v", err)
+				return nil, false
+			} else {
+				return v, true
+			}
+		},
+	)
+	// values = values.ExpandPhiClosure()
+	// 将 Values 转换为 sfvm.ValueOperator
+	return len(values) > 0, ToSFVMValues(values), nil
+}
+
+func (p *Program) ListIndex(i int) (sfvm.ValueOperator, error) {
+	return nil, utils.Error("ssa.Program is not supported list index")
+}
+
+func (p *Program) Merge(sfv ...sfvm.ValueOperator) (sfvm.Values, error) {
+	groups := make([]sfvm.Values, 0, len(sfv)+1)
+	groups = append(groups, sfvm.ValuesOf(p))
+	for _, value := range sfv {
+		if utils.IsNil(value) {
+			continue
+		}
+		groups = append(groups, sfvm.ValuesOf(value))
+	}
+	return sfvm.MergeValues(groups...), nil
+}
+
+func (p *Program) Remove(...sfvm.ValueOperator) (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported remove")
+}
+
+func (p *Program) GetCallActualParams(int, bool) (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported call all actual params")
+}
+
+func (p *Program) GetSyntaxFlowDef() (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported syntax flow def")
+}
+func (p *Program) GetSyntaxFlowUse() (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported syntax flow use")
+}
+func (p *Program) GetSyntaxFlowTopDef(sfResult *sfvm.SFFrameResult, sfConfig *sfvm.Config, config ...*sfvm.RecursiveConfigItem) (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported syntax flow top def")
+}
+
+func (p *Program) GetSyntaxFlowBottomUse(sfResult *sfvm.SFFrameResult, sfConfig *sfvm.Config, config ...*sfvm.RecursiveConfigItem) (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported syntax flow bottom use")
+}
+
+func (p *Program) GetCalled() (sfvm.Values, error) {
+	return nil, utils.Error("ssa.Program is not supported called")
+}
+
+type Index struct {
+	Start int
+	End   int
+}
+type FileFilter struct {
+	matchFile    func(string) bool
+	matchContent func(string) []Index
+}
+
+func NewFileFilter(file, matchType string, match []string) *FileFilter {
+	var matchFile []func(string) bool
+	if matchFile == nil {
+		matchFile = []func(string) bool{
+			func(s string) bool {
+				return s == file
+			},
+		}
+	}
+	if reg, err := regexp.Compile(file); err == nil {
+		matchFile = append(matchFile, func(s string) bool {
+			return reg.Match([]byte(s))
+		})
+	}
+	if glob, err := glob.Compile(file); err == nil {
+		matchFile = append(matchFile, func(s string) bool {
+			return glob.Match(s)
+		})
+	}
+	if matchFile == nil {
+		matchFile = append(matchFile, func(s string) bool {
+			return s == file
+		})
+	}
+
+	var matchContent []func(data string) []Index
+	for _, rule := range match {
+		switch matchType {
+		case "regexp":
+			reg := regexp_utils.NewYakRegexpUtils(rule)
+			// reg, err := regexp2.Compile(rule, regexp2.None)
+			// if err != nil {
+			// 	log.Errorf("regexp compile error: %s", err)
+			// 	continue
+			// }
+			matchContent = append(matchContent, func(data string) []Index {
+				indexs, err := reg.FindAllSubmatchIndex(data)
+				if err != nil {
+					log.Warnf("regexp match error: %s", err)
+					return nil
+				}
+				if len(indexs) == 0 {
+					return nil
+				}
+				res := make([]Index, 0)
+				for _, index := range indexs {
+					res = append(res, Index{Start: index[0], End: index[1]})
+				}
+				return res
+			})
+		case "xpath":
+			matcher, err := NewFileXPathMatcher(rule)
+			if err != nil {
+				log.Errorf("xpath match error: %s", err)
+				continue
+			}
+			matchContent = append(matchContent, func(data string) []Index {
+				results, err := matcher.Match(data)
+				if err != nil {
+					log.Errorf("xpath match error: %s", err)
+					return nil
+				}
+				res := make([]Index, 0)
+				for _, result := range results {
+					// TODO:使用string.Index会导致遇到重复内容位置会不正确;
+					// 此外，如果遇到中文，位置也会不正确。
+					substrings := utils.IndexAllSubstrings(data, result)
+					for _, subString := range substrings {
+						res = append(res, Index{Start: subString[1], End: subString[1] + len(result)})
+					}
+				}
+				return res
+			})
+		case "jsonpath": // json path
+			jsonFilter, err := jsonpath.Prepare(rule)
+			if err != nil {
+				log.Errorf("json path parse error: %s", err)
+				continue
+			}
+			matchContent = append(matchContent, func(data string) []Index {
+				structuredData, err := parseStructuredContent(data)
+				if err != nil {
+					log.Errorf("structured parse error: %s", err)
+					return nil
+				}
+
+				matched, err := jsonFilter(structuredData)
+				if err != nil {
+					log.Errorf("json path match content error: %s", err)
+					return nil
+				}
+
+				var searchResults []interface{}
+				switch ret := matched.(type) {
+				case nil:
+					return nil
+				case []interface{}:
+					searchResults = ret
+				default:
+					searchResults = []interface{}{ret}
+				}
+
+				res := make([]Index, 0)
+				for _, searchResult := range searchResults {
+					str := codec.AnyToString(searchResult)
+					substrings := utils.IndexAllSubstrings(data, str)
+					for _, subString := range substrings {
+						res = append(res, Index{Start: subString[1], End: subString[1] + len(str)})
+					}
+				}
+
+				return res
+			})
+		}
+	}
+
+	return &FileFilter{
+		matchFile: func(s string) bool {
+			for _, f := range matchFile {
+				if f(s) {
+					return true
+				}
+			}
+			return false
+		},
+		matchContent: func(data string) []Index {
+			var allResults []Index
+			for _, matcher := range matchContent {
+				results := matcher(data)
+				if results != nil {
+					allResults = append(allResults, results...)
+				}
+			}
+			if len(allResults) == 0 {
+				return nil
+			}
+			return allResults
+		},
+	}
+}
+
+func (p *Program) getEditor(filename, hash string) (*memedit.MemEditor, error) {
+	if editor, ok := p.Program.GetEditor(filename); ok {
+		return editor, nil
+	}
+
+	if p.Program.DatabaseKind == ssa.ProgramCacheMemory {
+		return nil, utils.Errorf("get editor by filename %s not found", filename)
+	}
+	// if have database, get source code from database
+	if editor, ok := p.Program.GetEditorByHash(hash); ok {
+		p.Program.SetEditor(filename, editor)
+		return editor, nil
+	}
+	return nil, utils.Errorf("get ir source from hash error: %s", hash)
+}
+
+func (p *Program) ForEachExtraFile(callBack func(string, *memedit.MemEditor) bool) {
+	p.foreach(p.Program.ExtraFile, callBack)
+}
+
+func (p *Program) ForEachAllFile(callBack func(string, *memedit.MemEditor) bool) {
+	p.foreach(p.Program.FileList, callBack)
+}
+
+// forEachFileListAndExtraFile walks FileList then ExtraFile, deduplicating by path
+// so config / sidecar paths kept only in ExtraFile still participate in scans
+// (e.g. ${*.yml}.regexp / .re).
+func (p *Program) forEachFileListAndExtraFile(callBack func(string, *memedit.MemEditor) bool) {
+	if p == nil || p.Program == nil {
+		return
+	}
+	seen := make(map[string]struct{})
+	handler := func(filename, hash string) bool {
+		if _, ok := seen[filename]; ok {
+			return true
+		}
+		seen[filename] = struct{}{}
+		editor, err := p.getEditor(filename, hash)
+		if err != nil {
+			log.Errorf("get editor [%s] not found: %v", filename, err)
+			return true
+		}
+		return callBack(filename, editor)
+	}
+	for _, m := range []map[string]string{p.Program.FileList, p.Program.ExtraFile} {
+		if m == nil {
+			continue
+		}
+		for filename, hash := range m {
+			if !handler(filename, hash) {
+				return
+			}
+		}
+	}
+}
+func (p *Program) foreach(file2Hash map[string]string, callBack func(string, *memedit.MemEditor) bool) {
+	handler := func(filename, hash string) bool {
+		editor, err := p.getEditor(filename, hash)
+		if err != nil {
+			log.Errorf("get editor [%s] not found: %v", filename, err)
+			return true
+		}
+		return callBack(filename, editor)
+	}
+	for filename, hash := range file2Hash {
+		if !handler(filename, hash) {
+			break
+		}
+	}
+}
+
+func (p *Program) FileFilter(path string, match string, rule map[string]string, rule2 []string) (sfvm.Values, error) {
+	filter := NewFileFilter(path, match, rule2)
+	if filter == nil {
+		return nil, nil
+	}
+
+	var res []sfvm.ValueOperator
+	addRes := func(index Index, editor *memedit.MemEditor, offsetMap *memedit.RuneOffsetMap) {
+		// get range of match string
+		if startRune, ok := offsetMap.ByteOffsetToRuneIndex(index.Start); ok {
+			index.Start = startRune
+		}
+		if endRune, ok := offsetMap.ByteOffsetToRuneIndex(index.End); ok {
+			index.End = endRune
+		}
+		rangeIf := editor.GetRangeOffset(index.Start, index.End)
+		val := p.NewConstValue(rangeIf.GetText(), rangeIf)
+		res = append(res, val)
+	}
+
+	matchFile := false
+	p.forEachFileListAndExtraFile(func(s string, me *memedit.MemEditor) bool {
+		if me == nil {
+			return true
+		}
+		offsetMap := memedit.NewRuneOffsetMap(me.GetSourceCode())
+		if filter.matchFile(s) {
+			matchFile = true
+			if filter.matchContent != nil {
+				matches := filter.matchContent(me.GetSourceCode())
+				for _, match := range matches {
+					addRes(match, me, offsetMap)
+				}
+			}
+		}
+		return true
+	})
+	if len(res) == 0 {
+		if matchFile {
+			return nil, utils.Errorf("no file contains data matching rule %v %v", rule, rule2)
+		}
+		return nil, utils.Errorf("no file matched by path %s", path)
+	}
+	return sfvm.NewValues(res), nil
+}

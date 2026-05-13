@@ -1,0 +1,817 @@
+package yaklangcodetests
+
+import (
+	"archive/zip"
+	"bytes"
+	_ "embed"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/segmentio/ksuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/ai/aid/aireact"
+	"github.com/yaklang/yaklang/common/ai/rag"
+	"github.com/yaklang/yaklang/common/ai/rag/vectorstore"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+	"github.com/yaklang/yaklang/common/utils/ziputil"
+	"github.com/yaklang/yaklang/common/yakgrpc/ypb"
+)
+
+//go:embed testdata/1114-tmp.rag
+var testRAGFileBytes []byte
+
+func createTestRagSystem(t *testing.T) (*rag.RAGSystem, error) {
+	tempFile, err := os.CreateTemp("", "yaklang_aikb_test-*.rag")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tempFile.Name())
+	tempFile.Write(testRAGFileBytes)
+
+	db, err := rag.NewTemporaryRAGDB()
+	if err != nil {
+		return nil, err
+	}
+	ragSystem, err := rag.Get("yaklang_aikb", rag.WithDB(db), rag.WithImportFile(tempFile.Name()), rag.WithEmbeddingClient(vectorstore.NewDefaultMockEmbedding()))
+	if err != nil {
+		return nil, err
+	}
+	return ragSystem, nil
+}
+
+func createTestZip(docs map[string]string) ([]byte, error) {
+	var buf bytes.Buffer
+	zipWriter := zip.NewWriter(&buf)
+
+	for filename, content := range docs {
+		writer, err := zipWriter.Create(filename)
+		if err != nil {
+			return nil, err
+		}
+		_, err = writer.Write([]byte(content))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err := zipWriter.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+type mockStats_forGrepSamples struct {
+	grepSamplesDone bool
+	codeWritten     bool
+}
+
+func mockedYaklangGrepSamples(t *testing.T, i aicommon.AICallerConfigIf, req *aicommon.AIRequest, stat *mockStats_forGrepSamples) (*aicommon.AIResponse, error) {
+	prompt := req.GetPrompt()
+
+	if utils.MatchAllOfSubString(prompt, "analyze-requirement-and-search", "create_new_file", "search_patterns") {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "analyze-requirement-and-search",
+  "create_new_file": true,
+  "search_patterns": ["http.*server", "httpserver"],
+  "reason": "User wants to create http server example"
+}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, "extract-ranked-lines", "ranges", "rank", "reason") {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "extract-ranked-lines",
+  "ranges": [
+    {"range": "1-5", "rank": 1, "reason": "Most relevant code"},
+    {"range": "6-10", "rank": 2, "reason": "Secondary example"}
+  ]
+}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, `"grep_yaklang_samples"`, `"require_tool"`, `"write_code"`, `"@action"`) {
+		nonceStr := aicommon.MustExtractDynamicSectionNonce(t, prompt)
+
+		rsp := i.NewAIResponse()
+
+		if !stat.grepSamplesDone {
+			rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "grep_yaklang_samples",
+  "pattern": "http.*server",
+  "case_sensitive": false,
+  "context_lines": 15
+}`))
+			stat.grepSamplesDone = true
+			rsp.Close()
+			return rsp, nil
+		}
+
+		if !stat.codeWritten {
+			rsp.EmitOutputStream(bytes.NewBufferString(utils.MustRenderTemplate(`{"@action": "write_code"}
+
+<|GEN_CODE_{{ .nonce }}|>
+// Code based on grep samples
+println("http server example")
+println("using Get method")
+<|GEN_CODE_END_{{ .nonce }}|>`, map[string]any{
+				"nonce": nonceStr,
+			})))
+			stat.codeWritten = true
+			rsp.Close()
+			return rsp, nil
+		}
+
+		rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "finish"}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, `"@action"`, `"create_new_file"`, `"check-filepath"`, `"existed_filepath"`) {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "check-filepath", "create_new_file": true}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	fmt.Println("Unexpected prompt:", prompt)
+	return nil, utils.Errorf("unexpected prompt: %s", prompt)
+}
+
+func TestFocusMode_GrepYaklangSamples(t *testing.T) {
+	tempDir := os.TempDir()
+	zipPath := filepath.Join(tempDir, "test-aikb-"+ksuid.New().String()+".zip")
+	defer os.Remove(zipPath)
+
+	docs := map[string]string{
+		"http/basics.yak": `# HTTP Basics Examples
+
+// Example 1: Simple HTTP GET request
+resp, err = http.Get("https://example.com")
+if err != nil {
+    die(err)
+}
+println(resp.Body)
+
+// Example 2: HTTP server
+httpserver.Serve("0.0.0.0", 8080, httpserver.handler(func(rsp, req) {
+    rsp.Write("Hello World")
+}))
+`,
+		"http/server.yak": `# HTTP Server Examples
+
+// Starting a basic server
+httpserver.Serve("127.0.0.1", 8080)
+
+// Server with custom handler
+httpserver.Serve("0.0.0.0", 8080, httpserver.handler(func(rsp, req) {
+    rsp.Write("Custom response")
+}))
+`,
+		"strings/utils.yak": `# String Utilities Examples
+
+// String split
+parts = str.Split("a,b,c", ",")
+println(parts)
+`,
+	}
+
+	raw, err := createTestZip(docs)
+	if err != nil {
+		t.Fatalf("Failed to create test zip data: %v", err)
+	}
+	err = os.WriteFile(zipPath, raw, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test zip: %v", err)
+	}
+
+	flag := ksuid.New().String()
+	_ = flag
+	in := make(chan *ypb.AIInputEvent, 10)
+	out := make(chan *ypb.AIOutputEvent, 100)
+
+	stat := &mockStats_forGrepSamples{
+		grepSamplesDone: false,
+		codeWritten:     false,
+	}
+
+	ins, err := aireact.NewTestReAct(
+		aicommon.WithAICallback(func(i aicommon.AICallerConfigIf, r *aicommon.AIRequest) (*aicommon.AIResponse, error) {
+			return mockedYaklangGrepSamples(t, i, r, stat)
+		}),
+		aicommon.WithEventInputChan(in),
+		aicommon.WithEventHandler(func(e *schema.AiOutputEvent) {
+			out <- e.ToGRPC()
+		}),
+		aicommon.WithAIKBPath(zipPath),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		in <- &ypb.AIInputEvent{
+			IsFreeInput:   true,
+			FreeInput:     "create http server example",
+			FocusModeLoop: schema.AI_REACT_LOOP_NAME_WRITE_YAKLANG,
+		}
+	}()
+
+	du := time.Duration(10)
+	if utils.InGithubActions() {
+		du = time.Duration(5)
+	}
+	after := time.After(du * time.Second)
+
+	var grepSamplesSeen bool
+	var codeGenerated bool
+
+LOOP:
+	for {
+		select {
+		case e := <-out:
+			if e.Type == string(schema.EVENT_TYPE_YAKLANG_CODE_EDITOR) {
+				if e.GetNodeId() == "grep_yaklang_samples" {
+					grepSamplesSeen = true
+					content := string(e.GetContent())
+					if !utils.MatchAllOfSubString(content, "Grep pattern") {
+						t.Logf("Grep samples results: %s", content)
+					}
+				}
+				if e.GetNodeId() == "write_code" {
+					codeGenerated = true
+					content := string(e.GetContent())
+					if !utils.MatchAllOfSubString(content, "http server example") {
+						t.Errorf("Generated code doesn't contain expected content: %s", content)
+					}
+					break LOOP
+				}
+			}
+		case <-after:
+			break LOOP
+		}
+	}
+	close(in)
+
+	fmt.Println("--------------------------------------")
+	tl := ins.DumpTimeline()
+	fmt.Println(tl)
+	if !utils.MatchAllOfSubString(tl, "grep") {
+		t.Error("Timeline doesn't contain grep action")
+	}
+	fmt.Println("--------------------------------------")
+
+	if !stat.grepSamplesDone {
+		t.Error("Grep samples action was not triggered")
+	}
+	if !stat.codeWritten {
+		t.Error("Code was not written after grep samples")
+	}
+
+	_ = grepSamplesSeen
+	_ = codeGenerated
+}
+
+func TestFocusMode_QueryDocumentWithFilters(t *testing.T) {
+	t.Skip()
+
+	tempDir := os.TempDir()
+	zipPath := filepath.Join(tempDir, "test-aikb-filters-"+ksuid.New().String()+".zip")
+	defer os.Remove(zipPath)
+
+	docs := map[string]string{
+		"api/http.md":      "http.Get documentation",
+		"api/tcp.md":       "tcp.Dial documentation",
+		"internal/test.md": "internal test doc",
+		"examples/demo.md": "example demo",
+	}
+
+	raw, err := createTestZip(docs)
+	if err != nil {
+		t.Fatalf("Failed to create test zip data: %v", err)
+	}
+	err = os.WriteFile(zipPath, raw, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test zip: %v", err)
+	}
+
+	searcher, err := ziputil.NewZipGrepSearcher(zipPath)
+	if err != nil {
+		t.Fatalf("Failed to create searcher: %v", err)
+	}
+
+	results, err := searcher.GrepSubString("documentation",
+		ziputil.WithIncludePathSubString("api/"),
+		ziputil.WithExcludePathSubString("internal"),
+	)
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+
+	if len(results) < 1 {
+		t.Error("Expected at least 1 result with path filters")
+	}
+
+	for _, r := range results {
+		if !utils.MatchAllOfSubString(r.FileName, "api/") {
+			t.Errorf("Result should be in api/ directory: %s", r.FileName)
+		}
+		if utils.MatchAllOfSubString(r.FileName, "internal") {
+			t.Errorf("Result should not be in internal directory: %s", r.FileName)
+		}
+	}
+}
+
+func TestFocusMode_QueryDocumentRRFRanking(t *testing.T) {
+	t.Skip()
+
+	tempDir := os.TempDir()
+	zipPath := filepath.Join(tempDir, "test-aikb-rrf-"+ksuid.New().String()+".zip")
+	defer os.Remove(zipPath)
+
+	docs := map[string]string{
+		"doc1.md": "http server example with Get method",
+		"doc2.md": "http client using Get and Post",
+		"doc3.md": "server configuration guide",
+		"doc4.md": "tcp server implementation",
+	}
+
+	raw, err := createTestZip(docs)
+	if err != nil {
+		t.Fatalf("Failed to create test zip data: %v", err)
+	}
+	err = os.WriteFile(zipPath, raw, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test zip: %v", err)
+	}
+
+	searcher, err := ziputil.NewZipGrepSearcher(zipPath)
+	if err != nil {
+		t.Fatalf("Failed to create searcher: %v", err)
+	}
+
+	var allResults []*ziputil.GrepResult
+
+	results1, err := searcher.GrepSubString("http")
+	if err != nil {
+		t.Fatalf("Search 1 failed: %v", err)
+	}
+	allResults = append(allResults, results1...)
+
+	results2, err := searcher.GrepSubString("server")
+	if err != nil {
+		t.Fatalf("Search 2 failed: %v", err)
+	}
+	allResults = append(allResults, results2...)
+
+	merged := ziputil.MergeGrepResults(allResults)
+	ranked := utils.RRFRankWithDefaultK(merged)
+
+	if len(ranked) == 0 {
+		t.Error("Expected ranked results")
+	}
+
+	topResult := ranked[0]
+	if topResult.FileName != "doc1.md" {
+		t.Logf("Top result is %s (expected doc1.md), score: %.4f", topResult.FileName, topResult.Score)
+	}
+
+	for i := 1; i < len(ranked); i++ {
+		if ranked[i].Score > ranked[i-1].Score {
+			t.Errorf("Results not properly ranked: result[%d].Score (%.4f) > result[%d].Score (%.4f)",
+				i, ranked[i].Score, i-1, ranked[i-1].Score)
+		}
+	}
+}
+
+func TestFocusMode_QueryDocumentSizeLimit(t *testing.T) {
+	tempDir := os.TempDir()
+	zipPath := filepath.Join(tempDir, "test-aikb-sizelimit-"+ksuid.New().String()+".zip")
+	defer os.Remove(zipPath)
+
+	docs := make(map[string]string)
+	for i := 0; i < 100; i++ {
+		content := ""
+		for j := 0; j < 100; j++ {
+			content += fmt.Sprintf("Line %d: This is a test document with some content about http server and api documentation. ", j)
+		}
+		docs[fmt.Sprintf("doc%d.md", i)] = content
+	}
+
+	raw, err := createTestZip(docs)
+	if err != nil {
+		t.Fatalf("Failed to create test zip data: %v", err)
+	}
+	err = os.WriteFile(zipPath, raw, 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test zip: %v", err)
+	}
+
+	searcher, err := ziputil.NewZipGrepSearcher(zipPath)
+	if err != nil {
+		t.Fatalf("Failed to create searcher: %v", err)
+	}
+
+	results, err := searcher.GrepSubString("http", ziputil.WithContext(2))
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+
+	if len(results) == 0 {
+		t.Fatal("Expected some results")
+	}
+
+	merged := ziputil.MergeGrepResults(results)
+	ranked := utils.RRFRankWithDefaultK(merged)
+
+	maxSize := int64(1024)
+	var docBuffer bytes.Buffer
+	docBuffer.WriteString("=== Document Query Results ===\n")
+
+	var includedResults int
+	var truncated bool
+
+	for i, result := range ranked {
+		resultStr := fmt.Sprintf("--- Result %d ---\n", i+1)
+		resultStr += result.String()
+		resultStr += "\n"
+
+		if int64(docBuffer.Len()+len(resultStr)+100) > maxSize {
+			truncated = true
+			break
+		}
+
+		docBuffer.WriteString(resultStr)
+		includedResults++
+	}
+
+	if truncated {
+		docBuffer.WriteString(fmt.Sprintf("...[truncated: %d more results]\n", len(ranked)-includedResults))
+	}
+
+	docBuffer.WriteString("=== End ===\n")
+	finalResult := docBuffer.String()
+
+	if !truncated {
+		t.Log("Warning: Expected truncation with 1KB limit, but no truncation occurred")
+	}
+
+	if int64(len(finalResult)) > maxSize+200 {
+		t.Errorf("Final result size %d exceeds limit %d (even with margin)", len(finalResult), maxSize)
+	}
+
+	if truncated && !utils.MatchAllOfSubString(finalResult, "truncated") {
+		t.Error("Truncated result should contain truncation message")
+	}
+
+	t.Logf("Results: total=%d, included=%d, truncated=%v, size=%d bytes",
+		len(ranked), includedResults, truncated, len(finalResult))
+}
+
+func TestFocusMode_QueryDocumentDefaultSizeLimit(t *testing.T) {
+	in := make(chan *ypb.AIInputEvent, 10)
+	out := make(chan *ypb.AIOutputEvent, 10)
+
+	ins, err := aireact.NewTestReAct(
+		aicommon.WithAICallback(func(i aicommon.AICallerConfigIf, r *aicommon.AIRequest) (*aicommon.AIResponse, error) {
+			rsp := i.NewAIResponse()
+			rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "finish"}`))
+			rsp.Close()
+			return rsp, nil
+		}),
+		aicommon.WithEventInputChan(in),
+		aicommon.WithEventHandler(func(e *schema.AiOutputEvent) {
+			out <- e.ToGRPC()
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedDefault := int64(20 * 1024)
+	aikbResultMaxSize := ins.GetConfig().GetConfigInt64("aikb_result_max_size", 20*1024)
+	if aikbResultMaxSize != expectedDefault {
+		t.Errorf("Default aikb result max size should be %d, got %d",
+			expectedDefault, aikbResultMaxSize)
+	}
+
+	ins2, err := aireact.NewTestReAct(
+		aicommon.WithAICallback(func(i aicommon.AICallerConfigIf, r *aicommon.AIRequest) (*aicommon.AIResponse, error) {
+			rsp := i.NewAIResponse()
+			rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "finish"}`))
+			rsp.Close()
+			return rsp, nil
+		}),
+		aicommon.WithEventInputChan(in),
+		aicommon.WithEventHandler(func(e *schema.AiOutputEvent) {
+			out <- e.ToGRPC()
+		}),
+		aicommon.WithAIKBResultMaxSize(10*1024),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aikbResultMaxSize = ins2.GetConfig().GetConfigInt64("aikb_result_max_size")
+	if aikbResultMaxSize != 10*1024 {
+		t.Errorf("Custom aikb result max size should be %d, got %d",
+			10*1024, aikbResultMaxSize)
+	}
+
+	ins3, err := aireact.NewTestReAct(
+		aicommon.WithAICallback(func(i aicommon.AICallerConfigIf, r *aicommon.AIRequest) (*aicommon.AIResponse, error) {
+			rsp := i.NewAIResponse()
+			rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "finish"}`))
+			rsp.Close()
+			return rsp, nil
+		}),
+		aicommon.WithEventInputChan(in),
+		aicommon.WithEventHandler(func(e *schema.AiOutputEvent) {
+			out <- e.ToGRPC()
+		}),
+		aicommon.WithAIKBResultMaxSize(50*1024),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aikbResultMaxSize = ins3.GetConfig().GetConfigInt64("aikb_result_max_size")
+	if aikbResultMaxSize != 20*1024 {
+		t.Errorf("aikb result max size exceeding hard limit should be capped at %d, got %d",
+			20*1024, aikbResultMaxSize)
+	}
+
+	close(in)
+}
+
+func TestFocusMode_RagSystem_Basic(t *testing.T) {
+	ragSystem, err := createTestRagSystem(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, ragSystem)
+
+	docCount, err := ragSystem.CountDocuments()
+	assert.NoError(t, err)
+	assert.Greater(t, docCount, 0)
+	assert.Equal(t, docCount, 17)
+
+	queryText := ragSystem.GetEmbedder().(*vectorstore.MockEmbeddingClient).GenerateRandomText(10)
+	log.Infof("queryText: %s", queryText)
+	results, err := ragSystem.QueryTopN(queryText, 10)
+	assert.NoError(t, err)
+	assert.NotNil(t, results)
+	assert.Greater(t, len(results), 0)
+}
+
+type mockStats_forSemanticSearch struct {
+	semanticSearchDone           bool
+	codeWritten                  bool
+	matchTestRagFileSuccessfully bool
+	matchTestRagFile             func(prompt string) bool
+	compressFlag                 string
+}
+
+func mockedYaklangSemanticSearch(t *testing.T, i aicommon.AICallerConfigIf, req *aicommon.AIRequest, stat *mockStats_forSemanticSearch) (*aicommon.AIResponse, error) {
+	prompt := req.GetPrompt()
+
+	if utils.MatchAllOfSubString(prompt, "KNOWLEDGE_CHUNK", "ranges", "score") {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "knowledge-compress",
+  "ranges": [
+    {"range": "1-3", "score": 0.9}
+  ]
+}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, "analyze-requirement-and-search", "create_new_file") {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "analyze-requirement-and-search",
+  "create_new_file": true,
+  "semantic_questions": [
+    "Yaklang中如何发送HTTP请求？",
+    "Yaklang中如何解析HTTP响应？",
+    "Yaklang中如何设置HTTP请求头？"
+  ],
+  "search_patterns": ["http.*request", "http.Get"],
+  "reason": "User wants to create http request example using semantic search"
+}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, "extract-ranked-lines", "ranges", "rank", "reason") {
+		stat.matchTestRagFileSuccessfully = stat.matchTestRagFile(prompt)
+		compressFlag := uuid.New().String()
+		stat.compressFlag = compressFlag
+		rsp := i.NewAIResponse()
+		mockedCompressSearchResults := fmt.Sprintf(`{
+  "@action": "extract-ranked-lines",
+  "ranges": [
+    {"range": "1-8", "rank": 1, "reason": "%v"},
+    {"range": "10-15", "rank": 2, "reason": "HTTP request with headers"}
+  ]
+}`, compressFlag)
+		rsp.EmitOutputStream(bytes.NewBufferString(mockedCompressSearchResults))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, `"semantic_search_yaklang_samples"`, `"require_tool"`, `"write_code"`, `"@action"`) {
+		nonceStr := aicommon.MustExtractDynamicSectionNonce(t, prompt)
+
+		rsp := i.NewAIResponse()
+
+		if !stat.semanticSearchDone {
+			rsp.EmitOutputStream(bytes.NewBufferString(`{
+  "@action": "semantic_search_yaklang_samples",
+  "questions": [{"question": "Yaklang中如何发送HTTP请求？"}],
+  "top_n": 10
+}`))
+			stat.semanticSearchDone = true
+			rsp.Close()
+			return rsp, nil
+		}
+
+		if !stat.codeWritten {
+			rsp.EmitOutputStream(bytes.NewBufferString(utils.MustRenderTemplate(`{"@action": "write_code"}
+
+<|GEN_CODE_{{ .nonce }}|>
+// Code based on semantic search samples
+resp, err = http.Get("https://example.com")
+if err != nil {
+    die(err)
+}
+println(resp.Body)
+<|GEN_CODE_END_{{ .nonce }}|>`, map[string]any{
+				"nonce": nonceStr,
+			})))
+			stat.codeWritten = true
+			rsp.Close()
+			return rsp, nil
+		}
+
+		rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "finish"}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	if utils.MatchAllOfSubString(prompt, `"@action"`, `"create_new_file"`, `"check-filepath"`, `"existed_filepath"`) {
+		rsp := i.NewAIResponse()
+		rsp.EmitOutputStream(bytes.NewBufferString(`{"@action": "check-filepath", "create_new_file": true}`))
+		rsp.Close()
+		return rsp, nil
+	}
+
+	fmt.Println("Unexpected prompt:", prompt)
+	return nil, utils.Errorf("unexpected prompt: %s", prompt)
+}
+
+func TestFocusMode_SemanticSearchYaklangSamples_BasicSearch(t *testing.T) {
+	tempFile, err := os.CreateTemp("", "yaklang_aikb_test-*.rag")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	_, err = tempFile.Write(testRAGFileBytes)
+	if err != nil {
+		t.Fatalf("Failed to write test RAG data: %v", err)
+	}
+	tempFile.Close()
+
+	var allDocContent []string
+
+	tempDb, err := rag.NewTemporaryRAGDB()
+	if err != nil {
+		t.Fatalf("Failed to create temporary RAG DB: %v", err)
+	}
+	defer tempDb.Close()
+	ragSystem, err := rag.Get("yaklang_aikb", rag.WithDB(tempDb), rag.WithImportFile(tempFile.Name()), rag.WithEmbeddingClient(vectorstore.NewDefaultMockEmbedding()))
+	if err != nil {
+		t.Fatalf("Failed to get RAG system: %v", err)
+	}
+
+	docs, err := ragSystem.QueryTopN("", 1000)
+	if err != nil {
+		t.Fatalf("Failed to query top N documents: %v", err)
+	}
+	for _, doc := range docs {
+		if doc.KnowledgeBaseEntry != nil {
+			allDocContent = append(allDocContent, doc.KnowledgeBaseEntry.KnowledgeDetails)
+		} else if doc.Document != nil {
+			allDocContent = append(allDocContent, doc.Document.Content)
+		}
+	}
+
+	verifyPromptThreshold := 10
+
+	in := make(chan *ypb.AIInputEvent, 10)
+	out := make(chan *ypb.AIOutputEvent, 100)
+
+	stat := &mockStats_forSemanticSearch{
+		semanticSearchDone:           false,
+		codeWritten:                  false,
+		matchTestRagFileSuccessfully: false,
+		matchTestRagFile: func(prompt string) bool {
+			n := 0
+			for _, docContent := range allDocContent {
+				if utils.MatchAllOfSubString(prompt, docContent) {
+					n++
+				}
+			}
+			return n >= verifyPromptThreshold
+		},
+	}
+
+	ins, err := aireact.NewTestReAct(
+		aicommon.WithAICallback(func(i aicommon.AICallerConfigIf, r *aicommon.AIRequest) (*aicommon.AIResponse, error) {
+			return mockedYaklangSemanticSearch(t, i, r, stat)
+		}),
+		aicommon.WithEventInputChan(in),
+		aicommon.WithEventHandler(func(e *schema.AiOutputEvent) {
+			out <- e.ToGRPC()
+		}),
+		aicommon.WithAIKBRagPath(tempFile.Name()),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		in <- &ypb.AIInputEvent{
+			IsFreeInput:   true,
+			FreeInput:     "create http request example",
+			FocusModeLoop: schema.AI_REACT_LOOP_NAME_WRITE_YAKLANG,
+		}
+	}()
+
+	du := time.Duration(10)
+	if utils.InGithubActions() {
+		du = time.Duration(5)
+	}
+	after := time.After(du * time.Second)
+
+LOOP:
+	for {
+		select {
+		case e := <-out:
+			if e.Type == string(schema.EVENT_TYPE_YAKLANG_CODE_EDITOR) {
+				if e.GetNodeId() == "semantic_search_yaklang_samples" {
+					content := string(e.GetContent())
+					if !utils.MatchAllOfSubString(content, "Semantic search") {
+						t.Logf("Semantic search results: %s", content)
+					}
+				}
+				if e.GetNodeId() == "write_code" {
+					content := string(e.GetContent())
+					if !utils.MatchAllOfSubString(content, "http.Get") {
+						t.Errorf("Generated code doesn't contain expected content: %s", content)
+					}
+					break LOOP
+				}
+			}
+		case <-after:
+			break LOOP
+		}
+	}
+	close(in)
+
+	fmt.Println("--------------------------------------")
+	tl := ins.DumpTimeline()
+	fmt.Println(tl)
+	if !utils.MatchAllOfSubString(tl, "semantic") {
+		t.Error("Timeline doesn't contain semantic search action")
+	}
+	fmt.Println("--------------------------------------")
+
+	if !stat.semanticSearchDone {
+		t.Error("Semantic search action was not triggered")
+	}
+	if !stat.codeWritten {
+		t.Error("Code was not written after semantic search")
+	}
+
+	if !stat.matchTestRagFileSuccessfully {
+		t.Error("Failed to match test RAG file successfully")
+	}
+
+	if !strings.Contains(tl, stat.compressFlag) {
+		t.Error("Timeline doesn't contain compress flag")
+	}
+}

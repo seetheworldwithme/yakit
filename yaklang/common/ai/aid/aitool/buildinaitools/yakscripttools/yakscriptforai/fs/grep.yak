@@ -1,0 +1,740 @@
+__DESC__ = "一个文本查找工具，用于在指定文件或目录下查找匹配特定模式的文本。支持子串（区分大小写和不区分大小写）和正则表达式模式。支持名称和扩展名黑白名单过滤。可指定查找的路径、模式、最大结果数量、跳过的匹配次数以及显示匹配文本周围的上下文。"
+__VERBOSE_NAME__ = "文本查找工具"
+__KEYWORDS__ = "pattern matching,regexp,file path,模式匹配,查找替换,文件路径,context text,文本查找,文本工具,directory search,text tool,文件搜索,正则表达式,目录搜索,grep,text finder,file search,include,exclude,extension filter"
+
+__USAGE__ = <<<USAGE_BLOCK
+Text Grep Tool - Parameter Description for JSON Tool Calls
+
+Required Parameters:
+  path            (string)  The file or directory path(s) to search. Multiple paths can be specified
+                            separated by comma ",". Each path is validated before scanning.
+                            If a path is a directory, all files within it are searched recursively.
+                            If a path is a file, only that file is searched.
+  pattern         (string)  The text pattern(s) to search for. Multiple patterns can be specified
+                            separated by comma ",". Each pattern is searched independently.
+                            How patterns are matched depends on the "pattern-mode" parameter.
+
+Optional Parameters:
+  output-mode     (string)  Controls what is returned. Accepted values:
+                            - "" or "content" (default): returns matching lines with file:line:content
+                              format. Each match counts toward the limit.
+                            - "files_with_matches" / "files": returns only file paths that contain
+                              at least one match, along with the match count per file.
+                              Much faster for large codebases—once a file has a match, it stops
+                              scanning that file and moves to the next. The limit controls the
+                              max number of files returned (default 200 in this mode).
+                              Use this mode when you need to discover WHICH files contain a pattern
+                              rather than the exact matching lines.
+  pattern-mode    (string)  Controls how the pattern string is interpreted. Accepted values:
+                            - "" or "regexp" (default): Golang-style regular expression, same as
+                              bash grep. If the pattern fails to compile as a valid regex, the tool
+                              automatically falls back to case-sensitive substring matching and
+                              emits a warning. This means simple literal patterns like "exec(" work
+                              correctly even in the default mode.
+                            - "substr": force case-sensitive substring matching.
+                              The pattern is always treated as a literal string (regex metacharacters
+                              have no special meaning).
+                            - "isubstr" or "isubstring": case-insensitive substring matching.
+                              Both the file content and the pattern are lowercased before comparison.
+                            - "re" / "regex": explicit regexp mode (same as default, but without
+                              automatic fallback — compile errors are reported as failures).
+  limit           (int)     Maximum number of matched results to return.
+                            Default: 50 for "content" mode, 200 for "files_with_matches" mode.
+                            In "content" mode: limits the number of matching lines.
+                            In "files_with_matches" mode: limits the number of files returned.
+                            The search stops early once this many results (after offset) are collected.
+  offset          (int)     Skip the first N matches before collecting results. Default: 0.
+                            Useful for paginating through large result sets.
+  file-size-max   (int)     Maximum file size in bytes. Files larger than this are skipped entirely.
+                            Default: 2000000000 (2GB). Set to a smaller value for faster scans.
+  context-buffer  (int)     Number of bytes of surrounding context to show around each match.
+                            Default: 0: each result is reported as "filepath:lineNo: full line content"
+                            (standard grep-style output — the entire matching line is always shown).
+                            When > 0, the tool additionally extracts [match_start - context_buffer,
+                            match_end + context_buffer] bytes as a raw snippet around the match.
+                            (Only effective in "content" output-mode.)
+  exclude         (string)  Comma-separated list of directory/file names to exclude.
+                            Each name is checked against EVERY component of the file path.
+                            For example, "node_modules,.git" will skip any file whose path contains
+                            a directory or file named exactly "node_modules" or ".git".
+                            Default: ".git,.svn,.hg,node_modules,__pycache__,.DS_Store,.idea,.vscode,.next,.nuxt,.cache"
+                            Set to "" to disable all name exclusions.
+  include         (string)  Comma-separated list of filename substrings for whitelist filtering.
+                            When set (non-empty), only files whose filename (last path component)
+                            contains at least one of these substrings are searched.
+                            Default: "" (disabled, all files are searched).
+  exclude-ext     (string)  Comma-separated list of file extensions to exclude (blacklist).
+                            The dot prefix is optional: both "pyc" and ".pyc" are accepted.
+                            Matching is case-insensitive.
+                            Default: "" (disabled).
+  include-ext     (string)  Comma-separated list of file extensions to include (whitelist).
+                            When set, only files whose extension matches one of these values are searched.
+                            The dot prefix is optional: both "go" and ".go" are accepted.
+                            Default: "" (disabled, all extensions pass).
+
+Filter Evaluation Order (for each file during recursive scan):
+  1. exclude name blacklist (path component exact match)
+  2. include name whitelist (filename substring match)
+  3. exclude-ext extension blacklist (file extension match)
+  4. include-ext extension whitelist (file extension match)
+  5. file-size-max check
+  6. pattern matching (substr/isubstr/regexp)
+USAGE_BLOCK
+
+yakit.AutoInitYakit()
+
+pathName := cli.String("path", cli.setHelp("the filepath(s) you want to check, use comma ',' to separate multiple paths"), cli.setRequired(true))
+pattern := cli.String("pattern", cli.setHelp("target text you want to grep, use comma ',' as split"), cli.setRequired(true))
+outputModeRaw := cli.String("output-mode", cli.setHelp("output mode: 'content' (default) returns matching lines; 'files_with_matches'/'files' returns only file paths with match counts"), cli.setDefault("content"))
+matchMode = cli.String("pattern-mode", cli.setHelp("one of [regexp/substr/isubstr] set match mode: 1. regexp (default) for Golang-style regex, auto-fallback to substr on compile error; 2. substr for CaseSensitive-SubString; 3. isubstr for CaseInsensitive-SubString"), cli.setDefault("regexp"))
+maxResult := cli.Int("limit", cli.setHelp("max results to return; default 50 for content mode, 200 for files_with_matches mode. Set to -1 to use mode-specific default."),  cli.setDefault(-1))
+offsetResultCount := cli.Int("offset", cli.setHelp("skip how many first match"), cli.setDefault(0))
+fileSizeLimit = cli.Int("file-size-max", cli.setHelp("limit for file size, if the file is too large, stop it auto"), cli.setDefault(1000 * 1000 * 1000 * 2)) // 2G
+contextBuffer := cli.Int("context-buffer", cli.setHelp("Show (or display) a certain number of bytes of context around the matching text, default 0 is for not show"), cli.setDefault(0))
+excludeRaw := cli.String("exclude", cli.setHelp("comma-separated list of directory/file names to exclude from scanning"), cli.setDefault(".git,.svn,.hg,node_modules,__pycache__,.DS_Store,.idea,.vscode,.next,.nuxt,.cache"))
+includeRaw := cli.String("include", cli.setHelp("comma-separated list of file name substrings to include (whitelist)"), cli.setDefault(""))
+excludeExtRaw := cli.String("exclude-ext", cli.setHelp("comma-separated list of file extensions to exclude (e.g. '.pyc,.o,.so')"), cli.setDefault(""))
+includeExtRaw := cli.String("include-ext", cli.setHelp("comma-separated list of file extensions to include (whitelist, e.g. '.go,.js,.py')"), cli.setDefault(""))
+cli.check()
+
+// Parse output mode
+filesOnlyMode = str.ToLower(str.TrimSpace(outputModeRaw)) in ["files_with_matches", "files", "files-with-matches"]
+
+// Apply mode-specific default limit
+if maxResult <= 0 {
+    if filesOnlyMode {
+        maxResult = 200
+    } else {
+        maxResult = 50
+    }
+}
+
+// Fallback: if fileSizeLimit is 0 or negative (e.g., due to scientific notation parsing issue), set to 2GB
+if fileSizeLimit <= 0 {
+    fileSizeLimit = 1000 * 1000 * 1000 * 2 // 2GB
+    yakit.Info("file-size-max was invalid (%v), reset to default 2GB", fileSizeLimit)
+}
+
+// Parse exclude name list
+excludeNames = {}
+for item in str.Split(excludeRaw, ",") {
+    item = str.TrimSpace(item)
+    if item != "" {
+        excludeNames[item] = true
+    }
+}
+
+// Parse include name list (whitelist)
+includeNames = {}
+for item in str.Split(includeRaw, ",") {
+    item = str.TrimSpace(item)
+    if item != "" {
+        includeNames[item] = true
+    }
+}
+hasIncludeFilter = len(includeNames) > 0
+
+// Parse exclude-ext list
+excludeExts = {}
+for item in str.Split(excludeExtRaw, ",") {
+    item = str.TrimSpace(item)
+    if item != "" {
+        if !str.HasPrefix(item, ".") { item = "." + item }
+        excludeExts[str.ToLower(item)] = true
+    }
+}
+
+// Parse include-ext list (whitelist)
+includeExts = {}
+for item in str.Split(includeExtRaw, ",") {
+    item = str.TrimSpace(item)
+    if item != "" {
+        if !str.HasPrefix(item, ".") { item = "." + item }
+        includeExts[str.ToLower(item)] = true
+    }
+}
+hasIncludeExtFilter = len(includeExts) > 0
+
+// shouldFilterPath returns true if the file should be EXCLUDED from searching.
+shouldFilterPath = (filePath) => {
+    normalized = str.ReplaceAll(filePath, "\\", "/")
+    parts = str.Split(normalized, "/")
+
+    // 1. Check exclude name blacklist (any path component)
+    for part in parts {
+        if excludeNames[part] {
+            return true
+        }
+    }
+
+    // 2. Check include name whitelist (file name must contain a substring)
+    if hasIncludeFilter {
+        fileName = parts[len(parts) - 1]
+        matched = false
+        for incName in includeNames {
+            if str.Contains(fileName, incName) {
+                matched = true
+                break
+            }
+        }
+        if !matched { return true }
+    }
+
+    // 3. Check extension filters
+    fileName = parts[len(parts) - 1]
+    ext = str.ToLower(file.GetExt(fileName))
+    // 3a. exclude-ext blacklist
+    if ext != "" && excludeExts[ext] {
+        return true
+    }
+    // 3b. include-ext whitelist
+    if hasIncludeExtFilter {
+        if ext == "" || !includeExts[ext] {
+            return true
+        }
+    }
+
+    return false
+}
+
+// 解析多个路径（以逗号分隔）
+pathList := str.Split(pathName, ",")
+validPaths := []
+for p in pathList {
+    p = str.TrimSpace(p)
+    if p == "" {
+        continue
+    }
+    if !file.IsExisted(p) {
+        yakit.Info("no such file or directory: %v" % p)
+        continue
+    }
+    validPaths = append(validPaths, p)
+}
+
+if len(validPaths) == 0 {
+    yakit.Info("no valid file or directory found")
+    return
+}
+
+multipleFiles := len(validPaths) > 1
+
+if pattern == "" {
+    yakit.Info("grep target not right")
+    return
+}
+
+// Print start info
+yakit.Info("=== Start Grep ===")
+yakit.Info("target path(s): %v", pathName)
+yakit.Info("pattern: %v", pattern)
+yakit.Info("pattern-mode: %v", matchMode)
+if filesOnlyMode {
+    yakit.Info("output-mode: files_with_matches")
+}
+yakit.Info("limit: %v, offset: %v, context-buffer: %v", maxResult, offsetResultCount, contextBuffer)
+if len(excludeNames) > 0 {
+    yakit.Info("exclude: %v", excludeRaw)
+}
+if hasIncludeFilter {
+    yakit.Info("include: %v", includeRaw)
+}
+if len(excludeExts) > 0 {
+    yakit.Info("exclude-ext: %v", excludeExtRaw)
+}
+if hasIncludeExtFilter {
+    yakit.Info("include-ext: %v", includeExtRaw)
+}
+
+count := 0
+m := sync.NewMutex()
+
+findRes := []
+
+// files_with_matches mode state
+fileMatchResults = []       // list of {"file": path, "count": matchCount} maps
+fileMatchSet = {}           // dedup: filePath -> true (already recorded)
+fileMatchCount = 0          // number of files collected (after offset)
+fileMatchTotalScanned = 0   // total files that had at least one match (before offset filtering)
+// per-file match counter for files_with_matches mode; reset per file
+currentFileMatchCount = 0
+
+defer func{
+    yakit.Info("=== Grep Finished ===")
+    if filesOnlyMode {
+        if len(fileMatchResults) <= 0 {
+            yakit.Info("pattern [%v] matched 0 files", pattern)
+        } else {
+            yakit.Info("pattern [%v] matched in %v files (showed %v)", pattern, fileMatchTotalScanned, len(fileMatchResults))
+        }
+    } else {
+        if count <= 0 {
+            yakit.Info("pattern [%v] matched 0 results", pattern)
+        } else {
+            yakit.Info("pattern [%v] matched %v results (showed %v)", pattern, count, min(count - offsetResultCount, maxResult))
+        }
+    }
+}
+
+end = false
+// Maximum number of matches to log individually via yakit.Info IPC
+// to avoid flooding the IPC channel (each yakit.Info is a network round-trip).
+maxIPCLogCount = 20
+currentOriginalContent = ""
+currentTargetFile = ""
+
+// countLineNumber returns the 1-based line number of the byte at position byteOffset
+// within content (a string). It counts '\n' characters before byteOffset.
+countLineNumber = (content, byteOffset) => {
+    if byteOffset <= 0 {
+        return 1
+    }
+    if byteOffset > len(content) {
+        byteOffset = len(content)
+    }
+    lineNo = 1
+    for i := 0; i < byteOffset; i++ {
+        if content[i] == '\n' {
+            lineNo++
+        }
+    }
+    return lineNo
+}
+
+// extractLine returns the full text of the line that contains byteOffset (without trailing newline).
+extractLine = (content, byteOffset) => {
+    if len(content) == 0 {
+        return ""
+    }
+    if byteOffset >= len(content) {
+        byteOffset = len(content) - 1
+    }
+    // find line start
+    lineStart = byteOffset
+    for lineStart > 0 && content[lineStart-1] != '\n' {
+        lineStart--
+    }
+    // find line end
+    lineEnd = byteOffset
+    for lineEnd < len(content) && content[lineEnd] != '\n' {
+        lineEnd++
+    }
+    return str.TrimRight(content[lineStart:lineEnd], "\r")
+}
+
+collectMatchPreview = (offset, offsetEnd) => {
+    if contextBuffer > 0 {
+        return
+    }
+
+    m.Lock()
+    defer m.Unlock()
+
+    if count <= offsetResultCount || count > (maxResult + offsetResultCount) {
+        return
+    }
+    if len(currentOriginalContent) <= 0 {
+        return
+    }
+    if offset < 0 {
+        offset = 0
+    }
+    if offsetEnd > len(currentOriginalContent) {
+        offsetEnd = len(currentOriginalContent)
+    }
+    if offsetEnd <= offset {
+        return
+    }
+
+    lineNo = countLineNumber(currentOriginalContent, offset)
+    lineContent = extractLine(currentOriginalContent, offset)
+    entry = sprintf("%v:%v: %v", currentTargetFile, lineNo, lineContent)
+
+    displayCount = count - offsetResultCount
+    if displayCount <= maxIPCLogCount {
+        yakit.Info("  %v", entry)
+    }
+}
+
+// output uses in-memory rawContent ([]byte) to extract context,
+// avoiding per-match file I/O and excessive yakit.File IPC calls.
+output = (targetFile, offset, offsetEnd, rawContent) => {
+    m.Lock()
+    defer m.Unlock()
+    count++
+
+    if count <= offsetResultCount {
+        return
+    }
+
+    if count > (maxResult + offsetResultCount) {
+        end = true
+        return
+    }
+
+    displayCount = count - offsetResultCount
+
+    // Compute line number from byte offset for human-readable output
+    rawStr = string(rawContent)
+    lineNo = countLineNumber(rawStr, offset)
+
+    // Build match info string: "filepath:lineNo: matched line content"
+    lineContent = extractLine(rawStr, offset)
+    var msg
+    msg = "%v:%v: %v" % [targetFile, lineNo, lineContent]
+
+    // Only log first N matches via yakit.Info to avoid IPC flood
+    if displayCount <= maxIPCLogCount {
+        yakit.Info(msg)
+    } else if displayCount == maxIPCLogCount + 1 {
+        yakit.Info("... (suppressing per-match IPC logs for remaining matches, results still collected)")
+    }
+
+    if contextBuffer > 0 && len(rawContent) > 0 {
+        seekStart = offset - contextBuffer
+        if seekStart < 0 {
+            seekStart = 0
+        }
+        seekEnd = offsetEnd + contextBuffer
+        if seekEnd > len(rawContent) {
+            seekEnd = len(rawContent)
+        }
+        if seekEnd <= seekStart {
+            return
+        }
+        raw = rawContent[seekStart:seekEnd]
+        if len(raw) > 0 {
+            contentStr := string(raw)
+            // Prefix context snippet with file:line for orientation
+            contextEntry = sprintf("%v:%v: ...%v...", targetFile, lineNo, str.TrimSpace(contentStr))
+            if displayCount <= maxIPCLogCount {
+                yakit.Info("  context: %v", contextEntry)
+            }
+            findRes = append(findRes, contextEntry)
+        }
+        return
+    }
+
+    // contextBuffer == 0: collect the matching line itself into findRes so that
+    // the println summary at the end of the script contains actual match content.
+    // Without this, findRes stays empty and the AI tool framework receives an
+    // uninformative "matches were found but no context text was collected" message.
+    findRes = append(findRes, msg)
+}
+
+isRegexp = str.ToLower(matchMode) in ["regexp", "re", "regex", ""]
+isExplicitRegexp = str.ToLower(matchMode) in ["re", "regex"]
+isAutoFallbackRegexp = !isExplicitRegexp && isRegexp
+
+// tryCompileRegexp attempts to compile a pattern as regexp.
+// In auto-fallback mode (default), returns (nil, false) on compile error so caller can fall back to substr.
+// In explicit regexp mode ("re"/"regex"), panics on error (handled by defer recover in callers).
+tryCompileRegexp = (subpattern) => {
+    subp = subpattern
+    if !str.HasPrefix(subp, "(?m)") {
+        subp = "(?m)" + subp
+    }
+    if isAutoFallbackRegexp {
+        compiled, err = re.Compile(subp)
+        if err != nil {
+            yakit.Info("[auto-fallback] pattern %q is not valid regexp (%v), treating as literal substring", subpattern, err)
+            return nil, false
+        }
+        return compiled, true
+    }
+    return re.Compile(subp)~, true
+}
+
+scanMatches = (patternRe, targetFile, content, rawContent) => {
+    searchBase = 0
+    for {
+        if end { return }
+        if searchBase >= len(content) {
+            return
+        }
+
+        current = content[searchBase:]
+        match = patternRe.FindStringIndex(current)
+        if match == nil || len(match) < 2 {
+            return
+        }
+
+        start = searchBase + match[0]
+        finish = searchBase + match[1]
+        output(targetFile, start, finish, rawContent)
+        collectMatchPreview(start, finish)
+        if end { return }
+
+        // Skip to the start of the next line (bash grep reports each line at most once)
+        nextBase = finish
+        for nextBase < len(content) && content[nextBase] != '\n' {
+            nextBase++
+        }
+        if nextBase < len(content) {
+            nextBase++
+        }
+        if nextBase <= searchBase {
+            nextBase = searchBase + 1
+        }
+        searchBase = nextBase
+    }
+}
+
+handleRegexp = (subpattern, targetFile, content, rawContent) => {
+    defer recover()
+    currentOriginalContent = content
+    currentTargetFile = targetFile
+    subpatternRe, ok := tryCompileRegexp(subpattern)
+    if !ok || subpatternRe == nil {
+        handle(subpattern, targetFile, content, rawContent)
+        return
+    }
+    scanMatches(subpatternRe, targetFile, content, rawContent)
+}
+
+handle = (patternSubstr, targetFile, content, rawContent) => {
+    workingContent = content
+    switch str.ToLower(matchMode){
+    case "isubstr", "isubstring":
+        workingContent = str.ToLower(workingContent)
+        patternSubstr = str.ToLower(patternSubstr)
+    }
+
+    defer recover()
+    currentOriginalContent = content
+    currentTargetFile = targetFile
+    patternRe := re.Compile(re.QuoteMeta(patternSubstr))~
+    scanMatches(patternRe, targetFile, workingContent, rawContent)
+}
+
+
+// checkFileHasMatch checks whether a file contains any match and returns the total match count.
+// Used by files_with_matches mode. Returns 0 if no match found.
+checkFileHasMatch = (targetFile, fileContentStr) => {
+    matchTotal = 0
+    allpattern := str.Split(pattern, ",")
+    for subPatternItem in allpattern {
+        workingContent = fileContentStr
+        if isRegexp {
+            defer recover()
+            patternRe, ok := tryCompileRegexp(subPatternItem)
+            if !ok || patternRe == nil {
+                switch str.ToLower(matchMode){
+                case "isubstr", "isubstring":
+                    workingContent = str.ToLower(workingContent)
+                    subPatternItem = str.ToLower(subPatternItem)
+                }
+                patternRe = re.Compile(re.QuoteMeta(subPatternItem))~
+            }
+            allMatches = patternRe.FindAllStringIndex(workingContent, -1)
+            if allMatches != nil {
+                matchTotal += len(allMatches)
+            }
+        } else {
+            switch str.ToLower(matchMode){
+            case "isubstr", "isubstring":
+                workingContent = str.ToLower(workingContent)
+                subPatternItem = str.ToLower(subPatternItem)
+            }
+            defer recover()
+            patternRe := re.Compile(re.QuoteMeta(subPatternItem))~
+            allMatches = patternRe.FindAllStringIndex(workingContent, -1)
+            if allMatches != nil {
+                matchTotal += len(allMatches)
+            }
+        }
+    }
+    return matchTotal
+}
+
+// recordFileMatch records a file-level match result for files_with_matches mode.
+// Returns true if the file limit has been reached (should stop scanning).
+recordFileMatch = (targetFile, matchCount) => {
+    m.Lock()
+    defer m.Unlock()
+
+    if fileMatchSet[targetFile] {
+        return end
+    }
+    fileMatchSet[targetFile] = true
+    fileMatchTotalScanned++
+
+    if fileMatchTotalScanned <= offsetResultCount {
+        return end
+    }
+
+    if fileMatchCount >= maxResult {
+        end = true
+        return true
+    }
+
+    fileMatchCount++
+    fileMatchResults = append(fileMatchResults, {"file": targetFile, "count": matchCount})
+
+    if fileMatchCount <= 20 {
+        yakit.Info("  [file %d] %v (%d matches)", fileMatchCount, targetFile, matchCount)
+    } else if fileMatchCount == 21 {
+        yakit.Info("  ... (suppressing per-file IPC logs for remaining files, results still collected)")
+    }
+
+    if fileMatchCount >= maxResult {
+        end = true
+        return true
+    }
+    return false
+}
+
+// processSingleFile processes one file in content mode (original behavior)
+processSingleFile = (targetFile, fileContentStr, fileContent) => {
+    allpattern := str.Split(pattern, ",")
+    for subPatternItem in allpattern {
+        if end { return }
+        if isRegexp {
+            handleRegexp(subPatternItem, targetFile, fileContentStr, fileContent)
+        } else {
+            handle(subPatternItem, targetFile, fileContentStr, fileContent)
+        }
+    }
+}
+
+// 处理单个路径的函数
+processPath = (singlePath) => {
+    if file.IsDir(singlePath) {
+        filesys.Recursive(singlePath, filesys.onFileStat((fileToCheck, info) => {
+            defer recover()
+            if end { return }
+
+            // Skip filtered paths (exclude/include name + extension filters)
+            if shouldFilterPath(fileToCheck) { return }
+
+            if fileSizeLimit > 0 && info.Size() > fileSizeLimit {
+                return
+            }
+
+            fileContent := file.ReadFile(fileToCheck)~
+            fileContentStr := string(fileContent)
+
+            if filesOnlyMode {
+                matchCount = checkFileHasMatch(fileToCheck, fileContentStr)
+                if matchCount > 0 {
+                    recordFileMatch(fileToCheck, matchCount)
+                }
+            } else {
+                processSingleFile(fileToCheck, fileContentStr, fileContent)
+            }
+        }))
+    } else {
+        fileContent := file.ReadFile(singlePath)~
+        fileContentStr := string(fileContent)
+
+        if filesOnlyMode {
+            matchCount = checkFileHasMatch(singlePath, fileContentStr)
+            if matchCount > 0 {
+                recordFileMatch(singlePath, matchCount)
+            }
+        } else {
+            processSingleFile(singlePath, fileContentStr, fileContent)
+        }
+    }
+}
+
+// 遍历所有有效路径
+for currentPath in validPaths {
+    if end { break }
+    if multipleFiles {
+        yakit.Info("processing path: %v", currentPath)
+    }
+    processPath(currentPath)
+}
+
+// Maximum results to output via stdout and yakit.Info summary
+// AI tool framework captures stdout as the tool result; keep it reasonable.
+maxStdoutResults = 100
+
+if filesOnlyMode {
+    // ── files_with_matches mode output ──
+    if len(fileMatchResults) > 0 {
+        yakit.Info("=== Grep Files Summary: %d files matched (pattern: %s) ===", len(fileMatchResults), pattern)
+        showCount = min(len(fileMatchResults), maxStdoutResults)
+        for i := 0; i < showCount; i++ {
+            entry = fileMatchResults[i]
+            yakit.Info("[file %d] %s (%d matches)", i+1, entry["file"], entry["count"])
+        }
+        if len(fileMatchResults) > maxStdoutResults {
+            yakit.Info("... (%d more files not shown, use offset to paginate)", len(fileMatchResults) - maxStdoutResults)
+        }
+        if fileMatchTotalScanned > len(fileMatchResults) + offsetResultCount {
+            yakit.Info("(total files with matches: at least %d, showing %d after offset %d)", fileMatchTotalScanned, len(fileMatchResults), offsetResultCount)
+        }
+        yakit.Info("=== End of Grep Files ===")
+
+        println(sprintf("=== Grep Files: %d files matched (pattern: %s) ===", len(fileMatchResults), pattern))
+        for i := 0; i < showCount; i++ {
+            entry = fileMatchResults[i]
+            println(sprintf("[file %d] %s (%d matches)", i+1, entry["file"], entry["count"]))
+        }
+        if len(fileMatchResults) > maxStdoutResults {
+            println(sprintf("... (%d more files not shown, use offset to paginate)", len(fileMatchResults) - maxStdoutResults))
+        }
+        if fileMatchTotalScanned > len(fileMatchResults) + offsetResultCount {
+            println(sprintf("(total files with matches: at least %d, showing %d after offset %d)", fileMatchTotalScanned, len(fileMatchResults), offsetResultCount))
+        }
+        println("=== End of Grep Files ===")
+    } else {
+        println(sprintf("No files matched for pattern: %s", pattern))
+    }
+
+    // Send structured results to yakit UI via IPC
+    maxFileResults = 200
+    ipcRes = []
+    for i := 0; i < min(len(fileMatchResults), maxFileResults); i++ {
+        entry = fileMatchResults[i]
+        ipcRes = append(ipcRes, sprintf("%s (%d matches)", entry["file"], entry["count"]))
+    }
+    if len(ipcRes) > 0 {
+        yakit.File(pathName, yakit.fileFindAction("files_with_matches", sprintf("patternMode:[%s] | pattern:[%s]",matchMode,pattern), ipcRes...))
+    }
+} else {
+    // ── content mode output (original behavior) ──
+    // print findRes summary to yakit.Info (batched, not per-match)
+    if len(findRes) > 0 {
+        yakit.Info("=== Grep Results Summary: %d matches ===", len(findRes))
+        showCount = min(len(findRes), maxStdoutResults)
+        for i := 0; i < showCount; i++ {
+            yakit.Info("[match %d] %s", i+1, findRes[i])
+        }
+        if len(findRes) > maxStdoutResults {
+            yakit.Info("... (%d more matches not shown)", len(findRes) - maxStdoutResults)
+        }
+        yakit.Info("=== End of Grep Results ===")
+
+        // Write results to stdout (captured by AI tool framework)
+        // Cap output to maxStdoutResults to keep tool result size manageable
+        println(sprintf("=== Grep Results: %d matches (pattern: %s) ===", len(findRes), pattern))
+        for i := 0; i < showCount; i++ {
+            println(sprintf("[match %d] %s", i+1, findRes[i]))
+        }
+        if len(findRes) > maxStdoutResults {
+            println(sprintf("... (%d more matches not shown, use offset to paginate)", len(findRes) - maxStdoutResults))
+        }
+        println("=== End of Grep Results ===")
+    } else if count > offsetResultCount {
+        shownCount = min(count - offsetResultCount, maxResult)
+        yakit.Info("matches were found but no context text was collected; reporting summary only")
+        println(sprintf("=== Grep Results: %d matches (pattern: %s) ===", shownCount, pattern))
+        println(sprintf("Matched %d results. Use context-buffer > 0 if you need surrounding text excerpts.", shownCount))
+        println("=== End of Grep Results ===")
+    } else {
+        println(sprintf("No matches found for pattern: %s", pattern))
+    }
+
+    // Send structured results to yakit UI via IPC.
+    // IMPORTANT: Cap results to prevent IPC hang from oversized payload.
+    maxFileResults = 50
+    if len(findRes) <= maxFileResults {
+        yakit.File(pathName, yakit.fileFindAction("content", sprintf("patternMode:[%s] | pattern:[%s]",matchMode,pattern), findRes...))
+    } else {
+        truncatedRes = findRes[:maxFileResults]
+        yakit.File(pathName, yakit.fileFindAction("content", sprintf("patternMode:[%s] | pattern:[%s] (showing %d of %d)",matchMode,pattern, maxFileResults, len(findRes)), truncatedRes...))
+    }
+}
