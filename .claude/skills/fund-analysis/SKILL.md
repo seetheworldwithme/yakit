@@ -4,14 +4,166 @@ description: "对银行账户交易数据进行可疑交易资金分析，生成
 ---
 
 # 资金交易分析
-## 数据处理要求（强制）
 
-执行本技能前，先使用 `excelcli analysis` 完成文件导入、字段识别、标准化、筛选和基础统计。银行流水统一分析 `bank_transactions`；涉税数据统一分析 `tax_invoices`、`seller_invoice`、`buyer_invoice`、`tax_registrations` 等标准表。
+## excelcli 工具使用指南（强制）
 
-本技能只规定查案思路、指标体系、模式识别、报告结构和调证建议；不要在技能中提供自定义代码示例，也不要指导智能体自行读取 Excel/CSV 或自建入库流程。
+本技能的所有数据操作必须通过 `excelcli` 完成，禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程。
 
+### excelcli 工作流总览
 
-可疑交易资金分析的完整方法论。本技能提供分析框架、领域知识、判断规则和分析框架和报告要求，帮助你完成从数据探查到报告撰写的全流程。
+excelcli 采用 **导入 → 检查 → 映射 → 标准化 → 分析** 的五步工作流：
+
+```
+Excel/CSV 文件  →  import     →  SQLite 数据库
+                      ↓
+                  inspect    →  确认表结构和列名
+                      ↓
+                  map        →  字段映射 JSON
+                      ↓
+                  normalize  →  bank_transactions 标准表
+                      ↓
+         analyze fund / transactions / query  →  分析结果
+```
+
+涉税数据有独立的子工作流：
+
+```
+数据库  →  tax map        →  涉税映射 JSON
+              ↓
+         tax normalize   →  标准涉税表
+              ↓
+   tax analyze / tax invoices  →  分析结果
+```
+
+### 命令速查表
+
+| 命令 | 用途 | 必填参数 |
+|---|---|---|
+| `excelcli import <INPUT> --case-id <ID> --db <DB>` | 导入 Excel/CSV 到 SQLite | INPUT, --case-id, --db |
+| `excelcli inspect <DB>` | 查看表结构和样例数据 | DB |
+| `excelcli map <DB>` | 生成银行流水字段映射 | DB |
+| `excelcli normalize <DB> --mapping <FILE>` | 标准化为 bank_transactions 表 | DB, --mapping |
+| `excelcli analyze fund <DB>` | 基础资金分析 | DB |
+| `excelcli query <DB> --sql <SQL>` | 执行自定义 SQL 查询 | DB, --sql 或 --file |
+| `excelcli transactions <DB>` | 交易流水多维筛选 | DB |
+| `excelcli tax map <DB>` | 涉税表自动识别与映射 | DB |
+| `excelcli tax normalize <DB> --mapping <FILE>` | 涉税表标准化 | DB, --mapping |
+| `excelcli tax analyze <DB>` | 涉税风险概览分析 | DB |
+| `excelcli tax invoices <DB>` | 发票明细筛选 | DB |
+
+### 银行流水分析完整步骤（按顺序执行）
+
+**Step 1 — 导入数据**
+
+```bash
+excelcli import 交易流水.xlsx --case-id case001 --db case001.db
+```
+
+- `<INPUT>`：输入文件路径，支持 .xls / .xlsx / .csv
+- `--case-id`：案件编号，用于区分不同案件
+- `--db`：SQLite 数据库输出路径
+- 可选：`--verify`（导入后校验）、`--encoding gbk`（指定 CSV 编码）
+- 如果有多个 Excel 文件，逐个 import 到同一个 `--db` 即可
+
+**Step 2 — 检查表结构**
+
+```bash
+excelcli inspect case001.db --json --sample 5
+```
+
+- 确认导入的表名、列名、数据样例
+- 这一步**必须执行**，因为不同银行导出的列名差异很大，后续分析依赖正确的列名
+- 输出 JSON 格式方便程序化处理
+
+**Step 3 — 生成字段映射**
+
+```bash
+excelcli map case001.db --out mapping.json
+```
+
+- 自动识别原始表列名与标准字段的对应关系
+- 输出映射 JSON 文件，供 normalize 使用
+- 可选：`--json` 直接在终端查看映射结果
+
+**Step 4 — 数据标准化**
+
+```bash
+excelcli normalize case001.db --mapping mapping.json
+```
+
+- 根据映射文件，将原始表标准化为 `bank_transactions` 标准表
+- 标准化后，所有后续分析都基于 `bank_transactions` 表进行
+
+**Step 5 — 基础资金分析**
+
+```bash
+excelcli analyze fund case001.db
+```
+
+- 对标准化后的银行流水进行基础资金分析
+- 可选：`--json` 输出 JSON 格式
+
+**Step 6 — 交易筛选**
+
+```bash
+excelcli transactions case001.db --account "622848123456" --min-amount 10000 --json
+excelcli transactions case001.db --counterparty "张三" --start 2024-01-01 --end 2024-06-30 --csv
+excelcli transactions case001.db --direction 支出 --keyword "转账" --limit 200
+```
+
+筛选参数说明：
+- `--account`：按账号筛选
+- `--counterparty`：按对手方名称筛选
+- `--direction`：按交易方向（如 收/支）
+- `--min-amount` / `--max-amount`：金额范围
+- `--start` / `--end`：日期范围
+- `--keyword`：关键词模糊搜索
+- `--limit`：返回行数上限（默认 100）
+- `--csv`：CSV 格式输出，方便导入其他工具
+
+**Step 7 — 自定义 SQL 查询**
+
+```bash
+excelcli query case001.db --sql "SELECT * FROM bank_transactions LIMIT 10"
+excelcli query case001.db --sql "SELECT account, COUNT(*) as cnt, SUM(amount) as total FROM bank_transactions GROUP BY account ORDER BY total DESC" --limit 50 --json
+excelcli query case001.db --file analysis.sql --limit 500 --csv
+```
+
+- `--sql` 和 `--file` 二选一
+- `--limit`：返回行数上限（默认 100）
+- 所有分析指标的计算都应通过 `excelcli query` 执行 SQL 完成
+
+### 涉税分析步骤（如数据涉及涉税场景）
+
+```bash
+# Step 1: 导入（同上）
+excelcli import 发票数据.xlsx --case-id tax001 --db tax001.db
+
+# Step 2: 涉税映射
+excelcli tax map tax001.db --out tax_mapping.json
+
+# Step 3: 标准化
+excelcli tax normalize tax001.db --mapping tax_mapping.json
+
+# Step 4: 风险分析
+excelcli tax analyze tax001.db --top 20
+
+# Step 5: 发票筛选
+excelcli tax invoices tax001.db --taxpayer "某某公司" --min-amount 100000 --csv
+```
+
+涉税分析统一操作以下标准表：`tax_invoices`、`seller_invoice`、`buyer_invoice`、`tax_registrations` 等。
+
+### 重要注意事项
+
+1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程
+2. **必须先 inspect 再分析**：不同银行的数据格式差异很大，先 inspect 确认列名和数据格式
+3. **必须先 map 再 normalize**：normalize 依赖映射文件，map 生成的 JSON 文件是桥梁
+4. **标准化后使用标准表名**：银行流水统一使用 `bank_transactions` 表，涉税数据使用对应标准表
+5. **复杂统计用 query**：`analyze fund` 提供基础分析，自定义统计指标用 `excelcli query --sql` 完成
+6. **数据异常排查**：如果分析结果异常，先用 `excelcli inspect` 核对列名和样例数据，再检查映射文件是否正确，必要时调整映射后重新 `normalize`
+
+---
 
 ## 数据文件说明
 
@@ -51,15 +203,15 @@ description: "对银行账户交易数据进行可疑交易资金分析，生成
 
 **目标**：了解账户全貌，建立基础数据认知。
 
-**操作**：读取数据文件，确认列名和数据格式，然后计算以下指标。
+**操作**：使用 `excelcli import` 导入数据，`excelcli inspect` 确认列名和数据格式，`excelcli map` + `normalize` 完成标准化，然后通过 `excelcli analyze fund` 和 `excelcli query --sql` 计算以下指标。
 
 **首先检查账户数量**：读取交易明细后，先统计"交易卡号"列的唯一值数量，确认数据中涉及几个主体账户。如果只有1个账户则为单账户分析；如果有多个账户，需在报告开头列出所有涉案账户，后续分析分别或合并进行（取决于业务需求）。
 
 **数据预处理**：
 1. 过滤失败交易：如"交易是否成功"列存在，仅保留值为1（成功）的记录，并在报告中注明过滤了多少笔失败交易
-2. 交易时间、金额、方向等字段由 `excelcli normalize` 标准化；如结果异常，先用 `excelcli inspect` 和 `import_issues` 核查字段映射
+2. 交易时间、金额、方向等字段由 `excelcli normalize` 标准化；如结果异常，先用 `excelcli inspect` 核查字段映射是否正确，检查映射 JSON 文件中对应字段的映射关系
 3. 收付方向通常在"收付标志"列，值为"进"/"出"，先确认具体取值
-- 使用 `excelcli inspect "./output/analysis.db" --json --sample 3` 查看真实列名和样例数据。
+4. 使用 `excelcli inspect <db路径> --json --sample 5` 查看真实列名和样例数据
 5. 关联辅助表：通过"交易卡号"或"交易户名"关联账户信息和人员信息，补充账户属性和人员背景
 
 **必须产出的指标**：
@@ -218,7 +370,7 @@ IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件�
 
 不同系统导出的交易数据列名差异很大。先打印列名再适配：
 
-使用 `excelcli inspect` 查看真实字段和样例数据；使用 `excelcli transactions`、`excelcli tax invoices` 或 `excelcli query` 完成筛选和统计。
+使用 `excelcli inspect <DB> --json --sample 5` 查看真实字段和样例数据；使用 `excelcli transactions`、`excelcli tax invoices` 或 `excelcli query --sql` 完成筛选和统计。
 
 常见列名对照（与本项目标准字段的映射）：
 
@@ -248,14 +400,18 @@ IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件�
 
 ### Excel文件过大或读取失败
 
-使用 `excelcli inspect` 查看真实字段和样例数据；使用 `excelcli transactions`、`excelcli tax invoices` 或 `excelcli query` 完成筛选和统计。
+使用 `excelcli import` 时添加 `--verify` 参数校验数据完整性；导入后用 `excelcli inspect <DB>` 查看表结构和数据量。
 
 ### 分析结果异常
 
-排查步骤：先用 `excelcli inspect` 核对列名和样例，再查看 `import_issues` 与映射文件；必要时调整映射后重新标准化。
+排查步骤：
+1. 先用 `excelcli inspect <DB> --json --sample 5` 核对列名和样例数据
+2. 检查映射 JSON 文件（如 mapping.json）中各字段映射是否正确
+3. 必要时修改映射 JSON 后重新执行 `excelcli normalize <DB> --mapping mapping.json`
 
 常见问题：
-- 金额、时间、空值等解析问题优先查看 `import_issues`，必要时调整 `mapping.json` 后重新标准化。
+- 金额、时间、空值等解析问题：检查映射 JSON 中对应字段的映射关系，必要时修改映射后重新标准化
+- 标准化后字段缺失：说明映射 JSON 中未映射该字段，补充映射后重新 normalize
 
 ### 分析结果不符合预期
 
