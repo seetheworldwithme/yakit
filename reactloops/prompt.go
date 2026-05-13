@@ -1,0 +1,289 @@
+package reactloops
+
+import (
+	_ "embed"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	"github.com/yaklang/yaklang/common/log"
+	"github.com/yaklang/yaklang/common/schema"
+	"github.com/yaklang/yaklang/common/utils"
+)
+
+const directlyCallToolParamsNodeID = "directly_call_tool_params"
+
+func renderRecentToolRoutingHint(nonce string) string {
+	return utils.MustRenderTemplate(`
+<|DIRECT_TOOL_ROUTING_{{ .Nonce }}|>
+# Fast Tool Routing
+- Before using require_tool, check CACHE_TOOL_CALL first.
+- If the exact tool you need is already listed in CACHE_TOOL_CALL, prefer directly_call_tool for faster execution.
+- Use require_tool only when the needed tool is not in the recent cache, or when you still need normal tool discovery.
+<|DIRECT_TOOL_ROUTING_END_{{ .Nonce }}|>
+	`, map[string]any{
+		"Nonce": nonce,
+	})
+}
+
+// renderRecentToolRoutingHintRequireToolOnly replaces the fast-path hint when directly_call_tool is disabled for this loop.
+func renderRecentToolRoutingHintRequireToolOnly(nonce string) string {
+	return utils.MustRenderTemplate(`
+<|DIRECT_TOOL_ROUTING_{{ .Nonce }}|>
+# 工具调用（本循环已关闭快速路径）
+- 一律使用 @action=require_tool 申请工具；不要使用 directly_call_tool。
+- CACHE_TOOL_CALL 仅供参考；含大块参数的工具（write_file、bash 等）请直接 require_tool，避免出现「快速参数预览」与正式调用重复。
+<|DIRECT_TOOL_ROUTING_END_{{ .Nonce }}|>
+	`, map[string]any{
+		"Nonce": nonce,
+	})
+}
+
+//go:embed prompts/loop_template.tpl
+var coreTemplate string
+
+//go:embed prompts/session_evidence.txt
+var sessionEvidenceTemplate string
+
+func (r *ReActLoop) generateSchemaString(disallowExit bool) (string, error) {
+	// loop
+	// build in code
+	values := r.GetAllActions()
+	disableActionList := []string{}
+	if disallowExit {
+		disableActionList = append(disableActionList, loopAction_Finish.ActionType)
+	}
+	if r.allowAIForge != nil && !r.allowAIForge() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_REQUIRE_AI_BLUEPRINT)
+	}
+	if r.allowPlanAndExec != nil && !r.allowPlanAndExec() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_REQUEST_PLAN_EXECUTION)
+	}
+
+	if r.allowToolCall != nil && !r.allowToolCall() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_REQUIRE_TOOL)
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_TOOL_COMPOSE)
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_DIRECTLY_CALL_TOOL)
+	}
+
+	// directly_call_tool is only available when there are recently-used tools in cache
+	toolManager := r.config.GetAiToolManager()
+	if toolManager == nil || !toolManager.HasRecentlyUsedTools() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_DIRECTLY_CALL_TOOL)
+	}
+	if r.disableDirectlyCallTool {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_DIRECTLY_CALL_TOOL)
+	}
+
+	// Skills conditional actions
+	if r.allowSkillLoading != nil && !r.allowSkillLoading() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_LOADING_SKILLS)
+	}
+	if r.allowSkillViewOffset != nil && !r.allowSkillViewOffset() {
+		disableActionList = append(disableActionList, schema.AI_REACT_LOOP_ACTION_CHANGE_SKILL_VIEW_OFFSET)
+	}
+
+	// Apply init handler action constraints (if not yet applied)
+	// These constraints are only applied once after init
+	if !r.initActionApplied && len(r.initActionDisabled) > 0 {
+		disableActionList = append(disableActionList, r.initActionDisabled...)
+		log.Infof("applied init action disabled list: %v", r.initActionDisabled)
+	}
+
+	filterFunc := func(action *LoopAction) bool {
+		if r.actionFilters == nil {
+			return true
+		}
+		for _, filter := range r.actionFilters {
+			if !filter(action) {
+				return false
+			}
+		}
+		return true
+	}
+
+	var filteredValues []*LoopAction
+	for _, v := range values {
+		if !slices.Contains(disableActionList, v.ActionType) && filterFunc(v) {
+			filteredValues = append(filteredValues, v)
+		} else {
+			log.Infof("action[%s] is removed from schema because loop exit is disallowed or init disabled", v.ActionType)
+		}
+	}
+
+	// Apply init handler must-use action constraints
+	// If must-use actions are specified, only keep those actions
+	if !r.initActionApplied && len(r.initActionMustUse) > 0 {
+		var mustUseFiltered []*LoopAction
+		for _, v := range filteredValues {
+			if slices.Contains(r.initActionMustUse, v.ActionType) {
+				mustUseFiltered = append(mustUseFiltered, v)
+			}
+		}
+		if len(mustUseFiltered) > 0 {
+			log.Infof("applied init action must-use list: %v, filtered from %d to %d actions",
+				r.initActionMustUse, len(filteredValues), len(mustUseFiltered))
+			filteredValues = mustUseFiltered
+		} else {
+			log.Warnf("init action must-use list %v did not match any available actions, keeping all", r.initActionMustUse)
+		}
+	}
+
+	// Mark init constraints as applied after first schema generation
+	if !r.initActionApplied && (len(r.initActionMustUse) > 0 || len(r.initActionDisabled) > 0) {
+		r.initActionApplied = true
+	}
+
+	schema := buildSchema(filteredValues...)
+	return schema, nil
+}
+
+func (r *ReActLoop) generateLoopPrompt(
+	nonce string,
+	userInput string,
+	memory string,
+	operator *LoopActionHandlerOperator,
+) (string, error) {
+	background, infos, err := r.getRenderInfo()
+	if err != nil {
+		return "", utils.Wrap(err, "get basic prompt info failed")
+	}
+	schema, err := r.generateSchemaString(operator.disallowLoopExit)
+	if err != nil {
+		return "", err
+	}
+
+	var persistent string
+	if r.persistentInstructionProvider != nil {
+		persistent, err = r.persistentInstructionProvider(r, nonce)
+		if err != nil {
+			return "", utils.Wrap(err, "build persistent context failed")
+		}
+	}
+
+	var outputExample string
+	if r.reflectionOutputExampleProvider != nil {
+		outputExample, err = r.reflectionOutputExampleProvider(r, nonce)
+		if err != nil {
+			return "", utils.Wrap(err, "build output example failed")
+		}
+	}
+
+	var reactiveData string
+	if r.reactiveDataBuilder != nil {
+		reactiveData, err = r.reactiveDataBuilder(r, operator.GetFeedback(), nonce)
+		if err != nil {
+			return "", utils.Wrap(err, "build reactive data failed")
+		}
+		if reactiveData != "" {
+			utils.Debug(func() {
+				fmt.Println("---------- Reactive Data ----------")
+				fmt.Println(reactiveData)
+				fmt.Println("---------- Reactive Data ----------")
+			})
+		}
+	}
+
+	// Render skills context if the manager is available
+	var skillsContext string
+	if r.skillsContextManager != nil {
+		skillsContext = r.skillsContextManager.Render(nonce)
+	}
+
+	// Render extra capabilities discovered via intent recognition
+	var extraCapabilities string
+	if r.extraCapabilities != nil && r.extraCapabilities.HasCapabilities() {
+		extraCapabilities = r.extraCapabilities.Render(nonce)
+	}
+
+	var sessionEvidence string
+	if evidenceContent := r.config.GetSessionEvidenceRendered(); evidenceContent != "" {
+		sessionEvidence, err = utils.RenderTemplate(sessionEvidenceTemplate, map[string]any{
+			"Nonce":    nonce,
+			"Evidence": evidenceContent,
+		})
+		if err != nil {
+			log.Warnf("render session evidence template failed: %v", err)
+			sessionEvidence = ""
+		}
+	}
+
+	// Append CACHE_TOOL_CALL block only when summary is non-empty
+	if tm := r.config.GetAiToolManager(); tm != nil && tm.HasRecentlyUsedTools() {
+		r.syncRecentToolParamAITagFields(tm.GetRecentToolParamNames())
+		if r.disableDirectlyCallTool {
+			reactiveData += renderRecentToolRoutingHintRequireToolOnly(nonce)
+		} else {
+			reactiveData += renderRecentToolRoutingHint(nonce)
+		}
+		if summary := tm.GetRecentToolsSummary(tm.GetRecentToolCacheMaxTokens(), nonce); summary != "" {
+			cacheBlock := utils.MustRenderTemplate(`
+<|CACHE_TOOL_CALL_{{ .Nonce }}>
+{{ .Summary }}
+<|CACHE_TOOL_CALL_END_{{ .Nonce }}>
+			`, map[string]interface{}{
+				"Nonce":   nonce,
+				"Summary": summary,
+			})
+			reactiveData += cacheBlock
+		}
+	}
+
+	infos["InjectedMemory"] = memory
+	infos["ReactiveData"] = reactiveData
+	infos["Background"] = background
+	infos["PersistentContext"] = persistent
+	infos["OutputExample"] = outputExample
+	infos["SkillsContext"] = skillsContext
+	infos["ExtraCapabilities"] = extraCapabilities
+	infos["SessionEvidence"] = sessionEvidence
+	infos["Nonce"] = nonce
+	infos["UserQuery"] = userInput
+	infos["Schema"] = schema
+
+	sections := buildPromptSections(
+		infos,
+		userInput,
+		persistent,
+		skillsContext,
+		reactiveData,
+		memory,
+		schema,
+		outputExample,
+		extraCapabilities,
+		sessionEvidence,
+	)
+	prompt, err := utils.RenderTemplate(coreTemplate, infos)
+	if err != nil {
+		return "", utils.Wrap(err, "render loop prompt template failed")
+	}
+	observation := buildPromptObservation(r.loopName, nonce, prompt, sections)
+	r.SetLastPromptObservation(observation)
+	status := observation.BuildStatus(1 * 1024)
+	r.SetLastPromptObservationStatus(status)
+	r.emitPromptObservationStatus(status)
+	if r.isDebugModeEnabled() {
+		log.Infof("prompt section build report:\n%s", observation.RenderCLIReport(120))
+	}
+	return prompt, nil
+}
+
+func (r *ReActLoop) syncRecentToolParamAITagFields(paramNames []string) {
+	if r.aiTagFields == nil {
+		return
+	}
+	for _, paramName := range aicommon.FilterSupportedToolParamAITagNames(paramNames) {
+		paramName = strings.TrimSpace(paramName)
+		if paramName == "" {
+			continue
+		}
+		tagName := fmt.Sprintf("TOOL_PARAM_%s", paramName)
+		r.aiTagFields.Set(tagName, &LoopAITagField{
+			TagName:      tagName,
+			VariableName: aicommon.GetToolParamAITagActionKey(paramName),
+			AINodeId:     directlyCallToolParamsNodeID,
+			ContentType:  "default",
+		})
+	}
+}

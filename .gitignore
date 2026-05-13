@@ -70,3 +70,7 @@ tools/dist.zip
 *.map
 *.hot-update.*
 *.mp4
+*.tar
+ExcelCLI/db/
+ExcelCLI/target/
+ExcelCLI/report/

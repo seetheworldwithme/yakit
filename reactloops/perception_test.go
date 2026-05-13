@@ -1,0 +1,538 @@
+package reactloops
+
+import (
+	"context"
+	"io"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yaklang/yaklang/common/ai/aid/aicommon"
+	mockcfg "github.com/yaklang/yaklang/common/ai/aid/aicommon/mock"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool"
+	"github.com/yaklang/yaklang/common/ai/aid/aitool/buildinaitools"
+)
+
+type perceptionMidtermSchedulerTestInvoker struct {
+	*mockcfg.MockInvoker
+	scheduledSummary  string
+	scheduledTopics   []string
+	scheduledKeywords []string
+}
+
+func (i *perceptionMidtermSchedulerTestInvoker) InvokeSpeedPriorityLiteForge(ctx context.Context, actionName string, prompt string, outputs []aitool.ToolOption, opts ...aicommon.GeneralKVConfigOption) (*aicommon.Action, error) {
+	_ = ctx
+	_ = actionName
+	_ = prompt
+	_ = outputs
+	_ = opts
+	return aicommon.ExtractAction(`{
+		"@action": "perception",
+		"summary": "focused summary from perception",
+		"topics": ["http fuzzing"],
+		"keywords": ["header", "malformed"],
+		"changed": true,
+		"confidence": 0.92
+	}`, "perception")
+}
+
+func (i *perceptionMidtermSchedulerTestInvoker) ScheduleMidtermTimelineRecallFromPerception(summary string, topics []string, keywords []string) {
+	i.scheduledSummary = summary
+	i.scheduledTopics = append([]string{}, topics...)
+	i.scheduledKeywords = append([]string{}, keywords...)
+}
+
+type perceptionCapabilitySearchTestInvoker struct {
+	*mockcfg.MockInvoker
+	cfg aicommon.AICallerConfigIf
+}
+
+func (i *perceptionCapabilitySearchTestInvoker) GetConfig() aicommon.AICallerConfigIf {
+	return i.cfg
+}
+
+func (i *perceptionCapabilitySearchTestInvoker) InvokeSpeedPriorityLiteForge(ctx context.Context, actionName string, prompt string, outputs []aitool.ToolOption, opts ...aicommon.GeneralKVConfigOption) (*aicommon.Action, error) {
+	_ = ctx
+	_ = actionName
+	_ = prompt
+	_ = outputs
+	_ = opts
+	return aicommon.ExtractAction(`{
+		"@action": "perception",
+		"summary": "focused summary from perception",
+		"topics": ["http fuzzing"],
+		"keywords": ["header", "malformed"],
+		"changed": true,
+		"confidence": 0.92
+	}`, "perception")
+}
+
+type perceptionKnowledgeSearchTestInvoker struct {
+	*mockcfg.MockInvoker
+	cfg                    aicommon.AICallerConfigIf
+	selectedKnowledgeBase  []string
+	enhanceResult          string
+	compressedResult       string
+	lastEnhanceQuery       string
+	lastEnhancePlans       []string
+	lastEnhanceCollections []string
+	lastCompressTarget     int64
+	selectCalls            int
+}
+
+func (i *perceptionKnowledgeSearchTestInvoker) GetConfig() aicommon.AICallerConfigIf {
+	return i.cfg
+}
+
+func (i *perceptionKnowledgeSearchTestInvoker) InvokeSpeedPriorityLiteForge(ctx context.Context, actionName string, prompt string, outputs []aitool.ToolOption, opts ...aicommon.GeneralKVConfigOption) (*aicommon.Action, error) {
+	_ = ctx
+	_ = actionName
+	_ = prompt
+	_ = outputs
+	_ = opts
+	return aicommon.ExtractAction(`{
+		"@action": "perception",
+		"summary": "focused summary from perception",
+		"topics": ["http fuzzing"],
+		"keywords": ["header", "malformed"],
+		"changed": true,
+		"confidence": 0.92
+	}`, "perception")
+}
+
+func (i *perceptionKnowledgeSearchTestInvoker) SelectKnowledgeBase(ctx context.Context, originQuery string) (*aicommon.SelectedKnowledgeBaseResult, error) {
+	_ = ctx
+	_ = originQuery
+	i.selectCalls++
+	return aicommon.NewSelectedKnowledgeBaseResult("test selection", append([]string{}, i.selectedKnowledgeBase...)), nil
+}
+
+func (i *perceptionKnowledgeSearchTestInvoker) EnhanceKnowledgeGetterEx(ctx context.Context, userQuery string, enhancePlans []string, collections ...string) (string, error) {
+	_ = ctx
+	i.lastEnhanceQuery = userQuery
+	i.lastEnhancePlans = append([]string{}, enhancePlans...)
+	i.lastEnhanceCollections = append([]string{}, collections...)
+	return i.enhanceResult, nil
+}
+
+func (i *perceptionKnowledgeSearchTestInvoker) CompressLongTextWithDestination(ctx context.Context, input any, destination string, targetByteSize int64) (string, error) {
+	_ = ctx
+	_ = input
+	_ = destination
+	i.lastCompressTarget = targetByteSize
+	return i.compressedResult, nil
+}
+
+func TestTriggerPerception_SchedulesMidtermRecallSummary(t *testing.T) {
+	invoker := &perceptionMidtermSchedulerTestInvoker{
+		MockInvoker: mockcfg.NewMockInvoker(context.Background()),
+	}
+
+	loop := NewMinimalReActLoop(invoker.GetConfig(), invoker)
+	loop.loopName = "perception-midterm-test"
+	loop.perception = newPerceptionController(loop.periodicVerificationInterval)
+	loop.maxIterations = 100
+	loop.actionHistory = make([]*ActionRecord, 0)
+	loop.actionHistoryMutex = new(sync.Mutex)
+
+	state := loop.TriggerPerception(PerceptionTriggerForced, true)
+	require.NotNil(t, state)
+	require.Equal(t, "focused summary from perception", state.OneLinerSummary)
+	require.Equal(t, "focused summary from perception", invoker.scheduledSummary)
+	require.Equal(t, []string{"http fuzzing"}, invoker.scheduledTopics)
+	require.Equal(t, []string{"header", "malformed"}, invoker.scheduledKeywords)
+}
+
+func TestTriggerPerception_AppliesCapabilitySearchResultsToLoop(t *testing.T) {
+	tool, err := aitool.New(
+		"perception_tool",
+		aitool.WithDescription("tool discovered from perception"),
+		aitool.WithSimpleCallback(func(params aitool.InvokeParams, stdout io.Writer, stderr io.Writer) (any, error) {
+			return "ok", nil
+		}),
+	)
+	require.NoError(t, err)
+
+	toolManager := buildinaitools.NewToolManagerByToolGetter(
+		func() []*aitool.Tool { return []*aitool.Tool{tool} },
+		buildinaitools.WithExtendTools([]*aitool.Tool{tool}, true),
+	)
+
+	cfg := &aicommon.Config{
+		Ctx:                    context.Background(),
+		ContextProviderManager: aicommon.NewContextProviderManager(),
+		AiToolManager:          toolManager,
+	}
+	invoker := &perceptionCapabilitySearchTestInvoker{
+		MockInvoker: mockcfg.NewMockInvoker(context.Background()),
+		cfg:         cfg,
+	}
+
+	loop := NewMinimalReActLoop(cfg, invoker)
+	loop.loopName = "perception-capability-search-test"
+	loop.perception = newPerceptionController(perceptionDefaultIterationInterval)
+	loop.extraCapabilities = NewExtraCapabilitiesManager()
+	loop.maxIterations = 100
+	loop.actionHistory = make([]*ActionRecord, 0)
+	loop.actionHistoryMutex = new(sync.Mutex)
+
+	originalSearcher := perceptionCapabilitySearcher
+	perceptionCapabilitySearcher = func(r aicommon.AIInvokeRuntime, loop *ReActLoop, input CapabilitySearchInput) (*CapabilitySearchResult, error) {
+		require.Equal(t, "focused summary from perception", input.Query)
+		require.Contains(t, input.Queries, "http fuzzing")
+		require.Contains(t, input.Queries, "header")
+		require.Contains(t, input.Queries, "malformed")
+		return &CapabilitySearchResult{
+			SearchResultsMarkdown:   "### Matched Tools\n- perception_tool\n",
+			ContextEnrichment:       "### Recommended Capabilities\n- perception_tool\n",
+			MatchedToolNames:        []string{"perception_tool"},
+			RecommendedCapabilities: []string{"perception_tool"},
+		}, nil
+	}
+	defer func() {
+		perceptionCapabilitySearcher = originalSearcher
+	}()
+
+	state := loop.TriggerPerception(PerceptionTriggerForced, true)
+	require.NotNil(t, state)
+	require.Equal(t, "perception_tool", loop.Get("perception_matched_tool_names"))
+	require.Equal(t, "perception_tool", loop.Get("perception_recommended_capabilities"))
+	require.Contains(t, loop.Get("perception_capability_context_enrichment"), "perception_tool")
+	require.True(t, toolManager.IsRecentlyUsedTool("perception_tool"))
+
+	rendered := loop.extraCapabilities.Render("nonce")
+	require.Contains(t, rendered, "`perception_tool`")
+}
+
+func TestTriggerPerception_AppliesKnowledgeSearchResultsToLoop(t *testing.T) {
+	cfg := &aicommon.Config{
+		Ctx:                    context.Background(),
+		ContextProviderManager: aicommon.NewContextProviderManager(),
+	}
+	invoker := &perceptionKnowledgeSearchTestInvoker{
+		MockInvoker:           mockcfg.NewMockInvoker(context.Background()),
+		cfg:                   cfg,
+		selectedKnowledgeBase: []string{"security_kb"},
+		enhanceResult:         "raw knowledge result",
+		compressedResult:      "compressed knowledge result",
+	}
+
+	loop := NewMinimalReActLoop(cfg, invoker)
+	loop.loopName = "perception-knowledge-search-test"
+	loop.perception = newPerceptionController(perceptionDefaultIterationInterval)
+	loop.allowRAG = func() bool { return true }
+	loop.maxIterations = 100
+	loop.actionHistory = make([]*ActionRecord, 0)
+	loop.actionHistoryMutex = new(sync.Mutex)
+	loop.SetCurrentTask(aicommon.NewStatefulTaskBase("perception-knowledge-task", "help me fuzz this endpoint", context.Background(), cfg.GetEmitter(), true))
+	loop.RegisterPerceptionContextProvider()
+
+	originalKBLister := perceptionKnowledgeBaseNameLister
+	perceptionKnowledgeBaseNameLister = func() ([]string, error) {
+		return []string{"security_kb", "yaklang_docs"}, nil
+	}
+	defer func() {
+		perceptionKnowledgeBaseNameLister = originalKBLister
+	}()
+
+	state := loop.TriggerPerception(PerceptionTriggerForced, true)
+	require.NotNil(t, state)
+	require.Equal(t, "security_kb,yaklang_docs", loop.Get("perception_selected_knowledge_bases"))
+	require.Contains(t, loop.Get("perception_knowledge_query"), "focused summary from perception")
+	require.Contains(t, loop.Get("perception_knowledge_context"), "compressed knowledge result")
+	require.Equal(t, int64(perceptionKnowledgeMaxContextTokens), invoker.lastCompressTarget)
+	require.Equal(t, []string{"security_kb", "yaklang_docs"}, invoker.lastEnhanceCollections)
+	require.Equal(t, []string{"hypothetical_answer", "generalize_query", "split_query"}, invoker.lastEnhancePlans)
+	require.Equal(t, 0, invoker.selectCalls)
+
+	renderedDynamicContext := cfg.ContextProviderManager.Execute(cfg, cfg.GetEmitter())
+	require.Contains(t, renderedDynamicContext, "## Perception Knowledge")
+	require.Contains(t, renderedDynamicContext, "security_kb")
+	require.Contains(t, renderedDynamicContext, "yaklang_docs")
+	require.Contains(t, renderedDynamicContext, "compressed knowledge result")
+}
+
+func TestTriggerPerception_LimitsKnowledgeContextTo15K(t *testing.T) {
+	oversizedKnowledge := strings.Repeat("knowledge ", perceptionKnowledgeMaxContextTokens+2048)
+
+	cfg := &aicommon.Config{
+		Ctx:                    context.Background(),
+		ContextProviderManager: aicommon.NewContextProviderManager(),
+	}
+	invoker := &perceptionKnowledgeSearchTestInvoker{
+		MockInvoker:           mockcfg.NewMockInvoker(context.Background()),
+		cfg:                   cfg,
+		selectedKnowledgeBase: []string{"security_kb"},
+		enhanceResult:         "raw knowledge result",
+		compressedResult:      oversizedKnowledge,
+	}
+
+	loop := NewMinimalReActLoop(cfg, invoker)
+	loop.loopName = "perception-knowledge-size-limit-test"
+	loop.perception = newPerceptionController(perceptionDefaultIterationInterval)
+	loop.allowRAG = func() bool { return true }
+	loop.maxIterations = 100
+	loop.actionHistory = make([]*ActionRecord, 0)
+	loop.actionHistoryMutex = new(sync.Mutex)
+	loop.SetCurrentTask(aicommon.NewStatefulTaskBase("perception-knowledge-limit-task", "help me fuzz this endpoint", context.Background(), cfg.GetEmitter(), true))
+
+	state := loop.TriggerPerception(PerceptionTriggerForced, true)
+	require.NotNil(t, state)
+
+	knowledgeContext := loop.Get("perception_knowledge_context")
+	require.NotEmpty(t, knowledgeContext)
+	require.LessOrEqual(t, aicommon.MeasureTokens(knowledgeContext), perceptionKnowledgeMaxContextTokens)
+}
+
+func TestHashTopics_DeterministicAndOrderIndependent(t *testing.T) {
+	h1 := hashTopics([]string{"SQL Injection", "WAF Bypass"})
+	h2 := hashTopics([]string{"WAF Bypass", "SQL Injection"})
+	if h1 != h2 {
+		t.Fatalf("hashTopics should be order-independent, got %s vs %s", h1, h2)
+	}
+	h3 := hashTopics([]string{"SQL Injection", "XSS"})
+	if h1 == h3 {
+		t.Fatalf("different topic sets should produce different hashes")
+	}
+}
+
+func TestPerceptionState_ShouldUpdate_ForcedAlwaysTrue(t *testing.T) {
+	prev := &PerceptionState{
+		Topics:         []string{"SQL Injection"},
+		PrevTopicsHash: hashTopics([]string{"SQL Injection"}),
+	}
+
+	newState := &PerceptionState{
+		Topics:      []string{"SQL Injection"},
+		Changed:     false,
+		LastTrigger: PerceptionTriggerForced,
+	}
+	if !prev.ShouldUpdate(newState) {
+		t.Fatal("forced trigger should always update")
+	}
+
+	newState.LastTrigger = PerceptionTriggerSpinDetected
+	if !prev.ShouldUpdate(newState) {
+		t.Fatal("spin_detected trigger should always update")
+	}
+
+	newState.LastTrigger = PerceptionTriggerLoopSwitch
+	if !prev.ShouldUpdate(newState) {
+		t.Fatal("loop_switch trigger should always update")
+	}
+}
+
+func TestPerceptionState_ShouldUpdate_UnchangedSkips(t *testing.T) {
+	prev := &PerceptionState{
+		Topics:         []string{"SQL Injection"},
+		PrevTopicsHash: hashTopics([]string{"SQL Injection"}),
+	}
+
+	newState := &PerceptionState{
+		Topics:      []string{"SQL Injection"},
+		Changed:     false,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+	if prev.ShouldUpdate(newState) {
+		t.Fatal("unchanged non-forced perception should not update")
+	}
+}
+
+func TestPerceptionState_ShouldUpdate_ChangedWithNewTopics(t *testing.T) {
+	prev := &PerceptionState{
+		Topics:         []string{"SQL Injection"},
+		PrevTopicsHash: hashTopics([]string{"SQL Injection"}),
+	}
+
+	newState := &PerceptionState{
+		Topics:      []string{"SQL Injection", "WAF Bypass"},
+		Changed:     true,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+	if !prev.ShouldUpdate(newState) {
+		t.Fatal("changed perception with new topics should update")
+	}
+}
+
+func TestPerceptionState_ShouldUpdate_ChangedButSameTopicsHash(t *testing.T) {
+	prev := &PerceptionState{
+		Topics:         []string{"SQL Injection"},
+		PrevTopicsHash: hashTopics([]string{"SQL Injection"}),
+	}
+
+	newState := &PerceptionState{
+		Topics:      []string{"SQL Injection"},
+		Changed:     true,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+	if prev.ShouldUpdate(newState) {
+		t.Fatal("changed=true but same topic hash should not update")
+	}
+}
+
+func TestPerceptionState_ShouldUpdate_NilNewState(t *testing.T) {
+	prev := &PerceptionState{Topics: []string{"test"}}
+	if prev.ShouldUpdate(nil) {
+		t.Fatal("nil new state should not trigger update")
+	}
+}
+
+func TestPerceptionController_IntervalThrottling(t *testing.T) {
+	pc := newPerceptionController(perceptionDefaultIterationInterval)
+
+	state1 := &PerceptionState{
+		Topics:      []string{"Topic A"},
+		Changed:     true,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+	pc.applyResult(state1)
+
+	if pc.shouldSkipDueToInterval() {
+		// just applied, interval has not elapsed; it should skip
+	}
+	if !pc.shouldSkipDueToInterval() {
+		t.Fatal("immediately after apply, should skip due to interval")
+	}
+}
+
+func TestPerceptionController_ExponentialBackoff(t *testing.T) {
+	pc := newPerceptionController(perceptionDefaultIterationInterval)
+	pc.currentInterval = 10 * time.Millisecond
+	pc.minInterval = 10 * time.Millisecond
+	pc.maxInterval = 100 * time.Millisecond
+
+	unchanged := &PerceptionState{
+		Topics:      []string{"Same"},
+		Changed:     false,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+
+	// First call initializes current (consecutiveUnchanged stays 0).
+	// Second and third calls are "unchanged" increments.
+	pc.applyResult(unchanged)
+	pc.applyResult(unchanged)
+	pc.applyResult(unchanged)
+	if pc.consecutiveUnchanged < 2 {
+		t.Fatalf("expected at least 2 consecutive unchanged, got %d", pc.consecutiveUnchanged)
+	}
+	if pc.currentInterval <= 10*time.Millisecond {
+		t.Fatalf("interval should have doubled, got %v", pc.currentInterval)
+	}
+}
+
+func TestPerceptionController_IntervalResetOnChange(t *testing.T) {
+	pc := newPerceptionController(perceptionDefaultIterationInterval)
+	pc.currentInterval = 10 * time.Millisecond
+	pc.minInterval = 10 * time.Millisecond
+
+	unchanged := &PerceptionState{
+		Topics:      []string{"Same"},
+		Changed:     false,
+		LastTrigger: PerceptionTriggerPostAction,
+	}
+	pc.applyResult(unchanged)
+	pc.applyResult(unchanged)
+	pc.applyResult(unchanged)
+
+	changed := &PerceptionState{
+		Topics:      []string{"New Topic"},
+		Changed:     true,
+		LastTrigger: PerceptionTriggerForced,
+	}
+	pc.applyResult(changed)
+
+	if pc.consecutiveUnchanged != 0 {
+		t.Fatalf("change should reset consecutiveUnchanged, got %d", pc.consecutiveUnchanged)
+	}
+	if pc.currentInterval != pc.minInterval {
+		t.Fatalf("change should reset interval to min, got %v", pc.currentInterval)
+	}
+}
+
+func TestPerceptionController_ShouldTriggerOnIteration(t *testing.T) {
+	pc := newPerceptionController(perceptionDefaultIterationInterval)
+	pc.iterationTriggerInterval = 2
+
+	if pc.shouldTriggerOnIteration(0) {
+		t.Fatal("iteration 0 should not trigger")
+	}
+	if pc.shouldTriggerOnIteration(1) {
+		t.Fatal("iteration 1 should not trigger with interval=2")
+	}
+	if !pc.shouldTriggerOnIteration(2) {
+		t.Fatal("iteration 2 should trigger with interval=2")
+	}
+	if pc.shouldTriggerOnIteration(3) {
+		t.Fatal("iteration 3 should not trigger with interval=2")
+	}
+	if !pc.shouldTriggerOnIteration(4) {
+		t.Fatal("iteration 4 should trigger with interval=2")
+	}
+}
+
+func TestPerceptionController_EpochIncrements(t *testing.T) {
+	pc := newPerceptionController(perceptionDefaultIterationInterval)
+	s1 := &PerceptionState{Topics: []string{"A"}, Changed: true, LastTrigger: PerceptionTriggerForced}
+	pc.applyResult(s1)
+	if pc.getCurrent().Epoch != 1 {
+		t.Fatalf("expected epoch 1, got %d", pc.getCurrent().Epoch)
+	}
+
+	s2 := &PerceptionState{Topics: []string{"B"}, Changed: true, LastTrigger: PerceptionTriggerForced}
+	pc.applyResult(s2)
+	if pc.getCurrent().Epoch != 2 {
+		t.Fatalf("expected epoch 2, got %d", pc.getCurrent().Epoch)
+	}
+}
+
+func TestPerceptionState_FormatForContext(t *testing.T) {
+	state := &PerceptionState{
+		Topics:          []string{"SQL Injection", "WAF Bypass"},
+		Keywords:        []string{"sqlmap", "union select"},
+		OneLinerSummary: "Attempting SQL injection via UNION SELECT",
+		Epoch:           3,
+		LastUpdateAt:    time.Now().Add(-30 * time.Second),
+	}
+	output := state.FormatForContext()
+	if !strings.Contains(output, "Current Perception") {
+		t.Fatal("expected header in context output")
+	}
+	if !strings.Contains(output, "SQL Injection") {
+		t.Fatal("expected topics in context output")
+	}
+	if !strings.Contains(output, "sqlmap") {
+		t.Fatal("expected keywords in context output")
+	}
+	if !strings.Contains(output, "Attempting SQL injection") {
+		t.Fatal("expected summary in context output")
+	}
+}
+
+func TestPerceptionState_FormatForContext_Nil(t *testing.T) {
+	var state *PerceptionState
+	if state.FormatForContext() != "" {
+		t.Fatal("nil state should produce empty string")
+	}
+}
+
+func TestPerceptionState_FormatForContext_TokenLimit(t *testing.T) {
+	topics := make([]string, 100)
+	keywords := make([]string, 100)
+	for i := range topics {
+		topics[i] = strings.Repeat("topic_", 20)
+		keywords[i] = strings.Repeat("keyword_", 20)
+	}
+	state := &PerceptionState{
+		Topics:          topics,
+		Keywords:        keywords,
+		OneLinerSummary: strings.Repeat("very long summary ", 50),
+		Epoch:           1,
+		LastUpdateAt:    time.Now(),
+	}
+	output := state.FormatForContext()
+	if output == "" {
+		t.Fatal("expected non-empty output even when truncated")
+	}
+}

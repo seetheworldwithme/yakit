@@ -1070,7 +1070,7 @@ export const StartupPage: React.FC = () => {
             )}
           </div>
           <div className={styles['startup-desc']}>
-            {isCommunityMemfit() || isMemfit() ? '为经侦智能而生' : '为网络安全而生'}
+            {isCommunityMemfit() || isMemfit() ? '为公安智能而生' : '为网络安全而生'}
           </div>
         </div>
         <YaklangEngineWatchDog

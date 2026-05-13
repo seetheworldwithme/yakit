@@ -325,7 +325,7 @@ const AIChatWelcome: React.FC<AIChatWelcomeProps> = React.memo(
           <div className={styles['content-absolute']}>
             <div className={styles['input-wrapper']}>
               <div className={styles['input-heard']}>
-                <div className={styles['title']}>经吾卫 AI Agent</div>
+                <div className={styles['title']}>海升 AI Agent</div>
                 <div className={styles['subtitle']}>{t('AIChatWelcome.WelcomeHomeSubTitle')}</div>
               </div>
               <div className={classNames(styles['input-body-wrapper'])}>

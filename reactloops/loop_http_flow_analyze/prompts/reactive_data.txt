@@ -1,0 +1,71 @@
+## Task Context
+
+<|USER_INPUT_{{ .Nonce }}|>
+{{ .UserInput }}
+<|USER_INPUT_END_{{ .Nonce }}|>
+
+{{ if .Findings }}
+### Accumulated Findings (FINDINGS)
+
+These are discoveries accumulated during analysis. They persist across iterations and help avoid redundant searches. When you discover new valuable information, use `output_findings` or include a `findings` field to append to this document.
+
+<|FINDINGS_{{ .Nonce }}|>
+{{ .Findings }}
+<|FINDINGS_END_{{ .Nonce }}|>
+{{ end }}
+
+{{ if .RecentActionsSummary }}
+### Recent Action History
+
+Review these to avoid repeating searches with identical parameters. Each entry shows the action name, search parameters, matcher details, and result summary.
+
+<|RECENT_ACTIONS_{{ .Nonce }}|>
+{{ .RecentActionsSummary }}
+<|RECENT_ACTIONS_END_{{ .Nonce }}|>
+{{ end }}
+
+{{ if .LastQuerySummary }}
+### Last Query Summary
+
+<|LAST_QUERY_{{ .Nonce }}|>
+{{ .LastQuerySummary }}
+<|LAST_QUERY_END_{{ .Nonce }}|>
+{{ end }}
+
+{{ if .LastMatchSummary }}
+### Last Match Summary
+
+<|LAST_MATCH_{{ .Nonce }}|>
+{{ .LastMatchSummary }}
+<|LAST_MATCH_END_{{ .Nonce }}|>
+{{ end }}
+
+{{ if .CurrentFlow }}
+### Current Flow Detail
+
+<|CURRENT_FLOW_{{ .Nonce }}|>
+{{ .CurrentFlow }}
+<|CURRENT_FLOW_END_{{ .Nonce }}|>
+{{ end }}
+
+{{ if .FeedbackMessages }}
+### Feedback Messages
+
+<|FEEDBACK_{{ .Nonce }}|>
+{{ .FeedbackMessages }}
+<|FEEDBACK_END_{{ .Nonce }}|>
+{{ end }}
+
+---
+## Decision Guide
+
+Think about the next step based on the above context:
+
+1. **Language**: You MUST respond in the same language as the user's query above. Chinese query → Chinese response. English query → English response.
+2. **Findings check**: Have you discovered something new that should be recorded to FINDINGS via `output_findings`?
+3. **Search precision**: Are search conditions specific enough? Can you add more filters (URL, status, method, keyword) to narrow results?
+4. **Avoid repetition**: Check Recent Action History. Do not repeat the same search with identical parameters.
+5. **Deep dive vs. broaden**: Should you inspect a specific flow in detail, or broaden the search with different conditions?
+6. **Scope discipline**: This mode is for traffic analysis only. Do not attempt to modify packets, send requests, or perform fuzz testing.{{ if .IsLastIteration }}
+
+**WARNING: This is the LAST iteration.** You must provide a final answer now using `directly_answer`. Summarize all findings and answer the user's question based on collected evidence.{{ end }}

@@ -237,7 +237,7 @@ const MemfitFontLogoSvg = () => (
           fontFamily="system-ui, sans-serif"
           fontWeight="bold"
         >
-          经吾卫
+          海升
         </text>
       </g>
     </g>

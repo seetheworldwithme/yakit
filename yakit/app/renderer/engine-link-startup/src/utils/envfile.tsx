@@ -27,7 +27,7 @@ export const getReleaseEditionName = () => {
     case PRODUCT_RELEASE_EDITION.IRifyEnpriTrace:
       return 'IRify-EnpriTrace'
     case PRODUCT_RELEASE_EDITION.MEMFIT:
-      return '经吾卫 AI'
+      return '海升 AI'
     default:
       return 'Yakit'
   }
