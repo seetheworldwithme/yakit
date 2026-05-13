@@ -74,3 +74,4 @@ tools/dist.zip
 ExcelCLI/db/
 ExcelCLI/target/
 ExcelCLI/report/
+test_data/

@@ -154,14 +154,190 @@ excelcli tax invoices tax001.db --taxpayer "某某公司" --min-amount 100000 --
 
 涉税分析统一操作以下标准表：`tax_invoices`、`seller_invoice`、`buyer_invoice`、`tax_registrations` 等。
 
+### bank_transactions 标准表列名（必须掌握）
+
+`normalize` 完成后，原始中文列名会被映射为以下**英文标准列名**。后续所有 `excelcli query --sql` 查询必须使用这些列名，**不要使用原始中文列名**，否则会报 `no such column` 错误。
+
+| 标准列名 | 含义 | 对应原始字段 | 备注 |
+| --- | --- | --- | --- |
+| `id` | 自增主键 | - | INTEGER PK |
+| `case_id` | 案件编号 | _case_id | TEXT |
+| `source_file` | 来源文件 | _source_file | TEXT |
+| `sheet_name` | 工作表名 | _sheet_name | TEXT |
+| `row_no` | 原始行号 | _row_no | INTEGER |
+| `bank_name` | 银行名称 | - | TEXT, 可能为空 |
+| `account_no` | 交易卡号 | 交易卡号 | TEXT |
+| `account_name` | 交易户名 | 交易户名 | TEXT |
+| `account_id_no` | 交易证件号 | 交易证件号 | TEXT, 可能为空 |
+| `account_type` | 账户类型 | - | TEXT, 可能为空 |
+| `txn_time` | 交易时间 | 交易时间 | TEXT, 格式 YYYY-MM-DD HH:MM:SS |
+| `direction` | 收付方向 | 收付标志 | TEXT, 值为 "in"/"out" |
+| `amount` | 交易金额 | 交易金额 | REAL |
+| `balance` | 交易余额 | 交易余额 | REAL |
+| `counterparty_account` | 对手账卡号 | 交易对手账卡号 | TEXT, 可能为空字符串 |
+| `counterparty_name` | 对手户名 | 对手户名 | TEXT, 可能为空字符串 |
+| `counterparty_id_no` | 对手证件号 | 对手证件号 | TEXT, 可能为空 |
+| `counterparty_bank` | 对手开户银行 | 对手开户银行 | TEXT, 可能为空 |
+| `summary` | 摘要说明 | 摘要说明 | TEXT |
+| `channel` | 现金标志/交易渠道 | 现金标志 | TEXT, 常见值 "现金交易"/"其它" |
+| `location` | 交易发生地 | 交易发生地 | TEXT, 可能为空 |
+| `ip` | IP地址 | IP地址 | TEXT, 可能为空 |
+| `mac` | MAC地址 | MAC地址 | TEXT, 可能为空 |
+| `currency` | 交易币种 | 交易币种 | TEXT, 可能为空 |
+| `txn_serial_no` | 交易流水号 | 交易流水号 | TEXT, 可能为空 |
+| `voucher_no` | 凭证号 | 凭证号 | TEXT, 可能为空 |
+| `is_success` | 是否成功 | 交易是否成功 | INTEGER, 1=成功 |
+| `raw_table` | 原始表名 | - | TEXT |
+| `raw_row_id` | 原始行ID | - | INTEGER |
+| `dedup_key` | 去重键 | - | TEXT |
+
+**关键易错点**：
+- 交易时间列名是 `txn_time`，不是 `transaction_time`
+- 收付方向列名是 `direction`，不是 `收付标志`，且值为 `"in"` / `"out"`（不是"进"/"出"）
+- 现金标志列名是 `channel`，不是 `cash_flag`
+- 余额列名是 `balance`，不是 `transaction_balance`
+- 对手账号列名是 `counterparty_account`，空值为空字符串 `""`，不是 NULL
+- `amount` 为 REAL 类型，可以直接用于数值计算和聚合
+- 无对手信息的交易：`counterparty_account = ""` 且 `counterparty_name = ""`
+
+**normalize 后的必备步骤**：执行 `PRAGMA table_info(bank_transactions)` 确认实际列名，避免 SQL 报错：
+
+```bash
+excelcli query <DB> --sql "PRAGMA table_info(bank_transactions)" --json
+```
+
+### 完整分析所需的 SQL 查询集（可直接复用）
+
+以下是在 `analyze fund` 基础上，需要通过 `excelcli query` 补充执行的 SQL 查询。**注意：所有查询均使用上方标准列名**。
+
+**1. 年度交易趋势（含对手主体数）**
+```sql
+SELECT strftime('%Y', txn_time) as year, direction,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total,
+       COUNT(DISTINCT counterparty_account) as counterparties
+FROM bank_transactions WHERE amount > 0
+GROUP BY year, direction ORDER BY year, direction
+```
+
+**2. 现金交易统计**
+```sql
+SELECT channel, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE channel IS NOT NULL AND channel != ''
+GROUP BY channel, direction ORDER BY channel, direction
+```
+
+**3. 余额特征**
+```sql
+SELECT ROUND(MAX(balance),2) as max_balance,
+       ROUND(MIN(balance),2) as min_balance,
+       ROUND(AVG(balance),2) as avg_balance
+FROM bank_transactions WHERE balance IS NOT NULL
+```
+
+**4. 最终余额**
+```sql
+SELECT ROUND(balance,2) as final_balance FROM bank_transactions ORDER BY id DESC LIMIT 1
+```
+
+**5. 同名账户识别（对手户名 = 主体户名）**
+```sql
+SELECT counterparty_account, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_name = (SELECT account_name FROM bank_transactions LIMIT 1)
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account, direction ORDER BY total DESC
+```
+
+**6. 双向交易对手**
+```sql
+SELECT counterparty_account,
+       COUNT(DISTINCT direction) as dir_cnt,
+       GROUP_CONCAT(DISTINCT direction) as directions,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account HAVING dir_cnt > 1 ORDER BY total DESC
+```
+
+**7. 自身转账（对手账号 = 主体账号）**
+```sql
+SELECT direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE counterparty_account = account_no
+GROUP BY direction
+```
+
+**8. 交易天数统计**
+```sql
+SELECT COUNT(DISTINCT date(txn_time)) as trading_days FROM bank_transactions WHERE amount > 0
+```
+
+**9. 整万交易统计**
+```sql
+SELECT COUNT(*) as cnt FROM bank_transactions
+WHERE CAST(amount AS INTEGER) = amount AND CAST(amount AS INTEGER) % 10000 = 0 AND amount >= 10000
+```
+
+**10. 快进快出天数（同日进出均>5万）**
+```sql
+SELECT date(txn_time) as d,
+       SUM(CASE WHEN direction='in' THEN amount ELSE 0 END) as in_amt,
+       SUM(CASE WHEN direction='out' THEN amount ELSE 0 END) as out_amt
+FROM bank_transactions WHERE amount > 0
+GROUP BY d HAVING in_amt > 50000 AND out_amt > 50000
+```
+
+**11. 可疑关键词交易**
+```sql
+SELECT counterparty_account, counterparty_name, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE summary LIKE '%换汇%' OR summary LIKE '%换钱%' OR summary LIKE '%换币%'
+   OR summary LIKE '%兑换%' OR summary LIKE '%换美金%'
+GROUP BY counterparty_account, counterparty_name, direction
+```
+
+**12. 非工作时间交易（22:00-08:00）**
+```sql
+SELECT COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE CAST(strftime('%H', txn_time) AS INTEGER) >= 22
+   OR CAST(strftime('%H', txn_time) AS INTEGER) < 8
+```
+
+**13. 同名多户控制人（同一户名控制多个账户）**
+```sql
+SELECT counterparty_name, COUNT(DISTINCT counterparty_account) as accounts,
+       GROUP_CONCAT(DISTINCT counterparty_account) as account_list
+FROM bank_transactions
+WHERE counterparty_name IS NOT NULL AND counterparty_name != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_name HAVING accounts >= 2 ORDER BY accounts DESC
+```
+
+**14. 收入/支出端对手账户数**
+```sql
+SELECT direction, COUNT(DISTINCT CASE WHEN counterparty_account != '' AND counterparty_account != account_no THEN counterparty_account END) as unique_counterparties
+FROM bank_transactions GROUP BY direction
+```
+
+**15. 对手开户银行分布**
+```sql
+SELECT counterparty_bank, COUNT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_bank IS NOT NULL AND counterparty_bank != ''
+GROUP BY counterparty_bank ORDER BY accounts DESC
+```
+
 ### 重要注意事项
 
 1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程
 2. **必须先 inspect 再分析**：不同银行的数据格式差异很大，先 inspect 确认列名和数据格式
 3. **必须先 map 再 normalize**：normalize 依赖映射文件，map 生成的 JSON 文件是桥梁
-4. **标准化后使用标准表名**：银行流水统一使用 `bank_transactions` 表，涉税数据使用对应标准表
-5. **复杂统计用 query**：`analyze fund` 提供基础分析，自定义统计指标用 `excelcli query --sql` 完成
-6. **数据异常排查**：如果分析结果异常，先用 `excelcli inspect` 核对列名和样例数据，再检查映射文件是否正确，必要时调整映射后重新 `normalize`
+4. **标准化后使用英文标准列名**：`bank_transactions` 表使用上方列名对照表中的英文名，SQL 查询中禁止使用中文列名
+5. **normalize 后先查 PRAGMA**：执行 `PRAGMA table_info(bank_transactions)` 确认实际列名，然后再写 SQL 查询，避免反复报错
+6. **复杂统计用 query**：`analyze fund` 提供基础分析（overview、月度趋势、金额分布、TOP来源/去向、集中度、部分可疑指标），自定义统计指标用上方 SQL 查询集补充
+7. **数据异常排查**：如果分析结果异常，先用 `excelcli inspect` 核对列名和样例数据，再检查映射文件是否正确，必要时调整映射后重新 `normalize`
+8. **SQL 查询可并行**：上述15条 SQL 查询相互独立，可以分批并行执行（每批3-4条），提高分析效率
 
 ---
 
