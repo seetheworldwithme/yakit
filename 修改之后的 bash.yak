@@ -1,0 +1,507 @@
+__DESC__ = "跨平台Shell命令执行工具，支持bash/cmd/powershell，具备超时控制和输出捕获。bash 与 powershell 脚本默认都不启用命令追踪，不默认回显执行中的命令，适用于系统管理、自动化脚本和运维操作。"
+__VERBOSE_NAME__ = "跨平台Shell命令执行工具"
+__KEYWORDS__ = "shell command,bash,cmd,powershell,命令行工具,系统管理,自动化脚本,运维工具,shell script,command execution,系统操作,终端命令,system administration,automation tools,操作系统,跨平台命令,timeout,超时控制,excelcli,fund analysis,资金分析,经侦分析,SQL查询,数据分析"
+
+__USAGE__ = <<<USAGE_BLOCK
+Cross-Platform Shell Command Execution Tool - Usage Guide for AI Parameter Generation
+
+## Parameters
+
+Required:
+  command   (string)  The shell command or script to execute.
+                      Single-line commands: put directly in JSON params.command
+                      Multi-line scripts: MUST use AITAG format for the command parameter
+
+Optional:
+  timeout   (int)     *** CRITICAL: YOU MUST ALWAYS SET THIS PARAMETER ***
+                      Max execution time in seconds. Process is KILLED when timeout is reached.
+                      Default: 60 (but DO NOT rely on the default -- always set explicitly!)
+                      If the command hangs or runs forever, the entire tool call blocks.
+                      Recommended values:
+                        - Quick queries (ls, cat, echo, uname, whoami): 10-15
+                        - File operations (find, grep, du): 15-30
+                        - Network commands (curl, wget, ping -c N): 30-60
+                        - Build/compile/install (make, go build, pip install): 120-300
+  shell     (string)  Shell type: "bash" | "cmd" | "powershell"
+                      Default: auto-detect (linux/mac -> bash, windows -> cmd)
+
+## Execution Characteristics
+
+bash:  set -e (exit on error), does not enable command trace by default
+cmd:   executes via "cmd /c", backslashes MUST be escaped: "C:\\Users"
+powershell: $ErrorActionPreference="Stop", does not enable trace by default
+
+## Safety Rules
+
+FORBIDDEN: find / , ls -R / , sudo, su, chmod 777, rm -rf /, access to /etc/shadow
+MUST have limits: ping -c N, find ... -maxdepth N, tail -n N (never -f), pipe | head -N
+
+## Few-Shot Examples
+
+Replace {NONCE} with the actual nonce from the response format section.
+
+### Example 1: Simple one-line command (JSON params, explicit timeout)
+
+User intent: "Check disk space"
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "check_disk_space",
+  "params": {
+    "command": "df -h",
+    "timeout": 10
+  }
+}
+```
+
+### Example 2: Multi-line diagnostic script (AITAG for command)
+
+User intent: "Show system status: OS, memory, and top processes"
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "system_status_check",
+  "params": {
+    "timeout": 20
+  }
+}
+```
+
+<|TOOL_PARAM_command_{NONCE}|>
+echo "=== OS Info ==="
+uname -a
+echo ""
+echo "=== Memory ==="
+free -h 2>/dev/null || vm_stat 2>/dev/null || echo "Memory info not available"
+echo ""
+echo "=== Top 5 CPU Processes ==="
+ps aux --sort=-%cpu 2>/dev/null | head -6 || ps aux | head -6
+<|TOOL_PARAM_command_END_{NONCE}|>
+
+### Example 3: File search with safety limits (AITAG for command)
+
+User intent: "Find large log files in /var/log"
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "find_large_logs",
+  "params": {
+    "timeout": 20
+  }
+}
+```
+
+<|TOOL_PARAM_command_{NONCE}|>
+echo "Searching for .log files > 10MB (max depth 3)..."
+find /var/log -name "*.log" -size +10M -maxdepth 3 -type f -exec ls -lh {} \; 2>/dev/null | head -20
+echo ""
+du -sh /var/log 2>/dev/null || echo "Cannot access /var/log"
+<|TOOL_PARAM_command_END_{NONCE}|>
+
+### Example 4: excelcli 资金分析工作流（经侦专用）
+
+IMPORTANT: 当已加载的 SKILL（如 fund-analysis）明确要求使用 excelcli 时，
+**必须优先遵循 SKILL 指令**，禁止自行编写 Python/pandas 脚本替代。
+excelcli 提供完整的 导入 → 检查 → 映射 → 标准化 → 分析 工作流。
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "excelcli_fund_analysis",
+  "params": {
+    "timeout": 60
+  }
+}
+```
+
+<|TOOL_PARAM_command_{NONCE}|>
+echo "=== Step 1: 导入 Excel 数据 ==="
+excelcli import 交易流水.xlsx --case-id case001 --db case001.db
+
+echo "=== Step 2: 检查表结构 ==="
+excelcli inspect case001.db --json --sample 5
+
+echo "=== Step 3: 生成字段映射 ==="
+excelcli map case001.db --out mapping.json
+
+echo "=== Step 4: 数据标准化 ==="
+excelcli normalize case001.db --mapping mapping.json
+
+echo "=== Step 5: 基础资金分析 ==="
+excelcli analyze fund case001.db
+<|TOOL_PARAM_command_END_{NONCE}|>
+
+### Example 5: excelcli 自定义 SQL 查询
+
+通过 excelcli query 执行 SQL 查询完成复杂统计分析，无需编写代码：
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "excelcli_sql_query",
+  "params": {
+    "command": "excelcli query case001.db --sql \"SELECT direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total FROM bank_transactions GROUP BY direction\" --json",
+    "timeout": 30
+  }
+}
+```
+
+也可先写入 SQL 文件再执行（适合复杂查询）：
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "excelcli_sql_file",
+  "params": {
+    "timeout": 60
+  }
+}
+```
+
+<|TOOL_PARAM_command_{NONCE}|>
+cat > analysis.sql << 'SQLEOF'
+SELECT strftime('%Y', txn_time) as year, direction,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE amount > 0
+GROUP BY year, direction ORDER BY year, direction;
+
+SELECT channel, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE channel IS NOT NULL AND channel != ''
+GROUP BY channel, direction;
+SQLEOF
+
+excelcli query case001.db --file analysis.sql --json
+<|TOOL_PARAM_command_END_{NONCE}|>
+
+### Example 6: excelcli 交易筛选
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "excelcli_filter_transactions",
+  "params": {
+    "command": "excelcli transactions case001.db --min-amount 10000 --direction out --json --limit 200",
+    "timeout": 30
+  }
+}
+```
+
+excelcli 工具要点：
+  - 所有数据操作（导入、标准化、查询、分析）均通过 excelcli 子命令完成
+  - 复杂统计用 `excelcli query --sql` 或 `--file` 执行 SQL，不编写代码
+  - 涉税数据使用 `excelcli tax` 系列子命令（tax map → tax normalize → tax analyze）
+  - 当 SKILL 指定了 excelcli 工具链时，禁止用 Python/pandas 替代
+
+### Example 7: Windows CMD one-line command (explicit shell)
+
+User intent: "On a Windows host, show OS version, current user, and a system directory"
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "windows_cmd_quick_check",
+  "params": {
+    "command": "ver && whoami && dir C:\\Windows\\System32\\drivers\\etc",
+    "shell": "cmd",
+    "timeout": 15
+  }
+}
+```
+
+### Example 8: Windows PowerShell diagnostic script (AITAG + explicit shell)
+
+User intent: "On a Windows host, show top memory processes and running services"
+
+```json
+{
+  "@action": "call-tool",
+  "tool": "bash",
+  "identifier": "windows_powershell_diagnostics",
+  "params": {
+    "shell": "powershell",
+    "timeout": 30
+  }
+}
+```
+
+<|TOOL_PARAM_command_{NONCE}|>
+Write-Output "=== Computer ==="
+Write-Output $env:COMPUTERNAME
+Write-Output ""
+Write-Output "=== Top 5 Processes By Working Set (MB) ==="
+Get-Process |
+  Sort-Object WorkingSet -Descending |
+  Select-Object -First 5 Name, Id, @{Name="WorkingSetMB"; Expression = { [math]::Round($_.WorkingSet64 / 1MB, 1) }}
+Write-Output ""
+Write-Output "=== Running Services (first 10) ==="
+Get-Service |
+  Where-Object { $_.Status -eq "Running" } |
+  Select-Object -First 10 Name, DisplayName, Status
+<|TOOL_PARAM_command_END_{NONCE}|>
+
+## Key Rules
+
+1. ** TIMEOUT IS MANDATORY ** -- Always set timeout explicitly. Do NOT rely on the default 60s.
+   Estimate how long the command should take, and set timeout to ~1.5x that estimate.
+   A command that hangs without timeout will block the entire agent workflow.
+2. Multi-line commands -> ALWAYS use AITAG for the command parameter
+3. Single-line commands -> Use JSON params.command directly
+4. Limit output: pipe through | head -N; limit search: add -maxdepth to find
+5. Use fallback chains for cross-platform: cmd1 2>/dev/null || cmd2 || echo "not available"
+6. NEVER generate indefinite commands (no tail -f, no watch, no ping without -c)
+7. ** SKILL PRIORITY ** -- 当已加载的 SKILL（通过 loading_skills）明确指定了工具链
+   （如 fund-analysis 要求使用 excelcli），**必须优先遵循 SKILL 指令**，禁止用 Python/pandas
+   或其他方式绕过 SKILL 规定的工具。SKILL 的工具约束优先级高于本文件中的任何通用示例。
+8. ** WINDOWS TARGETS ** -- Set shell explicitly to "cmd" or "powershell" when generating
+   Windows commands. This avoids mixing Bash syntax with Windows command syntax.
+USAGE_BLOCK
+
+yakit.AutoInitYakit()
+
+// 解析命令行参数：超时时间、shell类型和要执行的命令
+timeoutSeconds := cli.Int("timeout", cli.setRequired(false), cli.setHelp("the timeout seconds for the shell command, default 60. Commands exceeding this timeout will be killed. Set a reasonable value to avoid hanging. IMPORTANT: Avoid indefinite commands like 'tail -f', 'ping' without -c, 'watch', etc."), cli.setDefault(60))
+shellType := cli.String("shell", cli.setRequired(false), cli.setHelp("shell type: bash, cmd, powershell. Auto-detect if not specified (linux/mac: bash, windows: cmd)"), cli.setDefault(""))
+command := cli.String("command", cli.setRequired(true), cli.setHelp("the shell command you want to execute. IMPORTANT: Avoid commands that run indefinitely (e.g., tail -f, ping without -c, watch). For potentially long-running commands, use timeout wrapper or add limits."))
+
+cli.check()
+
+// 获取操作系统类型
+osType = os.OS
+
+// 根据系统类型和用户设置确定shell类型
+if shellType == "" {
+    switch osType {
+    case "windows":
+        shellType = "cmd"
+        yakit.Info("Auto-detected Windows, using cmd shell")
+    case "linux", "darwin":
+        shellType = "bash"
+        yakit.Info("Auto-detected %v, using bash shell", osType)
+    default:
+        shellType = "bash"
+        yakit.Info("Unknown OS %v, defaulting to bash shell", osType)
+    }
+} else {
+    yakit.Info("Using specified shell: %v", shellType)
+}
+
+// 验证超时参数，确保不为零或负数
+if timeoutSeconds <= 0 {
+    timeoutSeconds = 60
+    yakit.Info("Invalid timeout value, using default 60 seconds")
+}
+
+// 创建带超时的上下文，保护系统资源
+ctx, cancel = context.WithTimeout(context.Background(), time.ParseDuration(sprint(timeoutSeconds) + "s")~)
+defer cancel()
+
+// 根据shell类型构建相应的命令执行器
+var cmd
+var err
+var scriptFile = ""
+
+switch shellType {
+case "bash":
+    // Generate a temporary script file with proper bash settings
+    // - set -e: Exit immediately if a command exits with a non-zero status
+    // Keep command tracing disabled by default to avoid noisy stderr output.
+    // This approach avoids quoting/escaping issues while keeping output concise.
+    
+    scriptContent := `#!/bin/bash
+# Auto-generated script by AI tool
+# Exit on error (prevents catastrophic cascading failures)
+set -e
+
+# User command starts here
+` + command + `
+`
+    
+    // Create temporary script file
+    scriptFile, err = file.TempFileName("ai_bash_script_*.sh")
+    if err != nil {
+        yakit.Error("Failed to create temporary script file: %v", err)
+        return
+    }
+    
+    // Ensure cleanup of temporary file
+    defer func() {
+        if scriptFile != "" {
+            removeErr := file.Remove(scriptFile)
+            if removeErr != nil {
+                yakit.Info("Note: Failed to remove temporary script file %v: %v", scriptFile, removeErr)
+            }
+        }
+    }()
+    
+    // Write script content to file
+    err = file.Save(scriptFile, scriptContent)
+    if err != nil {
+        yakit.Error("Failed to write script content to file: %v", err)
+        return
+    }
+    
+    // Make script executable (optional, since we run via 'bash scriptfile')
+    chmodErr := os.Chmod(scriptFile, 0755)
+    if chmodErr != nil {
+        yakit.Info("Note: Failed to chmod script file: %v (continuing anyway)", chmodErr)
+    }
+    
+    yakit.Info("Executing bash script with %d seconds timeout", timeoutSeconds)
+    yakit.Info("Script file: %v", scriptFile)
+    
+    // Execute the script using bash
+    cmd, err = exec.CommandContext(ctx, "bash " + scriptFile)
+    
+case "cmd":
+    // For Windows cmd, use direct command execution
+    yakit.Info("Executing cmd command with %d seconds timeout: %v", timeoutSeconds, command)
+    cmd, err = exec.CommandContext(ctx, "cmd /c " + command)
+    
+case "powershell":
+    // For PowerShell, create a temporary script file as well
+    scriptContent := `# Auto-generated PowerShell script by AI tool
+# Stop on first error
+$ErrorActionPreference = "Stop"
+
+# User command starts here
+` + command + `
+`
+    
+    scriptFile, err = file.TempFileName("ai_powershell_script_*.ps1")
+    if err != nil {
+        yakit.Error("Failed to create temporary PowerShell script file: %v", err)
+        return
+    }
+    
+    defer func() {
+        if scriptFile != "" {
+            removeErr := file.Remove(scriptFile)
+            if removeErr != nil {
+                yakit.Info("Note: Failed to remove temporary script file %v: %v", scriptFile, removeErr)
+            }
+        }
+    }()
+    
+    err = file.Save(scriptFile, scriptContent)
+    if err != nil {
+        yakit.Error("Failed to write PowerShell script content to file: %v", err)
+        return
+    }
+    
+    yakit.Info("Executing PowerShell script with %d seconds timeout", timeoutSeconds)
+    yakit.Info("Script file: %v", scriptFile)
+    
+    cmd, err = exec.CommandContext(ctx, "powershell.exe -NoProfile -ExecutionPolicy Bypass -File " + scriptFile)
+    
+default:
+    yakit.Error("Unsupported shell type: %v. Supported types: bash, cmd, powershell", shellType)
+    return
+}
+
+if err != nil {
+    yakit.Error("Failed to create %v command: %v", shellType, err)
+    return
+}
+
+// 创建输出缓冲区以捕获命令结果
+stdoutbuf = bufio.NewBuffer()
+stderrbuf = bufio.NewBuffer()
+cmd.Stdout = stdoutbuf
+cmd.Stderr = stderrbuf
+
+// 执行命令并处理结果
+startTime = time.Now()
+err = cmd.Run()
+elapsed = time.Since(startTime)
+elapsedSec = int(elapsed.Seconds())
+isTimeout = false
+exitCode = 0
+
+if err != nil {
+    errStr = sprint(err)
+    // 检查是否是超时导致的错误（通过错误信息判断）
+    if str.Contains(errStr, "killed") || str.Contains(errStr, "signal: killed") || str.Contains(errStr, "context deadline exceeded") {
+        isTimeout = true
+        yakit.Info("COMMAND TIMEOUT: The command was killed after %d seconds timeout. The command may be running too long or hanging indefinitely.", timeoutSeconds)
+        yakit.Info("SUGGESTION: For long-running commands, consider using 'timeout' command wrapper (e.g., 'timeout 30 your_command'), or add limits to your command (e.g., 'ping -c 5' instead of 'ping').")
+    } else {
+        // Extract exit code if available
+        if str.Contains(errStr, "exit status") {
+            // Parse exit code from error message like "exit status 1"
+            parts = str.Split(errStr, " ")
+            if len(parts) >= 3 {
+                exitCode = parseInt(parts[len(parts)-1])
+            }
+        }
+        yakit.Error("%v command execution failed (exit code %d): %v", shellType, exitCode, err)
+        if shellType == "bash" {
+            yakit.Info("TIP: Bash uses 'set -e' by default, so the script exits on the first failing command.")
+        }
+    }
+}
+
+// Platform-aware output encoding conversion:
+// - Windows: cmd.exe/powershell may output GBK-encoded text, use codec.GBKSafe to convert
+// - macOS/Linux: bash outputs UTF-8 natively, use codec.FixUTF8 to preserve valid UTF-8
+//   and only escape truly invalid bytes (e.g. binary data mixed into output)
+//
+// Why not use codec.GBKSafe on macOS/Linux?
+//   GBKSafe checks utf8.Valid() on the ENTIRE buffer. If even one invalid byte exists
+//   (e.g. from httpd -V or other commands mixing binary into stderr), it converts the
+//   ENTIRE buffer from GBK to UTF-8, which corrupts all Chinese UTF-8 characters
+//   (e.g. "服务配置检查" becomes "鑸嗛姊烯闁磅曞夊€鑺6").
+toUtf8 = (s)=>{
+    if osType == "windows" {
+        res, err = codec.GBKSafe(s)
+        if err {
+            // GBK conversion failed, fall back to fixing invalid bytes
+            return codec.FixUTF8(s)
+        }
+        return res
+    }
+    // macOS/Linux: output is UTF-8, preserve valid characters and escape bad bytes
+    return codec.FixUTF8(s)
+}
+
+// 输出执行结果
+count := 0
+if stdoutbuf.Len() > 0 {
+    count++
+    yakit.Info("Stdout:\n%v", toUtf8(stdoutbuf.String()))
+}
+if stderrbuf.Len() > 0 {
+    count++
+    yakit.Info("Stderr:\n%v", toUtf8(stderrbuf.String()))
+}
+if count <= 0 {
+    if isTimeout {
+        yakit.Info("No output captured before timeout")
+    } else {
+        yakit.Info("No output found, %v command execution completed (possibly with empty output)", shellType)
+    }
+}
+
+yakit.Info("Execution completed in %ds", elapsedSec)
+
+if elapsedSec > 20 && !isTimeout {
+    stdoutStr = stdoutbuf.String()
+    hasExcelcli = str.Contains(command, "excelcli")
+
+    if hasExcelcli {
+        yakit.Info("[EXECUTION: %ds] excelcli command completed.", elapsedSec)
+    } else {
+        yakit.Info("[SLOW EXECUTION: %ds] Command took over 20 seconds.", elapsedSec)
+        yakit.Info("[ADVICE] If this command processes large files repeatedly, consider using specialized tools like excelcli for data analysis.")
+    }
+}

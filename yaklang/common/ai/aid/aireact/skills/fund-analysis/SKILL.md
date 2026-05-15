@@ -1,11 +1,345 @@
 ---
 name: fund-analysis
-description: "对银行账户交易数据进行可疑交易资金分析，生成专业的资金分析报告。适用于反洗钱、非法换汇、电信诈骗、地下钱庄等可疑交易场景。当用户提供交易流水数据并要求分析资金异常、撰写资金分析报告、进行团伙划分或可疑交易研判时使用。"
+description: "对银行账户交易数据进行可疑交易资金分析，生成专业资金分析报告。适用于反洗钱、非法换汇、电信诈骗、地下钱庄等场景。数据读取、入库、标准化、筛选和基础统计必须使用 excelcli，本技能保留原始技战法、分析流程、指标体系和报告要求。"
 ---
 
 # 资金交易分析
 
-可疑交易资金分析的完整方法论。本技能提供分析框架、领域知识、判断规则和参考代码，帮助你完成从数据探查到报告撰写的全流程。
+## excelcli 工具使用指南（强制）
+
+本技能的所有数据操作必须通过 `excelcli` 完成，禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程。
+
+### excelcli 工作流总览
+
+excelcli 采用 **导入 → 检查 → 映射 → 标准化 → 分析** 的五步工作流：
+
+```
+Excel/CSV 文件  →  import     →  SQLite 数据库
+                      ↓
+                  inspect    →  确认表结构和列名
+                      ↓
+                  map        →  字段映射 JSON
+                      ↓
+                  normalize  →  bank_transactions 标准表
+                      ↓
+         analyze fund / transactions / query  →  分析结果
+```
+
+涉税数据有独立的子工作流：
+
+```
+数据库  →  tax map        →  涉税映射 JSON
+              ↓
+         tax normalize   →  标准涉税表
+              ↓
+   tax analyze / tax invoices  →  分析结果
+```
+
+### 命令速查表
+
+| 命令 | 用途 | 必填参数 |
+|---|---|---|
+| `excelcli import <INPUT> --case-id <ID> --db <DB>` | 导入 Excel/CSV 到 SQLite | INPUT, --case-id, --db |
+| `excelcli inspect <DB>` | 查看表结构和样例数据 | DB |
+| `excelcli map <DB>` | 生成银行流水字段映射 | DB |
+| `excelcli normalize <DB> --mapping <FILE>` | 标准化为 bank_transactions 表 | DB, --mapping |
+| `excelcli analyze fund <DB>` | 基础资金分析 | DB |
+| `excelcli query <DB> --sql <SQL>` | 执行自定义 SQL 查询 | DB, --sql 或 --file |
+| `excelcli transactions <DB>` | 交易流水多维筛选 | DB |
+| `excelcli tax map <DB>` | 涉税表自动识别与映射 | DB |
+| `excelcli tax normalize <DB> --mapping <FILE>` | 涉税表标准化 | DB, --mapping |
+| `excelcli tax analyze <DB>` | 涉税风险概览分析 | DB |
+| `excelcli tax invoices <DB>` | 发票明细筛选 | DB |
+
+### 银行流水分析完整步骤（按顺序执行）
+
+**Step 1 — 导入数据**
+
+```bash
+excelcli import 交易流水.xlsx --case-id case001 --db case001.db
+```
+
+- `<INPUT>`：输入文件路径，支持 .xls / .xlsx / .csv
+- `--case-id`：案件编号，用于区分不同案件
+- `--db`：SQLite 数据库输出路径
+- 可选：`--verify`（导入后校验）、`--encoding gbk`（指定 CSV 编码）
+- 如果有多个 Excel 文件，逐个 import 到同一个 `--db` 即可
+
+**Step 2 — 检查表结构**
+
+```bash
+excelcli inspect case001.db --json --sample 5
+```
+
+- 确认导入的表名、列名、数据样例
+- 这一步**必须执行**，因为不同银行导出的列名差异很大，后续分析依赖正确的列名
+- 输出 JSON 格式方便程序化处理
+
+**Step 3 — 生成字段映射**
+
+```bash
+excelcli map case001.db --out mapping.json
+```
+
+- 自动识别原始表列名与标准字段的对应关系
+- 输出映射 JSON 文件，供 normalize 使用
+- 可选：`--json` 直接在终端查看映射结果
+
+**Step 4 — 数据标准化**
+
+```bash
+excelcli normalize case001.db --mapping mapping.json
+```
+
+- 根据映射文件，将原始表标准化为 `bank_transactions` 标准表
+- 标准化后，所有后续分析都基于 `bank_transactions` 表进行
+
+**Step 5 — 基础资金分析**
+
+```bash
+excelcli analyze fund case001.db
+```
+
+- 对标准化后的银行流水进行基础资金分析
+- 可选：`--json` 输出 JSON 格式
+
+**Step 6 — 交易筛选**
+
+```bash
+excelcli transactions case001.db --account "622848123456" --min-amount 10000 --json
+excelcli transactions case001.db --counterparty "张三" --start 2024-01-01 --end 2024-06-30 --csv
+excelcli transactions case001.db --direction 支出 --keyword "转账" --limit 200
+```
+
+筛选参数说明：
+- `--account`：按账号筛选
+- `--counterparty`：按对手方名称筛选
+- `--direction`：按交易方向（如 收/支）
+- `--min-amount` / `--max-amount`：金额范围
+- `--start` / `--end`：日期范围
+- `--keyword`：关键词模糊搜索
+- `--limit`：返回行数上限（默认 100）
+- `--csv`：CSV 格式输出，方便导入其他工具
+
+**Step 7 — 自定义 SQL 查询**
+
+```bash
+excelcli query case001.db --sql "SELECT * FROM bank_transactions LIMIT 10"
+excelcli query case001.db --sql "SELECT account, COUNT(*) as cnt, SUM(amount) as total FROM bank_transactions GROUP BY account ORDER BY total DESC" --limit 50 --json
+excelcli query case001.db --file analysis.sql --limit 500 --csv
+```
+
+- `--sql` 和 `--file` 二选一
+- `--limit`：返回行数上限（默认 100）
+- 所有分析指标的计算都应通过 `excelcli query` 执行 SQL 完成
+
+### 涉税分析步骤（如数据涉及涉税场景）
+
+```bash
+# Step 1: 导入（同上）
+excelcli import 发票数据.xlsx --case-id tax001 --db tax001.db
+
+# Step 2: 涉税映射
+excelcli tax map tax001.db --out tax_mapping.json
+
+# Step 3: 标准化
+excelcli tax normalize tax001.db --mapping tax_mapping.json
+
+# Step 4: 风险分析
+excelcli tax analyze tax001.db --top 20
+
+# Step 5: 发票筛选
+excelcli tax invoices tax001.db --taxpayer "某某公司" --min-amount 100000 --csv
+```
+
+涉税分析统一操作以下标准表：`tax_invoices`、`seller_invoice`、`buyer_invoice`、`tax_registrations` 等。
+
+### bank_transactions 标准表列名（必须掌握）
+
+`normalize` 完成后，原始中文列名会被映射为以下**英文标准列名**。后续所有 `excelcli query --sql` 查询必须使用这些列名，**不要使用原始中文列名**，否则会报 `no such column` 错误。
+
+| 标准列名 | 含义 | 对应原始字段 | 备注 |
+| --- | --- | --- | --- |
+| `id` | 自增主键 | - | INTEGER PK |
+| `case_id` | 案件编号 | _case_id | TEXT |
+| `source_file` | 来源文件 | _source_file | TEXT |
+| `sheet_name` | 工作表名 | _sheet_name | TEXT |
+| `row_no` | 原始行号 | _row_no | INTEGER |
+| `bank_name` | 银行名称 | - | TEXT, 可能为空 |
+| `account_no` | 交易卡号 | 交易卡号 | TEXT |
+| `account_name` | 交易户名 | 交易户名 | TEXT |
+| `account_id_no` | 交易证件号 | 交易证件号 | TEXT, 可能为空 |
+| `account_type` | 账户类型 | - | TEXT, 可能为空 |
+| `txn_time` | 交易时间 | 交易时间 | TEXT, 格式 YYYY-MM-DD HH:MM:SS |
+| `direction` | 收付方向 | 收付标志 | TEXT, 值为 "in"/"out" |
+| `amount` | 交易金额 | 交易金额 | REAL |
+| `balance` | 交易余额 | 交易余额 | REAL |
+| `counterparty_account` | 对手账卡号 | 交易对手账卡号 | TEXT, 可能为空字符串 |
+| `counterparty_name` | 对手户名 | 对手户名 | TEXT, 可能为空字符串 |
+| `counterparty_id_no` | 对手证件号 | 对手证件号 | TEXT, 可能为空 |
+| `counterparty_bank` | 对手开户银行 | 对手开户银行 | TEXT, 可能为空 |
+| `summary` | 摘要说明 | 摘要说明 | TEXT |
+| `channel` | 现金标志/交易渠道 | 现金标志 | TEXT, 常见值 "现金交易"/"其它" |
+| `location` | 交易发生地 | 交易发生地 | TEXT, 可能为空 |
+| `ip` | IP地址 | IP地址 | TEXT, 可能为空 |
+| `mac` | MAC地址 | MAC地址 | TEXT, 可能为空 |
+| `currency` | 交易币种 | 交易币种 | TEXT, 可能为空 |
+| `txn_serial_no` | 交易流水号 | 交易流水号 | TEXT, 可能为空 |
+| `voucher_no` | 凭证号 | 凭证号 | TEXT, 可能为空 |
+| `is_success` | 是否成功 | 交易是否成功 | INTEGER, 1=成功 |
+| `raw_table` | 原始表名 | - | TEXT |
+| `raw_row_id` | 原始行ID | - | INTEGER |
+| `dedup_key` | 去重键 | - | TEXT |
+
+**关键易错点**：
+- 交易时间列名是 `txn_time`，不是 `transaction_time`
+- 收付方向列名是 `direction`，不是 `收付标志`，且值为 `"in"` / `"out"`（不是"进"/"出"）
+- 现金标志列名是 `channel`，不是 `cash_flag`
+- 余额列名是 `balance`，不是 `transaction_balance`
+- 对手账号列名是 `counterparty_account`，空值为空字符串 `""`，不是 NULL
+- `amount` 为 REAL 类型，可以直接用于数值计算和聚合
+- 无对手信息的交易：`counterparty_account = ""` 且 `counterparty_name = ""`
+
+**normalize 后的必备步骤**：执行 `PRAGMA table_info(bank_transactions)` 确认实际列名，避免 SQL 报错：
+
+```bash
+excelcli query <DB> --sql "PRAGMA table_info(bank_transactions)" --json
+```
+
+### 完整分析所需的 SQL 查询集（可直接复用）
+
+以下是在 `analyze fund` 基础上，需要通过 `excelcli query` 补充执行的 SQL 查询。**注意：所有查询均使用上方标准列名**。
+
+**1. 年度交易趋势（含对手主体数）**
+```sql
+SELECT strftime('%Y', txn_time) as year, direction,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total,
+       COUNT(DISTINCT counterparty_account) as counterparties
+FROM bank_transactions WHERE amount > 0
+GROUP BY year, direction ORDER BY year, direction
+```
+
+**2. 现金交易统计**
+```sql
+SELECT channel, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE channel IS NOT NULL AND channel != ''
+GROUP BY channel, direction ORDER BY channel, direction
+```
+
+**3. 余额特征**
+```sql
+SELECT ROUND(MAX(balance),2) as max_balance,
+       ROUND(MIN(balance),2) as min_balance,
+       ROUND(AVG(balance),2) as avg_balance
+FROM bank_transactions WHERE balance IS NOT NULL
+```
+
+**4. 最终余额**
+```sql
+SELECT ROUND(balance,2) as final_balance FROM bank_transactions ORDER BY id DESC LIMIT 1
+```
+
+**5. 同名账户识别（对手户名 = 主体户名）**
+```sql
+SELECT counterparty_account, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_name = (SELECT account_name FROM bank_transactions LIMIT 1)
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account, direction ORDER BY total DESC
+```
+
+**6. 双向交易对手**
+```sql
+SELECT counterparty_account,
+       COUNT(DISTINCT direction) as dir_cnt,
+       GROUP_CONCAT(DISTINCT direction) as directions,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account HAVING dir_cnt > 1 ORDER BY total DESC
+```
+
+**7. 自身转账（对手账号 = 主体账号）**
+```sql
+SELECT direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions WHERE counterparty_account = account_no
+GROUP BY direction
+```
+
+**8. 交易天数统计**
+```sql
+SELECT COUNT(DISTINCT date(txn_time)) as trading_days FROM bank_transactions WHERE amount > 0
+```
+
+**9. 整万交易统计**
+```sql
+SELECT COUNT(*) as cnt FROM bank_transactions
+WHERE CAST(amount AS INTEGER) = amount AND CAST(amount AS INTEGER) % 10000 = 0 AND amount >= 10000
+```
+
+**10. 快进快出天数（同日进出均>5万）**
+```sql
+SELECT date(txn_time) as d,
+       SUM(CASE WHEN direction='in' THEN amount ELSE 0 END) as in_amt,
+       SUM(CASE WHEN direction='out' THEN amount ELSE 0 END) as out_amt
+FROM bank_transactions WHERE amount > 0
+GROUP BY d HAVING in_amt > 50000 AND out_amt > 50000
+```
+
+**11. 可疑关键词交易**
+```sql
+SELECT counterparty_account, counterparty_name, direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE summary LIKE '%换汇%' OR summary LIKE '%换钱%' OR summary LIKE '%换币%'
+   OR summary LIKE '%兑换%' OR summary LIKE '%换美金%'
+GROUP BY counterparty_account, counterparty_name, direction
+```
+
+**12. 非工作时间交易（22:00-08:00）**
+```sql
+SELECT COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE CAST(strftime('%H', txn_time) AS INTEGER) >= 22
+   OR CAST(strftime('%H', txn_time) AS INTEGER) < 8
+```
+
+**13. 同名多户控制人（同一户名控制多个账户）**
+```sql
+SELECT counterparty_name, COUNT(DISTINCT counterparty_account) as accounts,
+       GROUP_CONCAT(DISTINCT counterparty_account) as account_list
+FROM bank_transactions
+WHERE counterparty_name IS NOT NULL AND counterparty_name != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_name HAVING accounts >= 2 ORDER BY accounts DESC
+```
+
+**14. 收入/支出端对手账户数**
+```sql
+SELECT direction, COUNT(DISTINCT CASE WHEN counterparty_account != '' AND counterparty_account != account_no THEN counterparty_account END) as unique_counterparties
+FROM bank_transactions GROUP BY direction
+```
+
+**15. 对手开户银行分布**
+```sql
+SELECT counterparty_bank, COUNT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_bank IS NOT NULL AND counterparty_bank != ''
+GROUP BY counterparty_bank ORDER BY accounts DESC
+```
+
+### 重要注意事项
+
+1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel、自建入库流程、或编写 Python 脚本进行任何数据分析。所有分析指标和统计计算均通过 `excelcli query --sql` 执行 SQL 完成，团伙划分等复杂分析也不例外
+2. **必须先 inspect 再分析**：不同银行的数据格式差异很大，先 inspect 确认列名和数据格式
+3. **必须先 map 再 normalize**：normalize 依赖映射文件，map 生成的 JSON 文件是桥梁
+4. **标准化后使用英文标准列名**：`bank_transactions` 表使用上方列名对照表中的英文名，SQL 查询中禁止使用中文列名
+5. **normalize 后先查 PRAGMA**：执行 `PRAGMA table_info(bank_transactions)` 确认实际列名，然后再写 SQL 查询，避免反复报错
+6. **复杂统计用 query**：`analyze fund` 提供基础分析（overview、月度趋势、金额分布、TOP来源/去向、集中度、部分可疑指标），自定义统计指标用上方 SQL 查询集补充
+7. **数据异常排查**：如果分析结果异常，先用 `excelcli inspect` 核对列名和样例数据，再检查映射文件是否正确，必要时调整映射后重新 `normalize`
+8. **SQL 查询可并行**：上述15条 SQL 查询相互独立，可以分批并行执行（每批3-4条），提高分析效率
+
+---
 
 ## 数据文件说明
 
@@ -45,15 +379,15 @@ description: "对银行账户交易数据进行可疑交易资金分析，生成
 
 **目标**：了解账户全貌，建立基础数据认知。
 
-**操作**：读取数据文件，确认列名和数据格式，然后计算以下指标。
+**操作**：使用 `excelcli import` 导入数据，`excelcli inspect` 确认列名和数据格式，`excelcli map` + `normalize` 完成标准化，然后通过 `excelcli analyze fund` 和 `excelcli query --sql` 计算以下指标。
 
 **首先检查账户数量**：读取交易明细后，先统计"交易卡号"列的唯一值数量，确认数据中涉及几个主体账户。如果只有1个账户则为单账户分析；如果有多个账户，需在报告开头列出所有涉案账户，后续分析分别或合并进行（取决于业务需求）。
 
 **数据预处理**：
 1. 过滤失败交易：如"交易是否成功"列存在，仅保留值为1（成功）的记录，并在报告中注明过滤了多少笔失败交易
-2. 交易时间列需转为 datetime：`pd.to_datetime(df['交易时间'])`
+2. 交易时间、金额、方向等字段由 `excelcli normalize` 标准化；如结果异常，先用 `excelcli inspect` 核查字段映射是否正确，检查映射 JSON 文件中对应字段的映射关系
 3. 收付方向通常在"收付标志"列，值为"进"/"出"，先确认具体取值
-4. 用 `df.columns.tolist()` 和 `df.head()` 确认实际列名
+4. 使用 `excelcli inspect <db路径> --json --sample 5` 查看真实列名和样例数据
 5. 关联辅助表：通过"交易卡号"或"交易户名"关联账户信息和人员信息，补充账户属性和人员背景
 
 **必须产出的指标**：
@@ -98,35 +432,86 @@ description: "对银行账户交易数据进行可疑交易资金分析，生成
 
 **子任务C1 — 基于设备信息的团伙划分**：
 
-IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件：
+IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件。以下所有操作均通过 `excelcli query --sql` 完成，禁止编写 Python 脚本。
 
-1. 从交易明细中提取所有支出方向（收付标志="出"）的交易记录
-2. 在出账记录中，统计每个IP/MAC地址涉及的"交易卡号"数量（即不同账户出账时使用同一设备）
-3. **关键**：只有在出账方向上共享同一IP/MAC的账户才视为设备关联
-4. 使用 Union-Find 算法：在出账记录中共享同一IP或MAC的账户归为同一团伙
-5. 输出每个团伙的成员、共享IP数、共享MAC数、与主体账户的交易金额
+**关键原则**：只有在出账方向（direction='out'）上共享同一IP/MAC的账户才视为设备关联。
+
+**步骤1 — 查找出账方向共享同一IP的账户组**：
+```sql
+SELECT ip, GROUP_CONCAT(DISTINCT account_no) as accounts,
+       COUNT(DISTINCT account_no) as account_count,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE direction='out' AND ip IS NOT NULL AND ip != ''
+GROUP BY ip HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+**步骤2 — 查找出账方向共享同一MAC的账户组**：
+```sql
+SELECT mac, GROUP_CONCAT(DISTINCT account_no) as accounts,
+       COUNT(DISTINCT account_no) as account_count,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE direction='out' AND mac IS NOT NULL AND mac != ''
+GROUP BY mac HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+**步骤3 — 在报告中归纳团伙**：根据上述 SQL 查询结果，将共享同一 IP 或 MAC 的账户归为同一团伙。如果两个 IP/MAC 查询结果中有重叠账户，手动合并为同一团伙。在报告中列出每个团伙的成员账户、共享设备信息、与主体账户的交易金额汇总
 
 **子任务C2 — 基于对手证件号前6位的地域聚合**：
 
-如交易明细中有"对手证件号"列：
-1. 提取对手证件号前6位（代表户籍所在地区划代码）
-2. 将相同前6位的对手账户归为同一地域团伙
-3. 身份证前6位相同意味着来自同一地区，在反洗钱场景中常与老乡团伙、地域性犯罪组织相关
-4. 统计每个地域组的成员数和与主体的交易金额
-5. 也可结合人员信息表中的"工作单位""单位地址"进行交叉验证
+如交易明细中有"对手证件号"列，通过 `excelcli query --sql` 执行以下查询。身份证前6位代表户籍所在地区划代码，相同前6位意味着来自同一地区，在反洗钱场景中常与老乡团伙、地域性犯罪组织相关。
+
+```sql
+SELECT SUBSTR(counterparty_id_no, 1, 6) as region_code,
+       COUNT(DISTINCT counterparty_account) as account_count,
+       GROUP_CONCAT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE counterparty_id_no IS NOT NULL AND counterparty_id_no != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY region_code HAVING account_count >= 2
+ORDER BY account_count DESC
+```
+
+也可结合人员信息表中的"工作单位""单位地址"进行交叉验证，在报告中归纳地域团伙结论。
 
 **子任务C3 — 基于对手开户银行的聚类分析**：
 
-如交易明细中有"对手开户银行"列：
-1. 统计每个开户银行涉及的对手账户数和交易金额
-2. 集中在同一银行/网点开立的多个对手账户可能提示有组织的开户行为
+如交易明细中有"对手开户银行"列，通过 `excelcli query --sql` 执行以下查询。集中在同一银行/网点开立的多个对手账户可能提示有组织的开户行为。
+
+```sql
+SELECT counterparty_bank,
+       COUNT(DISTINCT counterparty_account) as account_count,
+       GROUP_CONCAT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total_amount
+FROM bank_transactions
+WHERE counterparty_bank IS NOT NULL AND counterparty_bank != ''
+  AND counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_bank HAVING account_count >= 3
+ORDER BY account_count DESC
+```
 
 **子任务C4 — 基于交易关系和身份特征的团伙拓展**：
 
-1. 同名账户关联：不同账户号但户名相同，视为同一人控制
-2. 稳定资金关系：高频次、大金额的固定交易对手
-3. 交易关键词关联：摘要中含"换汇""换钱"等关键词的对手账户
-4. 关联人员信息：通过证件号匹配人员信息表，分析对手的工作单位、单位地址是否集中
+通过 `excelcli query --sql` 完成以下分析，无需编写代码：
+
+1. **同名账户关联**：不同账户号但户名相同，视为同一人控制（使用前文 SQL 查询 #13 "同名多户控制人"）
+2. **稳定资金关系**：高频次、大金额的固定交易对手，通过以下 SQL 查询：
+```sql
+SELECT counterparty_account, counterparty_name, direction,
+       COUNT(*) as txn_count, ROUND(SUM(amount),2) as total,
+       ROUND(AVG(amount),2) as avg_amount
+FROM bank_transactions
+WHERE counterparty_account != '' AND counterparty_account != account_no
+GROUP BY counterparty_account, counterparty_name, direction
+HAVING txn_count >= 10 AND total >= 100000
+ORDER BY txn_count DESC
+```
+3. **交易关键词关联**：摘要中含"换汇""换钱"等关键词的对手账户（使用前文 SQL 查询 #11 "可疑关键词交易"）
+4. **关联人员信息**：通过证件号匹配人员信息表，分析对手的工作单位、单位地址是否集中
 
 **数据缺失处理**：
 - 如果交易明细中没有IP/MAC列：跳过C1，仅做C2-C4
@@ -196,11 +581,11 @@ IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件�
 - 对手证件号前6位地域高度集中
 - 对手开户银行集中度高
 
-匹配到模式后，在报告中按"四层模型"描述经营模式：
-1. **资金归集层**（收款阶段）：上游账户归集客户资金
-2. **资金中转层**（结算阶段）：核心账户整合与分配
-3. **资金分配层**（分配阶段）：向下游分发
-4. **变现层**（付款阶段）：现金取款或购汇
+匹配到模式后，在报告中基于阶段 A-D 的已有分析结果（无需额外编程或计算），按"四层模型"归纳描述经营模式：
+1. **资金归集层**（收款阶段）：根据阶段 B 的 TOP10 来源表，描述上游资金如何归集
+2. **资金中转层**（结算阶段）：根据阶段 A 的收支平衡度和快进快出指标，描述核心账户的整合与分配行为
+3. **资金分配层**（分配阶段）：根据阶段 B 的 TOP10 去向表，描述向下游分发的路径
+4. **变现层**（付款阶段）：根据阶段 A 的现金交易统计，描述现金取款或购汇行为
 
 ---
 
@@ -212,9 +597,7 @@ IP/MAC地址在交易明细中直接可用，无需单独的对手数据文件�
 
 不同系统导出的交易数据列名差异很大。先打印列名再适配：
 
-```python
-print(df.columns.tolist())
-```
+使用 `excelcli inspect <DB> --json --sample 5` 查看真实字段和样例数据；使用 `excelcli transactions`、`excelcli tax invoices` 或 `excelcli query --sql` 完成筛选和统计。
 
 常见列名对照（与本项目标准字段的映射）：
 
@@ -244,31 +627,18 @@ print(df.columns.tolist())
 
 ### Excel文件过大或读取失败
 
-```python
-# 先探查文件结构
-df = pd.read_excel('file.xlsx', nrows=5)
-print(f"列名: {df.columns.tolist()}")
-print(f"数据类型: {df.dtypes}")
+使用 `excelcli import` 时添加 `--verify` 参数校验数据完整性；导入后用 `excelcli inspect <DB>` 查看表结构和数据量。
 
-# 如果文件过大（>100MB），考虑分块处理
-# 或指定只读需要的列
-usecols = ['交易时间', '交易金额', '收付标志', '交易对手账卡号', '对手户名',
-           'IP地址', 'MAC地址', '对手证件号', '对手开户银行', '交易发生地']
-df = pd.read_excel('file.xlsx', usecols=usecols)
-```
-
-### 代码运行报错
+### 分析结果异常
 
 排查步骤：
-1. `print(df.head())` — 确认数据长什么样
-2. `print(df.dtypes)` — 确认列的数据类型（金额是否为数值型、时间是否已转换）
-3. `print(df['目标列'].unique()[:20])` — 确认列的实际取值
-4. 根据以上信息调整代码
+1. 先用 `excelcli inspect <DB> --json --sample 5` 核对列名和样例数据
+2. 检查映射 JSON 文件（如 mapping.json）中各字段映射是否正确
+3. 必要时修改映射 JSON 后重新执行 `excelcli normalize <DB> --mapping mapping.json`
 
 常见问题：
-- 金额列含逗号或货币符号：`df['金额'] = pd.to_numeric(df['金额'].astype(str).str.replace(',','').str.replace('¥',''), errors='coerce')`
-- 时间列格式混乱：`pd.to_datetime(df['时间'], format='mixed', dayfirst=False)`
-- 分组统计时NaN导致报错：先 `.dropna(subset=['目标列'])` 再分组
+- 金额、时间、空值等解析问题：检查映射 JSON 中对应字段的映射关系，必要时修改映射后重新标准化
+- 标准化后字段缺失：说明映射 JSON 中未映射该字段，补充映射后重新 normalize
 
 ### 分析结果不符合预期
 
@@ -289,7 +659,8 @@ df = pd.read_excel('file.xlsx', usecols=usecols)
 
 ## 报告结构
 
-完成分析后，按 [report-template.md](report-template.md) 的九章结构撰写报告。每章的核心要求：
+撰写正式报告时，优先读取并遵循同目录的 [report-template.md](report-template.md)。
+
 
 | 章节 | 核心内容 | 数据来源 |
 | --- | --- | --- |
@@ -302,5 +673,3 @@ df = pd.read_excel('file.xlsx', usecols=usecols)
 | 七、经营模式与资金穿透 | 四层模型 + 资金流入/流出路径 + 涉案规模 | 全部阶段 |
 | 八、下一步工作建议 | 立即措施 + 深度调查 + 扩线调查 | 全部阶段 |
 | 九、结论 | 证据汇总 + 涉案规模 + 处置建议 | 全部阶段 |
-
-参考代码片段见 [reference-code.md](reference-code.md)，根据实际数据格式自行调整使用。
