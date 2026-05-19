@@ -4,16 +4,720 @@ description: "基于税务登记、发票销方/购方数据、银行交易流�
 ---
 
 # 涉税犯罪数据分析
-## 数据处理要求（强制）
+## excelcli 工具使用指南（强制）
 
-执行本技能前，先使用 `excelcli-analysis` 完成文件导入、字段识别、标准化、筛选和基础统计。银行流水统一分析 `bank_transactions`；涉税数据统一分析 `tax_invoices`、`seller_invoice`、`buyer_invoice`、`tax_registrations` 等标准表。
+本技能的所有数据操作必须通过 `excelcli` 完成，禁止智能体自行用 Python/pandas 读取 Excel 或自建入库流程。
 
-本技能只规定查案思路、指标体系、模式识别、报告结构和调证建议；不要在技能中提供自定义代码示例，也不要指导智能体自行读取 Excel/CSV 或自建入库流程。
+### excelcli 工作流总览
 
+excelcli 采用 **导入 → 检查 → 涉税映射 → 标准化 → 分析** 的五步工作流：
 
-专门针对涉税类犯罪（虚开增值税专用发票、虚开增值税普通发票、骗取出口退税等）的发票、资金与企业数据综合分析方法论。本技能基于税务登记信息、增值税发票销方/购方数据、银行交易流水和工商信息，提供分析框架、可疑指标体系、犯罪模式识别规则和分析框架和报告要求，帮助你完成从数据探查到报告撰写的全流程。
+```
+Excel/CSV 文件  →  import        →  SQLite 数据库
+                      ↓
+                  inspect       →  确认表结构和列名
+                      ↓
+                  tax map       →  涉税字段映射 JSON
+                      ↓
+                  tax normalize →  涉税标准表/视图
+                      ↓
+         tax analyze / tax invoices / query  →  分析结果
+```
 
-**数据前置要求**：执行本技能前，需先使用 `excelcli-analysis` 将用户提供的 Excel/CSV 数据导入并标准化到 SQLite 数据库。本技能的所有分析均基于 `excelcli` 标准表、标准视图和只读 SQL 查询。
+如同时有银行流水数据，还需执行银行流水标准化子工作流：
+
+```
+银行流水数据  →  map        →  银行字段映射 JSON
+                  ↓
+              normalize   →  bank_transactions 标准表
+                  ↓
+     analyze fund / transactions / query  →  资金分析结果
+```
+
+### 命令速查表
+
+| 命令 | 用途 | 必填参数 |
+|---|---|---|
+| `excelcli import <INPUT> --case-id <ID> --db <DB>` | 导入 Excel/CSV 到 SQLite | INPUT, --case-id, --db |
+| `excelcli inspect <DB>` | 查看表结构和样例数据 | DB |
+| `excelcli tax map <DB>` | 涉税表自动识别与映射 | DB |
+| `excelcli tax normalize <DB> --mapping <FILE>` | 涉税表标准化 | DB, --mapping |
+| `excelcli tax analyze <DB>` | 涉税风险概览分析 | DB |
+| `excelcli tax invoices <DB>` | 发票明细筛选 | DB |
+| `excelcli map <DB>` | 生成银行流水字段映射 | DB |
+| `excelcli normalize <DB> --mapping <FILE>` | 标准化为 bank_transactions 表 | DB, --mapping |
+| `excelcli analyze fund <DB>` | 基础资金分析 | DB |
+| `excelcli transactions <DB>` | 交易流水多维筛选 | DB |
+| `excelcli query <DB> --sql <SQL>` | 执行自定义 SQL 查询 | DB, --sql 或 --file |
+
+### 涉税分析完整步骤（按顺序执行）
+
+**Step 1 — 导入数据**
+
+```bash
+excelcli import 发票数据.xlsx --case-id tax001 --db tax001.db
+```
+
+- `<INPUT>`：输入文件路径，支持 .xls / .xlsx / .csv
+- `--case-id`：案件编号，用于区分不同案件
+- `--db`：SQLite 数据库输出路径
+- 如果有多个 Excel 文件（如销方发票、购方发票、税务登记、工商信息、银行流水等），逐个 import 到同一个 `--db` 即可
+- 可选：`--verify`（导入后校验）、`--encoding gbk`（指定 CSV 编码）
+
+**Step 2 — 检查表结构**
+
+```bash
+excelcli inspect tax001.db --json --sample 5
+```
+
+- 确认导入的表名、列名、数据样例
+- 这一步**必须执行**，因为不同系统导出的发票数据列名差异很大，后续分析依赖正确的列名
+- 输出 JSON 格式方便程序化处理
+
+**Step 3 — 涉税映射**
+
+```bash
+excelcli tax map tax001.db --out tax_mapping.json
+```
+
+- 自动识别原始表为发票销方/购方/税务登记/工商信息等类型
+- 输出映射 JSON 文件，供 tax normalize 使用
+- 可选：`--json` 直接在终端查看映射结果
+
+**Step 4 — 涉税标准化**
+
+```bash
+excelcli tax normalize tax001.db --mapping tax_mapping.json
+```
+
+- 根据映射文件，将原始表标准化为以下标准表/视图：
+  - `tax_invoices` — 统一发票表
+  - `seller_invoice` — 销方发票视图
+  - `buyer_invoice` — 购方发票视图
+  - `tax_registrations` — 税务登记标准表
+  - `business_registration` — 工商信息标准表（如有）
+- 标准化后，所有后续分析都基于这些标准表进行
+
+**Step 5 — 银行流水标准化（如有银行数据）**
+
+```bash
+excelcli map tax001.db --out bank_mapping.json
+excelcli normalize tax001.db --mapping bank_mapping.json
+```
+
+- 将银行流水数据标准化为 `bank_transactions` 标准表
+- 标准列名参见 fund-analysis 技能中的 `bank_transactions 标准表列名` 章节
+
+**Step 6 — 涉税风险分析**
+
+```bash
+excelcli tax analyze tax001.db --top 20
+```
+
+- 对标准化后的涉税数据进行基础风险分析
+- 可选：`--top N` 指定排名数量
+
+**Step 7 — 发票筛选**
+
+```bash
+excelcli tax invoices tax001.db --taxpayer "某某公司" --min-amount 100000 --csv
+excelcli tax invoices tax001.db --type "专用发票" --start 2023-01-01 --end 2023-12-31 --json
+```
+
+筛选参数说明：
+- `--taxpayer`：按纳税人名称/识别号筛选
+- `--type`：按发票类型筛选（专用发票/普通发票）
+- `--min-amount` / `--max-amount`：金额范围
+- `--start` / `--end`：日期范围
+- `--goods`：按货品名称筛选
+- `--status`：按发票状态筛选（正常/作废/红冲）
+- `--csv`：CSV 格式输出
+
+**Step 8 — 自定义 SQL 查询**
+
+```bash
+excelcli query tax001.db --sql "SELECT * FROM tax_invoices LIMIT 10"
+excelcli query tax001.db --sql "SELECT seller_name, COUNT(*) as cnt, SUM(total_amount) as total FROM tax_invoices GROUP BY seller_name ORDER BY total DESC" --limit 50 --json
+excelcli query tax001.db --file tax_analysis.sql --limit 500 --csv
+```
+
+- `--sql` 和 `--file` 二选一
+- `--limit`：返回行数上限（默认 100）
+- 所有分析指标的计算都应通过 `excelcli query` 执行 SQL 完成
+
+### 涉税标准表列名（必须掌握）
+
+`tax normalize` 完成后，原始中文列名会被映射为以下**英文标准列名**。后续所有 `excelcli query --sql` 查询必须使用这些列名，**不要使用原始中文列名**，否则会报 `no such column` 错误。
+
+#### tax_invoices / seller_invoice / buyer_invoice
+
+| 标准列名 | 含义 | 备注 |
+| --- | --- | --- |
+| `id` | 自增主键 | INTEGER PK |
+| `case_id` | 案件编号 | TEXT |
+| `source_file` | 来源文件 | TEXT |
+| `sheet_name` | 工作表名 | TEXT |
+| `row_no` | 原始行号 | INTEGER |
+| `invoice_code` | 发票代码 | TEXT |
+| `invoice_number` | 发票号码 | TEXT |
+| `invoice_type` | 发票类型 | TEXT, 如"增值税专用发票"/"增值税普通发票" |
+| `invoice_date` | 开票日期 | TEXT, 格式 YYYY-MM-DD |
+| `invoice_status` | 发票状态 | TEXT, 如"正常"/"作废"/"红冲" |
+| `void_flag` | 作废标志 | TEXT, 如"是"/"否" |
+| `seller_tax_id` | 销方纳税人识别号 | TEXT |
+| `seller_name` | 销方名称 | TEXT |
+| `seller_tax_authority` | 销方税务机关 | TEXT, 可能为空 |
+| `buyer_tax_id` | 购方纳税人识别号 | TEXT |
+| `buyer_name` | 购方名称 | TEXT |
+| `buyer_tax_authority` | 购方税务机关 | TEXT, 可能为空 |
+| `goods_name` | 货品名称 | TEXT |
+| `goods_code` | 商品编码 | TEXT, 可能为空 |
+| `quantity` | 数量 | REAL |
+| `unit` | 单位 | TEXT, 可能为空 |
+| `unit_price` | 单价 | REAL |
+| `amount` | 货物金额（不含税） | REAL |
+| `tax_rate` | 税率 | REAL, 如 0.13 表示 13% |
+| `tax_amount` | 税额 | REAL |
+| `total_amount` | 价税合计 | REAL |
+| `is_deducted` | 是否认证抵扣 | INTEGER, 1=已认证 |
+| `certify_date` | 认证日期 | TEXT, 可能为空 |
+| `is_remote` | 异地发票标志 | TEXT, 可能为空 |
+| `ip` | 开票IP地址 | TEXT, 可能为空 |
+| `mac` | 开票MAC地址 | TEXT, 可能为空 |
+| `device_serial` | 设备序列号 | TEXT, 可能为空 |
+| `remark` | 备注 | TEXT, 可能为空 |
+| `raw_table` | 原始表名 | TEXT |
+| `raw_row_id` | 原始行ID | INTEGER |
+| `dedup_key` | 去重键 | TEXT |
+
+#### tax_registrations
+
+| 标准列名 | 含义 | 备注 |
+| --- | --- | --- |
+| `id` | 自增主键 | INTEGER PK |
+| `case_id` | 案件编号 | TEXT |
+| `source_file` | 来源文件 | TEXT |
+| `taxpayer_id` | 纳税人识别号 | TEXT |
+| `taxpayer_name` | 纳税人名称 | TEXT |
+| `credit_code` | 统一社会信用代码 | TEXT |
+| `taxpayer_status` | 纳税人状态 | TEXT, 如"正常"/"非正常"/"注销" |
+| `registration_type` | 登记注册类型 | TEXT |
+| `industry_type` | 行业种类 | TEXT |
+| `subject_type` | 课征主题类型名称 | TEXT, 可能为空 |
+| `legal_person_name` | 法定代表人姓名 | TEXT |
+| `legal_person_id` | 法定代表人身份证号码 | TEXT |
+| `legal_person_phone` | 法定代表人电话 | TEXT, 可能为空 |
+| `finance_officer_name` | 财务负责人姓名 | TEXT, 可能为空 |
+| `finance_officer_id` | 财务负责人身份证件号码 | TEXT, 可能为空 |
+| `finance_officer_phone` | 财务负责人电话 | TEXT, 可能为空 |
+| `tax_handler_name` | 办税人姓名 | TEXT, 可能为空 |
+| `tax_handler_id` | 办税人身份证件号码 | TEXT, 可能为空 |
+| `tax_handler_phone` | 办税人电话 | TEXT, 可能为空 |
+| `registration_date` | 登记日期 | TEXT |
+| `business_start_date` | 开业设立日期 | TEXT |
+| `tax_authority` | 主管税务局 | TEXT |
+| `registered_address` | 注册地址 | TEXT, 可能为空 |
+| `registered_address_code` | 注册地址行政区划代码 | TEXT, 可能为空 |
+| `business_address` | 生产经营地址 | TEXT, 可能为空 |
+| `business_address_code` | 生产经营地址行政区划代码 | TEXT, 可能为空 |
+| `raw_table` | 原始表名 | TEXT |
+| `raw_row_id` | 原始行ID | INTEGER |
+
+#### business_registration（工商信息，如有）
+
+| 标准列名 | 含义 | 备注 |
+| --- | --- | --- |
+| `id` | 自增主键 | INTEGER PK |
+| `case_id` | 案件编号 | TEXT |
+| `company_name` | 企业名称 | TEXT |
+| `credit_code` | 统一社会信用代码 | TEXT |
+| `registration_status` | 登记状态 | TEXT |
+| `registered_capital` | 注册资本 | TEXT, 可能为空 |
+| `paid_in_capital` | 实缴资本 | TEXT, 可能为空 |
+| `business_scope` | 经营范围 | TEXT, 可能为空 |
+| `legal_person_name` | 法定代表人 | TEXT |
+| `company_type` | 企业(机构)类型 | TEXT, 可能为空 |
+| `province` | 所属省份 | TEXT, 可能为空 |
+| `city` | 所属城市 | TEXT, 可能为空 |
+| `district` | 所属区县 | TEXT, 可能为空 |
+| `address` | 企业地址 | TEXT, 可能为空 |
+| `phone` | 电话 | TEXT, 可能为空 |
+| `email` | 邮箱 | TEXT, 可能为空 |
+| `industry_category` | 国标行业门类/大类 | TEXT, 可能为空 |
+| `registration_authority` | 登记机关 | TEXT, 可能为空 |
+| `raw_table` | 原始表名 | TEXT |
+| `raw_row_id` | 原始行ID | INTEGER |
+
+**关键易错点**：
+- 发票类型列名是 `invoice_type`，值区分"增值税专用发票"和"增值税普通发票"
+- 开票日期列名是 `invoice_date`，格式为 YYYY-MM-DD
+- 金额列名是 `amount`（不含税金额），价税合计是 `total_amount`
+- 作废标志是 `void_flag` 或 `invoice_status`，需确认具体取值
+- 销方识别号是 `seller_tax_id`，购方识别号是 `buyer_tax_id`
+- `seller_invoice` 和 `buyer_invoice` 是 `tax_invoices` 的视图，列名相同
+- `amount` 为 REAL 类型，可以直接用于数值计算和聚合
+
+**normalize 后的必备步骤**：执行 `PRAGMA table_info` 确认实际列名，避免 SQL 报错：
+
+```bash
+excelcli query <DB> --sql "PRAGMA table_info(tax_invoices)" --json
+excelcli query <DB> --sql "PRAGMA table_info(tax_registrations)" --json
+excelcli query <DB> --sql "PRAGMA table_info(business_registration)" --json
+```
+
+### 完整分析所需的 SQL 查询集（可直接复用）
+
+以下 SQL 查询按分析阶段组织，均可通过 `excelcli query <DB> --sql "..." --json` 执行。**注意：所有查询均使用上方标准列名**。
+
+#### 阶段A：数据探查与企业画像
+
+**A1. 涉案企业列表**
+```sql
+SELECT taxpayer_id, taxpayer_name, taxpayer_status, registration_type, industry_type,
+       legal_person_name, registration_date, business_start_date
+FROM tax_registrations ORDER BY taxpayer_name
+```
+
+**A2. 发票类型分布（专票/普票）**
+```sql
+SELECT invoice_type, COUNT(*) as cnt,
+       ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(tax_amount),2) as total_tax,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices GROUP BY invoice_type
+```
+
+**A3. 销方发票概况（按专票/普票+状态）**
+```sql
+SELECT invoice_type, invoice_status, COUNT(*) as cnt,
+       ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(tax_amount),2) as total_tax,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM seller_invoice GROUP BY invoice_type, invoice_status ORDER BY invoice_type, invoice_status
+```
+
+**A4. 购方发票概况**
+```sql
+SELECT invoice_type, invoice_status, COUNT(*) as cnt,
+       ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(tax_amount),2) as total_tax,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM buyer_invoice GROUP BY invoice_type, invoice_status ORDER BY invoice_type, invoice_status
+```
+
+**A5. 进销对比**
+```sql
+SELECT '销项' as direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total_amount, ROUND(SUM(tax_amount),2) as total_tax
+FROM seller_invoice WHERE invoice_status != '作废'
+UNION ALL
+SELECT '进项' as direction, COUNT(*) as cnt, ROUND(SUM(amount),2) as total_amount, ROUND(SUM(tax_amount),2) as total_tax
+FROM buyer_invoice WHERE invoice_status != '作废'
+```
+
+**A6. 税率分布**
+```sql
+SELECT tax_rate, COUNT(*) as cnt, ROUND(SUM(amount),2) as total_amount
+FROM tax_invoices GROUP BY tax_rate ORDER BY tax_rate
+```
+
+**A7. 货品名称TOP20**
+```sql
+SELECT goods_name, COUNT(*) as cnt,
+       ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices GROUP BY goods_name ORDER BY total_with_tax DESC LIMIT 20
+```
+
+**A8. 开票月度趋势**
+```sql
+SELECT substr(invoice_date,1,7) as month, COUNT(*) as cnt,
+       ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices WHERE invoice_status != '作废'
+GROUP BY month ORDER BY month
+```
+
+**A9. 认证情况统计**
+```sql
+SELECT CASE WHEN is_deducted = 1 THEN '已认证' ELSE '未认证' END as certify_status,
+       COUNT(*) as cnt, ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices GROUP BY is_deducted
+```
+
+#### 阶段B：发票异常特征筛查
+
+**B1. 进销品名匹配（R01）**
+```sql
+SELECT s.goods_name as out_goods, b.goods_name as in_goods,
+       s.total as out_total, b.total as in_total,
+       CASE WHEN s.goods_name = b.goods_name THEN '匹配' ELSE '不匹配' END as match_flag
+FROM (
+  SELECT goods_name, ROUND(SUM(amount),2) as total FROM seller_invoice WHERE invoice_status != '作废' GROUP BY goods_name
+) s
+JOIN (
+  SELECT goods_name, ROUND(SUM(amount),2) as total FROM buyer_invoice WHERE invoice_status != '作废' GROUP BY goods_name
+) b ON 1=1
+ORDER BY (s.total + b.total) DESC LIMIT 30
+```
+
+**B2. 整额开票检测（R02）**
+```sql
+SELECT COUNT(*) as round_cnt,
+       ROUND(SUM(total_amount),2) as round_total,
+       (SELECT COUNT(*) FROM tax_invoices WHERE invoice_status != '作废') as total_cnt,
+       ROUND(CAST(COUNT(*) AS REAL) / (SELECT COUNT(*) FROM tax_invoices WHERE invoice_status != '作废') * 100, 2) as pct
+FROM tax_invoices WHERE CAST(total_amount AS INTEGER) = total_amount
+  AND CAST(total_amount AS INTEGER) % 10000 = 0 AND total_amount >= 10000
+  AND invoice_status != '作废'
+```
+
+**B3. 顶额开票检测（R03）**
+```sql
+SELECT CASE
+  WHEN total_amount >= 9999000 THEN '千万级顶额(999.9万+)'
+  WHEN total_amount >= 999000 THEN '百万级顶额(99.9万+)'
+  WHEN total_amount >= 99000 THEN '十万级顶额(9.9万+)'
+  ELSE '其他'
+END as level, COUNT(*) as cnt, ROUND(SUM(total_amount),2) as total
+FROM tax_invoices WHERE invoice_status != '作废'
+GROUP BY level ORDER BY total DESC
+```
+
+**B4. 作废率统计（R05）**
+```sql
+SELECT invoice_type,
+       COUNT(*) as total_cnt,
+       SUM(CASE WHEN invoice_status = '作废' OR void_flag = '是' THEN 1 ELSE 0 END) as void_cnt,
+       ROUND(SUM(CASE WHEN invoice_status = '作废' OR void_flag = '是' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as void_rate
+FROM tax_invoices GROUP BY invoice_type
+```
+
+**B5. 购销对手集中度（R07）**
+```sql
+SELECT buyer_name, COUNT(*) as cnt, ROUND(SUM(total_amount),2) as total
+FROM seller_invoice WHERE invoice_status != '作废'
+GROUP BY buyer_name ORDER BY total DESC LIMIT 10
+```
+
+```sql
+SELECT seller_name, COUNT(*) as cnt, ROUND(SUM(total_amount),2) as total
+FROM buyer_invoice WHERE invoice_status != '作废'
+GROUP BY seller_name ORDER BY total DESC LIMIT 10
+```
+
+**B6. 集中开票天数检测（R04）**
+```sql
+SELECT invoice_date, COUNT(*) as cnt, ROUND(SUM(total_amount),2) as total
+FROM tax_invoices WHERE invoice_status != '作废'
+GROUP BY invoice_date HAVING cnt > 50 OR total > 1000000
+ORDER BY total DESC
+```
+
+**B7. 注册至首次开票天数（R14）**
+```sql
+SELECT t.taxpayer_id, t.taxpayer_name, t.registration_date, t.business_start_date,
+       MIN(inv.invoice_date) as first_invoice_date,
+       CAST(julianday(MIN(inv.invoice_date)) - julianday(t.registration_date) AS INTEGER) as days_to_first
+FROM tax_registrations t
+LEFT JOIN tax_invoices inv ON t.taxpayer_id = inv.seller_tax_id
+GROUP BY t.taxpayer_id ORDER BY days_to_first
+```
+
+**B8. 单价异常检测（R11）**
+```sql
+SELECT goods_name, COUNT(*) as cnt,
+       ROUND(MIN(unit_price),2) as min_price,
+       ROUND(MAX(unit_price),2) as max_price,
+       ROUND(AVG(unit_price),2) as avg_price,
+       ROUND(MAX(unit_price) - MIN(unit_price),2) as price_range
+FROM tax_invoices WHERE unit_price > 0 AND invoice_status != '作废'
+GROUP BY goods_name HAVING cnt > 10
+ORDER BY price_range DESC LIMIT 20
+```
+
+**B9. 数量异常检测（R12）**
+```sql
+SELECT goods_name, quantity, COUNT(*) as same_qty_cnt
+FROM tax_invoices WHERE quantity > 0 AND invoice_status != '作废'
+GROUP BY goods_name, quantity HAVING same_qty_cnt > 3
+ORDER BY same_qty_cnt DESC LIMIT 20
+```
+
+**B10. 经营性支出发票缺失检测（R13）**
+```sql
+SELECT
+  CASE
+    WHEN goods_name LIKE '%电费%' OR goods_name LIKE '%水费%' THEN '水电费'
+    WHEN goods_name LIKE '%运费%' OR goods_name LIKE '%物流%' OR goods_name LIKE '%运输%' THEN '运费物流'
+    WHEN goods_name LIKE '%办公%' THEN '办公用品'
+    WHEN goods_name LIKE '%工资%' OR goods_name LIKE '%劳务%' THEN '工资劳务'
+    WHEN goods_name LIKE '%租金%' OR goods_name LIKE '%房租%' THEN '租金'
+    ELSE '其他经营支出'
+  END as expense_type,
+  COUNT(*) as cnt, ROUND(SUM(tax_amount),2) as tax_total
+FROM buyer_invoice WHERE invoice_status != '作废'
+  AND (goods_name LIKE '%电费%' OR goods_name LIKE '%水费%' OR goods_name LIKE '%运费%'
+       OR goods_name LIKE '%物流%' OR goods_name LIKE '%运输%' OR goods_name LIKE '%办公%'
+       OR goods_name LIKE '%工资%' OR goods_name LIKE '%劳务%' OR goods_name LIKE '%租金%'
+       OR goods_name LIKE '%房租%')
+GROUP BY expense_type ORDER BY tax_total DESC
+```
+
+#### 阶段C：虚开网络与票流追踪
+
+**C1. TOP10上游供应商**
+```sql
+SELECT seller_tax_id, seller_name, seller_tax_authority,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(tax_amount),2) as total_tax, ROUND(SUM(total_amount),2) as total_with_tax,
+       ROUND(AVG(total_amount),2) as avg_per_invoice
+FROM buyer_invoice WHERE invoice_status != '作废'
+GROUP BY seller_tax_id, seller_name ORDER BY total_with_tax DESC LIMIT 10
+```
+
+**C2. TOP10下游客户**
+```sql
+SELECT buyer_tax_id, buyer_name, buyer_tax_authority,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total_amount,
+       ROUND(SUM(tax_amount),2) as total_tax, ROUND(SUM(total_amount),2) as total_with_tax,
+       ROUND(AVG(total_amount),2) as avg_per_invoice
+FROM seller_invoice WHERE invoice_status != '作废'
+GROUP BY buyer_tax_id, buyer_name ORDER BY total_with_tax DESC LIMIT 10
+```
+
+**C3. 对开企业检测**
+```sql
+SELECT a.seller_tax_id as entity_a, a.buyer_tax_id as entity_b,
+       a.total as a_to_b, b.total as b_to_a
+FROM (
+  SELECT seller_tax_id, buyer_tax_id, ROUND(SUM(total_amount),2) as total
+  FROM tax_invoices WHERE invoice_status != '作废' GROUP BY seller_tax_id, buyer_tax_id
+) a
+JOIN (
+  SELECT seller_tax_id, buyer_tax_id, ROUND(SUM(total_amount),2) as total
+  FROM tax_invoices WHERE invoice_status != '作废' GROUP BY seller_tax_id, buyer_tax_id
+) b ON a.seller_tax_id = b.buyer_tax_id AND a.buyer_tax_id = b.seller_tax_id
+WHERE a.seller_tax_id < a.buyer_tax_id
+```
+
+**C4. 进销时间倒挂检测**
+```sql
+SELECT s.seller_tax_id, s.goods_name as out_goods, s.invoice_date as out_date,
+       b.goods_name as in_goods, b.invoice_date as in_date
+FROM seller_invoice s
+JOIN buyer_invoice b ON s.seller_tax_id = b.buyer_tax_id AND s.goods_name = b.goods_name
+WHERE s.invoice_date < b.invoice_date AND s.invoice_status != '作废' AND b.invoice_status != '作废'
+```
+
+**C5. 集中度计算（TOP1/3/5占比）**
+```sql
+SELECT '销项' as direction,
+       ROUND(SUM(total_amount),2) as grand_total,
+       (SELECT ROUND(SUM(total_amount),2) FROM (
+         SELECT seller_tax_id, buyer_tax_id, SUM(total_amount) as total_amount
+         FROM seller_invoice WHERE invoice_status != '作废'
+         GROUP BY buyer_tax_id ORDER BY total DESC LIMIT 1
+       )) as top1,
+       (SELECT ROUND(SUM(total_amount),2) FROM (
+         SELECT seller_tax_id, buyer_tax_id, SUM(total_amount) as total_amount
+         FROM seller_invoice WHERE invoice_status != '作废'
+         GROUP BY buyer_tax_id ORDER BY total DESC LIMIT 3
+       )) as top3
+FROM seller_invoice WHERE invoice_status != '作废'
+```
+
+#### 阶段D：人员关联与团伙识别
+
+**D1. 设备指纹关联（IP）**
+```sql
+SELECT ip, GROUP_CONCAT(DISTINCT seller_tax_id) as entities,
+       COUNT(DISTINCT seller_tax_id) as entity_count,
+       COUNT(*) as invoice_count, ROUND(SUM(total_amount),2) as total
+FROM tax_invoices WHERE ip IS NOT NULL AND ip != '' AND invoice_status != '作废'
+GROUP BY ip HAVING entity_count >= 2 ORDER BY entity_count DESC
+```
+
+**D2. 设备指纹关联（MAC）**
+```sql
+SELECT mac, GROUP_CONCAT(DISTINCT seller_tax_id) as entities,
+       COUNT(DISTINCT seller_tax_id) as entity_count,
+       COUNT(*) as invoice_count, ROUND(SUM(total_amount),2) as total
+FROM tax_invoices WHERE mac IS NOT NULL AND mac != '' AND invoice_status != '作废'
+GROUP BY mac HAVING entity_count >= 2 ORDER BY entity_count DESC
+```
+
+**D3. 同法人关联**
+```sql
+SELECT legal_person_name, legal_person_id,
+       GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE legal_person_id IS NOT NULL AND legal_person_id != ''
+GROUP BY legal_person_id HAVING company_count >= 2 ORDER BY company_count DESC
+```
+
+**D4. 同办税人关联**
+```sql
+SELECT tax_handler_name, tax_handler_id,
+       GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE tax_handler_id IS NOT NULL AND tax_handler_id != ''
+GROUP BY tax_handler_id HAVING company_count >= 2 ORDER BY company_count DESC
+```
+
+**D5. 同财务负责人关联**
+```sql
+SELECT finance_officer_name, finance_officer_id,
+       GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE finance_officer_id IS NOT NULL AND finance_officer_id != ''
+GROUP BY finance_officer_id HAVING company_count >= 2 ORDER BY company_count DESC
+```
+
+**D6. 同注册地址关联**
+```sql
+SELECT registered_address, GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE registered_address IS NOT NULL AND registered_address != ''
+GROUP BY registered_address HAVING company_count >= 2 ORDER BY company_count DESC
+```
+
+**D7. 法人年龄异常检测**
+```sql
+SELECT taxpayer_name, legal_person_name, legal_person_id,
+       CAST(strftime('%Y','now') - CAST(substr(legal_person_id,7,4) AS INTEGER) AS INTEGER) as age
+FROM tax_registrations
+WHERE length(legal_person_id) = 18
+  AND CAST(strftime('%Y','now') - CAST(substr(legal_person_id,7,4) AS INTEGER) AS INTEGER) >= 70
+```
+
+**D8. 同电话关联**
+```sql
+SELECT legal_person_phone as phone, GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE legal_person_phone IS NOT NULL AND legal_person_phone != ''
+GROUP BY legal_person_phone HAVING company_count >= 2
+UNION ALL
+SELECT tax_handler_phone as phone, GROUP_CONCAT(DISTINCT taxpayer_name) as companies,
+       COUNT(DISTINCT taxpayer_id) as company_count
+FROM tax_registrations
+WHERE tax_handler_phone IS NOT NULL AND tax_handler_phone != ''
+GROUP BY tax_handler_phone HAVING company_count >= 2
+ORDER BY company_count DESC
+```
+
+#### 阶段E：资金流分析（如有银行数据）
+
+使用 `bank_transactions` 标准表（列名同 fund-analysis 技能）：
+
+**E1. 资金回流初步筛查**
+```sql
+SELECT bt.account_no, bt.counterparty_account, bt.counterparty_name,
+       ROUND(SUM(CASE WHEN bt.direction='in' THEN bt.amount ELSE 0 END),2) as in_amount,
+       ROUND(SUM(CASE WHEN bt.direction='out' THEN bt.amount ELSE 0 END),2) as out_amount
+FROM bank_transactions bt
+WHERE bt.counterparty_account != '' AND bt.counterparty_account != bt.account_no
+GROUP BY bt.account_no, bt.counterparty_account
+HAVING in_amount > 0 AND out_amount > 0
+ORDER BY (in_amount + out_amount) DESC
+```
+
+**E2. 快进快出天数**
+```sql
+SELECT date(txn_time) as d,
+       ROUND(SUM(CASE WHEN direction='in' THEN amount ELSE 0 END),2) as in_amt,
+       ROUND(SUM(CASE WHEN direction='out' THEN amount ELSE 0 END),2) as out_amt
+FROM bank_transactions WHERE amount > 0
+GROUP BY d HAVING in_amt > 50000 AND out_amt > 50000
+```
+
+**E3. 交易对手地域分析**
+```sql
+SELECT counterparty_bank, COUNT(DISTINCT counterparty_account) as accounts,
+       COUNT(*) as cnt, ROUND(SUM(amount),2) as total
+FROM bank_transactions
+WHERE counterparty_bank IS NOT NULL AND counterparty_bank != ''
+GROUP BY counterparty_bank ORDER BY total DESC
+```
+
+#### 阶段F：时间转折点
+
+**F1. 企业月度开票趋势（含对手数）**
+```sql
+SELECT substr(invoice_date,1,7) as month,
+       COUNT(*) as cnt,
+       ROUND(SUM(total_amount),2) as total,
+       COUNT(DISTINCT buyer_tax_id) as buyer_count
+FROM seller_invoice WHERE invoice_status != '作废'
+GROUP BY month ORDER BY month
+```
+
+**F2. 月度环比增长率**
+```sql
+SELECT month, total,
+       ROUND((total - LAG(total) OVER (ORDER BY month)) * 100.0 / NULLIF(LAG(total) OVER (ORDER BY month), 0), 2) as growth_rate_pct
+FROM (
+  SELECT substr(invoice_date,1,7) as month, ROUND(SUM(total_amount),2) as total
+  FROM seller_invoice WHERE invoice_status != '作废'
+  GROUP BY month
+) ORDER BY month
+```
+
+#### 阶段H：可疑指标计算
+
+**H1. 够罪条件计算（专票）**
+```sql
+SELECT seller_tax_id, seller_name,
+       COUNT(*) as invoice_cnt,
+       ROUND(SUM(tax_amount),2) as total_tax,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices
+WHERE invoice_type LIKE '%专用%' AND invoice_status != '作废'
+GROUP BY seller_tax_id ORDER BY total_tax DESC
+```
+
+**H2. 够罪条件计算（普票）**
+```sql
+SELECT seller_tax_id, seller_name,
+       COUNT(*) as invoice_cnt,
+       ROUND(SUM(total_amount),2) as total_with_tax
+FROM tax_invoices
+WHERE invoice_type LIKE '%普通%' AND invoice_status != '作废'
+GROUP BY seller_tax_id ORDER BY total_with_tax DESC
+```
+
+**H3. 可疑指标汇总**
+```sql
+SELECT '进销品名匹配率' as metric,
+  ROUND((SELECT COUNT(DISTINCT goods_name) FROM seller_invoice WHERE goods_name IN (
+    SELECT DISTINCT goods_name FROM buyer_invoice
+  ) AND invoice_status != '作废') * 100.0 / NULLIF((SELECT COUNT(DISTINCT goods_name) FROM seller_invoice WHERE invoice_status != '作废'), 0), 2) as value
+UNION ALL
+SELECT '整额开票占比',
+  ROUND(CAST(COUNT(*) AS REAL) * 100.0 / NULLIF((SELECT COUNT(*) FROM tax_invoices WHERE invoice_status != '作废'), 0), 2)
+FROM tax_invoices WHERE CAST(total_amount AS INTEGER) = total_amount
+  AND CAST(total_amount AS INTEGER) % 10000 = 0 AND total_amount >= 10000 AND invoice_status != '作废'
+UNION ALL
+SELECT '作废率',
+  ROUND(SUM(CASE WHEN invoice_status = '作废' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2)
+FROM tax_invoices
+```
+
+### 重要注意事项
+
+1. **所有数据操作必须通过 excelcli 完成**：禁止智能体自行用 Python/pandas 读取 Excel、自建入库流程、或编写 Python 脚本进行任何数据分析。所有分析指标和统计计算均通过 `excelcli query --sql` 执行 SQL 完成
+2. **必须先 inspect 再分析**：不同系统的发票数据格式差异很大，先 inspect 确认列名和数据格式
+3. **必须先 tax map 再 tax normalize**：normalize 依赖映射文件，map 生成的 JSON 文件是桥梁
+4. **标准化后使用英文标准列名**：`tax_invoices` 等标准表使用上方列名对照表中的英文名，SQL 查询中禁止使用中文列名
+5. **normalize 后先查 PRAGMA**：执行 `PRAGMA table_info(tax_invoices)` 确认实际列名，然后再写 SQL 查询，避免反复报错
+6. **区分专票/普票**：通过 `invoice_type` 字段区分，后续所有金额统计必须分开呈现
+7. **过滤作废发票**：正常分析时排除 `invoice_status = '作废'` 的发票，但作废率分析时需要统计
+8. **复杂统计用 query**：`tax analyze` 提供基础分析，自定义统计指标用上方 SQL 查询集补充
+9. **SQL 查询可并行**：上述 SQL 查询相互独立，可以分批并行执行（每批3-4条），提高分析效率
 
 ## 执行编排（强制）
 
@@ -100,18 +804,18 @@ output/tax-fraud-analysis-0326/
 
 **目标**：了解涉案企业全貌，建立基础数据认知，初步判断企业经营属性和纳税特征。
 
-**操作**：读取数据文件，确认列名和数据格式，然后计算以下指标。
+**操作**：使用 `excelcli import` 导入数据，`excelcli inspect` 确认列名和数据格式，`excelcli tax map` + `excelcli tax normalize` 完成标准化，然后通过 `excelcli tax analyze` 和 `excelcli query --sql` 执行 SQL 查询集 A1-A9 计算以下指标。
 
 **首先确定分析主体**：读取税务登记信息表，确认涉案企业数量和基本信息。如果只有1个企业则为单主体分析；如果有多个企业，需在报告开头列出所有涉案企业，后续分析分别或合并进行。
 
 **企业属性判断**：根据税务登记信息中的"课征主题类型名称""登记注册类型""行业种类"和工商信息中的"企业(机构)类型""国标行业门类/大类/中类/小类""经营范围"，判断企业的行业属性和经营性质。在涉税犯罪中，需特别关注商贸类、贸易类、进出口类企业。
 
 **数据预处理**：
-1. **数据去重（必须首先执行）**：任何导入的数据都必须去重。去重时排除无分析意义的字段（如"序号""登记序号"等人为编号字段），以其余所有字段联合判断是否重复。应优先使用 SQL 去重（如 `SELECT DISTINCT ...` 或去重视图/CTE），并记录去重前后条数。
+1. **数据去重（必须首先执行）**：任何导入的数据都必须去重。去重时排除无分析意义的字段（如"序号""登记序号"等人为编号字段），以其余所有字段联合判断是否重复。应优先使用 `excelcli query --sql` 执行 SQL 去重（如 `SELECT DISTINCT ...` 或去重视图/CTE），并记录去重前后条数。
 2. 发票日期列按 SQL 可计算格式处理：优先用 `substr()`、`date()`、`julianday()` 等函数完成时间统计。
 3. 过滤作废发票：如"作废标志"列存在，需区分正常发票和已作废发票，分别统计
 4. 金额列计算时统一使用 `CAST(金额列 AS REAL)`，并对空值做 `CASE WHEN` 防错处理。
-5. 用 `PRAGMA table_info(表名)` 和 `SELECT * FROM 表名 LIMIT 3` 确认实际列名与样例数据。
+5. 用 `excelcli query <DB> --sql "PRAGMA table_info(表名)"` 和 `excelcli query <DB> --sql "SELECT * FROM 表名 LIMIT 3"` 确认实际列名与样例数据。
 6. 关联各表：通过"纳税人识别号""社会信用代码""统一社会信用代码"将税务登记、发票数据、工商信息和银行交易明细关联
 7. 数据质量检查：检查发票状态、作废标志等字段，确认数据完整性
 8. **区分专票与普票**：通过"发票类型"或"开具发票类型"字段区分增值税专用发票（专票）和增值税普通发票（普票），后续所有统计须按专票/普票分别进行。专票和普票在定罪量刑上存在重大差异，必须在分析中明确区分
@@ -136,7 +840,7 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段B：发票异常特征筛查
 
-**目标**：对发票数据进行系统性异常筛查，标记可疑发票和可疑交易对手。
+**目标**：对发票数据进行系统性异常筛查，标记可疑发票和可疑交易对手。通过 `excelcli query --sql` 执行 SQL 查询集 B1-B10 完成以下筛查项目的量化计算。
 
 **必须执行的筛查项目**：
 
@@ -170,7 +874,7 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段C：虚开网络与票流追踪
 
-**目标**：追踪发票的上下游流向，构建虚开发票网络，识别票流闭环和虚开链条。
+**目标**：追踪发票的上下游流向，构建虚开发票网络，识别票流闭环和虚开链条。通过 `excelcli query --sql` 执行 SQL 查询集 C1-C5 完成上下游分析和闭环检测。
 
 **子任务C1 — 上游供应商分析（进项端）**：
 
@@ -225,11 +929,11 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段D：人员关联与团伙识别
 
-**目标**：通过法定代表人、财务负责人、办税人、设备指纹、地域关联和工商关系，识别犯罪团伙网络和组织架构。
+**目标**：通过法定代表人、财务负责人、办税人、设备指纹、地域关联和工商关系，识别犯罪团伙网络和组织架构。通过 `excelcli query --sql` 执行 SQL 查询集 D1-D8 完成人员关联和团伙识别。
 
 **子任务D1 — 基于开票设备的团伙划分（R10）**：
 
-发票数据表中的IP/MAC/主板序列号可用于设备关联：
+发票数据表中的IP/MAC/主板序列号可用于设备关联，通过 `excelcli query --sql` 执行 SQL 查询 D1-D2 完成设备关联分析：
 1. 从销方数据中提取IP、MAC、主板序列号信息
 2. 统计每个IP/MAC/主板序列号涉及的企业（销方识别号）数量
 3. 使用 Union-Find 算法：共享同一IP、MAC或主板序列号的企业归为同一团伙
@@ -237,7 +941,7 @@ output/tax-fraud-analysis-0326/
 
 **子任务D2 — 基于税务登记人员的关联分析**：
 
-利用税务登记信息表进行人员关联：
+利用税务登记信息表进行人员关联，通过 `excelcli query --sql` 执行 SQL 查询 D3-D8 完成人员关联分析：
 1. **同法人关联**：通过"法定代表人姓名""法定代表人身份证号码"识别由同一法人控制的多个企业；同时统计单个法人关联的企业数量，数量过多为异常（来源：技战法序号9）
 2. **同财务负责人关联**：通过"财务负责人姓名""财务负责人身份证件号码"识别共用同一财务负责人的企业
 3. **同办税人关联**：通过"办税人姓名""办税人身份证件号码"识别由同一办税人代办的企业
@@ -248,7 +952,7 @@ output/tax-fraud-analysis-0326/
 
 **子任务D3 — 基于工商信息的关联分析**：
 
-利用工商信息表进行深层关联：
+利用工商信息表进行深层关联，通过 `excelcli query --sql` 查询 `business_registration` 表完成关联分析：
 1. **同法定代表人关联**：与D2互补验证
 2. **同注册地址关联**：通过"企业地址"识别注册在相同地址的企业（"同址不同企"为空壳公司典型特征，来源：技战法序号2）
 3. **同电话/邮箱关联**：通过"电话""更多电话""邮箱""更多邮箱"识别共用联系方式的企业（来源：技战法序号1/3）
@@ -282,15 +986,17 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段E：资金流分析（如有银行交易数据）
 
-**目标**：结合银行交易明细，追踪资金流向，验证发票交易的真实性，识别资金回流和虚开资金链。
+**目标**：结合银行交易明细，追踪资金流向，验证发票交易的真实性，识别资金回流和虚开资金链。通过 `excelcli query --sql` 执行 SQL 查询集 E1-E3 完成资金流分析。需先通过 `excelcli map` + `excelcli normalize` 将银行流水标准化为 `bank_transactions` 表。
 
 **子任务E1 — 资金回流分析**：
+通过 `excelcli query --sql` 执行 SQL 查询 E1 完成资金回流筛查：
 1. 将发票数据（购方→销方的开票关系）与银行交易数据（付款→收款的资金关系）进行比对
 2. 追踪开票方收款后的资金去向：是否通过关联个人账户、中间账户回流至受票方或其实际控制人
 3. 检测"快进快出"特征：大额资金入账后短时间内（如当日或次日）以相近金额转出
 4. 识别资金闭环：受票方付款→开票方账户→关联个人→回流受票方
 
 **子任务E2 — 交易对手地域分析**：
+通过 `excelcli query --sql` 执行 SQL 查询 E3 完成交易对手地域分析：
 1. 通过对手开户行归属地统计资金流入/流出的地域分布
 2. 识别资金集中流向的地域（如资金大量转至某省某市），结合发票流向判断虚开团伙的地域特征
 3. 例如：发票开给本市企业，但资金却转至河南某市，说明背后可能是河南的虚开团伙
@@ -304,7 +1010,7 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段F：时间维度转折点分析
 
-**目标**：识别企业从正常经营转为虚开行为的时间节点，分析资金和开票行为在时间上的特征变化。
+**目标**：识别企业从正常经营转为虚开行为的时间节点，分析资金和开票行为在时间上的特征变化。通过 `excelcli query --sql` 执行 SQL 查询集 F1-F2 完成时间维度分析。
 
 **操作**：
 1. **经营阶段划分**：按月统计开票金额、开票频率、交易对手数量、货品名称变化，识别出明显的行为转折点（如某月开始开票金额陡增、交易对手突变、品名大类改变）
@@ -326,9 +1032,7 @@ output/tax-fraud-analysis-0326/
 
 ### 阶段H：可疑特征量化与研判
 
-**目标**：对前七阶段的发现进行系统性量化评估，形成结论。
-
-计算以下可疑指标（详见下方"可疑指标与阈值"），逐项给出数值和判定结论，作为报告"可疑点分析"章节的依据。完成后综合所有指标和模式匹配结果，形成最终研判结论。
+**目标**：对前七阶段的发现进行系统性量化评估，形成结论。通过 `excelcli query --sql` 执行 SQL 查询集 H1-H3 完成够罪条件计算和可疑指标汇总。（详见下方"可疑指标与阈值"），逐项给出数值和判定结论，作为报告"可疑点分析"章节的依据。完成后综合所有指标和模式匹配结果，形成最终研判结论。
 
 ---
 
