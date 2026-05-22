@@ -76,6 +76,8 @@ ExcelCLI/target/
 ExcelCLI/report/
 test_data/
 
+ai-logs*
+
 # --- from yaklang/.gitignore ---
 *.yakc
 *.test
