@@ -214,6 +214,7 @@ export const PluginHubList: React.FC<PluginHubListProps> = memo((props) => {
       <div className={styles['side-bar-list']}>
         <YakitSideTab
           key={i18n.language}
+          type="horizontal"
           yakitTabs={HubSideBarList}
           activeKey={active}
           onActiveKey={(v) => {

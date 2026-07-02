@@ -36,20 +36,27 @@
   height: 100%;
   overflow: hidden;
   background-color: var(--Colors-Use-Basic-Background);
-  .yakpoc-tab-wrap {
+  .yak-poc-left-section {
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    width: 33.33333%;
+    max-width: 432px;
+    min-width: 320px;
+  }
+  .yakpoc-tab-wrap {
+    flex-shrink: 0;
+    width: 100%;
   }
   .left-wrapper {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
     border-right: 1px solid var(--Colors-Use-Neutral-Border);
     padding: 12px 8px;
-    width: 33.33333%;
-    max-width: 432px;
-    min-width: 320px;
     .left-header-search {
       @extend %display-flex-center;
       justify-content: space-between;

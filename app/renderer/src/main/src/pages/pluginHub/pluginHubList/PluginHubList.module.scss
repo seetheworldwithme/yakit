@@ -4,15 +4,12 @@
   height: 100%;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
 }
 
 .side-bar-list {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  border-right: 1px solid var(--Colors-Use-Neutral-Border);
-  border-left: 1px solid var(--Colors-Use-Neutral-Border);
-  background: var(--Colors-Use-Neutral-Bg-Hover);
+  flex-shrink: 0;
+  width: 100%;
 }
 .side-bar-list-item {
   padding: 12px 4px;
@@ -115,6 +112,7 @@
 
 .hub-list-body {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   .side-content {
     width: 100%;
