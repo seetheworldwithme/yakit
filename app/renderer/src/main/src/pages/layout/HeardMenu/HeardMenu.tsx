@@ -3,7 +3,6 @@ import {
   HeardMenuProps,
   RouteMenuDataItemProps,
   SubMenuProps,
-  CollapseMenuProp,
   privateUnionMenus,
   EnhancedPrivateRouteMenuProps,
   privateExchangeProps,
@@ -16,26 +15,22 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   CursorClickIcon,
-  DotsHorizontalIcon,
   SortAscendingIcon,
   SortDescendingIcon,
   UserIcon,
 } from '@/assets/newIcon'
-import ReactResizeDetector from 'react-resize-detector'
 import { useGetState, useMemoizedFn, useUpdateEffect } from 'ahooks'
-import { Divider, Dropdown, Tabs, Tooltip } from 'antd'
-import { YakitMenu, YakitMenuItemProps } from '@/components/yakitUI/YakitMenu/YakitMenu'
+import { Divider, Dropdown, Tooltip } from 'antd'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { YakitModal } from '@/components/yakitUI/YakitModal/YakitModal'
-import { LoadingOutlined } from '@ant-design/icons'
 import { YakitModalConfirm } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
 import { failed, yakitNotify } from '@/utils/notification'
 import { YakScript } from '@/pages/invoker/schema'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { useStore } from '@/store'
-import { isEnpriTrace, isEnpriTraceAgent, isIRify } from '@/utils/envfile'
+import { isEnpriTrace, isEnpriTraceAgent, isIRify, isMemfit } from '@/utils/envfile'
 import { CodeGV, RemoteGV } from '@/yakitGV'
 import {
   DatabaseFirstMenuProps,
@@ -49,19 +44,11 @@ import {
   databaseConvertData,
 } from '@/routes/newRoute'
 import { RouteToPageProps } from '../publicMenu/PublicMenu'
-import {
-  DownloadOnlinePluginByScriptNamesResponse,
-  keyToRouteInfo,
-  menusConvertKey,
-  routeConvertKey,
-  routeInfoToKey,
-  routeToMenu,
-} from '../publicMenu/utils'
+import { DownloadOnlinePluginByScriptNamesResponse, menusConvertKey, routeConvertKey } from '../publicMenu/utils'
 import { grpcFetchLocalPluginDetail } from '@/pages/pluginHub/utils/grpc'
 
 import classNames from 'classnames'
 import style from './HeardMenu.module.scss'
-import { ExtraMenu } from '../publicMenu/ExtraMenu'
 import { SolidPayloadIcon } from '@/assets/icon/solid'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { YakitEditor } from '@/components/yakitUI/YakitEditor/YakitEditor'
@@ -105,24 +92,14 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
   const [subMenuData, setSubMenuData] = useState<EnhancedPrivateRouteMenuProps[]>([])
   /** @name 展开状态下的被选中的一级菜单 */
   const [menuId, setMenuId] = useState<string>('')
-  /** @description 收起状态下，宽度不够时部分菜单被收起成二级菜单 */
-  const [routeMenuDataAfter, setRouteMenuDataAfter] = useState<EnhancedPrivateRouteMenuProps[]>([])
-  /** @description 宽度不够时部分菜单被整合的逻辑变量 */
-  const [width, setWidth] = useState<number>(0)
-  const [number, setNumber] = useState<number>(-1)
-  const [moreLeft, setMoreLeft] = useState<number>(0) // 更多文字的left
-
   const [isExpand, setIsExpand] = useState<boolean>(defaultExpand)
   useEffect(() => {
-    setIsExpand(isExpand)
+    setIsExpand(defaultExpand)
   }, [defaultExpand])
 
   const [customizeVisible, setCustomizeVisible] = useState<boolean>(false)
 
   const [loading, setLoading] = useState<boolean>(true)
-
-  const menuLeftRef = useRef<any>()
-  const menuLeftInnerRef = useRef<any>()
 
   const routeToName = useRef<Map<string, string>>(new Map<string, string>())
   useUpdateEffect(() => {
@@ -352,27 +329,6 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
         setTimeout(() => setLoading(false), 300)
       })
   })
-  /** 展开状态的菜单点击事件 */
-  const onTabClick = useMemoizedFn((key) => {
-    const data = keyToRouteInfo(key)
-    if (data) {
-      if (data.route === YakitRoute.Plugin_OP) {
-        onCheckPlugin(data)
-      } else {
-        onRouteMenuSelect(data)
-      }
-    }
-  })
-  /** 更多菜单里的菜单点击事件 */
-  const onClickMoreMenu = useMemoizedFn((info: RouteToPageProps) => {
-    if (!info.route) return
-
-    if (info.route !== YakitRoute.Plugin_OP) onRouteMenuSelect(info)
-    else {
-      if (!info.pluginName) return
-      onCheckPlugin(info)
-    }
-  })
   /** 收起状态的菜单点击事件 */
   const onClickMenu = useMemoizedFn((info: EnhancedPrivateRouteMenuProps) => {
     if (!info.page) return
@@ -492,49 +448,6 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
       .catch((err) => yakitNotify('error', t('Layout.HeardMenu.downloadMenuPluginFailed') + err))
   })
 
-  useEffect(() => {
-    if (!width) return
-    toMove()
-  }, [width, routeMenu])
-  /**
-   * @description: 计算是否显示一级折叠菜单
-   */
-  const toMove = useMemoizedFn(() => {
-    const menuWidth = menuLeftRef.current.clientWidth
-    let childrenList: any[] = menuLeftInnerRef.current.children
-    let childWidthAll = 0
-    let n = -1
-    let clientWidth: number[] = []
-    for (let index = 0; index < childrenList.length; index++) {
-      const element = childrenList[index]
-      childWidthAll += element.clientWidth
-      if (childWidthAll > menuWidth) {
-        n = index
-        break
-      }
-      clientWidth[index] = element.clientWidth
-    }
-    setNumber(n)
-    if (clientWidth.length > 0) {
-      setMoreLeft(clientWidth.reduce((p, c) => p + c))
-    }
-    if (n < 0) {
-      setRouteMenuDataAfter([])
-      return
-    }
-    const afterRoute: EnhancedPrivateRouteMenuProps[] = []
-    const beforeRoute: EnhancedPrivateRouteMenuProps[] = []
-    routeMenu.forEach((ele, index) => {
-      if (ele.children && ele.children.length > 0) {
-        if (index < n) {
-          beforeRoute.push(ele)
-        } else {
-          afterRoute.push(ele)
-        }
-      }
-    })
-    setRouteMenuDataAfter(afterRoute)
-  })
   const onExpand = useMemoizedFn((checked) => {
     const value = JSON.stringify(checked)
     setIsExpand(checked)
@@ -683,237 +596,138 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
 
   return (
     <div className={style['heard-menu-body']}>
-      <div
-        className={classNames(style['heard-menu'], {
-          [style['heard-menu-expand']]: isExpand,
-        })}
-      >
-        <ReactResizeDetector
-          onResize={(w) => {
-            if (!w) {
-              return
-            }
-            setWidth(w)
-          }}
-          handleWidth={true}
-          handleHeight={true}
-          refreshMode={'debounce'}
-          refreshRate={50}
-        />
-        <div className={classNames(style['heard-menu-left'])} ref={menuLeftRef}>
-          <div className={classNames(style['heard-menu-left-inner'])} ref={menuLeftInnerRef}>
-            {routeMenu
-              .filter((ele) => ele.children && ele.children?.length > 0)
-              .map((menuItem, index) => {
-                return (
-                  <RouteMenuDataItem
-                    key={`menuItem-${menuItem.label}`}
-                    menuItem={menuItem}
-                    isShow={number > 0 ? number <= index : false}
-                    onSelect={onClickMenu}
-                    isExpand={isExpand}
-                    setSubMenuData={(menu) => {
-                      setSubMenuData(menu.children || [])
-                      setMenuId(menu.label || '')
-                    }}
-                    activeMenuId={menuId}
-                  />
-                )
-              })}
-          </div>
-          {number > 0 && routeMenuDataAfter.length > 0 && (
-            <>
-              <CollapseMenu
-                moreLeft={moreLeft}
-                menuData={routeMenuDataAfter}
-                isExpand={isExpand}
-                onMenuSelect={onClickMoreMenu}
-              />
-            </>
-          )}
-        </div>
-        <div className={classNames(style['heard-menu-right'])}>
-          {!isEnpriTraceAgent() ? (
-            <>
-              <ExtraMenu onMenuSelect={onRouteMenuSelect} />
-              {!isIRify() && (
-                <>
-                  <Dropdown
-                    overlayClassName={style['customize-drop-menu']}
-                    overlay={
-                      <>
-                        {CustomizeMenuData.map((item) => (
-                          <div
-                            key={item.key}
-                            className={classNames(style['customize-item'], {
-                              [style['customize-item-select']]: patternMenu === item.key,
-                            })}
-                            onClick={() => onCustomizeMenuClick(item.key)}
-                          >
-                            <div className={style['customize-item-left']}>
-                              {item.itemIcon}
-                              <span className={style['customize-item-label']}>{t(item.labelUi)}</span>
-                            </div>
-                            {patternMenu === item.key && <CheckIcon />}
-                          </div>
-                        ))}
-                        <Divider style={{ margin: '6px 0' }} />
-                        <YakitSpin spinning={loading} tip="Loading..." size="small">
-                          <div
-                            className={classNames(style['customize-item'])}
-                            onClick={() => CustomizeMenuData.find((ele) => patternMenu === ele.key)?.onRestoreMenu()}
-                          >
-                            {t(CustomizeMenuData.find((ele) => patternMenu === ele.key)?.tipUi as string)}
-                          </div>
-                          <div className={classNames(style['customize-item'])} onClick={() => onGoCustomize()}>
-                            {t('Layout.HeardMenu.editMenu')}
-                          </div>
-                          <div
-                            className={classNames(style['customize-item'])}
-                            onClick={() => {
-                              setVisibleImport(true)
-                              setMenuDataString('')
-                              setFileName('')
-                              setRefreshTrigger(!refreshTrigger)
-                            }}
-                          >
-                            {t('Layout.HeardMenu.importJsonConfig')}
-                          </div>
-                        </YakitSpin>
-                      </>
-                    }
-                    onVisibleChange={setCustomizeVisible}
-                  >
-                    <YakitButton
-                      type="secondary2"
-                      className={classNames(style['heard-menu-customize'], {
-                        [style['margin-right-0']]: isExpand,
-                        [style['heard-menu-customize-menu']]: customizeVisible,
-                      })}
-                      icon={<CursorClickIcon />}
-                    >
-                      <div className={style['heard-menu-customize-content']}>
-                        {t('YakitButton.custom')}
-                        {(customizeVisible && <ChevronUpIcon />) || <ChevronDownIcon />}
-                      </div>
-                    </YakitButton>
-                  </Dropdown>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              <YakitButton
-                type="secondary2"
-                onClick={() => {
-                  onRouteMenuSelect({ route: YakitRoute.PayloadManager })
-                }}
-                icon={<SolidPayloadIcon />}
-              >
-                {t('YakitRoute.Payload')}
-              </YakitButton>
-            </>
-          )}
-          {!isExpand && (
-            <div className={style['heard-menu-sort']} onClick={() => onExpand(true)}>
-              {!isExpand && <SortDescendingIcon />}
-            </div>
-          )}
-        </div>
-      </div>
-      {isExpand && (
-        <div className={style['heard-sub-menu-expand']}>
-          <Tabs
-            tabBarExtraContent={
-              <div className={style['heard-menu-sort']} onClick={() => onExpand(false)}>
-                <SortAscendingIcon />
-              </div>
-            }
-            onTabClick={onTabClick}
-            popupClassName={style['heard-sub-menu-popup']}
-            moreIcon={<DotsHorizontalIcon className={style['dots-icon']} />}
-          >
-            {subMenuData.map((item, index) => {
-              const lableShow = item.labelUi ? t(item.labelUi) : item.label
-              const nodeLabel = (
-                <div className={classNames(style['sub-menu-expand-item-label'], style['heard-menu-item-label'])}>
-                  {lableShow}
-                </div>
-              )
-              const isDisable = !item.label || (item.page === YakitRoute.Plugin_OP && !item.yakScriptId)
-              // 二级菜单的路由信息
-              const tabKey = routeInfoToKey(item)
-              return (
-                <Tabs.TabPane
-                  tab={
-                    <div className={style['sub-menu-expand']}>
-                      {(!isDisable && (
-                        <div className={style['sub-menu-expand-item']} style={{ paddingLeft: index === 0 ? 0 : '' }}>
-                          <div className={style['sub-menu-expand-item-icon']}>
-                            <span className={style['item-icon']}>{item.icon}</span>
-                            <span className={style['item-hoverIcon']}>{item.hoverIcon}</span>
-                          </div>
-                          <Tooltip title={lableShow} placement="bottom">
-                            <div
-                              className={classNames(
-                                style['sub-menu-expand-item-label'],
-                                style['heard-menu-item-label'],
-                              )}
-                            >
-                              {lableShow}
-                            </div>
-                          </Tooltip>
-                        </div>
-                      )) || (
-                        <div
-                          className={classNames(style['sub-menu-expand-item'], {
-                            [style['sub-menu-expand-item-disable']]: isDisable,
-                          })}
-                          style={{ paddingLeft: index === 0 ? 0 : '' }}
-                          onClick={(e) => {
-                            // 设定loading为true时，点击菜单无效
-                            // 所以需要自定义处理事件，阻止tab组件的冒泡
-                            e.stopPropagation()
-                            if (loading) return
-                            onClickMenu(item)
+      <div className={style['heard-menu-brand']}>Sentinel</div>
+      <div className={style['heard-menu-scroll']}>
+        <div
+          className={classNames(style['heard-menu'], {
+            [style['heard-menu-expand']]: isExpand,
+          })}
+        >
+          <div className={classNames(style['heard-menu-left'])}>
+            <div className={classNames(style['heard-menu-left-inner'])}>
+              <YakitSpin spinning={loading} tip="Loading..." size="small">
+                <div className={style['heard-menu-primary-list']}>
+                  {routeMenu
+                    .filter((ele) => ele.children && ele.children?.length > 0)
+                    .map((menuItem) => {
+                      return (
+                        <RouteMenuDataItem
+                          key={`menuItem-${menuItem.label}`}
+                          menuItem={menuItem}
+                          isShow={false}
+                          onSelect={onClickMenu}
+                          isExpand={isExpand}
+                          setSubMenuData={(menu) => {
+                            setSubMenuData(menu.children || [])
+                            setMenuId(menu.label || '')
                           }}
-                        >
-                          <div className={style['sub-menu-expand-item-icon']}>
-                            <span className={style['item-icon']}>{(loading && <LoadingOutlined />) || item.icon}</span>
-                          </div>
-                          {(loading && nodeLabel) || (
-                            <Tooltip title={t('Layout.HeardMenu.pluginMissingDownload')} placement="bottom">
-                              {nodeLabel}
-                            </Tooltip>
-                          )}
-                        </div>
-                      )}
-                      {index !== subMenuData.length - 1 && <div className={style['sub-menu-expand-item-line']} />}
+                          activeMenuId={menuId}
+                        />
+                      )
+                    })}
+                </div>
+              </YakitSpin>
+            </div>
+          </div>
+        </div>
+        {isExpand && <SubMenu subMenuData={subMenuData} onSelect={onClickMenu} />}
+      </div>
+      <div className={classNames(style['heard-menu-right'])}>
+        <YakitButton
+          type="secondary2"
+          onClick={() => {
+            onRouteMenuSelect({ route: YakitRoute.PayloadManager })
+          }}
+          icon={<SolidPayloadIcon />}
+        >
+          {t('YakitRoute.Payload')}
+        </YakitButton>
+        {!isEnpriTraceAgent() && !isIRify() && (
+          <Dropdown
+            overlayClassName={style['customize-drop-menu']}
+            overlay={
+              <>
+                {CustomizeMenuData.map((item) => (
+                  <div
+                    key={item.key}
+                    className={classNames(style['customize-item'], {
+                      [style['customize-item-select']]: patternMenu === item.key,
+                    })}
+                    onClick={() => onCustomizeMenuClick(item.key)}
+                  >
+                    <div className={style['customize-item-left']}>
+                      {item.itemIcon}
+                      <span className={style['customize-item-label']}>{t(item.labelUi)}</span>
                     </div>
-                  }
-                  key={tabKey}
-                />
-              )
-            })}
-          </Tabs>
-        </div>
-      )}
-      {/* 后面看看菜单导出的数据格式 */}
-      <YakitModal
-        title={t('Layout.HeardMenu.importJsonConfig')}
-        closable={true}
-        visible={visibleImport}
-        onCancel={() => setVisibleImport(false)}
-        width="60%"
-        onOk={() => onImportJSON()}
-        okText={t('YakitButton.import')}
-        confirmLoading={importLoading}
-        bodyStyle={{ padding: 0 }}
-      >
-        <div style={{ height: 400 }}>
-          <YakitEditor type="json" value={menuDataString} setValue={setMenuDataString}></YakitEditor>
-        </div>
-      </YakitModal>
+                    {patternMenu === item.key && <CheckIcon />}
+                  </div>
+                ))}
+                <Divider style={{ margin: '6px 0' }} />
+                <YakitSpin spinning={loading} tip="Loading..." size="small">
+                  <div
+                    className={classNames(style['customize-item'])}
+                    onClick={() => CustomizeMenuData.find((ele) => patternMenu === ele.key)?.onRestoreMenu()}
+                  >
+                    {t(CustomizeMenuData.find((ele) => patternMenu === ele.key)?.tipUi as string)}
+                  </div>
+                  <div className={classNames(style['customize-item'])} onClick={() => onGoCustomize()}>
+                    {t('Layout.HeardMenu.editMenu')}
+                  </div>
+                  <div
+                    className={classNames(style['customize-item'])}
+                    onClick={() => {
+                      setVisibleImport(true)
+                      setMenuDataString('')
+                      setFileName('')
+                      setRefreshTrigger(!refreshTrigger)
+                    }}
+                  >
+                    {t('Layout.HeardMenu.importJsonConfig')}
+                  </div>
+                </YakitSpin>
+              </>
+            }
+            onVisibleChange={setCustomizeVisible}
+          >
+            <YakitButton
+              type="secondary2"
+              className={classNames(style['heard-menu-customize'], {
+                [style['heard-menu-customize-menu']]: customizeVisible,
+              })}
+              icon={<CursorClickIcon />}
+            >
+              <div className={style['heard-menu-customize-content']}>
+                {t('YakitButton.custom')}
+                {(customizeVisible && <ChevronUpIcon />) || <ChevronDownIcon />}
+              </div>
+            </YakitButton>
+          </Dropdown>
+        )}
+        {!isMemfit() && (
+          <div className={style['heard-menu-sort']} onClick={() => onExpand(!isExpand)}>
+            {(isExpand && <SortAscendingIcon />) || <SortDescendingIcon />}
+            <span>{(isExpand && '收起') || '展开'}</span>
+          </div>
+        )}
+      </div>
+      <div className={style['heard-menu-modals']}>
+        {/* 后面看看菜单导出的数据格式 */}
+        <YakitModal
+          title={t('Layout.HeardMenu.importJsonConfig')}
+          closable={true}
+          visible={visibleImport}
+          onCancel={() => setVisibleImport(false)}
+          width="60%"
+          onOk={() => onImportJSON()}
+          okText={t('YakitButton.import')}
+          confirmLoading={importLoading}
+          bodyStyle={{ padding: 0 }}
+        >
+          <div style={{ height: 400 }}>
+            <YakitEditor type="json" value={menuDataString} setValue={setMenuDataString}></YakitEditor>
+          </div>
+        </YakitModal>
+      </div>
     </div>
   )
 })
@@ -951,7 +765,7 @@ const RouteMenuDataItem: React.FC<RouteMenuDataItemProps> = React.memo((props) =
   return (
     (isExpand && popoverContent) || (
       <YakitPopover
-        placement="bottomLeft"
+        placement="rightTop"
         content={<SubMenu subMenuData={menuItem.children || []} onSelect={onSelect} />}
         trigger="hover"
         overlayClassName={classNames(style['popover'], {
@@ -999,47 +813,3 @@ const SubMenu: React.FC<SubMenuProps> = (props) => {
     </div>
   )
 }
-/** 宽度影响展示时的更多菜单 */
-const CollapseMenu: React.FC<CollapseMenuProp> = React.memo((props) => {
-  const { menuData, moreLeft, isExpand, onMenuSelect } = props
-  const { t, i18n } = useI18nNamespaces(['yakitRoute', 'yakitUi'])
-
-  const [show, setShow] = useState<boolean>(false)
-
-  const newMenuData: YakitMenuItemProps[] = routeToMenu(menuData, t)
-
-  const menu = (
-    <YakitMenu
-      isHint={true}
-      data={newMenuData}
-      width={136}
-      onSelect={({ key }) => {
-        const data = keyToRouteInfo(key)
-        if (data) onMenuSelect(data)
-      }}
-    ></YakitMenu>
-  )
-
-  return (
-    <div className={style['heard-menu-more']} style={{ left: moreLeft }}>
-      <YakitPopover
-        placement={'bottomLeft'}
-        arrowPointAtCenter={true}
-        content={menu}
-        trigger="hover"
-        onVisibleChange={(visible) => setShow(visible)}
-        overlayClassName={classNames(style['popover'])}
-      >
-        <div
-          className={classNames(style['heard-menu-item'], style['heard-menu-item-font-weight'], {
-            [style['heard-menu-item-open']]: show,
-            [style['heard-menu-item-flex-start']]: isExpand,
-          })}
-        >
-          {t('YakitButton.more')}
-          {(show && <ChevronUpIcon />) || <ChevronDownIcon />}
-        </div>
-      </YakitPopover>
-    </div>
-  )
-})

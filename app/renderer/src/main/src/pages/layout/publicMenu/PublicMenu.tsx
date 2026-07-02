@@ -12,12 +12,9 @@ import {
   getSecurityExpertLeftMenu,
   getSecurityExpertNotepadMenu,
 } from '@/routes/newRoute'
-import { ExtraMenu, OrdinaryMenu } from './ExtraMenu'
-import { SortAscendingIcon, SortDescendingIcon } from '@/assets/newIcon'
+import { OrdinaryMenu } from './ExtraMenu'
+import { CursorClickIcon, SortAscendingIcon, SortDescendingIcon } from '@/assets/newIcon'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
-import { MenuCodec } from './MenuCodec'
-import { MenuDNSLog } from './MenuDNSLog'
-import { MenuMode } from './MenuMode'
 import { useMemoizedFn } from 'ahooks'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { YakitMenu } from '@/components/yakitUI/YakitMenu/YakitMenu'
@@ -56,6 +53,7 @@ import emiter from '@/utils/eventBus/eventBus'
 import { grpcQueryNote } from '@/pages/notepadManage/notepadManage/utils'
 import { defaultNoteFilter } from '@/defaultConstants/ModifyNotepad'
 import { genDefaultPagination } from '@/pages/invoker/schema'
+import { SolidPayloadIcon } from '@/assets/icon/solid'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -108,7 +106,6 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
     setActiveMenu(0)
   }, [softMode])
 
-  const [activeTool, setActiveTool] = useState<'codec' | 'dnslog'>('codec')
   const [isExpand, setIsExpand] = useState<boolean>(defaultExpand)
   useEffect(() => {
     setIsExpand(defaultExpand)
@@ -562,12 +559,69 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
     return isCommunityYakit() && softMode === YakitModeEnum.SecurityExpert
   }, [softMode])
 
+  const getMenuLabel = useMemoizedFn((item: EnhancedPublicRouteMenuProps) => {
+    return item.labelUi ? t(item.labelUi) : item.label
+  })
+
+  const onClickSidebarMenu = useMemoizedFn((item: EnhancedPublicRouteMenuProps, source: string) => {
+    if (!item.page) return
+    const pluginName = item.yakScripName || item.menuName || item.label
+    const pluginId =
+      source === 'plugin'
+        ? item.yakScriptId || 0
+        : pluginToId[pluginName as ResidentPluginName] || item.yakScriptId || 0
+    onClickMenu(
+      {
+        route: item.page,
+        pluginId,
+        pluginName,
+      },
+      source,
+    )
+  })
+
+  const renderSidebarMenuItems = useMemoizedFn(
+    (menuList: EnhancedPublicRouteMenuProps[] = [], source = 'route', level = 0) => {
+      return menuList.map((item, index) => {
+        const label = getMenuLabel(item)
+        if (item.children && item.children.length > 0) {
+          return (
+            <div className={styles['sidebar-menu-group']} key={`${item.menuName || item.label}-${index}`}>
+              <div className={styles['sidebar-menu-group-title']}>{label}</div>
+              <div className={styles['sidebar-menu-group-children']}>
+                {renderSidebarMenuItems(item.children, source, level + 1)}
+              </div>
+            </div>
+          )
+        }
+        const pluginName = item.yakScripName || item.menuName || item.label
+        const pluginId =
+          source === 'plugin'
+            ? item.yakScriptId || 0
+            : pluginToId[pluginName as ResidentPluginName] || item.yakScriptId || 0
+        return (
+          <div
+            key={`${item.menuName || item.label}-${index}`}
+            className={classNames(styles['second-menu-item'], {
+              [styles['second-menu-item-indent']]: level > 0,
+              [styles['second-menu-item-disable']]: item.page === YakitRoute.Plugin_OP && !pluginId,
+            })}
+            onClick={() => onClickSidebarMenu(item, source)}
+          >
+            <span className={styles['second-menu-item-label']}>{label}</span>
+          </div>
+        )
+      })
+    },
+  )
+
   return (
     <div
       className={classNames(styles['public-menu-wrapper'], {
         [styles['public-menu-no-expand-wrapper']]: !isExpand,
       })}
     >
+      <div className={styles['public-menu-brand']}>Sentinel</div>
       <div className={styles['first-menu-wrapper']}>
         {isSecurityExpert ? (
           <div className={styles['menu-wrapper-left']}>
@@ -611,14 +665,6 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
             {!isExpand && <div className={styles['first-menu-body']}>{noExpand}</div>}
           </>
         )}
-        <div className={styles['first-menu-extra-wrapper']}>
-          <ExtraMenu onMenuSelect={onClickExtraMenu} isSecurityExpert={isSecurityExpert} />
-          {!isMemfit() && !isExpand && (
-            <div className={styles['no-expand-wrapper']} onClick={(e) => onSetIsExpand(true)}>
-              <SortDescendingIcon />
-            </div>
-          )}
-        </div>
       </div>
 
       <div
@@ -626,95 +672,35 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
           [styles['second-menu-hidden-wrapper']]: !isExpand,
         })}
       >
-        <div
-          className={styles['second-menu-body']}
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            gap: isSecurityExpert ? 0 : 8,
-          }}
-        >
-          {!!defaultMenu[activeMenu] && (
-            <MenuMode
-              mode={defaultMenu[activeMenu]?.label}
-              pluginToId={pluginToId}
-              onMenuSelect={(route) => onClickMenu(route, 'route')}
-            />
-          )}
-
-          {!isMemfit() && (
+        <div className={styles['second-menu-body']}>
+          {isSecurityExpert ? null : (
             <>
-              <>
-                {!isSecurityExpert && defaultMenu[activeMenu]?.label !== '插件' ? (
-                  <div className={styles['divider-style']}></div>
-                ) : (
-                  <div></div>
-                )}
-              </>
-              <div className={styles['tool-wrapper']}>
-                {defaultMenu[activeMenu]?.label === '插件' && (
-                  <MenuPlugin
-                    loading={loading}
-                    pluginList={pluginMenu}
-                    onMenuSelect={(route) => onClickMenu(route, 'plugin')}
-                    onRestore={() => {
-                      isInitRef.current = true
-                    }}
-                  />
-                )}
-                <div
-                  className={defaultMenu[activeMenu]?.label !== '插件' ? styles['tool-body'] : styles['hide-tool-body']}
-                >
-                  <div className={styles['tool-container']}>
-                    <div
-                      className={
-                        activeTool === 'codec' ? styles['tool-nohidden-container'] : styles['tool-hidden-container']
-                      }
-                    >
-                      <MenuCodec />
-                    </div>
-                    <div
-                      className={
-                        activeTool === 'dnslog' ? styles['tool-nohidden-container'] : styles['tool-hidden-container']
-                      }
-                    >
-                      <MenuDNSLog />
-                    </div>
-                  </div>
-                  <div className={styles['switch-op-wrapper']}>
-                    <div className={styles['border-wrapper']}></div>
-                    <div
-                      className={classNames(styles['tab-bar'], {
-                        [styles['active-tab-bar']]: activeTool === 'codec',
-                      })}
-                      onClick={() => {
-                        if (activeTool === 'codec') return
-                        setActiveTool('codec')
-                      }}
-                    >
-                      {t('YakitRoute.Codec')}
-                    </div>
-                    <div
-                      className={classNames(styles['tab-bar'], {
-                        [styles['active-tab-bar']]: activeTool === 'dnslog',
-                      })}
-                      onClick={() => {
-                        if (activeTool === 'dnslog') return
-                        setActiveTool('dnslog')
-                      }}
-                    >
-                      {t('YakitRoute.DNSLog')}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderSidebarMenuItems(defaultMenu[activeMenu]?.children || [], 'route')}
+              {defaultMenu[activeMenu]?.label === '插件' && renderSidebarMenuItems(pluginMenu, 'plugin')}
             </>
           )}
         </div>
+      </div>
+      <div className={styles['first-menu-extra-wrapper']}>
+        <YakitButton
+          type="secondary2"
+          icon={<SolidPayloadIcon />}
+          onClick={() => onMenuSelect({ route: YakitRoute.PayloadManager })}
+        >
+          {t('YakitRoute.Payload')}
+        </YakitButton>
+        <YakitButton
+          type="secondary2"
+          icon={<CursorClickIcon />}
+          onClick={() => ipcRenderer.invoke('open-customize-menu')}
+        >
+          {t('YakitButton.custom')}
+        </YakitButton>
         {!isMemfit() && (
           <div className={styles['expand-wrapper']}>
-            <div className={styles['expand-body']} onClick={(e) => onSetIsExpand(false)}>
-              <SortAscendingIcon />
+            <div className={styles['expand-body']} onClick={(e) => onSetIsExpand(!isExpand)}>
+              {(isExpand && <SortAscendingIcon />) || <SortDescendingIcon />}
+              <span>{(isExpand && '收起') || '展开'}</span>
             </div>
           </div>
         )}

@@ -659,14 +659,14 @@ const Main: React.FC<MainProp> = React.memo((props) => {
             )}
 
             <div
+              className="main-operator-shell"
               style={{
                 display: isShowCustomizeMenu ? 'none' : 'flex',
-                flexDirection: 'column',
                 height: '100%',
               }}
             >
-              {isCommunityEdition() ? (
-                <>
+              <div className="main-operator-sidebar">
+                {isCommunityEdition() ? (
                   <PublicMenu
                     defaultExpand={defaultExpand}
                     onMenuSelect={openMenu}
@@ -676,19 +676,21 @@ const Main: React.FC<MainProp> = React.memo((props) => {
                       })
                     }}
                   />
-                </>
-              ) : (
-                <HeardMenu
-                  defaultExpand={defaultExpand}
-                  onRouteMenuSelect={openMenu}
-                  setRouteToLabel={(val) => {
-                    val.forEach((value, key) => {
-                      routeKeyToLabel.current.set(key, value)
-                    })
-                  }}
-                />
-              )}
-              <MainOperatorContent routeKeyToLabel={routeKeyToLabel.current} />
+                ) : (
+                  <HeardMenu
+                    defaultExpand={defaultExpand}
+                    onRouteMenuSelect={openMenu}
+                    setRouteToLabel={(val) => {
+                      val.forEach((value, key) => {
+                        routeKeyToLabel.current.set(key, value)
+                      })
+                    }}
+                  />
+                )}
+              </div>
+              <div className="main-operator-workspace">
+                <MainOperatorContent routeKeyToLabel={routeKeyToLabel.current} />
+              </div>
             </div>
           </AutoSpin>
 
