@@ -292,8 +292,8 @@ const HTTPHistoryFilterInner: React.FC<HTTPHistoryFilterProps> = React.memo((pro
               yakitTabs={HistoryTab}
               activeKey={activeKey}
               onActiveKey={onActiveKey}
-              show={openTabsFlag}
-              setShow={setOpenTabsFlag}
+              type="horizontal"
+              className={styles['history-filter-side-tabs']}
             />
             <div className={styles['tab-content']}>
               <ReactResizeDetector
@@ -381,7 +381,7 @@ const HTTPHistoryFilterInner: React.FC<HTTPHistoryFilterProps> = React.memo((pro
           </div>
         }
         lineStyle={{ display: '' }}
-        firstMinSize={openTabsFlag ? '325px' : '24px'}
+        firstMinSize="325px"
         secondMinSize={720}
         secondNode={
           <div className={styles['HTTPHistoryFilter-right']}>

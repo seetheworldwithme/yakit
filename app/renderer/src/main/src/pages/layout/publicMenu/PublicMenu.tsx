@@ -646,17 +646,25 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
             {isExpand && (
               <div className={styles['first-menu-body']}>
                 {defaultMenu.map((item, index) => {
+                  const isActiveMenu = activeMenu === index
                   return (
-                    <div
-                      key={`${item.menuName}-${index}`}
-                      className={classNames(styles['menu-opt'], {
-                        [styles['active-menu-opt']]: activeMenu === index,
-                      })}
-                      onClick={() => {
-                        if (activeMenu !== index) setActiveMenu(index)
-                      }}
-                    >
-                      {item.labelUi ? t(item.labelUi) : item.label}
+                    <div className={styles['first-menu-item-block']} key={`${item.menuName}-${index}`}>
+                      <div
+                        className={classNames(styles['menu-opt'], {
+                          [styles['active-menu-opt']]: isActiveMenu,
+                        })}
+                        onClick={() => {
+                          if (activeMenu !== index) setActiveMenu(index)
+                        }}
+                      >
+                        {item.labelUi ? t(item.labelUi) : item.label}
+                      </div>
+                      {isActiveMenu && (
+                        <div className={styles['inline-second-menu']}>
+                          {renderSidebarMenuItems(item.children || [], 'route')}
+                          {item.label === '插件' && renderSidebarMenuItems(pluginMenu, 'plugin')}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -667,20 +675,6 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
         )}
       </div>
 
-      <div
-        className={classNames(styles['second-menu-wrapper'], {
-          [styles['second-menu-hidden-wrapper']]: !isExpand,
-        })}
-      >
-        <div className={styles['second-menu-body']}>
-          {isSecurityExpert ? null : (
-            <>
-              {renderSidebarMenuItems(defaultMenu[activeMenu]?.children || [], 'route')}
-              {defaultMenu[activeMenu]?.label === '插件' && renderSidebarMenuItems(pluginMenu, 'plugin')}
-            </>
-          )}
-        </div>
-      </div>
       <div className={styles['first-menu-extra-wrapper']}>
         <YakitButton
           type="secondary2"

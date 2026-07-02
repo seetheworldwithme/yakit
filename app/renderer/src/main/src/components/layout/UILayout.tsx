@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreation, useDebounceEffect, useMemoizedFn, useUpdateEffect } from 'ahooks'
 import { MacUIOp } from './MacUIOp'
-import { PerformanceDisplay, yakProcess } from './PerformanceDisplay'
+import type { yakProcess } from './PerformanceDisplay'
 import { FuncDomain } from './FuncDomain'
 import { TemporaryProjectPop, WinUIOp } from './WinUIOp'
 import { GlobalState } from './GlobalState'
@@ -53,8 +53,7 @@ import { RemoteEngine } from './RemoteEngine/RemoteEngine'
 import { RemoteLinkInfo } from './RemoteEngine/RemoteEngineType'
 import { DownloadYakit } from './update/DownloadYakit'
 import { DownloadYaklang } from './update/DownloadYaklang'
-import { HelpDoc } from './HelpDoc/HelpDoc'
-import { SolidCheckCircleIcon, SolidHomeIcon } from '@/assets/icon/solid'
+import { SolidCheckCircleIcon } from '@/assets/icon/solid'
 import { setNowProjectDescription } from '@/pages/globalVariable'
 import { handleAIConfig, apiGetGlobalNetworkConfig, apiSetGlobalNetworkConfig } from '@/pages/spaceEngine/utils'
 import { GlobalNetworkConfig } from '../configNetwork/ConfigNetworkPage'
@@ -1190,20 +1189,6 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
   }
   // #endregion
 
-  /** @name 软件顶部Title */
-  const getAppTitleName: string = useMemo(() => {
-    // 引擎未连接或便携版 显示默认title
-    if (!engineLink || isEnpriTraceAgent()) return getReleaseEditionName()
-    else if (
-      !isExportTemporaryProjectFlag &&
-      temporaryProjectId &&
-      temporaryProjectId === (currentProject?.Id ? currentProject?.Id + '' : '')
-    ) {
-      return '临时项目'
-    } else {
-      return projectName ? projectName : getReleaseEditionName()
-    }
-  }, [projectName, engineLink, temporaryProjectId, currentProject])
   /**  yakit是否进入首页 */
   const pageShowHome = useMemo(() => {
     const flag = engineLink && !isJudgeLicense && !showProjectManage
@@ -1662,6 +1647,10 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
     })
   })
   const dropClassName = { [styles['header-title-drop']]: drop }
+  const engineModeText = useCreation(() => {
+    if ((engineMode || 'local') === 'local' && !dynamicStatus.isDynamicStatus) return '本地链接'
+    return EngineModeVerbose(engineMode || 'local', dynamicStatus)
+  }, [engineMode, dynamicStatus.isDynamicStatus])
 
   return (
     <div className={styles['ui-layout-wrapper']}>
@@ -1681,13 +1670,10 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
             {system === 'Darwin' ? (
               <div className={classNames(styles['header-body'], styles['mac-header-body'])}>
                 {/* 遮住底部边框线 */}
-                <div
-                  style={{ left: yakitMode === 'soft' ? 76 : -45 }}
-                  className={styles['header-border-yakit-mask']}
-                ></div>
+                <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
 
                 <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
-                  {getAppTitleName}-{`${EngineModeVerbose(engineMode || 'local', dynamicStatus)}`}
+                  {engineLink ? <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} /> : engineModeText}
                 </div>
 
                 <div className={styles['header-left']}>
@@ -1697,45 +1683,12 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                       pageChildrenShow={pageShowHome}
                     />
                   </div>
-
-                  {engineLink && (
-                    <>
-                      {!isEnpriTraceAgent() && (
-                        <div
-                          className={classNames(styles['yakit-mode-icon'], {
-                            [styles['yakit-mode-selected']]: yakitMode === 'soft',
-                          })}
-                          onClick={() => changeYakitMode('soft')}
-                        >
-                          <SolidHomeIcon className={styles['mode-icon-selected']} />
-                        </div>
-                      )}
-                      <div className={classNames(dropClassName)}>
-                        <div className={styles['divider-wrapper']}></div>
-                        <YakitGlobalHost isEngineLink={engineLink} />
-                      </div>
-                    </>
-                  )}
-                  <div className={styles['short-divider-wrapper']}>
-                    <div className={styles['divider-style']}></div>
-                  </div>
-
-                  <div className={styles['left-cpu']}>
-                    <PerformanceDisplay
-                      engineMode={engineMode}
-                      typeCallback={handleOperations}
-                      engineLink={engineLink}
-                      cpuWrapperClassName={dropClassName}
-                    />
-                  </div>
                 </div>
                 <div className={classNames(styles['header-title'], dropClassName)} onDoubleClick={maxScreen} />
                 <div className={styles['header-right']}>
                   {performanceSampling}
 
                   {stopScreen}
-
-                  <HelpDoc system={system} />
 
                   {engineLink && (
                     <>
@@ -1751,6 +1704,8 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                         system={system}
                         isJudgeLicense={isJudgeLicense}
                         onDevToolRefresh={onDevToolRefresh}
+                        hideScreenAndScreenshot
+                        hideNotice
                       />
                       {!showProjectManage && (
                         <>
@@ -1764,14 +1719,15 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
               </div>
             ) : (
               <div className={classNames(styles['header-body'], styles['win-header-body'])}>
-                <div
-                  style={{ left: yakitMode === 'soft' ? 44 : -45 }}
-                  className={styles['header-border-yakit-mask']}
-                ></div>
+                <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
 
                 <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
                   <>
-                    {getAppTitleName}-{`${EngineModeVerbose(engineMode || 'local', dynamicStatus)}`}
+                    {engineLink ? (
+                      <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} />
+                    ) : (
+                      engineModeText
+                    )}
                   </>
                 </div>
 
@@ -1779,17 +1735,6 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                   {engineLink && (
                     <>
                       {!showProjectManage && <GlobalState isEngineLink={engineLink} system={system} mcp={mcp} />}
-
-                      {!isEnpriTraceAgent() && (
-                        <div
-                          className={classNames(styles['yakit-mode-icon'], {
-                            [styles['yakit-mode-selected']]: false && yakitMode === 'soft',
-                          })}
-                          onClick={() => changeYakitMode('soft')}
-                        >
-                          <SolidHomeIcon className={styles['mode-icon-selected']} />
-                        </div>
-                      )}
 
                       <div className={styles['divider-wrapper']}></div>
                       <div>
@@ -1806,12 +1751,12 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                           system={system}
                           isJudgeLicense={isJudgeLicense}
                           onDevToolRefresh={onDevToolRefresh}
+                          hideScreenAndScreenshot
+                          hideNotice
                         />
                       </div>
                     </>
                   )}
-
-                  <HelpDoc system={system} />
 
                   {stopScreen}
 
@@ -1821,25 +1766,6 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                 <div className={classNames(styles['header-title'], dropClassName)} onDoubleClick={maxScreen} />
 
                 <div className={styles['header-right']}>
-                  <div className={styles['left-cpu']}>
-                    <PerformanceDisplay
-                      engineMode={engineMode}
-                      typeCallback={handleOperations}
-                      engineLink={engineLink}
-                      cpuWrapperClassName={dropClassName}
-                    />
-                  </div>
-                  <div className={styles['short-divider-wrapper']}>
-                    <div className={styles['divider-style']}></div>
-                  </div>
-                  <div className={classNames(dropClassName)}>
-                    {engineLink && (
-                      <>
-                        <YakitGlobalHost isEngineLink={engineLink} />
-                        <div className={styles['divider-wrapper']}></div>
-                      </>
-                    )}
-                  </div>
                   <WinUIOp
                     currentProjectId={currentProject?.Id ? currentProject?.Id + '' : ''}
                     pageChildrenShow={pageShowHome}

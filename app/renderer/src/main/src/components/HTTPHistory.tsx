@@ -189,10 +189,8 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
 
     if (activeKey === 'rules' && openTabsFlag) {
       p.firstRatio = '470px'
-    } else if (openTabsFlag) {
-      p.firstRatio = '20%'
     } else {
-      p.firstRatio = '24px'
+      p.firstRatio = '20%'
     }
     return p
   }, [openTabsFlag, activeKey])
@@ -305,8 +303,8 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
               yakitTabs={HistoryTab}
               activeKey={activeKey}
               onActiveKey={onActiveKey}
-              show={openTabsFlag}
-              setShow={setOpenTabsFlag}
+              type="horizontal"
+              className={styles['history-side-tabs']}
             />
             <div className={styles['tab-content']}>
               <ReactResizeDetector
@@ -403,7 +401,7 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
           </div>
         )}
         lineStyle={{ display: '' }}
-        firstMinSize={openTabsFlag ? '325px' : '24px'}
+        firstMinSize="325px"
         secondMinSize={720}
         secondNode={
           <div className={styles['hTTPHistory-right']}>

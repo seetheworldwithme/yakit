@@ -6,6 +6,10 @@
     font-size: 12px;
     line-height: 20px;
     text-transform: capitalize;
+    .addr-prefix {
+      margin-right: 8px;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+    }
     .addr-ip {
       color: var(--Colors-Use-Neutral-Disable);
     }

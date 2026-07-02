@@ -255,6 +255,8 @@ export interface FuncDomainProp {
   system: YakitSystem
 
   onDevToolRefresh: () => void
+  hideScreenAndScreenshot?: boolean
+  hideNotice?: boolean
 }
 
 export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
@@ -272,6 +274,8 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
     system,
     isJudgeLicense,
     onDevToolRefresh,
+    hideScreenAndScreenshot = false,
+    hideNotice = false,
   } = props
 
   /** 登录用户信息 */
@@ -570,11 +574,13 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
       <div className={classNames(styles['func-domain-body'], { [styles['func-domain-reverse-body']]: isReverse })}>
         {showDevTool() && <UIDevTool onDevToolRefresh={onDevToolRefresh} />}
 
-        <ScreenAndScreenshot
-          system={system}
-          token={screenRecorderInfo.token}
-          isRecording={screenRecorderInfo.isRecording}
-        />
+        {!hideScreenAndScreenshot && (
+          <ScreenAndScreenshot
+            system={system}
+            token={screenRecorderInfo.token}
+            isRecording={screenRecorderInfo.isRecording}
+          />
+        )}
 
         {!showProjectManage && (
           <div className={styles['ui-op-btn-wrapper']} onClick={openConsoleNewWindow}>
@@ -592,7 +598,7 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
         <div className={styles['state-setting-wrapper']}>
           {!showProjectManage && !isIRify() && <UIOpRisk isEngineLink={isEngineLink} />}
           {!showProjectManage && isIRify() && <UIOpIRifyRisk isEngineLink={isEngineLink} />}
-          {!isEnpriTraceAgent() && (
+          {!hideNotice && !isEnpriTraceAgent() && (
             <UIOpNotice isEngineLink={isEngineLink} isRemoteMode={isRemoteMode} onLogin={() => setLoginShow(true)} />
           )}
           {!showProjectManage && (

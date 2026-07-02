@@ -112,6 +112,12 @@
       gap: 4px;
     }
 
+    .heard-menu-primary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .heard-menu-item {
       cursor: pointer;
       font-weight: 500;
@@ -296,7 +302,6 @@
   min-width: 0;
   width: 100%;
   font-size: 12px;
-  margin-top: 8px;
   padding: 4px;
   border-radius: 6px;
   background: var(--Colors-Use-Basic-Background);

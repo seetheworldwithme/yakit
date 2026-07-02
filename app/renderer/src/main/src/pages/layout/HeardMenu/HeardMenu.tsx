@@ -610,19 +610,22 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
                   {routeMenu
                     .filter((ele) => ele.children && ele.children?.length > 0)
                     .map((menuItem) => {
+                      const isActiveMenu = isExpand && menuId === menuItem.label
                       return (
-                        <RouteMenuDataItem
-                          key={`menuItem-${menuItem.label}`}
-                          menuItem={menuItem}
-                          isShow={false}
-                          onSelect={onClickMenu}
-                          isExpand={isExpand}
-                          setSubMenuData={(menu) => {
-                            setSubMenuData(menu.children || [])
-                            setMenuId(menu.label || '')
-                          }}
-                          activeMenuId={menuId}
-                        />
+                        <div className={style['heard-menu-primary-item']} key={`menuItem-${menuItem.label}`}>
+                          <RouteMenuDataItem
+                            menuItem={menuItem}
+                            isShow={false}
+                            onSelect={onClickMenu}
+                            isExpand={isExpand}
+                            setSubMenuData={(menu) => {
+                              setSubMenuData(menu.children || [])
+                              setMenuId(menu.label || '')
+                            }}
+                            activeMenuId={menuId}
+                          />
+                          {isActiveMenu && <SubMenu subMenuData={subMenuData} onSelect={onClickMenu} />}
+                        </div>
                       )
                     })}
                 </div>
@@ -630,7 +633,6 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
             </div>
           </div>
         </div>
-        {isExpand && <SubMenu subMenuData={subMenuData} onSelect={onClickMenu} />}
       </div>
       <div className={classNames(style['heard-menu-right'])}>
         <YakitButton

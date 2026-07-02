@@ -68,7 +68,10 @@
           position: absolute;
           top: 0;
           left: 50%;
-          transform: translate(-30px, 0);
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
           line-height: 36px;
           font-weight: 600;
           color: var(--Colors-Use-Neutral-Text-1-Title);

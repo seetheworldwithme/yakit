@@ -58,7 +58,7 @@ export const buildHistoryFilterSideResizeBoxProps = (activeKey: string, openTabs
   }
 
   return {
-    firstRatio: openTabsFlag ? '20%' : '24px',
+    firstRatio: '20%',
     secondRatio: '80%',
   }
 }

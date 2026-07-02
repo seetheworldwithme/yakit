@@ -6,10 +6,11 @@ import styles from './yakitGlobalHost.module.scss'
 
 export interface YakitGlobalHostProp {
   isEngineLink: boolean
+  prefix?: React.ReactNode
 }
 
 export const YakitGlobalHost: React.FC<YakitGlobalHostProp> = (props) => {
-  const { isEngineLink } = props
+  const { isEngineLink, prefix } = props
 
   const [host, setHost] = useState<{ addr: string; port: string }>({ addr: '??', port: '??' })
   /** 获取连接引擎地址计时器 */
@@ -47,6 +48,7 @@ export const YakitGlobalHost: React.FC<YakitGlobalHostProp> = (props) => {
   return (
     <div className={styles['yakit-global-host-wrapper']}>
       <div className={styles['yakit-global-host-body']}>
+        {prefix && <span className={styles['addr-prefix']}>{prefix}</span>}
         <span className={styles['addr-ip']}>{`${host.addr} `}</span>
         <span className={styles['addr-port']}>{host.port}</span>
       </div>
