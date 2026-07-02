@@ -30,8 +30,6 @@ import IrifyDarkPowerEmpty from '@/assets/EmptyImage/IrifyDarkPowerEmpty.png'
 import MemfitLightPowerEmpty from '@/assets/EmptyImage/MemfitLightPowerEmpty.png'
 import MemfitDarkPowerEmpty from '@/assets/EmptyImage/MemfitDarkPowerEmpty.png'
 
-import YakitLightEmpty from '@/assets/EmptyImage/YakitLightEmpty.png'
-import YakitDarkEmpty from '@/assets/EmptyImage/YakitDarkEmpty.png'
 import IrifyLightEmpty from '@/assets/EmptyImage/IrifyLightEmpty.png'
 import IrifyDarkEmpty from '@/assets/EmptyImage/IrifyDarkEmpty.png'
 import MemfitLightEmpty from '@/assets/EmptyImage/MemfitLightEmpty.png'
@@ -72,8 +70,8 @@ const yakitMap: ImageMap = {
     dark: YakitDarkPowerEmpty,
   },
   empty: {
-    light: YakitLightEmpty,
-    dark: YakitDarkEmpty,
+    light: '',
+    dark: '',
   },
   screenRecording: {
     light: YakitLightScreenRecordingEmpty,

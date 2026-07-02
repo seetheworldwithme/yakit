@@ -2563,7 +2563,7 @@ const PrivateSolidFingerprintManage = () => {
       <g mask="url(#mask0_38051_63673)">
         <path
           d="M5.3335 13.4027C5.3335 12.5246 5.76581 11.7028 6.48942 11.2053L14.4894 5.7053C15.3994 5.07967 16.6009 5.07967 17.5109 5.7053L25.5109 11.2053C26.2345 11.7028 26.6668 12.5246 26.6668 13.4027V25.3333C26.6668 26.8061 25.4729 28 24.0002 28H8.00017C6.52741 28 5.3335 26.8061 5.3335 25.3333V13.4027Z"
-          fill="#F28C45"
+          fill="#116a77"
         />
         <path
           d="M30.6668 12L16.0002 1.33337L1.3335 12"
@@ -2582,7 +2582,7 @@ const PrivateSolidFingerprintManage = () => {
         <path
           d="M5.3335 14.3333C5.3335 13.597 5.93045 13 6.66683 13H10.6668V18.3333H5.3335V14.3333Z"
           fill="white"
-          stroke="#F28C45"
+          stroke="#116a77"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -2936,7 +2936,7 @@ export const PrivateOutlineAuditCodeIcon = (props: Partial<CustomIconComponentPr
 
 const PrivateSolidAuditCode = () => (
   <svg width="33" height="32" viewBox="0 0 33 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 6C4 4.89543 4.89543 4 6 4H26C27.1046 4 28 4.89543 28 6V18.6667H4V6Z" fill="#F28C45" />
+    <path d="M4 6C4 4.89543 4.89543 4 6 4H26C27.1046 4 28 4.89543 28 6V18.6667H4V6Z" fill="#116a77" />
     <path
       fillRule="evenodd"
       clipRule="evenodd"
@@ -2979,7 +2979,7 @@ const PrivateSolidAuditCode = () => (
       fillRule="evenodd"
       clipRule="evenodd"
       d="M27.7069 6.18181C28.0975 6.57233 28.0975 7.2055 27.7069 7.59602L25.4847 9.81824C25.0942 10.2088 24.461 10.2088 24.0705 9.81824L22.9594 8.70713C22.5689 8.31661 22.5689 7.68344 22.9594 7.29292C23.3499 6.9024 23.9831 6.9024 24.3736 7.29292L24.7776 7.69692L26.2927 6.18181C26.6833 5.79128 27.3164 5.79128 27.7069 6.18181Z"
-      fill="#F28C45"
+      fill="#116a77"
     />
   </svg>
 )
@@ -3039,7 +3039,7 @@ const PrivateSolidCodeScan = () => (
   <svg width="33" height="32" viewBox="0 0 33 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
       d="M7.3335 28H24.6668C25.7714 28 26.6668 27.1046 26.6668 26V9.8815C26.6668 9.3199 26.4307 8.78417 26.0162 8.40527L21.7698 4.52378C21.4011 4.18684 20.9198 4 20.4204 4H7.3335C6.22893 4 5.3335 4.89543 5.3335 6V26C5.3335 27.1046 6.22893 28 7.3335 28Z"
-      fill="#F28C45"
+      fill="#116a77"
     />
     <path
       fillRule="evenodd"

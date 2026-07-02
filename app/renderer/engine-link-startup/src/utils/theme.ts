@@ -722,7 +722,7 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       'editorGutter.foldingControlForeground': vars['--Colors-Use-Neutral-Text-3-Secondary'],
 
       'editorLink.activeForeground': vars['--Colors-Use-Main-Border'],
-      // "#F28C45",
+      // "#116a77",
 
       'editorBracketHighlight.foreground1': vars['--Colors-Use-Blue-Primary'],
       'editorBracketHighlight.foreground2': vars['--Colors-Use-Blue-Primary'],

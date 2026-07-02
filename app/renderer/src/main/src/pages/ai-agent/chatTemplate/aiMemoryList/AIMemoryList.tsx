@@ -251,7 +251,7 @@ const getScoreOption = (value: AIMemoryEchartsProps['data']): EChartsOption => {
       left: 0, // 左边距
     },
 
-    color: ['#f28c45'],
+    color: ['#116a77'],
     radar: {
       radius: '70%',
       indicator: [

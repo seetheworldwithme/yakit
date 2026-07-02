@@ -18,7 +18,6 @@ import { yakitNotify } from '@/utils/notification'
 import { OutlineCheckIcon, OutlineXIcon } from '@/assets/icon/outline'
 
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import { useEmptyImage } from '@/hook/useResultEmpty/SearchEmpty'
 import { has } from 'lodash'
 
 const { Option, OptGroup } = Select
@@ -44,7 +43,6 @@ export const YakitSelectCustom = <ValueType, OptionType>(
   ref: React.Ref<YakitBaseSelectRef>,
 ) => {
   const { t, i18n } = useI18nNamespaces(['yakitUi'])
-  const emptyImageTarget = useEmptyImage('empty')
   const selectRef = useRef<HTMLDivElement>(null)
   const [inViewport = true] = useInViewport(selectRef)
   // 鼠标移入项 用于判断是否显示 ×
@@ -314,7 +312,6 @@ export const YakitSelectCustom = <ValueType, OptionType>(
         }}
         notFoundContent={
           <div className={classNames('yakit-select-notFound')}>
-            <img src={emptyImageTarget} alt="" style={{ width: 88 }} />
             <div className={classNames('yakit-select-content')}>{t('YakitEmpty.noData')}</div>
           </div>
         }

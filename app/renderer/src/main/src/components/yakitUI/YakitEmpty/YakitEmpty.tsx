@@ -5,7 +5,6 @@ import classNames from 'classnames'
 import styles from './YakitEmpty.module.scss'
 
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import { useEmptyImage } from '@/hook/useResultEmpty/SearchEmpty'
 
 /**
  * @description:YakitEmpty
@@ -15,11 +14,9 @@ export const YakitEmpty: React.FC<YakitEmptyProps> = (props) => {
   const { title, titleClassName, ...restProps } = props
   const { t, i18n } = useI18nNamespaces(['yakitUi'])
 
-  const emptyImageTarget = useEmptyImage('empty')
-
   return (
     <Empty
-      image={<img style={{ userSelect: 'none' }} draggable={false} src={emptyImageTarget} alt="" />}
+      image={props.image ?? null}
       imageStyle={
         props.imageStyle
           ? props.imageStyle
