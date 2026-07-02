@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, ReactElement, CSSProperties } from 'react'
 import classNames from 'classnames'
 import {
-  PublicBasicCrawlerIcon,
   PublicBatchExecutorIcon,
   PublicBlastingIcon,
   PublicBruteIcon,
@@ -21,9 +20,6 @@ import {
   PublicPublicToolLightbulbIcon,
   PublicScanPortIcon,
   PublicSequenceAnimationIcon,
-  PublicSpaceEngineIcon,
-  PublicSubDomainCollectionIcon,
-  PublicToolBasicCrawlerIcon,
   PublicToolCVEIcon,
   PublicToolDBDomainIcon,
   PublicToolDBHTTPHistoryIcon,
@@ -39,11 +35,8 @@ import {
   PublicToolScreenRecordingIcon,
   PublicToolScreenshotIcon,
   PublicToolShellReceiverIcon,
-  PublicToolSpaceEngineIcon,
-  PublicToolSubDomainCollectionIcon,
   PublicToolTCPPortLogIcon,
   PublicToolVulinboxIcon,
-  PublicToolWebsocketFuzzerIcon,
   PublicToolYakScriptIcon,
   PublicWebFuzzerIcon,
 } from '@/routes/publicIcon'
@@ -212,44 +205,6 @@ const Home: React.FC<HomeProp> = (props) => {
         desc: t('YakitRoute.reverseShellTool'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.ShellReceiver }),
-      },
-      {
-        label: t('YakitRoute.Websocket Fuzzer'),
-        icon: <PublicToolWebsocketFuzzerIcon />,
-        desc: t('YakitRoute.fuzzTestingForWebSocketPackets'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.WebsocketFuzzer }),
-      },
-      {
-        label: t('YakitRoute.subdomainCollection'),
-        icon: <PublicToolSubDomainCollectionIcon />,
-        desc: t('Home.collectSubdomainsRelatedToTargetAssets'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () =>
-          onMenu({
-            route: YakitRoute.Plugin_OP,
-            pluginId: pluginToId[ResidentPluginName.SubDomainCollection],
-            pluginName: ResidentPluginName.SubDomainCollection,
-          }),
-      },
-      {
-        label: t('YakitRoute.basicCrawler'),
-        icon: <PublicToolBasicCrawlerIcon />,
-        desc: t('Home.collectAllPageInformationOfTargetAssets'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () =>
-          onMenu({
-            route: YakitRoute.Plugin_OP,
-            pluginId: pluginToId[ResidentPluginName.BasicCrawler],
-            pluginName: ResidentPluginName.BasicCrawler,
-          }),
-      },
-      {
-        label: t('YakitRoute.spaceEngine'),
-        icon: <PublicToolSpaceEngineIcon />,
-        desc: t('Home.integrateMultipleEnginesToCollectAssetInformation'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.Space_Engine }),
       },
       {
         label: t('YakitRoute.ICMP-SizeLog'),
@@ -989,47 +944,6 @@ const Home: React.FC<HomeProp> = (props) => {
                         <PublicDirectoryScanningIcon className={styles['item-icon']} />
                         <span className={styles['item-text']} title={t('YakitRoute.directoryScan')}>
                           {t('YakitRoute.directoryScan')}
-                        </span>
-                      </div>
-                      <div
-                        className={styles['informationGathering-item']}
-                        onClick={() => onMenu({ route: YakitRoute.Space_Engine })}
-                      >
-                        <PublicSpaceEngineIcon className={styles['item-icon']} />
-                        <span className={styles['item-text']} title={t('YakitRoute.spaceEngine')}>
-                          {t('YakitRoute.spaceEngine')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className={styles['informationGathering-items-wrapper']}>
-                      <div
-                        className={styles['informationGathering-item']}
-                        onClick={() =>
-                          onMenu({
-                            route: YakitRoute.Plugin_OP,
-                            pluginId: pluginToId[ResidentPluginName.SubDomainCollection],
-                            pluginName: ResidentPluginName.SubDomainCollection,
-                          })
-                        }
-                      >
-                        <PublicSubDomainCollectionIcon className={styles['item-icon']} />
-                        <span className={styles['item-text']} title={t('YakitRoute.subdomainCollection')}>
-                          {t('YakitRoute.subdomainCollection')}
-                        </span>
-                      </div>
-                      <div
-                        className={styles['informationGathering-item']}
-                        onClick={() =>
-                          onMenu({
-                            route: YakitRoute.Plugin_OP,
-                            pluginId: pluginToId[ResidentPluginName.BasicCrawler],
-                            pluginName: ResidentPluginName.BasicCrawler,
-                          })
-                        }
-                      >
-                        <PublicBasicCrawlerIcon className={styles['item-icon']} />
-                        <span className={styles['item-text']} title={t('YakitRoute.basicCrawler')}>
-                          {t('YakitRoute.basicCrawler')}
                         </span>
                       </div>
                     </div>

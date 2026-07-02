@@ -3,7 +3,6 @@ import {
   PublicAIAgentIcon,
   PublicAuditCodeIcon,
   PublicAuditHoleIcon,
-  PublicBasicCrawlerIcon,
   PublicBatchPluginIcon,
   PublicBruteIcon,
   PublicCVEIcon,
@@ -29,11 +28,8 @@ import {
   PublicRuleManagementIcon,
   PublicScanPortIcon,
   PublicShellReceiverIcon,
-  PublicSpaceEngineIcon,
-  PublicSubDomainCollectionIcon,
   PublicTCPPortLogIcon,
   PublicWebFuzzerIcon,
-  PublicWebsocketFuzzerIcon,
 } from '@/routes/publicIcon'
 import { useMemoizedFn } from 'ahooks'
 import { RouteToPageProps } from './PublicMenu'
@@ -93,32 +89,13 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
             <div className={styles['title-style']}>MITM</div>
           </div>
           <div className={styles['divider-style']}></div>
-          <div className={styles['parent-menu-wrapper']} onClick={() => onMenu(YakitRoute.HTTPFuzzer)}>
-            <div className={styles['childs-menu-wrapper']}>
-              <Tooltip placement="bottom" title={tooltipTitle(YakitRoute.HTTPFuzzer)}>
-                <div
-                  className={classNames(styles['icon-wrapper'], styles['child-icon-wrapper'])}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onMenu(YakitRoute.HTTPFuzzer)
-                  }}
-                >
-                  <PublicWebFuzzerIcon />
-                </div>
-              </Tooltip>
-              <Tooltip placement="bottom" title={tooltipTitle(YakitRoute.WebsocketFuzzer)}>
-                <div
-                  className={classNames(styles['icon-wrapper'], styles['child-icon-wrapper'])}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onMenu(YakitRoute.WebsocketFuzzer)
-                  }}
-                >
-                  <PublicWebsocketFuzzerIcon />
-                </div>
-              </Tooltip>
+          <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.HTTPFuzzer)}>
+            <div className={styles['menu-icon-wrapper']}>
+              <div className={styles['icon-wrapper']}>
+                <PublicWebFuzzerIcon />
+              </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.fuzzer')}</div>
+            <div className={styles['title-style']}>{tooltipTitle(YakitRoute.HTTPFuzzer)}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div>
@@ -155,55 +132,6 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.vulnTargetedScan')}</div>
-          </div>
-          <div className={styles['divider-style']}></div>
-          <div
-            className={classNames(styles['vertical-menu-wrapper'], {
-              [styles['disable-style']]: pluginToId[ResidentPluginName.SubDomainCollection] === 0,
-            })}
-            onClick={() =>
-              onMenu(
-                YakitRoute.Plugin_OP,
-                pluginToId[ResidentPluginName.SubDomainCollection],
-                ResidentPluginName.SubDomainCollection,
-              )
-            }
-          >
-            <div className={styles['menu-icon-wrapper']}>
-              <div className={styles['icon-wrapper']}>
-                <PublicSubDomainCollectionIcon />
-              </div>
-            </div>
-            <div className={styles['title-style']}>{t('YakitRoute.subdomainCollection')}</div>
-          </div>
-          <div className={styles['divider-style']}></div>
-          <div>
-            <div
-              className={classNames(styles['horizontal-menu-wrapper'], {
-                [styles['disable-style']]: pluginToId[ResidentPluginName.BasicCrawler] === 0,
-              })}
-              onClick={() =>
-                onMenu(
-                  YakitRoute.Plugin_OP,
-                  pluginToId[ResidentPluginName.BasicCrawler],
-                  ResidentPluginName.BasicCrawler,
-                )
-              }
-            >
-              <div className={styles['icon-wrapper']}>
-                <PublicBasicCrawlerIcon />
-              </div>
-              <div className={styles['title-style']}>{t('YakitRoute.basicCrawler')}</div>
-            </div>
-            <div
-              className={classNames(styles['horizontal-menu-wrapper'])}
-              onClick={() => onMenu(YakitRoute.Space_Engine)}
-            >
-              <div className={styles['icon-wrapper']}>
-                <PublicSpaceEngineIcon />
-              </div>
-              <div className={styles['title-style']}>{t('YakitRoute.spaceEngine')}</div>
-            </div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['parent-menu-wrapper']} onClick={() => onMenu(YakitRoute.Mod_Brute)}>

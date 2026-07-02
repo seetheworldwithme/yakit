@@ -145,11 +145,7 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
   // 获取 基础工具菜单下的4个插件 是否存在于本地库内
   const fetchPluginToolInfo = useMemoizedFn(() => {
     /** 基础工具菜单下的4个插件 */
-    const pluginTool = [
-      ResidentPluginName.SubDomainCollection,
-      ResidentPluginName.BasicCrawler,
-      ResidentPluginName.DirectoryScanning,
-    ]
+    const pluginTool = [ResidentPluginName.DirectoryScanning]
     ipcRenderer
       .invoke('QueryYakScriptByNames', { YakScriptName: pluginTool })
       .then((res: { Data: YakScript[] }) => {
@@ -376,11 +372,7 @@ const HeardMenu: React.FC<HeardMenuProps> = React.memo((props) => {
   /** 更新前端菜单数据(单项) */
   const updateSingleMenu = useMemoizedFn((info: { pluginName: string; pluginId: number }) => {
     const menus = [...routeMenu]
-    const pluginTool = [
-      ResidentPluginName.SubDomainCollection,
-      ResidentPluginName.BasicCrawler,
-      ResidentPluginName.DirectoryScanning,
-    ]
+    const pluginTool = [ResidentPluginName.DirectoryScanning]
     const pluginToIds: Record<string, number> = {}
     menus.forEach((item) => {
       ;(item.children || []).forEach((subItem) => {

@@ -54,11 +54,9 @@ import {
   PrivateOutlineRuleManagementIcon,
   PrivateOutlineScanPortIcon,
   PrivateOutlineShellReceiverIcon,
-  PrivateOutlineSpaceEngineIcon,
   PrivateOutlineSubDomainCollectionIcon,
   PrivateOutlineTCPPortLogIcon,
   PrivateOutlineWebFuzzerIcon,
-  PrivateOutlineWebsocketFuzzerIcon,
   PrivateSolidAuditCodeIcon,
   PrivateSolidAuditHoleIcon,
   PrivateSolidBasicCrawlerIcon,
@@ -87,11 +85,9 @@ import {
   PrivateSolidRuleManagementIcon,
   PrivateSolidScanPortIcon,
   PrivateSolidShellReceiverIcon,
-  PrivateSolidSpaceEngineIcon,
   PrivateSolidSubDomainCollectionIcon,
   PrivateSolidTCPPortLogIcon,
   PrivateSolidWebFuzzerIcon,
-  PrivateSolidWebsocketFuzzerIcon,
   PrivateSolidAIAgentIcon,
 } from './privateIcon'
 import { ControlAdminPage } from '@/pages/dynamicControl/DynamicControl'
@@ -1178,10 +1174,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
                     page: YakitRoute.HTTPFuzzer,
                     ...YakitRouteToPageInfo[YakitRoute.HTTPFuzzer],
                   },
-                  {
-                    page: YakitRoute.WebsocketFuzzer,
-                    ...YakitRouteToPageInfo[YakitRoute.WebsocketFuzzer],
-                  },
                 ],
               },
               { page: YakitRoute.Codec, ...YakitRouteToPageInfo[YakitRoute.Codec] },
@@ -1201,19 +1193,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
                 ...YakitRouteToPageInfo[YakitRoute.Mod_ScanPort],
               },
               { page: YakitRoute.PoC, ...YakitRouteToPageInfo[YakitRoute.PoC] },
-              {
-                page: YakitRoute.Plugin_OP,
-                label: '子域名收集',
-                labelUi: 'YakitRoute.subdomainCollection',
-                yakScripName: ResidentPluginName.SubDomainCollection,
-              },
-              {
-                page: YakitRoute.Plugin_OP,
-                label: '基础爬虫',
-                labelUi: 'YakitRoute.basicCrawler',
-                yakScripName: ResidentPluginName.BasicCrawler,
-              },
-              { page: YakitRoute.Space_Engine, ...YakitRouteToPageInfo[YakitRoute.Space_Engine] },
               {
                 page: undefined,
                 label: '爆破与未授权检测',
@@ -1330,19 +1309,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
               },
               { page: YakitRoute.PoC, ...YakitRouteToPageInfo[YakitRoute.PoC] },
               {
-                page: YakitRoute.Plugin_OP,
-                label: '子域名收集',
-                labelUi: 'YakitRoute.subdomainCollection',
-                yakScripName: ResidentPluginName.SubDomainCollection,
-              },
-              {
-                page: YakitRoute.Plugin_OP,
-                label: '基础爬虫',
-                labelUi: 'YakitRoute.basicCrawler',
-                yakScripName: ResidentPluginName.BasicCrawler,
-              },
-              { page: YakitRoute.Space_Engine, ...YakitRouteToPageInfo[YakitRoute.Space_Engine] },
-              {
                 page: undefined,
                 label: '爆破与未授权检测',
                 labelUi: 'YakitRoute.bruteForceAndUnauthorizedCheck',
@@ -1378,10 +1344,6 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
                   {
                     page: YakitRoute.HTTPFuzzer,
                     ...YakitRouteToPageInfo[YakitRoute.HTTPFuzzer],
-                  },
-                  {
-                    page: YakitRoute.WebsocketFuzzer,
-                    ...YakitRouteToPageInfo[YakitRoute.WebsocketFuzzer],
                   },
                 ],
               },
@@ -1442,20 +1404,12 @@ export const PublicCommonPlugins: PublicRouteMenuProps[] = [
     label: '基础工具',
     children: [
       'web登录页面用户名密码爆破',
-      '基础爬虫',
       '字典生成器',
       '无头浏览器模拟点击爬虫',
       '综合目录扫描与爆破',
       'fuzztag表格生成',
       '按行去重',
     ].map((item) => {
-      return { page: YakitRoute.Plugin_OP, label: item, yakScripName: item }
-    }),
-  },
-  {
-    page: undefined,
-    label: '子域名收集',
-    children: ['子域名收集&漏洞扫描', 'IP批量查询', '主动指纹探测', 'ICP备案查询', '瞅一下'].map((item) => {
       return { page: YakitRoute.Plugin_OP, label: item, yakScripName: item }
     }),
   },
@@ -1634,10 +1588,6 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
             labelUi: 'YakitButton.more',
             children: [
               {
-                page: YakitRoute.WebsocketFuzzer,
-                ...YakitRouteToPageInfo[YakitRoute.WebsocketFuzzer],
-              },
-              {
                 page: YakitRoute.Plugin_Hub,
                 ...YakitRouteToPageInfo[YakitRoute.Plugin_Hub],
               },
@@ -1682,19 +1632,6 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
                     ...YakitRouteToPageInfo[YakitRoute.Mod_ScanPort],
                   },
                   { page: YakitRoute.PoC, ...YakitRouteToPageInfo[YakitRoute.PoC] },
-                  {
-                    page: YakitRoute.Plugin_OP,
-                    label: '子域名收集',
-                    labelUi: 'YakitRoute.subdomainCollection',
-                    yakScripName: ResidentPluginName.SubDomainCollection,
-                  },
-                  {
-                    page: YakitRoute.Plugin_OP,
-                    label: '基础爬虫',
-                    labelUi: 'YakitRoute.basicCrawler',
-                    yakScripName: ResidentPluginName.BasicCrawler,
-                  },
-                  { page: YakitRoute.Space_Engine, ...YakitRouteToPageInfo[YakitRoute.Space_Engine] },
                   {
                     page: undefined,
                     label: '爆破与未授权检测',
@@ -1878,12 +1815,6 @@ export const PrivateAllMenus: Record<string, PrivateRouteMenuProps> = {
     hoverIcon: <PrivateSolidWebFuzzerIcon />,
     ...YakitRouteToPageInfo[YakitRoute.HTTPFuzzer],
   },
-  [YakitRoute.WebsocketFuzzer]: {
-    page: YakitRoute.WebsocketFuzzer,
-    icon: <PrivateOutlineWebsocketFuzzerIcon />,
-    hoverIcon: <PrivateSolidWebsocketFuzzerIcon />,
-    ...YakitRouteToPageInfo[YakitRoute.WebsocketFuzzer],
-  },
   [YakitRoute.Mod_Brute]: {
     page: YakitRoute.Mod_Brute,
     icon: <PrivateOutlineBruteIcon />,
@@ -2040,12 +1971,6 @@ export const PrivateAllMenus: Record<string, PrivateRouteMenuProps> = {
     hoverIcon: <PrivateSolidCVEIcon />,
     ...YakitRouteToPageInfo[YakitRoute.DB_CVE],
   },
-  [YakitRoute.Space_Engine]: {
-    page: YakitRoute.Space_Engine,
-    icon: <PrivateOutlineSpaceEngineIcon />,
-    hoverIcon: <PrivateSolidSpaceEngineIcon />,
-    ...YakitRouteToPageInfo[YakitRoute.Space_Engine],
-  },
   [YakitRoute.Yak_Java_Decompiler]: {
     page: YakitRoute.Yak_Java_Decompiler,
     icon: <PrivateOutlineAuditHoleIcon />,
@@ -2120,7 +2045,7 @@ export const PrivateExpertRouteMenu: PrivateRouteMenuProps[] = isIRify()
         page: undefined,
         label: '手工渗透',
         labelUi: 'YakitRoute.manualPenTest',
-        children: routeToChildren([YakitRoute.MITMHacker, YakitRoute.HTTPFuzzer, YakitRoute.WebsocketFuzzer]),
+        children: routeToChildren([YakitRoute.MITMHacker, YakitRoute.HTTPFuzzer]),
       },
       {
         page: undefined,
@@ -2128,24 +2053,7 @@ export const PrivateExpertRouteMenu: PrivateRouteMenuProps[] = isIRify()
         labelUi: 'YakitRoute.securityTools',
         children: [
           PrivateAllMenus[YakitRoute.Mod_Brute],
-          {
-            page: YakitRoute.Plugin_OP,
-            label: '基础爬虫',
-            icon: getFixedPluginIcon(ResidentPluginName.BasicCrawler),
-            hoverIcon: getFixedPluginHoverIcon(ResidentPluginName.BasicCrawler),
-            describe: getFixedPluginDescribe(ResidentPluginName.BasicCrawler),
-            yakScripName: ResidentPluginName.BasicCrawler,
-          },
-          PrivateAllMenus[YakitRoute.Space_Engine],
           PrivateAllMenus[YakitRoute.Mod_ScanPort],
-          {
-            page: YakitRoute.Plugin_OP,
-            label: '子域名收集',
-            icon: getFixedPluginIcon(ResidentPluginName.SubDomainCollection),
-            hoverIcon: getFixedPluginHoverIcon(ResidentPluginName.SubDomainCollection),
-            describe: getFixedPluginDescribe(ResidentPluginName.SubDomainCollection),
-            yakScripName: ResidentPluginName.SubDomainCollection,
-          },
           {
             page: YakitRoute.Plugin_OP,
             label: '目录扫描',
@@ -2219,24 +2127,7 @@ export const PrivateScanRouteMenu: PrivateRouteMenuProps[] = [
     labelUi: 'YakitRoute.securityTools',
     children: [
       PrivateAllMenus[YakitRoute.Mod_Brute],
-      {
-        page: YakitRoute.Plugin_OP,
-        label: '基础爬虫',
-        icon: getFixedPluginIcon(ResidentPluginName.BasicCrawler),
-        hoverIcon: getFixedPluginHoverIcon(ResidentPluginName.BasicCrawler),
-        describe: getFixedPluginDescribe(ResidentPluginName.BasicCrawler),
-        yakScripName: ResidentPluginName.BasicCrawler,
-      },
-      PrivateAllMenus[YakitRoute.Space_Engine],
       PrivateAllMenus[YakitRoute.Mod_ScanPort],
-      {
-        page: YakitRoute.Plugin_OP,
-        label: '子域名收集',
-        icon: getFixedPluginIcon(ResidentPluginName.SubDomainCollection),
-        hoverIcon: getFixedPluginHoverIcon(ResidentPluginName.SubDomainCollection),
-        describe: getFixedPluginDescribe(ResidentPluginName.SubDomainCollection),
-        yakScripName: ResidentPluginName.SubDomainCollection,
-      },
       {
         page: YakitRoute.Plugin_OP,
         label: '目录扫描',

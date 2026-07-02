@@ -133,18 +133,18 @@ const PublicMenu: React.FC<PublicMenuProps> = React.memo((props) => {
   // 获取 基础工具菜单下的4个插件 是否存在于本地库内
   const fetchPluginToolInfo = useMemoizedFn(() => {
     /** 基础工具菜单下的4个插件 */
-    const pluginTool = [
-      ResidentPluginName.SubDomainCollection,
-      ResidentPluginName.BasicCrawler,
-      ResidentPluginName.DirectoryScanning,
-    ]
+    const pluginTool = [ResidentPluginName.DirectoryScanning]
     ipcRenderer
       .invoke('QueryYakScriptByNames', { YakScriptName: pluginTool })
       .then((res: { Data: YakScript[] }) => {
         const { Data } = res
         const info: Record<string, number> = {}
         for (let item of Data) info[item.ScriptName] = +(item.Id || 0) || 0
-        const pluginToIds: Record<string, number> = {}
+        const pluginToIds: Record<ResidentPluginName, number> = {
+          [ResidentPluginName.SubDomainCollection]: 0,
+          [ResidentPluginName.BasicCrawler]: 0,
+          [ResidentPluginName.DirectoryScanning]: 0,
+        }
         for (let name of pluginTool) pluginToIds[name] = info[name] || 0
         setPluginToId(pluginToIds)
         setNewPluginToId(pluginToIds)

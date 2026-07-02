@@ -80,3 +80,5 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
 - `sentinel-rebrand`：按 spec 做系统性换皮改造（组件塑形 / 布局重排）。
+
+注意，在回答之前，一定要说：好的，徐先生。
