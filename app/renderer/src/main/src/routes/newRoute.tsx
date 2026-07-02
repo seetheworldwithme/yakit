@@ -170,10 +170,10 @@ import { Misstatement } from '@/pages/misstatement/Misstatement'
 import { SystemConfig } from '@/pages/systemConfig/SystemConfig'
 import { HTTPHistoryAnalysis } from '@/pages/hTTPHistoryAnalysis/HTTPHistoryAnalysis'
 import { ShortcutKeyPageName } from '@/utils/globalShortcutKey/events/pageMaps'
-import { getNotepadAdd, getNotepadManage, getNotepadNameByEditionMulLang } from '@/pages/layout/NotepadMenu/utils'
+import { getNotepadManage, getNotepadNameByEditionMulLang } from '@/pages/layout/NotepadMenu/utils'
 import { ShortcutKeyList } from '@/pages/shortcutKey/ShortcutKey'
 import { AIAgent } from '@/pages/ai-agent/AIAgent'
-import { SolidClipboardlistIcon, SolidCodecIcon, SolidTerminalIcon } from '@/assets/icon/solid'
+import { SolidCodecIcon } from '@/assets/icon/solid'
 import { PublicToolDataCompareIcon } from './publicIcon'
 import { SoftMode, YakitModeEnum } from '@/store/softMode'
 
@@ -1458,21 +1458,11 @@ export const getSecurityExpertLeftMenu: () => ExtraMenuItem[] = () => {
       page: YakitRoute.DataCompare,
       ...YakitRouteToPageInfo[YakitRoute.DataCompare],
     },
-    {
-      page: YakitRoute.YakScript,
-      ...YakitRouteToPageInfo[YakitRoute.YakScript],
-    },
   ]
 }
 /** @name yakit 安全专家模式 记事本菜单 */
 export const getSecurityExpertNotepadMenu: () => ExtraMenuItem[] = () => {
-  return [
-    {
-      page: YakitRoute.Modify_Notepad,
-      i18n: false,
-      label: getNotepadNameByEditionMulLang(),
-    },
-  ]
+  return []
 }
 /** @name 右侧额外菜单 */
 export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) => {
@@ -1487,31 +1477,7 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
   }
 
   if (isMemfit()) {
-    return [
-      {
-        page: YakitRoute.YakScript,
-        icon: <SolidTerminalIcon />,
-        ...YakitRouteToPageInfo[YakitRoute.YakScript],
-      },
-      {
-        page: undefined,
-        icon: <SolidClipboardlistIcon />,
-        i18n: false,
-        label: getNotepadNameByEditionMulLang(),
-        children: [
-          {
-            page: YakitRoute.Notepad_Manage,
-            i18n: false,
-            label: getNotepadManage(),
-          },
-          {
-            page: YakitRoute.Modify_Notepad,
-            i18n: false,
-            label: getNotepadAdd(),
-          },
-        ],
-      },
-    ]
+    return []
   }
 
   if (isYakit()) {
@@ -1521,29 +1487,6 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
           page: YakitRoute.Codec,
           icon: <SolidCodecIcon />,
           ...YakitRouteToPageInfo[YakitRoute.Codec],
-        },
-        {
-          page: YakitRoute.YakScript,
-          icon: <SolidTerminalIcon />,
-          ...YakitRouteToPageInfo[YakitRoute.YakScript],
-        },
-        {
-          page: undefined,
-          icon: <SolidClipboardlistIcon />,
-          i18n: false,
-          label: getNotepadNameByEditionMulLang(),
-          children: [
-            {
-              page: YakitRoute.Notepad_Manage,
-              i18n: false,
-              label: getNotepadManage(),
-            },
-            {
-              page: YakitRoute.Modify_Notepad,
-              i18n: false,
-              label: getNotepadAdd(),
-            },
-          ],
         },
       ]
     }
@@ -1555,17 +1498,6 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
             page: YakitRoute.Codec,
             icon: <SolidCodecIcon />,
             ...YakitRouteToPageInfo[YakitRoute.Codec],
-          },
-          {
-            page: YakitRoute.YakScript,
-            icon: <SolidTerminalIcon />,
-            ...YakitRouteToPageInfo[YakitRoute.YakScript],
-          },
-          {
-            page: YakitRoute.Modify_Notepad,
-            icon: <SolidClipboardlistIcon />,
-            i18n: false,
-            label: getNotepadNameByEditionMulLang(),
           },
         ]
       }
@@ -1713,15 +1645,6 @@ export const getExtraMenu: (softMode: SoftMode) => ExtraMenuItem[] = (softMode) 
                     ...YakitRouteToPageInfo[YakitRoute.ShellReceiver],
                   },
                 ],
-              },
-              {
-                page: YakitRoute.YakScript,
-                ...YakitRouteToPageInfo[YakitRoute.YakScript],
-              },
-              {
-                page: YakitRoute.Modify_Notepad,
-                i18n: false,
-                label: getNotepadNameByEditionMulLang(),
               },
             ],
           },
