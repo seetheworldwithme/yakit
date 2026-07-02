@@ -574,14 +574,6 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
       <div className={classNames(styles['func-domain-body'], { [styles['func-domain-reverse-body']]: isReverse })}>
         {showDevTool() && <UIDevTool onDevToolRefresh={onDevToolRefresh} />}
 
-        {!hideScreenAndScreenshot && (
-          <ScreenAndScreenshot
-            system={system}
-            token={screenRecorderInfo.token}
-            isRecording={screenRecorderInfo.isRecording}
-          />
-        )}
-
         {!showProjectManage && (
           <div className={styles['ui-op-btn-wrapper']} onClick={openConsoleNewWindow}>
             <div className={styles['op-btn-body']}>
@@ -1073,16 +1065,8 @@ const GetUIOpSettingMenu = () => {
       label: '试验性功能',
       children: [
         {
-          key: 'bas-chaosmaker',
-          label: 'BAS实验室',
-        },
-        {
           key: 'debug-monaco-editor',
           label: '(DEV)调试Playground',
-        },
-        {
-          key: 'vulinbox-manager',
-          label: '(靶场)Vulinbox',
         },
         {
           key: 'debug-traffic-analize',
@@ -1091,10 +1075,6 @@ const GetUIOpSettingMenu = () => {
         {
           key: 'run-node',
           label: '运行节点',
-        },
-        {
-          key: 'webshell-manager',
-          label: '网站管理',
         },
         { key: 'mcp', label: 'Yak Mcp' },
         { key: 'ai-agent', label: 'AI Agent' },
@@ -1294,9 +1274,6 @@ const UIOpSetting: React.FC<UIOpSettingProp> = React.memo((props) => {
       case 'refreshMenu':
         yakitUILayout.refreshMainMenu()
         return
-      case 'bas-chaosmaker':
-        addToTab('**chaos-maker')
-        return
       case 'screen-recorder':
         addToTab('**screen-recorder')
         return
@@ -1306,9 +1283,6 @@ const UIOpSetting: React.FC<UIOpSettingProp> = React.memo((props) => {
       case 'debug-monaco-editor':
         addToTab('**debug-monaco-editor')
         return
-      case 'vulinbox-manager':
-        addToTab('**vulinbox-manager')
-        return
       case 'diagnose-network':
         addToTab('**diagnose-network')
         return
@@ -1317,9 +1291,6 @@ const UIOpSetting: React.FC<UIOpSettingProp> = React.memo((props) => {
         return
       case 'debug-traffic-analize':
         addToTab('**beta-debug-traffic-analize')
-        return
-      case 'webshell-manager':
-        addToTab('**webshell-manager')
         return
       case 'invalidCache':
         invalidCacheAndUserData(delTemporaryProject)

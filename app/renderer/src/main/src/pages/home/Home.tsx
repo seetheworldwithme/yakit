@@ -31,12 +31,8 @@ import {
   PublicToolPayloadIcon,
   PublicToolPluginHubIcon,
   PublicToolReverseServerIcon,
-  PublicToolScreenRecorderPageIcon,
-  PublicToolScreenRecordingIcon,
-  PublicToolScreenshotIcon,
   PublicToolShellReceiverIcon,
   PublicToolTCPPortLogIcon,
-  PublicToolVulinboxIcon,
   PublicToolYakScriptIcon,
   PublicWebFuzzerIcon,
 } from '@/routes/publicIcon'
@@ -73,7 +69,6 @@ import { yakitNotify } from '@/utils/notification'
 import { YakitSystem } from '@/yakitGVDefine'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
 import { ShieldCheckIcon as AllShieldCheckIcon } from '@/components/layout/globalStateIcon'
-import { useScreenRecorder } from '@/store/screenRecorder'
 import numeral from 'numeral'
 import { CloudDownloadIcon } from '@/assets/newIcon'
 import { getEnvTypeByProjects, ProjectDescription } from '../softwareSettings/ProjectManage'
@@ -151,7 +146,6 @@ const Home: React.FC<HomeProp> = (props) => {
   const [pcapHintShow, setPcapHintShow] = useState<boolean>(false)
   const [pcapResult, setPcapResult] = useState<boolean>(false)
   const [pcapHintLoading, setPcapHintLoading] = useState<boolean>(false)
-  const { screenRecorderInfo } = useScreenRecorder()
   const [searchToolVal, setSearchToolVal] = useState<string>('')
   const toolsList = useMemo(() => {
     return [
@@ -162,13 +156,6 @@ const Home: React.FC<HomeProp> = (props) => {
         desc: t('YakitRoute.yaklangProgramming'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.YakScript }),
-      },
-      {
-        label: t('Home.targetRangeVulinbox'),
-        icon: <PublicToolVulinboxIcon />,
-        desc: t('Home.built-inYakTargetRange'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.Beta_VulinboxManager }),
       },
       {
         label: t('YakitRoute.Payload'),
@@ -276,29 +263,8 @@ const Home: React.FC<HomeProp> = (props) => {
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.Modify_Notepad }),
       },
-      {
-        label: t('Home.screenRecording'),
-        icon: <PublicToolScreenRecordingIcon />,
-        desc: t('Home.recordScreenActivities'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => !screenRecorderInfo.isRecording && ipcRenderer.invoke('send-open-screenCap-modal'),
-      },
-      {
-        label: t('Home.screenshot'),
-        icon: <PublicToolScreenshotIcon />,
-        desc: t('Home.captureScreenIntoImage'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => ipcRenderer.invoke('activate-screenshot'),
-      },
-      {
-        label: t('YakitRoute.recordingManagement'),
-        icon: <PublicToolScreenRecorderPageIcon />,
-        desc: t('YakitRoute.manageAllRecordedVideoFiles'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.ScreenRecorderPage }),
-      },
     ] as ToolInfo[]
-  }, [screenRecorderInfo, i18n.language, pluginToId])
+  }, [i18n.language, pluginToId])
   const [curProjectInfo, setCurProjectInfo] = useState<ProjectDescription>()
   const [historyData, setHistoryData] = useState<number>(0)
   const [riskLevelData, setRiskLevelData] = useState<FieldName[]>([])
