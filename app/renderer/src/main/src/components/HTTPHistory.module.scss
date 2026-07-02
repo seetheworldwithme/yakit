@@ -2,15 +2,23 @@
 
 .hTTPHistory {
   height: 100%;
+  position: relative;
 
   &-left {
     display: flex;
     flex-direction: column;
     height: 100%;
+    padding-top: 24px;
 
     .history-side-tabs {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 3;
       flex: 0 0 auto;
       height: 24px;
+      width: max-content;
+      max-width: 100%;
     }
 
     .tab-content {
