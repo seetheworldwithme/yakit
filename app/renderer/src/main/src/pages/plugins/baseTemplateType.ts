@@ -219,6 +219,8 @@ export interface PluginDetailsListItemProps<T> {
   pluginType: string
   /** @name 是否内置 */
   isCorePlugin: boolean
+  /**隐藏头像右下角角标 */
+  hideAuthorBadge?: boolean
   optCheck: (data: T, value: boolean) => any
   extra?: (data: T) => ReactNode
   onPluginClick: (plugin: T, index: number) => void

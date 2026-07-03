@@ -35,6 +35,8 @@ export interface PluginLocalListDetailsProps {
   setAllCheck?: (b: boolean) => void
   /**插件组排除插件类型 */
   pluginGroupExcludeType?: string[]
+  /**隐藏插件头像右下角角标 */
+  hideAuthorBadge?: boolean
 }
 
 export interface PluginLocalListDetailsRefProps {}

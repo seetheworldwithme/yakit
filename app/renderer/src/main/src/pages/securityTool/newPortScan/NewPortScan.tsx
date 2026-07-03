@@ -102,6 +102,7 @@ export const NewPortScan: React.FC<NewPortScanProps> = React.memo((props) => {
         },
       ]}
       pluginGroupExcludeType={['yak', 'codec', 'lua']}
+      hideAuthorBadge={true}
       pluginDetailsProps={{
         bodyClassName: styles['port-scan-body'],
       }}

@@ -870,7 +870,7 @@ export const ListLayoutOpt: React.FC<ListLayoutOptProps> = memo((props) => {
   })
 
   const authorImgNode = useMemo(() => {
-    if (isCorePlugin) {
+    if (isCorePlugin && type !== 'port-scan') {
       if (!pluginTypeToName[type]) {
         debugToPrintLogs({
           page: 'ListLayoutOpt',
@@ -1124,7 +1124,7 @@ export const GridLayoutOpt: React.FC<GridLayoutOptProps> = memo((props) => {
     }
   }, [prImgs])
   const authorImgNode = useMemo(() => {
-    if (isCorePlugin) {
+    if (isCorePlugin && type !== 'port-scan') {
       if (!pluginTypeToName[type]) {
         debugToPrintLogs({
           page: 'GridLayoutOpt',

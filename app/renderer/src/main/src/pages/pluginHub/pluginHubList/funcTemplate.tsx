@@ -650,7 +650,7 @@ export const HubGridOpt: React.FC<HubGridOptProps> = memo((props) => {
     }
   }, [prImgs])
   const authorImgNode = useMemo(() => {
-    if (isCorePlugin) {
+    if (isCorePlugin && type !== 'port-scan') {
       if (!pluginTypeToName[type]) {
         debugToPrintLogs({
           page: 'HubGridOpt',
@@ -877,7 +877,7 @@ export const HubDetailListOpt: <T>(props: HubDetailListOptProps<T>) => any = mem
     if (enableCheck) optCheck(plugin, e.target.checked)
   })
   const authorImgNode = useMemo(() => {
-    if (isCorePlugin) {
+    if (isCorePlugin && pluginType !== 'port-scan') {
       if (!pluginTypeToName[pluginType]) {
         debugToPrintLogs({
           page: 'HubDetailListOpt',

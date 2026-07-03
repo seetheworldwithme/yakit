@@ -932,6 +932,7 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
     headImg,
     isCorePlugin,
     official,
+    hideAuthorBadge = false,
     pluginType,
     selectUUId,
     pluginName,
@@ -948,6 +949,9 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
     if (enableCheck) optCheck(plugin, e.target.checked)
   })
   const authorImgNode = useMemo(() => {
+    if (hideAuthorBadge) {
+      return <AuthorImg src={isCorePlugin ? YakitLogo : headImg || UnLogin} />
+    }
     if (isCorePlugin) {
       if (!pluginTypeToName[pluginType]) {
         debugToPrintLogs({
@@ -965,7 +969,7 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
       )
     }
     return <AuthorImg src={headImg || UnLogin} builtInIcon={official ? 'official' : undefined} />
-  }, [isCorePlugin, headImg, pluginType, official])
+  }, [hideAuthorBadge, isCorePlugin, headImg, pluginType, official])
   const onClick = useMemoizedFn((e) => {
     if (enableClick) onPluginClick(plugin, order)
   })

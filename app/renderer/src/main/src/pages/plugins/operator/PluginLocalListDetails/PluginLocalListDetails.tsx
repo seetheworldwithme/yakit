@@ -36,6 +36,7 @@ export const PluginLocalListDetails: React.FC<PluginLocalListDetailsProps> = Rea
       fixFilterList,
       defaultFilters,
       pluginGroupExcludeType = [],
+      hideAuthorBadge = false,
     } = props
 
     const [search, setSearch] = useControllableValue<PluginSearchParams>(props, {
@@ -252,6 +253,7 @@ export const PluginLocalListDetails: React.FC<PluginLocalListDetailsProps> = Rea
                 content={info.Content}
                 optCheck={optCheck}
                 official={!!info.OnlineOfficial}
+                hideAuthorBadge={hideAuthorBadge}
                 isCorePlugin={!!info.IsCorePlugin}
                 pluginType={info.Type}
                 onPluginClick={onPluginClick}
