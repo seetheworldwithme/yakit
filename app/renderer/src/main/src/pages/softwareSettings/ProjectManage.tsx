@@ -1179,7 +1179,8 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
         </div>
 
         <div className={styles['project-operate']}>
-          <div
+          {/* 隐藏 [default] 卡片 */}
+          {/* <div
             className={classNames(styles['open-recent-wrapper'], {
               [styles['open-recent-focus-wrapper']]: headerShow,
             })}
@@ -1195,7 +1196,6 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                 </div>
               </div>
 
-              {/* { engineMode !== "remote" && ( */}
               <div className={styles['icon-wrapper']} onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu
                   dropdown={{
@@ -1258,11 +1258,11 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                   </div>
                 </DropdownMenu>
               </div>
-              {/* )} */}
             </div>
-          </div>
+          </div> */}
 
-          <div
+          {/* 隐藏临时项目卡片 */}
+          {/* <div
             className={classNames(styles['btn-wrapper'], styles['new-temporary-project-wrapper'])}
             onClick={async () => {
               if (await getTemporaryProjectId()) {
@@ -1281,7 +1281,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                 <PlusBoldSvgIcon />
               </div>
             </div>
-          </div>
+          </div> */}
 
           <div
             className={classNames(styles['btn-wrapper'], styles['new-project-wrapper'])}
@@ -1298,7 +1298,8 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
             </div>
           </div>
 
-          <div
+          {/* 隐藏新建文件夹卡片 */}
+          {/* <div
             className={classNames(styles['btn-wrapper'], styles['new-folder-wrapper'])}
             onClick={() => operateFunc('newFolder')}
           >
@@ -1311,7 +1312,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                 <PlusBoldSvgIcon />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* { engineMode !== "remote" && ( */}
           <div

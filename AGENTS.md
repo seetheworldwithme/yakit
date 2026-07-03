@@ -41,6 +41,33 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 3. **只改 UI 不动逻辑**：调整布局 / 样式时，保留现有 state、事件、接口调用。
 4. **定位要准**：用文件路径（`pages/Login.tsx`）配合截图指明位置，避免改错文件。
 
+## 改 UI 的标准操作流程（SOP）
+> 适用于「调布局 / 隐按钮 / 换图标 / 改样式」等高频 UI 改动。准则：**改得准、不崩、可复用**。新开 session 改 UI 一律按此走。
+
+### 改前：探查要全
+1. **读全目标文件**（含同名 `.scss`）再动手，不凭片段猜结构。
+2. **查全「定义点 + 消费点」**：菜单 / 路由 / 标签 / 图标这类「一处定义多处消费」的，先 grep 全部引用再改。例：顶级标签由 `getDefaultFixedTabs`（钉住）+ `getInitPageCache`（启动开页）双驱动；`HistoryTab` 被 History 与 Analysis 两个页面共用。**漏一处就残影**。
+3. **先区分「隐入口」vs「删功能」**：查 `docs/功能裁剪最终方案.md` 的定性（保留 / 不展示）。
+   - **隐入口** = 保留路由 + 页面，只去展示入口（tab / 菜单 / 按钮）；功能仍可从其它入口进入。多数情况走这条。
+   - **删功能** = 连路由 / 页面 / IPC 一起删；删前**必须做依赖扫描**（`rg "YakitRoute.Xxx|openPage|onMenu\(\{ route"`）。
+
+### 改时：外科式 + 保兼容
+1. **外科式 Edit**，不整文件重写；优先保留未触及的 JSX 分支（复制大段 JSX 易出错）。
+2. **共享文件保兼容**：`Home.tsx` / `newRoute.tsx` / `MainOperatorContent.tsx` 等是**全变体 / 多模式共享**。当前主要在企业版（`isEnpriTrace()` 分支），但社区版 `isCommunityYakit()`+Scan 的扫描模式、IRify / Memfit 分支的 JSX 仍在同一文件里——**用不到的分支也要原样保留，勿删崩**。
+3. **只动 UI 不动逻辑**：保留 state / 事件 / 接口 / 路由。
+4. **隐入口要改全所有定义处**（双驱动的两处都改，否则一边残影）。
+5. **删 tab / 面板后处理缓存残留**：如 activeKey 历史缓存值要回退到默认 tab，避免空面板；只服务于已删 JSX 的 hook/Provider 若深度集成（多处注册、包裹整页），**只隐展示不刨根**，另行说明。
+
+### 改后：清理 + 验证
+1. **顺手清死代码**：删只服务已删 JSX 的 state / handler / ref / import；删前 grep 确认该符号**全文件仅 1 处引用**（= 仅定义处）。若死代码 cascade（hook 还被别处用），只删明显死的局部变量，保留 hook。
+2. **验证三板斧**：
+   - IDE `getDiagnostics`（项目 `tsconfig` 的 TS server，**权威、等同 tsc**；本机根目录无 `tsc` / `sass` 可执行文件，以此为准）；
+   - grep 扫已删标识符的残留引用（应为空）；
+   - SCSS 查花括号配平（`{` 数 == `}` 数）。
+3. **删 `export` 前**全仓 grep 确认无外部引用（如 `convertToBytes`）。
+4. **大段 SCSS 删除**（多块 + 多档 `@media`）：用「按 selector + 花括号配准」的 python 脚本批量删，避免逐块手改导致行号漂移；删完查配平。脚本骨架：遍历行，匹配 `selector {` 起，按 `{`/`}` 计深度到配平，整段删 + 去一个尾空行。
+5. 验证通过即 `git commit`（**不 push**，走 feature 分支）——见下「提交策略」。
+
 ## 开发与预览
 - 社区版开发：根目录 `yarn start-render`（react-app-rewired start，保存即热更新）
 - 变体：`yarn start-render-enterprise` / `yarn start-render-irify` / `yarn start-render-memfit`
@@ -67,18 +94,18 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 - **测试通过即 commit，无需问**：换皮改动只要满足「构建无报错（`tsc` / 启动无错）+ 功能正常（`regression-check.py` 过 / 关键页可点）+ 视觉走查通过」就直接 `git commit`，**不必停下来征求确认**。各 phase 的「Commit」步骤按此执行。
 - 仍遵守：**不 push**（推远端是 outward 操作，另问）；换皮代码走 feature 分支（不在 `master` 直接堆叠实现提交，文档 / 基线除外）。
 
-### Phase 3 布局重构边界（重要）
-
-阶段 3 的「左功能栏 + 顶部状态条 + tab 工作区」按当前代码结构落地，避免误把旧菜单简单包进新容器：
-
-1. **`UILayout` 不接菜单**：`components/layout/UILayout.tsx` 是应用外壳，只负责顶部状态条、引擎连接、loading、remote engine、project-manager 等壳层；不要把 `PublicMenu` / `HeardMenu` 接进 `UILayout`。
-2. **`MainOperator` 是主骨架入口**：`pages/MainOperator.tsx` 才是菜单 + `MainOperatorContent` tab 工作区的真实父级，阶段 3 在这里建立「左栏 + 右工作区」。
-3. **企业版 `HeardMenu` 原组件内纵向化**：保留专家/扫描/简易模式、导航数据库合并、自定义菜单、JSON 导入、插件下载补齐、插件缺失弹窗、路由打开逻辑；只改 JSX 布局和 SCSS。
-4. **社区版 `PublicMenu` 原组件内纵向化**：保留软模式、常用插件、Codec/DNSLog、SecurityExpert、Memfit 等分支逻辑。
-5. **禁止通用包装式迁移**：不要新建通用 `LayoutSidebar` 去包装 `HeardMenu` / `PublicMenu`，二者不是纯菜单数据组件。
-
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
 - `sentinel-rebrand`：按 spec 做系统性换皮改造（组件塑形 / 布局重排）。
 
 注意，在回答之前，一定要说：好的，徐先生。
+
+## graphify（代码知识图谱）
+
+本项目在 `graphify-out/` 维护了一份代码知识图谱，包含 god 节点、社区结构与跨文件关系。
+
+规则：
+- 遇到代码库相关问题时，若 `graphify-out/graph.json` 存在，**优先**用 `graphify query "<问题>"` 查询；用 `graphify path "<A>" "<B>"` 查两个对象之间的关系，用 `graphify explain "<概念>"` 聚焦某个概念。它们返回的是裁剪后的子图，通常比 `GRAPH_REPORT.md` 或裸 `grep` 结果小得多。
+- 若 `graphify-out/wiki/index.md` 存在，用它做整体导航，优于直接翻源码。
+- 只在「需要整体架构审视」或 query / path / explain 仍提供不了足够上下文时，才读 `graphify-out/GRAPH_REPORT.md`。
+- 改完代码后运行 `graphify update .` 保持图谱最新（仅基于 AST，不消耗 API）。
