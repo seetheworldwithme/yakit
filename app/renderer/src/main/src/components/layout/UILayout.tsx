@@ -24,6 +24,7 @@ import {
   GetConnectPort,
   getReleaseEditionName,
   isCommunityYakit,
+  isEnpriTrace,
   isEnpriTraceAgent,
   isEnterpriseEdition,
   isIRify,
@@ -182,9 +183,9 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
   /** ---------- 软件状态相关属性 End ---------- */
 
   // #region 新窗口引擎已经启动好，只需要看门狗检查是否ready，此处默认初始化一些变量
-  const [showLoadingPage, setShowLoadingPage] = useState<boolean>(false)
+  const [showLoadingPage, setShowLoadingPage] = useState<boolean>(isEnpriTrace())
   /** 本地引擎自检输出日志 */
-  const [newCheckLog, setNewCheckLog] = useState<string[]>([])
+  const [newCheckLog, setNewCheckLog] = useState<string[]>(isEnpriTrace() ? ['正在初始化引擎连接...'] : [])
   useEffect(() => {
     const cleanup = yakitUILayout.onFromEngineLinkWindow((data) => {
       setNewCheckLog([t('UILayout.entering')])
@@ -1673,7 +1674,12 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                 <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
 
                 <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
-                  {engineLink ? <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} /> : engineModeText}
+                  {!showLoadingPage &&
+                    (engineLink ? (
+                      <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} />
+                    ) : (
+                      engineModeText
+                    ))}
                 </div>
 
                 <div className={styles['header-left']}>
@@ -1722,13 +1728,15 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                 <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
 
                 <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
-                  <>
-                    {engineLink ? (
-                      <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} />
-                    ) : (
-                      engineModeText
-                    )}
-                  </>
+                  {!showLoadingPage && (
+                    <>
+                      {engineLink ? (
+                        <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} />
+                      ) : (
+                        engineModeText
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div className={styles['header-left']}>

@@ -223,13 +223,15 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
           </div>
 
           <div className={styles['yakit-loading-content']}>
-            <div className={classNames(styles['loading-box-wrapper'], styles['light-boder'])}>
-              <div className={classNames(styles['loading-box'], styles['light-bg'])}>
-                <div className={styles['loading-bar']}>
-                  <div className={styles['shine']}></div>
+            {!isEnpriTrace() && (
+              <div className={classNames(styles['loading-box-wrapper'], styles['light-boder'])}>
+                <div className={classNames(styles['loading-box'], styles['light-bg'])}>
+                  <div className={styles['loading-bar']}>
+                    <div className={styles['shine']}></div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className={styles['log-wrapper']}>
               <div className={styles['log-body']}>

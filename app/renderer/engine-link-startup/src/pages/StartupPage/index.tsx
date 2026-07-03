@@ -140,6 +140,10 @@ export const StartupPage: React.FC = () => {
 
   // #region 软件开始进行逻辑启动
   useEffect(() => {
+    // EnpriTrace 企业版：通知主进程隐藏启动窗口，直接在主窗口展示 Loading
+    if (isEnpriTrace()) {
+      yakitApp.hideStartupWindow()
+    }
     handleBuiltInCheck()
     handleFetchBaseInfo(() => {
       handleLinkEngineMode()

@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('yakitBridge', {
     exitApp: (params) => invoke('app-exit', params),
     relaunch: () => invoke('relaunch'),
     completeEngineLink: (payload) => invoke('engineLinkWin-done', payload),
+    hideStartupWindow: () => send('hide-startup-win'),
     closeWindow: () => invokePrefixed('UIOperate', 'close'),
     onCloseWindow: (callback) => subscribe('close-engineLinkWin-renderer', () => callback()),
     onFromMainWindow: (callback) => subscribe('from-win', callback),

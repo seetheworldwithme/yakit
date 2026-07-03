@@ -110,6 +110,7 @@ let ipcRegistered = false
  * ---------------- 创建 yakitEngineLink 窗口 ----------------
  */
 let readyEngineLinkShow = false
+let startupWinHidden = false // 标记启动窗口是否被渲染进程请求隐藏（EnpriTrace 跳过启动页）
 function createEngineLinkWindow() {
   const state = windowStateKeeper({
     defaultWidth: 900,
@@ -136,7 +137,7 @@ function createEngineLinkWindow() {
       sandbox: true,
     },
     titleBarStyle: 'hidden',
-    show: true,
+    show: false,
     skipTaskbar: false,
     fullscreenable: false,
     maximizable: false,
@@ -163,6 +164,10 @@ function createEngineLinkWindow() {
 
   engineLinkWin.once('ready-to-show', () => {
     readyEngineLinkShow = true
+    // 非 EnpriTrace 跳过启动页模式：正常显示启动窗口
+    if (!startupWinHidden && !engineLinkWin.isVisible()) {
+      engineLinkWin.show()
+    }
     printLogOutputFile(
       `[engineLinkWin] ready-to-show, isVisible: ${engineLinkWin.isVisible()}, isDestroyed: ${engineLinkWin.isDestroyed()}`,
     )
@@ -536,11 +541,25 @@ function registerGlobalIPC() {
     markRenderOk(win)
   })
 
+  // ------------------- EnpriTrace 隐藏启动窗口 -------------------
+  // 渲染进程（StartupPage）在挂载时如果检测到 isEnpriTrace，发送此 IPC 请求隐藏启动窗口
+  ipcMain.on('hide-startup-win', (event) => {
+    startupWinHidden = true
+    winHide(engineLinkWin)
+    winShow(win, false) // 立即显示主窗口
+  })
+
   // ------------------- 窗口发送数据操作 -------------------
   // engineLink 完成操作
   ipcMain.handle('engineLinkWin-done', async (event, data) => {
-    winHide(engineLinkWin)
-    winShow(win, readyWinShow)
+    if (startupWinHidden && engineLinkWin && !engineLinkWin.isDestroyed()) {
+      // EnpriTrace: 启动窗口已被隐藏，直接销毁释放资源
+      engineLinkWin.destroy()
+      engineLinkWin = null
+    } else {
+      winHide(engineLinkWin)
+      winShow(win, readyWinShow)
+    }
     safeSend(win, 'from-engineLinkWin', data)
   })
 
