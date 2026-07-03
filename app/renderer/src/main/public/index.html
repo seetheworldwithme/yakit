@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
@@ -30,6 +30,7 @@
         height: 100vh;
         margin: 0;
         padding: 0;
+        background: var(--yakit-colors-Neutral-0, #171717);
       }
 
       #initial-loading {
@@ -38,6 +39,11 @@
         justify-content: center;
         height: 100vh;
         background: var(--yakit-colors-Neutral-0);
+      }
+
+      #root {
+        min-height: 100vh;
+        background: var(--yakit-colors-Neutral-0, #171717);
       }
 
       #initial-loading span {

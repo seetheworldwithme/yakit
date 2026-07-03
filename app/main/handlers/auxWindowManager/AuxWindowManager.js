@@ -148,6 +148,7 @@ class AuxWindowManager {
         contextIsolation: false,
         sandbox: true,
       },
+      backgroundColor: '#171717',
       show: false,
     })
 
