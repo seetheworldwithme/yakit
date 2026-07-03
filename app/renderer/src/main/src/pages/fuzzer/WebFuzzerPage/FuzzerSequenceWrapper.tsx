@@ -29,7 +29,6 @@ const FuzzerSequenceWrapper: React.FC<FuzzerSequenceWrapperProps> = React.memo((
               onSetType(keyType)
             }}
           >
-            {item.icon}
             <span className={styles['web-fuzzer-tab-label']}>{item.label}</span>
           </div>
         ))}

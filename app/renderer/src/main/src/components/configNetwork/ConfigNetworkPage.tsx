@@ -892,7 +892,7 @@ export const ConfigNetworkPage: React.FC<ConfigNetworkPageProp> = (props) => {
                   />
                 </Form.Item>
 
-                <Divider orientation={'left'} style={{ marginTop: '0px' }}>
+                {/* <Divider orientation={'left'} style={{ marginTop: '0px' }}>
                   {t('ConfigNetworkPage.thirdPartyAppConfig')}
                 </Divider>
                 <Form.Item label={t('ConfigNetworkPage.thirdPartyApp')}>
@@ -990,7 +990,7 @@ export const ConfigNetworkPage: React.FC<ConfigNetworkPageProp> = (props) => {
                   >
                     {t('ConfigNetworkPage.addThirdPartyApp')}
                   </YakitButton>
-                </Form.Item>
+                </Form.Item> */}
                 {/* <Form.Item label={"AI使用优先级"}>
                                     <div className={styles["ai-sort-box"]}>
                                         {!!params.AppConfigs.length ? (
@@ -1019,7 +1019,7 @@ export const ConfigNetworkPage: React.FC<ConfigNetworkPageProp> = (props) => {
                                         )}
                                     </div>
                                 </Form.Item> */}
-                <AIModelGlobalConfig />
+                {/* <AIModelGlobalConfig /> */}
                 <Divider orientation={'left'} style={{ marginTop: '0px' }}>
                   {t('ConfigNetworkPage.customCodeSnippet')}
                   <div className={styles['form-rule-code-customize-describe']}>

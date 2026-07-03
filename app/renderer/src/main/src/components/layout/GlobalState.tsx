@@ -1048,49 +1048,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
                   )}
                 </div>
               </div>
-              <div className={styles['body-info']}>
-                <div className={styles['info-left']}>
-                  {enableMcp ? <SuccessIcon /> : <HelpIcon />}
-                  <div className={styles['left-body']}>
-                    <div className={styles['system-proxy-title']}>
-                      {t('GlobalState.mcp')}
-                      <YakitTag color={enableMcp ? 'success' : 'danger'}>
-                        {enableMcp ? t('YakitButton.enabled') : t('YakitButton.notEnabled')}
-                      </YakitTag>
-                    </div>
-                    <div className={styles['subtitle-style']}>{t('GlobalState.mcpDesc')}</div>
-                  </div>
-                </div>
-                <div className={styles['info-right']}>
-                  {enableMcp ? (
-                    <div className={styles['system-proxy-info']}>
-                      {mcp.mcpStreamInfo.mcpServerUrl}
-                      <YakitButton
-                        type="text"
-                        colors="danger"
-                        className={styles['btn-style']}
-                        onClick={() => {
-                          setShow(false)
-                          mcp.mcpStreamEvent.onCancel()
-                        }}
-                      >
-                        {t('GlobalState.disable')}
-                      </YakitButton>
-                    </div>
-                  ) : (
-                    <YakitButton
-                      type="text"
-                      className={styles['btn-style']}
-                      onClick={() => {
-                        setShow(false)
-                        setConfigMcpModalVisible(true)
-                      }}
-                    >
-                      {t('GlobalState.toConfigure')}
-                    </YakitButton>
-                  )}
-                </div>
-              </div>
+              {/* Yak Mcp 检测项已按功能裁剪方案隐藏（§B14） */}
             </>
           )}
           {isEnpriTraceAgent() && state === 'success' && (
@@ -1189,24 +1147,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
             </div>
           </div>
         </div>
-        <div className={styles['body-setting']}>
-          {t('GlobalState.statusRefreshInterval')}
-          <YakitInputNumber
-            size="small"
-            type="horizontal"
-            wrapperClassName={styles['yakit-input-number']}
-            min={1}
-            formatter={(value) => `${value}s`}
-            parser={(value) => value!.replace('s', '')}
-            value={timeInterval}
-            onChange={(value) => {
-              if (!value) setTimeInterval(1)
-              else {
-                if (+value !== timeInterval) setTimeInterval(+value || 5)
-              }
-            }}
-          />
-        </div>
+        {/* 状态刷新间隔时间 — 已按功能裁剪方案隐藏 */}
       </div>
     )
   }, [

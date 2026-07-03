@@ -2775,7 +2775,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                             {t('YakitButton.sendRequest')}{' '}
                             {convertKeyboardToUIKey(getHttpFuzzerShortcutKeyEvents()['sendRequest*httpFuzzer'].keys)}
                           </YakitButton>
-                          <WebFuzzerAiTestMenu inViewport={inViewport} onSelect={onAiTest} />
+                          {/* AI测试按钮已按功能裁剪方案隐藏（§B8） */}
                         </>
                       )}
                     </>

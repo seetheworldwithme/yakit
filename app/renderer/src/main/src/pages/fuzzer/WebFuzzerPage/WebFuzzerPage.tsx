@@ -1,14 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { WebFuzzerPageProps, WebFuzzerType } from './WebFuzzerPageType'
 import styles from './WebFuzzerPage.module.scss'
-import {
-  OutlineAdjustmentsIcon,
-  OutlineBotIcon,
-  OutlineClipboardlistIcon,
-  OutlineCollectionIcon,
-  OutlineLightningboltIcon,
-  OutlineViewboardsIcon,
-} from '@/assets/icon/outline'
+// icons removed: 按功能裁剪方案隐藏工具栏按钮图标
 import classNames from 'classnames'
 import { useCreation, useInViewport, useMemoizedFn } from 'ahooks'
 import { YakitRoute } from '@/enums/yakitRoute'
@@ -30,36 +23,11 @@ const { ipcRenderer } = window.require('electron')
 
 export const webFuzzerTabs = (t: TFunction) => {
   return [
-    {
-      key: 'config',
-      label: t('WebFuzzerPage.config'),
-      icon: <OutlineAdjustmentsIcon />,
-    },
-    {
-      key: 'rule',
-      label: t('WebFuzzerPage.rule'),
-      icon: <OutlineClipboardlistIcon />,
-    },
-    {
-      key: 'hot-patch',
-      label: t('HTTPFuzzerPage.hotReload'),
-      icon: <OutlineLightningboltIcon />,
-    },
-    {
-      key: 'ai',
-      label: t('WebFuzzerPage.AI'),
-      icon: <OutlineBotIcon />,
-    },
-    {
-      key: 'sequence',
-      label: t('WebFuzzerPage.sequence'),
-      icon: <OutlineCollectionIcon />,
-    },
-    {
-      key: 'concurrency',
-      label: t('WebFuzzerPage.concurrency'),
-      icon: <OutlineViewboardsIcon />,
-    },
+    { key: 'config', label: t('WebFuzzerPage.config') },
+    { key: 'rule', label: t('WebFuzzerPage.rule') },
+    { key: 'hot-patch', label: t('HTTPFuzzerPage.hotReload') },
+    { key: 'sequence', label: t('WebFuzzerPage.sequence') },
+    { key: 'concurrency', label: t('WebFuzzerPage.concurrency') },
   ]
 }
 /**包裹 配置\规则\热加载\AI，不包裹序列 */
@@ -236,7 +204,6 @@ const WebFuzzerPage: React.FC<WebFuzzerPageProps> = React.memo((props) => {
               onSetType(keyType)
             }}
           >
-            {item.icon}
             <span className={styles['web-fuzzer-tab-label']}>{item.label}</span>
           </div>
         ))}

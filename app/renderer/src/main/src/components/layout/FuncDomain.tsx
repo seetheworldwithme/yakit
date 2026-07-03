@@ -1143,8 +1143,8 @@ const GetUIOpSettingMenu = () => {
         { key: 'agent', label: '系统代理' },
         // { key: "engineVar",label: "引擎环境变量" },
         { key: 'config-network', label: '全局配置' },
-        { key: 'setShortcutKey', label: '快捷键设置' },
-        { key: 'configMcp', label: 'Yak Mcp配置' },
+        // { key: 'setShortcutKey', label: '快捷键设置' },
+        // { key: 'configMcp', label: 'Yak Mcp配置' },
       ],
     },
     {
