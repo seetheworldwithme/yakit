@@ -1,0 +1,46 @@
+# graphify 忽略规则（gitignore 语法；与 .gitignore 合并，last-match-wins，只能排除更多）
+# 目的：排除非代码资源，让提取走纯 AST，不触发 LLM key 需求
+
+# 前端资源 / 模板 / 样式（非代码逻辑）
+*.html
+*.css
+
+# 原生二进制 / 第三方可执行
+*.exe
+*.dll
+*.so
+*.dylib
+
+# vendored 第三方库目录（不该进图谱）
+app/main/handlers/libs/
+handlers/libs/
+
+# 文档类（保持纯 AST、不调 LLM；graphify 的 DOC_EXTENSIONS = md/mdx/qmd/txt/rst/html/yaml/yml）
+*.md
+*.mdx
+*.qmd
+*.txt
+*.rst
+*.yaml
+*.yml
+*.pdf
+
+# 保险：依赖与构建产物（通常已在 .gitignore，这里显式兜底）
+node_modules/
+dist/
+release/
+
+# 图片资源（UI 图标/截图/svg，会触发 vision API，对代码图谱价值低）
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.bmp
+*.ico
+*.icns
+*.tiff
+
+# 设计文档目录（代码图谱不需要；如需纳入设计文档，用 graphify add 单独加）
+docs/

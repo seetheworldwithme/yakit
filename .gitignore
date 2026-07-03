@@ -63,3 +63,5 @@ yarn.lock
 pr-ci-changed-files-list.txt
 .agents
 .claude
+# graphify 知识图谱（本地生成产物，不入库）
+graphify-out/
