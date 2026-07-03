@@ -1,33 +1,29 @@
-import React, { useEffect, useMemo, useRef, useState, ReactElement, CSSProperties } from 'react'
+import React, { useEffect, useMemo, useRef, useState, ReactElement } from 'react'
 import classNames from 'classnames'
 import {
-  PublicBatchExecutorIcon,
-  PublicBruteIcon,
-  PublicCodecIcon,
-  PublicDNSLogIcon,
-  PublicDirectoryScanningIcon,
-  PublicInformationGatheringIcon,
-  PublicPayloadGeneraterIcon,
-  PublicPayloadManagerIcon,
-  PublicPluginLocalIcon,
-  PublicPluginMineIcon,
-  PublicPluginStoreIcon,
-  PublicPocIcon,
-  PublicScanPortIcon,
-  PublicToolCVEIcon,
-  PublicToolDBDomainIcon,
-  PublicToolDBHTTPHistoryIcon,
-  PublicToolDBReportIcon,
-  PublicToolDBRiskIcon,
-  PublicToolDataCompareIcon,
-  PublicToolICMPSizeLogIcon,
-  PublicToolModScanPortIcon,
-  PublicToolPayloadIcon,
-  PublicToolPluginHubIcon,
-  PublicToolReverseServerIcon,
-  PublicToolShellReceiverIcon,
-  PublicToolTCPPortLogIcon,
-} from '@/routes/publicIcon'
+  SentinelHomeBatchPluginIcon,
+  SentinelHomeBruteIcon,
+  SentinelHomeCVEIcon,
+  SentinelHomeCodecIcon,
+  SentinelHomeDNSLogIcon,
+  SentinelHomeDataCompareIcon,
+  SentinelHomeDirectoryScanIcon,
+  SentinelHomeDomainAssetsIcon,
+  SentinelHomeHistoryIcon,
+  SentinelHomeICMPSizeLogIcon,
+  SentinelHomePayloadGeneraterIcon,
+  SentinelHomePayloadIcon,
+  SentinelHomePluginHubIcon,
+  SentinelHomePortAssetsIcon,
+  SentinelHomePortListenerIcon,
+  SentinelHomePocIcon,
+  SentinelHomeProjectManagerIcon,
+  SentinelHomeReportIcon,
+  SentinelHomeReverseServerIcon,
+  SentinelHomeRiskIcon,
+  SentinelHomeScanPortIcon,
+  SentinelHomeTCPPortLogIcon,
+} from '@/assets/icon/sentinelHome/SentinelHomeIcons'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { SolidCheckIcon, SolidExclamationIcon, SolidPlayIcon } from '@/assets/icon/solid'
 import { OutlineArrowrightIcon, OutlineChevronupIcon } from '@/assets/icon/outline'
@@ -57,7 +53,6 @@ const { ipcRenderer } = window.require('electron')
 interface ToolInfo {
   label: string
   icon: ReactElement
-  iconStyle?: CSSProperties
   desc: string
   rightIcon: ReactElement
   onClick: () => void
@@ -90,113 +85,112 @@ const Home: React.FC<HomeProp> = (props) => {
     return [
       {
         label: t('YakitRoute.Yso-Java Hack'),
-        icon: <PublicPayloadGeneraterIcon />,
+        icon: <SentinelHomePayloadGeneraterIcon />,
         desc: t('YakitRoute.fuzzPayLoadDeserialization'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.PayloadGenerater_New }),
       },
       {
         label: t('YakitRoute.DNSLog'),
-        icon: <PublicDNSLogIcon />,
+        icon: <SentinelHomeDNSLogIcon />,
         desc: t('YakitRoute.subdomainAutoGenerate'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DNSLog }),
       },
       {
         label: t('YakitRoute.Codec'),
-        icon: <PublicCodecIcon />,
+        icon: <SentinelHomeCodecIcon />,
         desc: t('Home.codecPluginCustom'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.Codec }),
       },
       {
         label: t('YakitRoute.Payload'),
-        icon: <PublicToolPayloadIcon />,
+        icon: <SentinelHomePayloadIcon />,
         desc: t('YakitRoute.customPayload'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.PayloadManager }),
       },
       {
         label: t('YakitRoute.dataCompare'),
-        icon: <PublicToolDataCompareIcon />,
+        icon: <SentinelHomeDataCompareIcon />,
         desc: t('YakitRoute.quicklyIdentifyDifferencesInData'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DataCompare }),
       },
       {
         label: t('YakitRoute.cVEManagement'),
-        icon: <PublicToolCVEIcon />,
+        icon: <SentinelHomeCVEIcon />,
         desc: t('YakitRoute.searchAndQueryCVEData'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_CVE }),
       },
       {
         label: t('YakitRoute.pluginHub'),
-        icon: <PublicToolPluginHubIcon />,
-        iconStyle: { backgroundColor: '#F4736B', padding: 1 },
+        icon: <SentinelHomePluginHubIcon />,
         desc: t('YakitRoute.massiveYakitPluginsOne-ClickDownload', { edition: getReleaseEditionName() }),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.Plugin_Hub }),
       },
       {
         label: t('YakitRoute.portListener'),
-        icon: <PublicToolShellReceiverIcon />,
+        icon: <SentinelHomePortListenerIcon />,
         desc: t('YakitRoute.reverseShellTool'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.ShellReceiver }),
       },
       {
         label: t('YakitRoute.ICMP-SizeLog'),
-        icon: <PublicToolICMPSizeLogIcon />,
+        icon: <SentinelHomeICMPSizeLogIcon />,
         desc: t('YakitRoute.detectICMPCallbackViaPingWithSpecificPacketSize'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.ICMPSizeLog }),
       },
       {
         label: t('YakitRoute.TCP-PortLog'),
-        icon: <PublicToolTCPPortLogIcon />,
+        icon: <SentinelHomeTCPPortLogIcon />,
         desc: t('YakitRoute.detectTCPCallbackViaRandomClosedPorts'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.TCPPortLog }),
       },
       {
         label: t('YakitRoute.reverseServer'),
-        icon: <PublicToolReverseServerIcon />,
+        icon: <SentinelHomeReverseServerIcon />,
         desc: t('YakitRoute.simultaneouslyProvideHTTP/RMI/HTTPSReverseConnectionsOnOnePort'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.ReverseServer_New }),
       },
       {
         label: t('YakitRoute.History'),
-        icon: <PublicToolDBHTTPHistoryIcon />,
+        icon: <SentinelHomeHistoryIcon />,
         desc: t('YakitRoute.viewAndManageAllHistoricalTrafficFromMITMPluginsAndFuzzing'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_HTTPHistory }),
       },
       {
         label: t('YakitRoute.report'),
-        icon: <PublicToolDBReportIcon />,
+        icon: <SentinelHomeReportIcon />,
         desc: t('YakitRoute.viewAndManageReportsGeneratedDuringScanning'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_Report }),
       },
       {
         label: t('Home.vulnerabilityRiskStatistics'),
-        icon: <PublicToolDBRiskIcon />,
+        icon: <SentinelHomeRiskIcon />,
         desc: t('YakitRoute.manageAllDetectedVulnerabilitiesAndRisks'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_Risk }),
       },
       {
         label: t('YakitRoute.portAssets'),
-        icon: <PublicToolModScanPortIcon />,
+        icon: <SentinelHomePortAssetsIcon />,
         desc: t('YakitRoute.manageAllDiscoveredPortAssets'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_Ports }),
       },
       {
         label: t('YakitRoute.domainAssets'),
-        icon: <PublicToolDBDomainIcon />,
+        icon: <SentinelHomeDomainAssetsIcon />,
         desc: t('YakitRoute.manageAllDiscoveredDomainAssets'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_Domain }),
@@ -422,7 +416,7 @@ const Home: React.FC<HomeProp> = (props) => {
               >
                 <div className={styles['home-card-header']}>
                   <div className={styles['home-card-header-title']}>
-                    <PublicInformationGatheringIcon className={styles['title-icon']} />
+                    <SentinelHomeScanPortIcon className={styles['title-icon']} />
                     <span className={styles['title-text']}>{t('Home.informationGathering')}</span>
                   </div>
                   <div className={styles['home-card-header-desc']}>{t('Home.assetReconDescription')}</div>
@@ -432,7 +426,7 @@ const Home: React.FC<HomeProp> = (props) => {
                     className={styles['informationGathering-item']}
                     onClick={() => onMenu({ route: YakitRoute.Mod_ScanPort })}
                   >
-                    <PublicScanPortIcon className={styles['item-icon']} />
+                    <SentinelHomeScanPortIcon className={styles['item-icon']} />
                     <span className={styles['item-text']} title={t('YakitRoute.portScan')}>
                       {t('YakitRoute.portScan')}
                     </span>
@@ -447,7 +441,7 @@ const Home: React.FC<HomeProp> = (props) => {
                       })
                     }
                   >
-                    <PublicDirectoryScanningIcon className={styles['item-icon']} />
+                    <SentinelHomeDirectoryScanIcon className={styles['item-icon']} />
                     <span className={styles['item-text']} title={t('YakitRoute.directoryScan')}>
                       {t('YakitRoute.directoryScan')}
                     </span>
@@ -457,7 +451,7 @@ const Home: React.FC<HomeProp> = (props) => {
               <div ref={scanningRef} className={classNames(styles['vulnerability-scanning-card'], styles['home-card'])}>
                 <div className={styles['home-card-header']}>
                   <div className={styles['home-card-header-title']}>
-                    <PublicPocIcon className={styles['title-icon']} />
+                    <SentinelHomePocIcon className={styles['title-icon']} />
                     <span className={styles['title-text']}>{t('YakitRoute.vulnScan')}</span>
                   </div>
                   <div className={styles['home-card-header-desc']}>{t('Home.vulnBatchScan')}</div>
@@ -540,7 +534,7 @@ const Home: React.FC<HomeProp> = (props) => {
                 )}
                 <div className={styles['security-tools']}>
                   <div className={styles['security-tools-item']} onClick={() => onMenu({ route: YakitRoute.PoC })}>
-                    <PublicPocIcon className={styles['title-icon']} />
+                    <SentinelHomePocIcon className={styles['title-icon']} />
                     <span className={styles['tools-text']} title={t('YakitRoute.vulnTargetedScan')}>
                       {t('YakitRoute.vulnTargetedScan')}
                     </span>
@@ -553,7 +547,7 @@ const Home: React.FC<HomeProp> = (props) => {
                       })
                     }
                   >
-                    <PublicBatchExecutorIcon className={styles['tools-icon']} />
+                    <SentinelHomeBatchPluginIcon className={styles['tools-icon']} />
                     <span className={styles['tools-text']} title={t('Home.vulnCustomScan')}>
                       {t('Home.vulnCustomScan')}
                     </span>
@@ -562,7 +556,7 @@ const Home: React.FC<HomeProp> = (props) => {
                     className={styles['security-tools-item']}
                     onClick={() => onMenu({ route: YakitRoute.Mod_Brute })}
                   >
-                    <PublicBruteIcon className={styles['tools-icon']} />
+                    <SentinelHomeBruteIcon className={styles['tools-icon']} />
                     <span className={styles['tools-text']} title={t('YakitRoute.weakPasswordCheck')}>
                       {t('YakitRoute.weakPasswordCheck')}
                     </span>
@@ -575,9 +569,7 @@ const Home: React.FC<HomeProp> = (props) => {
               {toolsList.map((item) => (
                 <div className={styles['tools-grid-item']} key={item.label} onClick={item.onClick} title={item.desc}>
                   <div className={styles['tools-grid-item-cont']}>
-                    <div className={styles['tools-grid-item-icon']} style={item.iconStyle}>
-                      {item.icon}
-                    </div>
+                    <div className={styles['tools-grid-item-icon']}>{item.icon}</div>
                     <div className={styles['tools-grid-item-cont-right']}>
                       <div className={styles['tools-grid-item-title']}>{item.label}</div>
                       <div className={styles['tools-grid-item-desc']}>{item.desc}</div>
@@ -594,7 +586,7 @@ const Home: React.FC<HomeProp> = (props) => {
               <div ref={pluginHubRef} className={classNames(styles['pluginHub-card'], styles['home-card'])}>
                 <div className={styles['home-card-header']}>
                   <div className={styles['home-card-header-title']}>
-                    <PublicPluginStoreIcon className={styles['title-icon']} />
+                    <SentinelHomePluginHubIcon className={styles['title-icon']} />
                     <span className={styles['title-text']}>{t('YakitRoute.pluginHub')}</span>
                   </div>
                   <div className={styles['home-card-header-desc']}>{t('Home.pluginCoverageDescription')}</div>
@@ -610,7 +602,7 @@ const Home: React.FC<HomeProp> = (props) => {
                         })
                       }
                     >
-                      <PublicPluginStoreIcon className={styles['tabs-icon']} />
+                      <SentinelHomePluginHubIcon className={styles['tabs-icon']} />
                       <span className={styles['tabs-text']} title={t('Home.pluginStore')}>
                         {t('Home.pluginStore')}
                       </span>
@@ -625,7 +617,7 @@ const Home: React.FC<HomeProp> = (props) => {
                       })
                     }
                   >
-                    <PublicPluginMineIcon className={styles['tabs-icon']} />
+                    <SentinelHomeProjectManagerIcon className={styles['tabs-icon']} />
                     <span className={styles['tabs-text']} title={t('Home.pluginsMine')}>
                       {t('Home.pluginsMine')}
                     </span>
@@ -639,7 +631,7 @@ const Home: React.FC<HomeProp> = (props) => {
                       })
                     }
                   >
-                    <PublicPluginLocalIcon className={styles['tabs-icon']} />
+                    <SentinelHomePayloadIcon className={styles['tabs-icon']} />
                     <span className={styles['tabs-text']} title={t('Home.pluginLocal')}>
                       {t('Home.pluginLocal')}
                     </span>
@@ -650,7 +642,9 @@ const Home: React.FC<HomeProp> = (props) => {
               <div ref={smallToolsRef} className={styles['small-tools-wrapper']}>
                 <div className={styles['small-tools-item']} onClick={() => onMenu({ route: YakitRoute.Codec })}>
                   <div className={styles['small-tools-item-cont']}>
-                    <PublicCodecIcon className={styles['small-tools-item-icon']} />
+                    <div className={styles['small-tools-item-icon']}>
+                      <SentinelHomeCodecIcon />
+                    </div>
                     <div className={styles['small-tools-item-cont-right']}>
                       <div className={styles['small-tools-cont-title']}>{t('YakitRoute.Codec')}</div>
                       <div className={styles['small-tools-cont-desc']}>{t('Home.codecDesc')}</div>
@@ -662,7 +656,9 @@ const Home: React.FC<HomeProp> = (props) => {
                   onClick={() => onMenu({ route: YakitRoute.PayloadManager })}
                 >
                   <div className={styles['small-tools-item-cont']}>
-                    <PublicPayloadManagerIcon className={styles['small-tools-item-icon']} />
+                    <div className={styles['small-tools-item-icon']}>
+                      <SentinelHomePayloadIcon />
+                    </div>
                     <div className={styles['small-tools-item-cont-right']}>
                       <div className={styles['small-tools-cont-title']}>{t('YakitRoute.Payload')}</div>
                       <div className={styles['small-tools-cont-desc']}>{t('Home.payloadDesc')}</div>

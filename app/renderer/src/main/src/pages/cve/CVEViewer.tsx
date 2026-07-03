@@ -34,7 +34,7 @@ export interface CVEViewerProp {}
 const { ipcRenderer } = window.require('electron')
 export const CVEViewer: React.FC<CVEViewerProp> = (props) => {
   const [params, setParams] = useState<QueryCVERequest>(defQueryCVERequest)
-  const [advancedQuery, setAdvancedQuery] = useState<boolean>(true)
+  const [advancedQuery, setAdvancedQuery] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const [available, setAvailable] = useState(false) // cve数据库是否可用
   useEffect(() => {

@@ -33,9 +33,13 @@
         align-items: center;
 
         .title-icon {
+          color: var(--Colors-Use-Main-Primary);
+
+          &,
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -172,10 +176,12 @@
           display: flex;
           justify-content: center;
           align-items: center;
+          color: var(--Colors-Use-Main-Primary);
 
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -273,9 +279,13 @@
         }
 
         .tools-icon {
+          color: var(--Colors-Use-Main-Primary);
+
+          &,
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -325,9 +335,13 @@
         }
 
         .item-icon {
+          color: var(--Colors-Use-Main-Primary);
+
+          &,
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -378,9 +392,13 @@
         }
 
         .tabs-icon {
+          color: var(--Colors-Use-Main-Primary);
+
+          &,
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -424,9 +442,12 @@
         align-items: center;
 
         .small-tools-item-icon {
+          color: var(--Colors-Use-Main-Primary);
+
           svg {
             width: 36px;
             height: 36px;
+            stroke-width: 1.8;
           }
         }
 
@@ -471,6 +492,7 @@
       &-header {
         &-title {
           .title-icon {
+            &,
             svg {
               width: 28px;
               height: 28px;
@@ -560,6 +582,7 @@
           gap: 4px;
 
           .tools-icon {
+            &,
             svg {
               width: 28px;
               height: 28px;
@@ -585,6 +608,7 @@
           gap: 4px;
 
           .item-icon {
+            &,
             svg {
               width: 28px;
               height: 28px;
@@ -610,6 +634,7 @@
           gap: 4px;
 
           .tabs-icon {
+            &,
             svg {
               width: 28px;
               height: 28px;
@@ -671,6 +696,7 @@
       &-header {
         &-title {
           .title-icon {
+            &,
             svg {
               width: 32px;
               height: 32px;
@@ -760,6 +786,7 @@
           gap: 4px;
 
           .tools-icon {
+            &,
             svg {
               width: 32px;
               height: 32px;
@@ -785,6 +812,7 @@
           gap: 4px;
 
           .item-icon {
+            &,
             svg {
               width: 32px;
               height: 32px;
@@ -810,6 +838,7 @@
           gap: 4px;
 
           .tabs-icon {
+            &,
             svg {
               width: 32px;
               height: 32px;
@@ -871,6 +900,7 @@
       &-header {
         &-title {
           .title-icon {
+            &,
             svg {
               width: 36px;
               height: 36px;
@@ -960,6 +990,7 @@
           gap: 6px;
 
           .tools-icon {
+            &,
             svg {
               width: 36px;
               height: 36px;
@@ -985,6 +1016,7 @@
           gap: 6px;
 
           .item-icon {
+            &,
             svg {
               width: 36px;
               height: 36px;
@@ -1010,6 +1042,7 @@
           gap: 6px;
 
           .tabs-icon {
+            &,
             svg {
               width: 36px;
               height: 36px;

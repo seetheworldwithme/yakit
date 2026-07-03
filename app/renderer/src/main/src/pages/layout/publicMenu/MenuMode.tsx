@@ -1,36 +1,35 @@
 import React, { useMemo } from 'react'
 import {
-  PublicAIAgentIcon,
-  PublicAuditCodeIcon,
-  PublicAuditHoleIcon,
-  PublicBatchPluginIcon,
-  PublicBruteIcon,
-  PublicCVEIcon,
-  PublicCodeScanIcon,
-  PublicCodecIcon,
-  PublicDNSLogIcon,
-  PublicDataCompareIcon,
-  PublicDirectoryScanningIcon,
-  PublicDomainIcon,
-  PublicFingerprintManageIcon,
-  PublicHTTPHistoryIcon,
-  PublicICMPSizeLogIcon,
-  PublicKnowledgeBaseIcon,
-  PublicMitmIcon,
-  PublicPayloadGeneraterIcon,
-  PublicPluginStoreIcon,
-  PublicPocIcon,
-  PublicPortsIcon,
-  PublicProjectManagerIcon,
-  PublicReportIcon,
-  PublicReverseServerIcon,
-  PublicRiskIcon,
-  PublicRuleManagementIcon,
-  PublicScanPortIcon,
-  PublicShellReceiverIcon,
-  PublicTCPPortLogIcon,
-  PublicWebFuzzerIcon,
-} from '@/routes/publicIcon'
+  SentinelHomeAIAgentIcon,
+  SentinelHomeAuditCodeIcon,
+  SentinelHomeAuditHoleIcon,
+  SentinelHomeBatchPluginIcon,
+  SentinelHomeBruteIcon,
+  SentinelHomeCVEIcon,
+  SentinelHomeCodeScanIcon,
+  SentinelHomeCodecIcon,
+  SentinelHomeDNSLogIcon,
+  SentinelHomeDataCompareIcon,
+  SentinelHomeDirectoryScanIcon,
+  SentinelHomeDomainAssetsIcon,
+  SentinelHomeHistoryIcon,
+  SentinelHomeICMPSizeLogIcon,
+  SentinelHomeKnowledgeBaseIcon,
+  SentinelHomeMitmIcon,
+  SentinelHomePayloadGeneraterIcon,
+  SentinelHomePluginHubIcon,
+  SentinelHomePocIcon,
+  SentinelHomePortAssetsIcon,
+  SentinelHomePortListenerIcon,
+  SentinelHomeProjectManagerIcon,
+  SentinelHomeReportIcon,
+  SentinelHomeReverseServerIcon,
+  SentinelHomeRiskIcon,
+  SentinelHomeRuleManagementIcon,
+  SentinelHomeScanPortIcon,
+  SentinelHomeTCPPortLogIcon,
+  SentinelHomeWebFuzzerIcon,
+} from '@/assets/icon/sentinelHome/SentinelHomeIcons'
 import { useMemoizedFn } from 'ahooks'
 import { RouteToPageProps } from './PublicMenu'
 import { Tooltip } from 'antd'
@@ -83,7 +82,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.MITMHacker)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicMitmIcon />
+                <SentinelHomeMitmIcon />
               </div>
             </div>
             <div className={styles['title-style']}>MITM</div>
@@ -92,7 +91,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.HTTPFuzzer)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicWebFuzzerIcon />
+                <SentinelHomeWebFuzzerIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{tooltipTitle(YakitRoute.HTTPFuzzer)}</div>
@@ -101,13 +100,13 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div>
             <div className={styles['horizontal-menu-wrapper']} onClick={() => onMenu(YakitRoute.Codec)}>
               <div className={styles['icon-wrapper']}>
-                <PublicCodecIcon />
+                <SentinelHomeCodecIcon />
               </div>
               <div className={styles['title-style']}>{t('YakitRoute.Codec')}</div>
             </div>
             <div className={styles['horizontal-menu-wrapper']} onClick={() => onMenu(YakitRoute.DataCompare)}>
               <div className={styles['icon-wrapper']}>
-                <PublicDataCompareIcon />
+                <SentinelHomeDataCompareIcon />
               </div>
               <div className={styles['title-style']}>{t('YakitRoute.dataCompare')}</div>
             </div>
@@ -119,7 +118,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Mod_ScanPort)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicScanPortIcon />
+                <SentinelHomeScanPortIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.portAndFingerprintScan')}</div>
@@ -128,7 +127,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.PoC)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicPocIcon />
+                <SentinelHomePocIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.vulnTargetedScan')}</div>
@@ -144,7 +143,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.Mod_Brute)
                   }}
                 >
-                  <PublicBruteIcon />
+                  <SentinelHomeBruteIcon />
                 </div>
               </Tooltip>
               <Tooltip placement="bottom" title={t('YakitRoute.directoryScan')}>
@@ -161,7 +160,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     )
                   }}
                 >
-                  <PublicDirectoryScanningIcon />
+                  <SentinelHomeDirectoryScanIcon />
                 </div>
               </Tooltip>
             </div>
@@ -179,7 +178,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Plugin_Hub)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicPluginStoreIcon />
+                <SentinelHomePluginHubIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.pluginHub')}</div>
@@ -189,7 +188,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.BatchExecutorPage)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicBatchPluginIcon />
+                <SentinelHomeBatchPluginIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.batchExecute')}</div>
@@ -208,7 +207,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.DNSLog)
                   }}
                 >
-                  <PublicDNSLogIcon />
+                  <SentinelHomeDNSLogIcon />
                 </div>
               </Tooltip>
               <Tooltip placement="bottom" title={tooltipTitle(YakitRoute.ICMPSizeLog)}>
@@ -219,7 +218,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.ICMPSizeLog)
                   }}
                 >
-                  <PublicICMPSizeLogIcon />
+                  <SentinelHomeICMPSizeLogIcon />
                 </div>
               </Tooltip>
               <Tooltip placement="bottom" title={tooltipTitle(YakitRoute.TCPPortLog)}>
@@ -230,7 +229,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.TCPPortLog)
                   }}
                 >
-                  <PublicTCPPortLogIcon />
+                  <SentinelHomeTCPPortLogIcon />
                 </div>
               </Tooltip>
             </div>
@@ -247,7 +246,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.PayloadGenerater_New)
                   }}
                 >
-                  <PublicPayloadGeneraterIcon />
+                  <SentinelHomePayloadGeneraterIcon />
                 </div>
               </Tooltip>
               <Tooltip placement="bottom" title={tooltipTitle(YakitRoute.ReverseServer_New)}>
@@ -258,7 +257,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     onMenu(YakitRoute.ReverseServer_New)
                   }}
                 >
-                  <PublicReverseServerIcon />
+                  <SentinelHomeReverseServerIcon />
                 </div>
               </Tooltip>
             </div>
@@ -268,7 +267,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.ShellReceiver)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicShellReceiverIcon />
+                <SentinelHomePortListenerIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.portListener')}</div>
@@ -280,7 +279,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Project_Manager)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicProjectManagerIcon />
+                <SentinelHomeProjectManagerIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.projectManagement')}</div>
@@ -289,7 +288,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Audit_Code)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicAuditCodeIcon />
+                <SentinelHomeAuditCodeIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.codeAudit')}</div>
@@ -298,7 +297,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Irify_AI_Code_Audit)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicAIAgentIcon />
+                <SentinelHomeAIAgentIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.irifyAiCodeAudit')}</div>
@@ -307,7 +306,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Code_Scan)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicCodeScanIcon />
+                <SentinelHomeCodeScanIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.codeScan')}</div>
@@ -316,7 +315,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Rule_Management)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicRuleManagementIcon />
+                <SentinelHomeRuleManagementIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.ruleManagement')}</div>
@@ -325,7 +324,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Audit_Hole)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicAuditHoleIcon />
+                <SentinelHomeAuditHoleIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.auditVulnerability')}</div>
@@ -334,7 +333,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Yak_Java_Decompiler)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicAuditHoleIcon />
+                <SentinelHomeAuditHoleIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.javaDecompile')}</div>
@@ -348,7 +347,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
               <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_Report)}>
                 <div className={styles['menu-icon-wrapper']}>
                   <div className={styles['icon-wrapper']}>
-                    <PublicReportIcon />
+                    <SentinelHomeReportIcon />
                   </div>
                 </div>
                 <div className={styles['title-style']}>{t('YakitRoute.report')}</div>
@@ -359,7 +358,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
               <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_HTTPHistory)}>
                 <div className={styles['menu-icon-wrapper']}>
                   <div className={styles['icon-wrapper']}>
-                    <PublicHTTPHistoryIcon />
+                    <SentinelHomeHistoryIcon />
                   </div>
                 </div>
                 <div className={styles['title-style']}>{t('YakitRoute.History')}</div>
@@ -369,7 +368,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_Report)}>
                   <div className={styles['menu-icon-wrapper']}>
                     <div className={styles['icon-wrapper']}>
-                      <PublicReportIcon />
+                      <SentinelHomeReportIcon />
                     </div>
                   </div>
                   <div className={styles['title-style']}>{t('YakitRoute.report')}</div>
@@ -377,7 +376,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_Risk)}>
                   <div className={styles['menu-icon-wrapper']}>
                     <div className={styles['icon-wrapper']}>
-                      <PublicRiskIcon />
+                      <SentinelHomeRiskIcon />
                     </div>
                   </div>
                   <div className={styles['title-style']}>{t('YakitRoute.vulnerability')}</div>
@@ -385,7 +384,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_Ports)}>
                   <div className={styles['menu-icon-wrapper']}>
                     <div className={styles['icon-wrapper']}>
-                      <PublicPortsIcon />
+                      <SentinelHomePortAssetsIcon />
                     </div>
                   </div>
                   <div className={styles['title-style']}>{t('YakitRoute.port')}</div>
@@ -393,25 +392,17 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_Domain)}>
                   <div className={styles['menu-icon-wrapper']}>
                     <div className={styles['icon-wrapper']}>
-                      <PublicDomainIcon />
+                      <SentinelHomeDomainAssetsIcon />
                     </div>
                   </div>
                   <div className={styles['title-style']}>{t('YakitRoute.domain')}</div>
-                </div>
-                <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.FingerprintManage)}>
-                  <div className={styles['menu-icon-wrapper']}>
-                    <div className={styles['icon-wrapper']}>
-                      <PublicFingerprintManageIcon />
-                    </div>
-                  </div>
-                  <div className={styles['title-style']}>{t('YakitRoute.fingerprintDatabase')}</div>
                 </div>
               </div>
               <div className={styles['divider-style']}></div>
               <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.DB_CVE)}>
                 <div className={styles['menu-icon-wrapper']}>
                   <div className={styles['icon-wrapper']}>
-                    <PublicCVEIcon />
+                    <SentinelHomeCVEIcon />
                   </div>
                 </div>
                 <div className={styles['title-style']}>{t('YakitRoute.cVEManagement')}</div>
@@ -425,7 +416,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.AI_Agent)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicAIAgentIcon />
+                <SentinelHomeAIAgentIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.AIAgent')}</div>
@@ -434,7 +425,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.AI_REPOSITORY)}>
             <div className={styles['menu-icon-wrapper']}>
               <div className={styles['icon-wrapper']}>
-                <PublicKnowledgeBaseIcon />
+                <SentinelHomeKnowledgeBaseIcon />
               </div>
             </div>
             <div className={styles['title-style']}>{t('YakitRoute.ai-repository')}</div>

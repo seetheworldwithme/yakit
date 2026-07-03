@@ -19,6 +19,13 @@
     display: flex;
     border-radius: 4px;
     cursor: pointer;
+    color: var(--Colors-Use-Main-Primary);
+
+    svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 1.8;
+    }
   }
   .child-icon-wrapper:hover {
     background: var(--Colors-Use-Neutral-Bg-Hover);
