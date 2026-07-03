@@ -504,15 +504,6 @@ const getInitPageCache: (softMode: SoftMode) => PageCache[] = (softMode) => {
           singleNode: true,
           multipleNode: [],
         },
-        {
-          routeKey: routeConvertKey(YakitRoute.DB_HTTPHistory, ''),
-          verbose: 'History',
-          verboseKey: 'YakitRoute.History',
-          menuName: YakitRouteToPageInfo[YakitRoute.DB_HTTPHistory].label,
-          route: YakitRoute.DB_HTTPHistory,
-          singleNode: true,
-          multipleNode: [],
-        },
       ]
     }
     if (isCommunityYakit()) {

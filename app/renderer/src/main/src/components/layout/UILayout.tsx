@@ -185,7 +185,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
   // #region 新窗口引擎已经启动好，只需要看门狗检查是否ready，此处默认初始化一些变量
   const [showLoadingPage, setShowLoadingPage] = useState<boolean>(isEnpriTrace())
   /** 本地引擎自检输出日志 */
-  const [newCheckLog, setNewCheckLog] = useState<string[]>(isEnpriTrace() ? ['正在初始化引擎连接...'] : [])
+  const [newCheckLog, setNewCheckLog] = useState<string[]>(isEnpriTrace() ? ['正在初始化...'] : [])
   useEffect(() => {
     const cleanup = yakitUILayout.onFromEngineLinkWindow((data) => {
       setNewCheckLog([t('UILayout.entering')])

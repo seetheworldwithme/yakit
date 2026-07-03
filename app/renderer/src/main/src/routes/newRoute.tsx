@@ -546,7 +546,7 @@ export const getDefaultFixedTabs = (softMode: SoftMode) => {
       return []
     }
     if (isEnpriTrace()) {
-      return [YakitRoute.NewHome, YakitRoute.DB_HTTPHistory]
+      return [YakitRoute.NewHome]
     }
     if (isCommunityYakit()) {
       if (softMode === YakitModeEnum.SecurityExpert) {

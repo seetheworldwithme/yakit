@@ -137,6 +137,8 @@ function createEngineLinkWindow() {
       sandbox: true,
     },
     titleBarStyle: 'hidden',
+    // 原生窗口背景色 = yakit 深色主题底色（blackBackgroundColor），避免窗口 show 后、web 内容首帧绘制前的白屏
+    backgroundColor: '#171717',
     show: false,
     skipTaskbar: false,
     fullscreenable: false,
@@ -248,6 +250,8 @@ function createWindow() {
       backgroundThrottling: false,
     },
     titleBarStyle: 'hidden',
+    // 原生窗口背景色 = yakit 深色主题底色（blackBackgroundColor），避免窗口 show 后、React 首帧绘制前的白屏
+    backgroundColor: '#171717',
     show: false,
     skipTaskbar: true,
   })
@@ -400,6 +404,22 @@ function winShow(targetWin, readyShow) {
     }
   }
 }
+// EnpriTrace 跳过启动页：等主窗口「首帧绘制完成」(ready-to-show) 再显示
+// 比 did-finish-load 更晚（首帧已合成），配合原生背景色彻底消除 React 挂载前的白屏
+function showMainWindowWhenReady() {
+  if (!win || win.isDestroyed()) return
+  const doShow = () => {
+    if (!win || win.isDestroyed()) return
+    win.show()
+    win.focus()
+    win.setSkipTaskbar(false)
+  }
+  if (readyWinShow) {
+    doShow()
+  } else {
+    win.once('ready-to-show', doShow)
+  }
+}
 // 窗口关闭
 function winClose(targetWin, removeEvent) {
   if (targetWin && !targetWin.isDestroyed()) {
@@ -546,7 +566,8 @@ function registerGlobalIPC() {
   ipcMain.on('hide-startup-win', (event) => {
     startupWinHidden = true
     winHide(engineLinkWin)
-    winShow(win, false) // 立即显示主窗口
+    // 等主窗口首帧绘制完成再显示（而非 did-finish-load），避免 React 挂载前的白屏
+    showMainWindowWhenReady()
   })
 
   // ------------------- 窗口发送数据操作 -------------------

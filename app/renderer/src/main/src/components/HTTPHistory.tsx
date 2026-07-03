@@ -25,7 +25,6 @@ import classNames from 'classnames'
 import emiter from '@/utils/eventBus/eventBus'
 import { WebTree } from './WebTree/WebTree'
 import {
-  OutlineBotIcon,
   OutlineFileSlidersIcon,
   OutlineFilterIcon,
   OutlineLog2Icon,
@@ -139,11 +138,6 @@ export const HistoryTab: YakitTabsProps[] = [
     label: 'HTTPFlowExtractedDataTable.ruleData',
     value: 'rules',
   },
-  {
-    icon: <OutlineBotIcon />,
-    label: 'HTTPHistory.AI',
-    value: 'ai',
-  },
 ]
 const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
   const { renderHistoryAIReActChat, setShowFreeChat, historyAIReActChatBridge, focusModeLoop } = useHistoryAIReActChat()
@@ -165,10 +159,8 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
   }, [])
 
   const onActiveKey = useMemoizedFn((key) => {
-    if (key === 'ai') {
-      setShowFreeChat(true)
-    }
-    setActiveKey(key)
+    // AI 标签已下线，历史缓存的 'ai' 回退到网站树，避免空面板
+    setActiveKey(key === 'ai' ? 'web-tree' : key)
   })
 
   const { detailsRightIcon } = useHistoryAIReActTaskDetails()
@@ -361,42 +353,6 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
                   }}
                 />
               </div>
-              {activeKey === 'ai' &&
-                renderHistoryAIReActChat({
-                  externalParameters: {
-                    isOpen: false,
-                    rightIcon: {
-                      history: true,
-                      dataDetails: { type: 'text2' },
-                      add: (
-                        <Tooltip title="新建会话">
-                          <YakitButton
-                            type="text2"
-                            icon={<OutlineMessageCirclePlusIcon />}
-                            onClick={() => historyAIReActChatBridge.onNewChat()}
-                          />
-                        </Tooltip>
-                      ),
-                      close: (
-                        <YakitButton type="text2" icon={<OutlineXIcon />} onClick={() => setOpenTabsFlag(false)} />
-                      ),
-                      details: detailsRightIcon,
-                    },
-                    footerRightTypes: [
-                      {
-                        type: AIInputFooterRightEnum.AIFocusMode,
-                        props: {
-                          value: focusModeLoop,
-                          onChange: () => {},
-                          disabled: true,
-                        },
-                      },
-                    ],
-                    filterMentionType: ['focusMode'],
-                    onHttpFlowRemove: clearHttpFlowSelection,
-                    onAfterSubmit: clearHttpFlowSelection,
-                  },
-                })}
             </div>
           </div>
         )}

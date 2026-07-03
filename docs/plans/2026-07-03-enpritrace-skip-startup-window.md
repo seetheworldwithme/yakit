@@ -111,7 +111,7 @@ ipcMain.handle('engineLinkWin-done', async (event, data) => {
 })
 ```
 
-**验证:** 
+**验证:**
 - EnpriTrace: 应用启动后主窗口立即可见（显示 UILayout 的默认空状态或 loading）
 - 其他版本: 行为完全不变，仍然等启动窗口完成后才显示主窗口
 
@@ -144,7 +144,7 @@ const [newCheckLog, setNewCheckLog] = useState<string[]>([])
 
 // 改为:
 const [newCheckLog, setNewCheckLog] = useState<string[]>(
-  isEnpriTrace() ? ['正在初始化引擎连接...'] : []
+  isEnpriTrace() ? ['正在初始化...'] : []
 )
 ```
 
@@ -153,7 +153,7 @@ const [newCheckLog, setNewCheckLog] = useState<string[]>(
 `onFromEngineLinkWindow` 的回调逻辑保持不变——当 IPC 数据到达时，它仍会更新 credential、yakitStatus、keepalive 等。由于 `showLoadingPage` 已经是 `true`，`setShowLoadingPage(true)` 是幂等的，不会有问题。
 
 **验证:**
-- EnpriTrace 启动后主窗口立即显示 NewYakitLoading 蒙层，文案 "正在初始化引擎连接..."
+- EnpriTrace 启动后主窗口立即显示 NewYakitLoading 蒙层，文案 "正在初始化..."
 - 引擎连接 IPC 到达后，蒙层状态正常更新，WatchDog 探活成功后进入主界面
 - 其他版本行为不变
 
@@ -280,7 +280,7 @@ ipcMain.handle('engineLinkWin-done', async (event, data) => {
 ### After（改造后）
 ```
 用户双击 EnpriTrace
-  → 主窗口直接出现（带 NewYakitLoading 蒙层，显示 "正在初始化引擎连接..."）
+  → 主窗口直接出现（带 NewYakitLoading 蒙层，显示 "正在初始化..."）
   → 后台静默完成引擎自检+连接（~5-10s，窗口一直显示 loading）
   → IPC 到达 → WatchDog 探活 → 蒙层消失
   → 主界面
