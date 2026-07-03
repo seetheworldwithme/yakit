@@ -10,7 +10,7 @@ import { useAIGlobalConfigStore } from '@/store/aiGlobalConfig'
 import { AIModelTypeEnum } from '@/pages/ai-agent/defaultConstant'
 import { shallow } from 'zustand/shallow'
 import { cloneDeep } from 'lodash'
-import { getFileNameByModelType } from '@/pages/ai-agent/aiModelList/aiModelForm/AIModelForm'
+import { getFileNameByModelType } from '@/pages/ai-agent/aiModelList/modelType'
 import { API } from '@/services/swagger/resposeType'
 
 interface UseAIGlobalConfigData {

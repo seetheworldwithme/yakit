@@ -10,7 +10,7 @@ import { OutlinePencilaltIcon } from '@/assets/icon/outline'
 import useAIGlobalConfig from '@/pages/ai-re-act/hooks/useAIGlobalConfig'
 import { onEditAIModel } from '@/pages/ai-agent/aiModelList/AIModelList'
 import { AIAgentGrpcApi } from '@/pages/ai-re-act/hooks/grpcApi'
-import { getFileNameByModelType, getModelLabelByModelType } from '@/pages/ai-agent/aiModelList/aiModelForm/AIModelForm'
+import { getFileNameByModelType, getModelLabelByModelType } from '@/pages/ai-agent/aiModelList/modelType'
 import styles from './AIModelErrorPrompt.module.scss'
 import { Tooltip } from 'antd'
 export const AIModelErrorPrompt: React.FC<AIModelErrorPromptProps> = React.memo((props) => {

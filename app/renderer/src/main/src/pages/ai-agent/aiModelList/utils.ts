@@ -20,11 +20,10 @@ import {
   GetAIModelAvailableTotalResponse,
 } from '../type/aiModel'
 import omit from 'lodash/omit'
-import { ThirdPartyApplicationConfig } from '@/components/configNetwork/ConfigNetworkPage'
-import { onOpenConfigModal } from './aiModelSelect/AIModelSelect'
+import type { ThirdPartyApplicationConfig } from '@/components/configNetwork/ConfigNetworkPage'
 import { KVPair } from '@/models/kv'
 import { genDefaultPagination, PaginationSchema } from '@/pages/invoker/schema'
-import { GetThirdPartyAppConfigTemplateResponse } from '@/components/configNetwork/NewThirdPartyApplicationConfig'
+import type { GetThirdPartyAppConfigTemplateResponse } from '@/components/configNetwork/NewThirdPartyApplicationConfig'
 import { AIModelPolicyEnum, defaultAIGlobalConfig } from '../defaultConstant'
 import { TFunction } from '@/i18n/useI18nNamespaces'
 export { AI_API_TYPE_OPTIONS, DEFAULT_AI_API_TYPE, normalizeAIAPIType, type AIAPIType } from './aiApiTypeOptions'
@@ -292,7 +291,11 @@ export const isForcedSetAIModal: APIFunc<
           // 每个 tab / 页面只弹一次
           if (!openedAIModalMap.get(pageKey)) {
             openedAIModalMap.set(pageKey, true)
-            isOpen && t && onOpenConfigModal(mountContainer, t)
+            if (isOpen && t) {
+              import('./aiModelSelect/AIModelSelect').then(({ onOpenConfigModal }) => {
+                onOpenConfigModal(mountContainer, t)
+              })
+            }
           }
           noDataCall?.(res)
         } else {
