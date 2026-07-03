@@ -4,8 +4,9 @@
   padding: 14px 18px;
 
   &-left {
-    overflow-x: hidden;
     height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
 
     .left-row-wrapper {
       display: flex;
@@ -15,13 +16,6 @@
         margin-bottom: 0;
       }
     }
-  }
-
-  &-right {
-    display: flex;
-    overflow: hidden;
-    flex-direction: column;
-    height: 100%;
   }
 
   .home-card {
@@ -152,219 +146,33 @@
     }
   }
 
-  .mitm-card {
-    overflow: visible;
-    flex: 1;
-    margin-right: 10px;
-    padding: 22px;
-    padding-bottom: 0px;
-    cursor: pointer;
-    border: 1px solid var(--Colors-Use-Cyan-Border);
-    background: var(--Colors-Use-Cyan-Bg);
-
-    &:hover {
-      border: 1px solid var(--Colors-Use-Cyan-Primary);
-      background: var(--Colors-Use-Cyan-Bg-Hover);
-    }
-
-    .mitm-cont-wrapper {
-      flex: 1;
-      border-radius: 8px 8px 0 0;
-      background-image: var(--mitm-bg-image);
-      background-size: cover;
-
-      .mitm-glass-effect {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        border-radius: 8px 8px 0px 0px;
-        background: var(--mitm-bg-color);
-
-        backdrop-filter: blur(1px);
-
-        .mitm-operation {
-          &-border {
-            width: 100%;
-            border-radius: 40px;
-          }
-        }
-      }
-
-      .mitm-operation {
-        .operation-dropdown-wrapper {
-          position: absolute;
-          top: calc(100% + 5px);
-          left: 50%;
-          width: 300px;
-          margin-left: -150px;
-          padding: 20px 20px 10px 10px;
-          transition: all 0.5s ease;
-          border: 1px solid var(--Colors-Use-Neutral-Border);
-          border-radius: 4px;
-          background: var(--Colors-Use-Basic-Background);
-
-          :global {
-            .ant-form-item {
-              margin-bottom: 8px;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .webFuzzer-card {
-    flex: 1;
-    padding: 22px;
-    cursor: pointer;
-    border: 1px solid var(--Colors-Use-Success-Border);
-    background: var(--Colors-Use-Success-Bg);
-
-    &:hover {
-      border: 1px solid var(--Colors-Use-Success-Primary);
-      background: var(--Colors-Use-Success-Bg-Hover);
-    }
-
-    .example-blasting-wrapper {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      padding: 18px 22px;
-      border-radius: 8px;
-      background: var(--Colors-Use-Basic-Background);
-
-      .example-blasting-title {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-
-        span.title-text {
-          margin-left: 8px;
-          font-size: 16px;
-          font-weight: 600;
-        }
-      }
-
-      .example-blasting-video-wrapper {
-        display: flex;
-        justify-content: space-between;
-        flex: 1;
-
-        gap: 10px;
-
-        .example-blasting-video {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex: 1;
-          cursor: pointer;
-          text-align: center;
-          color: var(--Colors-Use-Main-Primary);
-          border-radius: 8px;
-          background: var(--Colors-Use-Main-Bg);
-          font-size: 16px;
-          font-weight: 600;
-
-          &:hover {
-            border: 1px solid var(--Colors-Use-Main-Primary);
-          }
-        }
-
-        .example-blasting-title {
-          .example-blasting-icon {
-            svg {
-              width: 28px;
-              height: 28px;
-            }
-          }
-
-          span.title-text {
-            font-size: 16px;
-          }
-        }
-      }
-    }
-
-    .sequence-animation-wrapper {
-      position: relative;
-      flex: 1;
-      padding: 18px 22px;
-      border-radius: 8px;
-      background: var(--Colors-Use-Basic-Background);
-
-      .sequence-animation-title {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-
-        span.title-text {
-          margin-left: 8px;
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .sequence-animation-icon {
-          svg {
-            width: 28px;
-            height: 28px;
-          }
-        }
-      }
-
-      .sequence-animation-desc {
-        margin-bottom: 10px;
-        color: var(--Colors-Use-Neutral-Text-3-Secondary);
-        font-size: 16px;
-      }
-
-      .sequence-animation-btn-wrapper {
-        text-align: center;
-
-        .animation-play-icon {
-          svg {
-            width: 24px;
-            height: 24px;
-          }
-        }
-
-        .animation-btn {
-          height: 32px;
-          padding: 0 14px;
-          font-size: 16px;
-        }
-      }
-    }
-  }
-
-  .signle-jump-wrapper {
-    display: flex;
-    flex-direction: column;
-    width: 50%;
-    height: 100%;
-    margin-right: 10px;
+  .tools-grid-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    align-content: start;
 
     gap: 10px;
 
-    .signle-jump-item {
+    .tools-grid-item {
       display: flex;
       align-items: center;
-      flex: 1;
+      min-height: 76px;
       padding: 0 14px;
       cursor: pointer;
       border: 1px solid var(--Colors-Use-Neutral-Border);
       border-radius: 8px;
       background: var(--Colors-Use-Basic-Background);
 
-      &:last-of-type {
-        margin-bottom: 0;
-      }
-
-      &-cont {
+      .tools-grid-item-cont {
         display: flex;
         align-items: center;
 
-        .signle-jump-item-icon {
+        .tools-grid-item-icon {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+
           svg {
             width: 36px;
             height: 36px;
@@ -374,12 +182,12 @@
         &-right {
           margin-left: 8px;
 
-          .single-jump-cont-title {
+          .tools-grid-item-title {
             font-size: 18px;
             font-weight: 600;
           }
 
-          .single-jump-cont-desc {
+          .tools-grid-item-desc {
             color: var(--Colors-Use-Neutral-Text-3-Secondary);
             font-size: 16px;
           }
@@ -642,358 +450,6 @@
       }
     }
   }
-
-  .tools-wrapper {
-    display: flex;
-    overflow: hidden;
-    flex-direction: column;
-    flex: 1;
-    height: 70%;
-    margin-bottom: 10px;
-    padding: 18px 14px;
-    border: 1px solid var(--Colors-Use-Neutral-Border);
-    border-radius: 8px;
-    background: var(--Colors-Use-Basic-Background);
-
-    gap: 10px;
-
-    .tools-title-wrapper {
-      display: flex;
-      align-items: center;
-
-      gap: 10px;
-
-      .tools-title-icon {
-        svg {
-          width: 28px;
-          height: 28px;
-        }
-      }
-
-      .tools-title-text {
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        font-size: 20px;
-        font-weight: 600;
-      }
-
-      .tools-title-desc {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        color: var(--Colors-Use-Neutral-Text-3-Secondary);
-        font-size: 14px;
-      }
-    }
-
-    .tools-list-wrapper {
-      overflow-y: overlay;
-      flex: 1;
-
-      .tools-list-item {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        padding: 12px;
-        cursor: pointer;
-
-        &:not(:first-child) {
-          border-top: 1px solid var(--Colors-Use-Neutral-Border);
-        }
-
-        &:last-child {
-          border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
-        }
-
-        .tools-item-left-wrapper {
-          display: flex;
-          align-items: center;
-
-          gap: 8px;
-
-          .tools-item-icon {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            margin-right: 4px;
-            border-radius: 6px;
-
-            svg {
-              width: 22px;
-              height: 22px;
-            }
-          }
-
-          .tools-item-label {
-            white-space: nowrap;
-            font-size: 16px;
-            font-weight: 600;
-          }
-        }
-
-        .tools-item-desc {
-          visibility: hidden;
-          overflow: hidden;
-          margin: 0 8px;
-          padding: 0 6px;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          color: var(--Colors-Use-Neutral-Text-1-Title);
-          border-radius: 4px;
-          background: var(--Colors-Use-Neutral-Bg-Hover);
-          font-size: 15px;
-        }
-
-        .tools-item-right-icon {
-          visibility: hidden;
-          flex: 1;
-          text-align: right;
-
-          svg {
-            width: 18px;
-            height: 18px;
-            color: var(--Colors-Use-Main-Primary);
-          }
-        }
-
-        &:hover {
-          border-color: transparent;
-          border-radius: 8px;
-          background-color: var(--Colors-Use-Neutral-Bg);
-
-          & + .tools-list-item {
-            border-top-color: transparent;
-          }
-
-          .tools-item-desc {
-            visibility: visible;
-          }
-
-          .tools-item-right-icon {
-            visibility: visible;
-          }
-        }
-      }
-    }
-  }
-
-  .data-preview-wrapper {
-    display: flex;
-    justify-content: space-between;
-    overflow-y: auto;
-    flex-direction: column;
-    max-height: 500px;
-    padding: 18px 14px;
-    border: 1px solid var(--Colors-Use-Neutral-Border);
-    border-radius: 8px;
-    background: var(--Colors-Use-Basic-Background);
-
-    .data-preview-title {
-      display: flex;
-      align-items: center;
-
-      gap: 12px;
-
-      .data-preview-title-icon {
-        svg {
-          width: 28px;
-          height: 28px;
-          color: var(--Colors-Use-Success-Primary);
-
-          path {
-            stroke: var(--Colors-Use-Neutral-Text-1-Title);
-          }
-        }
-      }
-
-      .data-preview-title-text {
-        font-size: 16px;
-        font-weight: 600;
-      }
-    }
-
-    .data-preview-item {
-      display: flex;
-      align-items: center;
-
-      .data-preview-item-icon {
-        margin-right: 10px;
-
-        svg {
-          width: 22px;
-          height: 22px;
-          color: var(--Colors-Use-Neutral-Text-3-Secondary);
-
-          path {
-            stroke-width: 1.5;
-          }
-        }
-      }
-
-      .data-preview-item-text {
-        display: inline-block;
-        width: 140px;
-        color: var(--Colors-Use-Neutral-Text-3-Secondary);
-        font-size: 16px;
-      }
-
-      .data-preview-item-cont {
-        display: flex;
-        align-items: center;
-
-        .download-btn-icon {
-          svg {
-            width: 20px;
-            height: 20px;
-          }
-        }
-
-        .download-btn {
-          font-size: 16px;
-        }
-
-        .data-preview-item-number {
-          display: inline-block;
-          margin-right: 4px;
-          color: var(--Colors-Use-Neutral-Text-1-Title);
-        }
-
-        .database-warning-icon {
-          svg {
-            width: 22px;
-            height: 22px;
-            color: var(--Colors-Use-Error-Primary);
-          }
-        }
-
-        .reclaim-icon {
-          cursor: pointer;
-          svg {
-            width: 22px;
-            height: 22px;
-            color: var(--Colors-Use-Error-Primary);
-          }
-        }
-      }
-
-      .data-preview-item-cont-jump {
-        cursor: pointer;
-
-        .data-preview-item-number {
-          &:active {
-            color: var(--Colors-Use-Main-Primary);
-          }
-        }
-      }
-
-      .risk-tag-wrapper {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        flex: 1;
-        flex: 0 0 50%;
-        width: 200px;
-
-        .risk-tag {
-          display: flex;
-          margin-right: 4px;
-          margin-bottom: 4px;
-          cursor: pointer;
-          border-radius: 4px;
-          font-size: 14px;
-
-          flex-shrink: 0;
-
-          .risk-text {
-            padding: 2px 6px;
-          }
-
-          .risk-num {
-            padding: 2px 6px;
-            color: var(--Colors-Use-Neutral-Text-1-Title);
-          }
-        }
-
-        .seriousRisk-tag {
-          border: 1px solid var(--Colors-Use-Error-Border);
-
-          .risk-text {
-            color: var(--Colors-Use-Status-Serious);
-            border-right: 1px solid var(--Colors-Use-Error-Border);
-            border-radius: 4px 0 0 4px;
-            background-color: var(--Colors-Use-Error-Bg-Hover);
-          }
-        }
-
-        .highRisk-tag {
-          border: 1px solid var(--Colors-Use-Error-Border);
-
-          .risk-text {
-            color: var(--Colors-Use-Error-Primary);
-            border-right: 1px solid var(--Colors-Use-Error-Border);
-            border-radius: 4px 0 0 4px;
-            background-color: var(--Colors-Use-Error-Bg-Hover);
-          }
-        }
-
-        .mediumRisk-tag {
-          border: 1px solid var(--Colors-Use-Warning-Border);
-
-          .risk-text {
-            color: var(--Colors-Use-Warning-Primay);
-            border-right: 1px solid var(--Colors-Use-Warning-Border);
-            border-radius: 4px 0 0 4px;
-            background-color: var(--Colors-Use-Warning-Bg-Hover);
-          }
-        }
-
-        .lowRisk-tag {
-          border: 1px solid var(--Colors-Use-Yellow-Border);
-
-          .risk-text {
-            color: var(--Colors-Use-Yellow-Primary);
-            border-right: 1px solid var(--Colors-Use-Yellow-Border);
-            border-radius: 4px 0 0 4px;
-            background-color: var(--Colors-Use-Yellow-Bg);
-          }
-        }
-      }
-    }
-  }
-}
-
-.sequence-animation-pop-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-
-  .subtitle-help-wrapper {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    color: var(--Colors-Use-Grey-Primary);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 20px;
-
-    .text-style {
-      text-decoration-line: underline;
-    }
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .subtitle-help-wrapper:hover {
-    color: var(--Colors-Use-Main-Primary);
-  }
 }
 
 /* 适用于设备宽度小于1220px的样式 */
@@ -1066,108 +522,14 @@
       }
     }
 
-    .mitm-card {
-      margin-right: 6px;
-      padding: 18px;
-      padding-bottom: 0px;
-
-      .mitm-cont-wrapper {
-        .mitm-operation {
-          .operation-dropdown-wrapper {
-            padding: 18px 18px 8px 8px;
-
-            :global {
-              .ant-form-item {
-                margin-bottom: 5px;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .webFuzzer-card {
-      padding: 18px;
-
-      .example-blasting-wrapper {
-        padding: 14px 18px;
-
-        .example-blasting-title {
-          margin-bottom: 6px;
-        }
-
-        .example-blasting-video-wrapper {
-          gap: 4px;
-
-          .example-blasting-video {
-            font-size: 12px;
-          }
-        }
-
-        .example-blasting-title {
-          .example-blasting-icon {
-            svg {
-              width: 20px;
-              height: 20px;
-            }
-          }
-
-          span.title-text {
-            font-size: 12px;
-          }
-        }
-      }
-
-      .sequence-animation-wrapper {
-        padding: 14px 18px;
-
-        .sequence-animation-title {
-          margin-bottom: 4px;
-
-          .sequence-animation-icon {
-            svg {
-              width: 20px;
-              height: 20px;
-            }
-          }
-
-          span.title-text {
-            font-size: 12px;
-          }
-        }
-
-        .sequence-animation-desc {
-          margin-bottom: 6px;
-          font-size: 12px;
-        }
-
-        .sequence-animation-btn-wrapper {
-          .animation-play-icon {
-            svg {
-              width: 16px;
-              height: 16px;
-            }
-          }
-
-          .animation-btn {
-            height: 28px;
-            padding: 0 10px;
-            font-size: 12px;
-          }
-        }
-      }
-    }
-
-    .signle-jump-wrapper {
-      margin-right: 6px;
-
+    .tools-grid-wrapper {
       gap: 4px;
 
-      .signle-jump-item {
+      .tools-grid-item {
         padding: 0 10px;
 
-        &-cont {
-          .signle-jump-item-icon {
+        .tools-grid-item-cont {
+          .tools-grid-item-icon {
             svg {
               width: 28px;
               height: 28px;
@@ -1175,11 +537,11 @@
           }
 
           &-right {
-            .single-jump-cont-title {
+            .tools-grid-item-title {
               font-size: 14px;
             }
 
-            .single-jump-cont-desc {
+            .tools-grid-item-desc {
               font-size: 12px;
             }
           }
@@ -1283,144 +645,6 @@
             .small-tools-cont-desc {
               font-size: 12px;
             }
-          }
-        }
-      }
-    }
-
-    .tools-wrapper {
-      height: 75%;
-      margin-bottom: 6px;
-      padding: 12px 14px;
-
-      gap: 4px;
-
-      .tools-title-wrapper {
-        gap: 4px;
-
-        .tools-title-icon {
-          svg {
-            width: 20px;
-            height: 20px;
-          }
-        }
-
-        .tools-title-text {
-          font-size: 16px;
-        }
-
-        .tools-title-desc {
-          font-size: 10px;
-        }
-      }
-
-      .tools-list-wrapper {
-        .tools-list-item {
-          padding: 8px;
-
-          .tools-item-left-wrapper {
-            gap: 2px;
-
-            .tools-item-icon {
-              svg {
-                width: 14px;
-                height: 14px;
-              }
-            }
-
-            .tools-item-label {
-              font-size: 12px;
-            }
-          }
-
-          .tools-item-desc {
-            margin: 0 4px;
-            font-size: 11px;
-          }
-
-          .tools-item-right-icon {
-            svg {
-              width: 10px;
-              height: 10px;
-            }
-          }
-        }
-      }
-    }
-
-    .data-preview-wrapper {
-      padding: 14px 10px;
-
-      .data-preview-title {
-        gap: 4px;
-
-        .data-preview-title-icon {
-          svg {
-            width: 20px;
-            height: 20px;
-          }
-        }
-
-        .data-preview-title-text {
-          font-size: 12px;
-        }
-      }
-
-      .data-preview-item {
-        .data-preview-item-icon {
-          margin-right: 6px;
-
-          svg {
-            width: 14px;
-            height: 14px;
-          }
-        }
-
-        .data-preview-item-text {
-          font-size: 12px;
-        }
-
-        .data-preview-item-cont {
-          .download-btn-icon {
-            svg {
-              width: 12px;
-              height: 12px;
-            }
-          }
-
-          .download-btn {
-            font-size: 12px;
-          }
-
-          .data-preview-item-size {
-            font-size: 16px;
-          }
-
-          .data-preview-item-number {
-            font-size: 14px;
-          }
-
-          .database-warning-icon {
-            svg {
-              width: 14px;
-              height: 14px;
-            }
-          }
-
-          .reclaim-icon {
-            svg {
-              width: 14px;
-              height: 14px;
-            }
-          }
-        }
-
-        .risk-tag-wrapper {
-          width: 200px;
-
-          .risk-tag {
-            overflow: hidden;
-            font-size: 10px;
           }
         }
       }
@@ -1498,108 +722,14 @@
       }
     }
 
-    .mitm-card {
-      margin-right: 8px;
-      padding: 20px;
-      padding-bottom: 0px;
-
-      .mitm-cont-wrapper {
-        .mitm-operation {
-          .operation-dropdown-wrapper {
-            padding: 20px 20px 10px 10px;
-
-            :global {
-              .ant-form-item {
-                margin-bottom: 7px;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .webFuzzer-card {
-      padding: 20px;
-
-      .example-blasting-wrapper {
-        padding: 16px 20px;
-
-        .example-blasting-title {
-          margin-bottom: 8px;
-        }
-
-        .example-blasting-video-wrapper {
-          gap: 8px;
-
-          .example-blasting-video {
-            font-size: 14px;
-          }
-        }
-
-        .example-blasting-title {
-          .example-blasting-icon {
-            svg {
-              width: 24px;
-              height: 24px;
-            }
-          }
-
-          span.title-text {
-            font-size: 14px;
-          }
-        }
-      }
-
-      .sequence-animation-wrapper {
-        padding: 16px 20px;
-
-        .sequence-animation-title {
-          margin-bottom: 6px;
-
-          .sequence-animation-icon {
-            svg {
-              width: 24px;
-              height: 24px;
-            }
-          }
-
-          span.title-text {
-            font-size: 14px;
-          }
-        }
-
-        .sequence-animation-desc {
-          margin-bottom: 8px;
-          font-size: 14px;
-        }
-
-        .sequence-animation-btn-wrapper {
-          .animation-play-icon {
-            svg {
-              width: 20px;
-              height: 20px;
-            }
-          }
-
-          .animation-btn {
-            height: 30px;
-            padding: 0 12px;
-            font-size: 14px;
-          }
-        }
-      }
-    }
-
-    .signle-jump-wrapper {
-      margin-right: 8px;
-
+    .tools-grid-wrapper {
       gap: 8px;
 
-      .signle-jump-item {
+      .tools-grid-item {
         padding: 0 12px;
 
-        &-cont {
-          .signle-jump-item-icon {
+        .tools-grid-item-cont {
+          .tools-grid-item-icon {
             svg {
               width: 32px;
               height: 32px;
@@ -1607,11 +737,11 @@
           }
 
           &-right {
-            .single-jump-cont-title {
+            .tools-grid-item-title {
               font-size: 16px;
             }
 
-            .single-jump-cont-desc {
+            .tools-grid-item-desc {
               font-size: 14px;
             }
           }
@@ -1715,143 +845,6 @@
             .small-tools-cont-desc {
               font-size: 14px;
             }
-          }
-        }
-      }
-    }
-
-    .tools-wrapper {
-      height: 70%;
-      margin-bottom: 8px;
-      padding: 16px 12px;
-
-      gap: 8px;
-
-      .tools-title-wrapper {
-        gap: 8px;
-
-        .tools-title-icon {
-          svg {
-            width: 24px;
-            height: 24px;
-          }
-        }
-
-        .tools-title-text {
-          font-size: 18px;
-        }
-
-        .tools-title-desc {
-          font-size: 12px;
-        }
-      }
-
-      .tools-list-wrapper {
-        .tools-list-item {
-          padding: 10px;
-
-          .tools-item-left-wrapper {
-            gap: 4px;
-
-            .tools-item-icon {
-              svg {
-                width: 18px;
-                height: 18px;
-              }
-            }
-
-            .tools-item-label {
-              font-size: 14px;
-            }
-          }
-
-          .tools-item-desc {
-            margin: 0 6px;
-            font-size: 13px;
-          }
-
-          .tools-item-right-icon {
-            svg {
-              width: 14px;
-              height: 14px;
-            }
-          }
-        }
-      }
-    }
-
-    .data-preview-wrapper {
-      padding: 16px 12px;
-
-      .data-preview-title {
-        gap: 8px;
-
-        .data-preview-title-icon {
-          svg {
-            width: 24px;
-            height: 24px;
-          }
-        }
-
-        .data-preview-title-text {
-          font-size: 14px;
-        }
-      }
-
-      .data-preview-item {
-        .data-preview-item-icon {
-          margin-right: 8px;
-
-          svg {
-            width: 18px;
-            height: 18px;
-          }
-        }
-
-        .data-preview-item-text {
-          font-size: 14px;
-        }
-
-        .data-preview-item-cont {
-          .download-btn-icon {
-            svg {
-              width: 16px;
-              height: 16px;
-            }
-          }
-
-          .download-btn {
-            font-size: 14px;
-          }
-
-          .data-preview-item-size {
-            font-size: 16px;
-          }
-
-          .data-preview-item-number {
-            font-size: 14px;
-          }
-
-          .database-warning-icon {
-            svg {
-              width: 18px;
-              height: 18px;
-            }
-          }
-
-          .reclaim-icon {
-            svg {
-              width: 18px;
-              height: 18px;
-            }
-          }
-        }
-
-        .risk-tag-wrapper {
-          width: 200px;
-
-          .risk-tag {
-            font-size: 12px;
           }
         }
       }
@@ -1929,108 +922,14 @@
       }
     }
 
-    .mitm-card {
-      margin-right: 10px;
-      padding: 22px;
-      padding-bottom: 0px;
-
-      .mitm-cont-wrapper {
-        .mitm-operation {
-          .operation-dropdown-wrapper {
-            padding: 20px 20px 10px 10px;
-
-            :global {
-              .ant-form-item {
-                margin-bottom: 8px;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .webFuzzer-card {
-      padding: 22px;
-
-      .example-blasting-wrapper {
-        padding: 18px 22px;
-
-        .example-blasting-title {
-          margin-bottom: 8px;
-        }
-
-        .example-blasting-video-wrapper {
-          gap: 10px;
-
-          .example-blasting-video {
-            font-size: 16px;
-          }
-        }
-
-        .example-blasting-title {
-          .example-blasting-icon {
-            svg {
-              width: 28px;
-              height: 28px;
-            }
-          }
-
-          span.title-text {
-            font-size: 16px;
-          }
-        }
-      }
-
-      .sequence-animation-wrapper {
-        padding: 18px 22px;
-
-        .sequence-animation-title {
-          margin-bottom: 8px;
-
-          .sequence-animation-icon {
-            svg {
-              width: 28px;
-              height: 28px;
-            }
-          }
-
-          span.title-text {
-            font-size: 16px;
-          }
-        }
-
-        .sequence-animation-desc {
-          margin-bottom: 10px;
-          font-size: 16px;
-        }
-
-        .sequence-animation-btn-wrapper {
-          .animation-play-icon {
-            svg {
-              width: 24px;
-              height: 24px;
-            }
-          }
-
-          .animation-btn {
-            height: 32px;
-            padding: 0 14px;
-            font-size: 16px;
-          }
-        }
-      }
-    }
-
-    .signle-jump-wrapper {
-      margin-right: 10px;
-
+    .tools-grid-wrapper {
       gap: 10px;
 
-      .signle-jump-item {
+      .tools-grid-item {
         padding: 0 14px;
 
-        &-cont {
-          .signle-jump-item-icon {
+        .tools-grid-item-cont {
+          .tools-grid-item-icon {
             svg {
               width: 36px;
               height: 36px;
@@ -2038,11 +937,11 @@
           }
 
           &-right {
-            .single-jump-cont-title {
+            .tools-grid-item-title {
               font-size: 18px;
             }
 
-            .single-jump-cont-desc {
+            .tools-grid-item-desc {
               font-size: 16px;
             }
           }
@@ -2146,143 +1045,6 @@
             .small-tools-cont-desc {
               font-size: 16px;
             }
-          }
-        }
-      }
-    }
-
-    .tools-wrapper {
-      height: 70%;
-      margin-bottom: 10px;
-      padding: 18px 14px;
-
-      gap: 10px;
-
-      .tools-title-wrapper {
-        gap: 10px;
-
-        .tools-title-icon {
-          svg {
-            width: 28px;
-            height: 28px;
-          }
-        }
-
-        .tools-title-text {
-          font-size: 20px;
-        }
-
-        .tools-title-desc {
-          font-size: 14px;
-        }
-      }
-
-      .tools-list-wrapper {
-        .tools-list-item {
-          padding: 12px;
-
-          .tools-item-left-wrapper {
-            gap: 8px;
-
-            .tools-item-icon {
-              svg {
-                width: 22px;
-                height: 22px;
-              }
-            }
-
-            .tools-item-label {
-              font-size: 16px;
-            }
-          }
-
-          .tools-item-desc {
-            margin: 0 8px;
-            font-size: 15px;
-          }
-
-          .tools-item-right-icon {
-            svg {
-              width: 18px;
-              height: 18px;
-            }
-          }
-        }
-      }
-    }
-
-    .data-preview-wrapper {
-      padding: 18px 14px;
-
-      .data-preview-title {
-        gap: 12px;
-
-        .data-preview-title-icon {
-          svg {
-            width: 28px;
-            height: 28px;
-          }
-        }
-
-        .data-preview-title-text {
-          font-size: 16px;
-        }
-      }
-
-      .data-preview-item {
-        .data-preview-item-icon {
-          margin-right: 10px;
-
-          svg {
-            width: 22px;
-            height: 22px;
-          }
-        }
-
-        .data-preview-item-text {
-          font-size: 16px;
-        }
-
-        .data-preview-item-cont {
-          .download-btn-icon {
-            svg {
-              width: 20px;
-              height: 20px;
-            }
-          }
-
-          .download-btn {
-            font-size: 16px;
-          }
-
-          .data-preview-item-size {
-            font-size: 20px;
-          }
-
-          .data-preview-item-number {
-            font-size: 18px;
-          }
-
-          .database-warning-icon {
-            svg {
-              width: 22px;
-              height: 22px;
-            }
-          }
-
-          .reclaim-icon {
-            svg {
-              width: 22px;
-              height: 22px;
-            }
-          }
-        }
-
-        .risk-tag-wrapper {
-          width: 200px;
-
-          .risk-tag {
-            font-size: 14px;
           }
         }
       }

@@ -301,7 +301,7 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
   const [loading, setLoading] = useState<boolean>(false)
   const [hasMore, setHasMore] = useState<boolean>(true)
 
-  const privateDomainRef = useRef<string>('') // 私有域地址
+  const privateDomainRef = useRef<string>('') // 连接地址
 
   // 获取筛选栏展示状态
   useEffect(() => {

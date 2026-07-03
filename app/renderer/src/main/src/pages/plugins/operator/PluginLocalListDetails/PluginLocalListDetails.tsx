@@ -74,7 +74,7 @@ export const PluginLocalListDetails: React.FC<PluginLocalListDetailsProps> = Rea
 
     /** 是否为初次加载 */
     const isLoadingRef = useRef<boolean>(true)
-    const privateDomainRef = useRef<string>('') // 私有域地址
+    const privateDomainRef = useRef<string>('') // 连接地址
     const pluginListRef = useRef<HTMLDivElement>(null)
 
     const [inViewport = true] = useInViewport(pluginListRef)

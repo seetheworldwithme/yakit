@@ -94,7 +94,7 @@ module.exports = (win, getClient) => {
     return await asyncNetworkJudgment(win, params)
   })
 
-  /** 获取私有域地址 */
+  /** 获取连接地址 */
   ipcMain.handle('fetch-netWork-status-by-request-interface', async (e, params) => {
     return await asyncFetchPrivateDomainUrl(win, params)
   })

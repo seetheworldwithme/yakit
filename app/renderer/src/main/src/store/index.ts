@@ -60,7 +60,7 @@ export interface DynamicStatusProps extends ResultObjProps {
   isDynamicStatus: boolean
   /**是否被远程控制中*/
   isDynamicSelfStatus: boolean
-  /**私有域地址*/
+  /**连接地址*/
   baseUrl: string
 }
 

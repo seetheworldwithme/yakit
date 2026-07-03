@@ -1799,7 +1799,7 @@ const PluginListContent: React.FC<PluginListContentProps> = memo((props) => {
   })
   // 选中项
   const [checkedList, setCheckedList] = useState<string[]>([])
-  // 私有域地址
+  // 连接地址
   const privateDomainRef = useRef<string>('')
 
   /**获取最新的私有域 */
