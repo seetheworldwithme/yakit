@@ -871,13 +871,16 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
       case 'idle':
         return (
           <div className={style['mitm-idle-tab-wrap']} ref={idleTabsRef}>
-            <YakitSideTab
-              yakitTabs={MITMIdleTab}
-              activeKey={activeKey}
-              onActiveKey={onActiveKey}
-              show={openTabsFlag}
-              setShow={setOpenTabsFlag}
-            />
+            <div className={style['mitm-idle-tab-bar']}>
+              <YakitSideTab
+                type="horizontal"
+                yakitTabs={MITMIdleTab}
+                activeKey={activeKey}
+                onActiveKey={onActiveKey}
+                show={openTabsFlag}
+                setShow={setOpenTabsFlag}
+              />
+            </div>
             <div
               className={style['mitm-idle-tab-cont-item']}
               style={{
