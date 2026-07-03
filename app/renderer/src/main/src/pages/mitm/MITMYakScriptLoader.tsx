@@ -320,13 +320,7 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
           status: 'INFO',
         })
       }
-      return (
-        <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[Type]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
-          wrapperClassName={style['plugin-local-headImg']}
-        />
-      )
+      return <AuthorImg src={YakitLogo} wrapperClassName={style['plugin-local-headImg']} />
     }
     return (
       <AuthorImg
