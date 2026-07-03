@@ -19,13 +19,13 @@ export enum PRODUCT_RELEASE_EDITION {
 export const getReleaseEditionName = () => {
   switch (GetReleaseEdition()) {
     case PRODUCT_RELEASE_EDITION.EnpriTrace:
-      return 'EnpriTrace'
+      return 'Sentinel'
     case PRODUCT_RELEASE_EDITION.EnpriTraceAgent:
-      return 'EnpriTraceAgent'
+      return 'SentinelAgent'
     case PRODUCT_RELEASE_EDITION.IRify:
       return 'IRify'
     case PRODUCT_RELEASE_EDITION.IRifyEnpriTrace:
-      return 'IRify-EnpriTrace'
+      return 'IRify-Sentinel'
     case PRODUCT_RELEASE_EDITION.MEMFIT:
       return 'Memfit AI'
     default:

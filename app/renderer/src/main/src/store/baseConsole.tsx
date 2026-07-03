@@ -1,5 +1,5 @@
 /**
- * @description 引擎Console
+ * @description 引擎日志
  */
 
 import { create } from 'zustand'

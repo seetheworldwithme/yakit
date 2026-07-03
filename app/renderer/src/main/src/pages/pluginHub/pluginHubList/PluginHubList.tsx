@@ -19,6 +19,10 @@ import classNames from 'classnames'
 import styles from './PluginHubList.module.scss'
 import { HubSideBarList } from '../defaultConstant'
 import { JSONParseLog } from '@/utils/tool'
+import { isEnpriTrace } from '@/utils/envfile'
+
+/** EnpriTrace 隐藏插件商店标签 */
+const SideBarTabs = isEnpriTrace() ? HubSideBarList.filter((item) => item.value !== 'online') : HubSideBarList
 
 interface PluginHubListProps {
   /** 根元素的id */
@@ -59,7 +63,7 @@ export const PluginHubList: React.FC<PluginHubListProps> = memo((props) => {
   // 处理指定页面和详情类型功能
   const handleSpecifiedPageAndDetail = useMemoizedFn((data: PluginHubPageInfoProps) => {
     const { tabActive, detailInfo, refeshList, openGroupDrawer } = data
-    onSetActive(tabActive || 'online', true)
+    onSetActive(tabActive || (isEnpriTrace() ? 'local' : 'online'), true)
     setOpenGroupDrawer(openGroupDrawer || false)
     if (detailInfo) {
       setAutoOpenDetailTab && setAutoOpenDetailTab(detailInfo.tabActive || undefined)
@@ -93,7 +97,7 @@ export const PluginHubList: React.FC<PluginHubListProps> = memo((props) => {
       handleSpecifiedPageAndDetail(data)
       setOpenGroupDrawer(data.openGroupDrawer || false)
     } else {
-      onSetActive('online', true)
+      onSetActive(isEnpriTrace() ? 'local' : 'online', true)
     }
   }, [])
 
@@ -215,7 +219,7 @@ export const PluginHubList: React.FC<PluginHubListProps> = memo((props) => {
         <YakitSideTab
           key={i18n.language}
           type="horizontal"
-          yakitTabs={HubSideBarList}
+          yakitTabs={SideBarTabs}
           activeKey={active}
           onActiveKey={(v) => {
             setSearchParams(undefined)

@@ -29,9 +29,9 @@ export type VersionSource = 'yakit' | 'irify' | 'memfit'
 export const getReleaseEditionName = () => {
   switch (GetReleaseEdition()) {
     case PRODUCT_RELEASE_EDITION.EnpriTrace:
-      return 'EnpriTrace'
+      return 'Sentinel'
     case PRODUCT_RELEASE_EDITION.EnpriTraceAgent:
-      return 'EnpriTraceAgent'
+      return 'SentinelAgent'
     case PRODUCT_RELEASE_EDITION.BreachTrace:
       return 'BAS'
     case PRODUCT_RELEASE_EDITION.IRify:

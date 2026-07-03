@@ -44,7 +44,7 @@ import { yakitNotify } from '@/utils/notification'
 import { YakitSystem } from '@/yakitGVDefine'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
 import { ShieldCheckIcon as AllShieldCheckIcon } from '@/components/layout/globalStateIcon'
-import { getReleaseEditionName, isCommunityYakit } from '@/utils/envfile'
+import { getReleaseEditionName, isCommunityYakit, isEnpriTrace } from '@/utils/envfile'
 import ReactResizeDetector from 'react-resize-detector'
 import { PluginHubPageInfoProps } from '@/store/pageInfo'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
@@ -600,20 +600,22 @@ const Home: React.FC<HomeProp> = (props) => {
                   <div className={styles['home-card-header-desc']}>{t('Home.pluginCoverageDescription')}</div>
                 </div>
                 <div className={styles['pluginHub-tabs']}>
-                  <div
-                    className={styles['pluginHub-tabs-item']}
-                    onClick={() =>
-                      onMenuParams({
-                        route: YakitRoute.Plugin_Hub,
-                        params: { tabActive: 'online' } as PluginHubPageInfoProps,
-                      })
-                    }
-                  >
-                    <PublicPluginStoreIcon className={styles['tabs-icon']} />
-                    <span className={styles['tabs-text']} title={t('Home.pluginStore')}>
-                      {t('Home.pluginStore')}
-                    </span>
-                  </div>
+                  {!isEnpriTrace() && (
+                    <div
+                      className={styles['pluginHub-tabs-item']}
+                      onClick={() =>
+                        onMenuParams({
+                          route: YakitRoute.Plugin_Hub,
+                          params: { tabActive: 'online' } as PluginHubPageInfoProps,
+                        })
+                      }
+                    >
+                      <PublicPluginStoreIcon className={styles['tabs-icon']} />
+                      <span className={styles['tabs-text']} title={t('Home.pluginStore')}>
+                        {t('Home.pluginStore')}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className={styles['pluginHub-tabs-item']}
                     onClick={() =>

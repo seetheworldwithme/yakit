@@ -254,8 +254,8 @@
     "migrateDataDesc": "由於IRify功能進行重構，為不影響使用，需要點選確定將舊資料進行遷移，遷移資料不會造成任何資料丟失。",
     "setPassword": "修改密碼",
     "irifyTechPreviewWatermark": "IRify技術瀏覽版僅供技術交流使用",
-    "enpriTraceTrialWatermark": "EnpriTrace-試用版",
-    "enpriTraceAgentTrialWatermark": "EnpriTraceAgent-試用版"
+    "enpriTraceTrialWatermark": "Sentinel-試用版",
+    "enpriTraceAgentTrialWatermark": "SentinelAgent-試用版"
   },
   "NewApp": {
     "userClickEvent": "使用者點選事件",
@@ -281,7 +281,7 @@
     "systemConfig": "系統配置",
     "screenRecordingNotice": "錄屏須知",
     "isScrecorderReadyFailed": "IsScrecorderReady失敗: {{error}}",
-    "engineConsole": "引擎Console",
+    "engineConsole": "引擎日志",
     "signOutSuccess": "已成功退出賬號",
     "signOutRemoteConfirm": "點選退出登入將自動退出遠端控制，是否確認退出",
     "remoteControl": "遠端控制",

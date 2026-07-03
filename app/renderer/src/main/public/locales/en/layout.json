@@ -254,8 +254,8 @@
     "migrateDataDesc": "Due to the reconstruction of the IRify function, in order not to affect the use, you need to click OK to migrate the old data. Data migration will not cause any data loss.",
     "setPassword": "Set Password",
     "irifyTechPreviewWatermark": "IRify technical preview is for technical communication only",
-    "enpriTraceTrialWatermark": "EnpriTrace Trial",
-    "enpriTraceAgentTrialWatermark": "EnpriTraceAgent Trial"
+    "enpriTraceTrialWatermark": "Sentinel Trial",
+    "enpriTraceAgentTrialWatermark": "SentinelAgent Trial"
   },
   "NewApp": {
     "userClickEvent": "User Click Event",

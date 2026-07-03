@@ -1006,36 +1006,36 @@ const GetUIOpSettingMenu = () => {
         key: 'diagnose-network',
         label: '网络诊断',
       },
-      {
-        key: 'link',
-        label: '切换连接模式',
-        children: [
-          { label: '本地', key: 'local' },
-          { label: '远程', key: 'remote' },
-        ],
-      },
-      {
-        key: 'i18nSwitching',
-        label: '语言切换',
-        children: [
-          {
-            key: 'zh',
-            label: '简体中文',
-          },
-          {
-            key: 'en',
-            label: '英文',
-          },
-          {
-            key: 'zh-TW',
-            label: '繁体中文',
-          },
-        ],
-      },
+      // {
+      //   key: 'link',
+      //   label: '切换连接模式',
+      //   children: [
+      //     { label: '本地', key: 'local' },
+      //     { label: '远程', key: 'remote' },
+      //   ],
+      // },
+      // {
+      //   key: 'i18nSwitching',
+      //   label: '语言切换',
+      //   children: [
+      //     {
+      //       key: 'zh',
+      //       label: '简体中文',
+      //     },
+      //     {
+      //       key: 'en',
+      //       label: '英文',
+      //     },
+      //     {
+      //       key: 'zh-TW',
+      //       label: '繁体中文',
+      //     },
+      //   ],
+      // },
       { type: 'divider' },
       {
         key: 'logs',
-        label: ' 日志收集',
+        label: ' 日志文件',
         children: [
           { label: '渲染端日志', key: 'renderLog' },
           { label: '引擎日志', key: 'engineLog' },
@@ -1076,42 +1076,42 @@ const GetUIOpSettingMenu = () => {
           key: 'run-node',
           label: '运行节点',
         },
-        { key: 'mcp', label: 'Yak Mcp' },
+        // { key: 'mcp', label: 'Yak Mcp' },
       ],
     },
     ModeSwitch(),
-    {
-      key: 'themeSwitching',
-      label: '主题切换',
-      children: [
-        {
-          key: 'light',
-          label: '亮色',
-        },
-        {
-          key: 'dark',
-          label: '暗色',
-        },
-      ],
-    },
-    {
-      key: 'i18nSwitching',
-      label: '语言切换',
-      children: [
-        {
-          key: 'zh',
-          label: '简体中文',
-        },
-        {
-          key: 'en',
-          label: '英文',
-        },
-        {
-          key: 'zh-TW',
-          label: '繁体中文',
-        },
-      ],
-    },
+    // {
+    //   key: 'themeSwitching',
+    //   label: '主题切换',
+    //   children: [
+    //     {
+    //       key: 'light',
+    //       label: '亮色',
+    //     },
+    //     {
+    //       key: 'dark',
+    //       label: '暗色',
+    //     },
+    //   ],
+    // },
+    // {
+    //   key: 'i18nSwitching',
+    //   label: '语言切换',
+    //   children: [
+    //     {
+    //       key: 'zh',
+    //       label: '简体中文',
+    //     },
+    //     {
+    //       key: 'en',
+    //       label: '英文',
+    //     },
+    //     {
+    //       key: 'zh-TW',
+    //       label: '繁体中文',
+    //     },
+    //   ],
+    // },
     { type: 'divider' },
     DBCacheManager(),
     {
@@ -1126,14 +1126,14 @@ const GetUIOpSettingMenu = () => {
         { label: '差量更新', key: 'cve-database-differential-update' },
       ],
     },
-    {
-      key: 'link',
-      label: '切换连接模式',
-      children: [
-        { label: '本地', key: 'local' },
-        { label: '远程', key: 'remote' },
-      ],
-    },
+    // {
+    //   key: 'link',
+    //   label: '切换连接模式',
+    //   children: [
+    //     { label: '本地', key: 'local' },
+    //     { label: '远程', key: 'remote' },
+    //   ],
+    // },
     { type: 'divider' },
     {
       key: 'systemSet',
@@ -1151,14 +1151,14 @@ const GetUIOpSettingMenu = () => {
       key: 'diagnose-network',
       label: '网络诊断',
     },
-    {
-      key: 'refreshMenu',
-      label: '刷新菜单',
-    },
+    // {
+    //   key: 'refreshMenu',
+    //   label: '刷新菜单',
+    // },
     { type: 'divider' },
     {
       key: 'logs',
-      label: ' 日志收集',
+      label: ' 日志文件',
       children: [
         { label: '渲染端日志', key: 'renderLog' },
         { label: '引擎日志', key: 'engineLog' },
@@ -2575,7 +2575,7 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
         type="white"
         size="large"
         visible={isShowEnpriTraceUpdateVisible}
-        title="检测到 内网版 EnpriTrace 版本升级"
+        title="检测到 内网版 Sentinel 版本升级"
         children={`检测到有新版本${yakitLastIntranetVersion}，请立即更新`}
         onCancel={() => {
           setShowEnpriTraceUpdateVisible(false)

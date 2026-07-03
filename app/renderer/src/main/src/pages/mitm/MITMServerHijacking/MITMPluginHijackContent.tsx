@@ -510,7 +510,7 @@ export const MITMPluginHijackContent: React.FC<MITMPluginHijackContentProps> = R
               }}
             ></HotCodeTemplate>
             <div className={styles['hot-patch-heard-extra']}>
-              <Tooltip placement="bottom" title="引擎Console">
+              <Tooltip placement="bottom" title="引擎日志">
                 <YakitButton
                   type="text"
                   onClick={openConsoleNewWindow}
