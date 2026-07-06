@@ -206,6 +206,200 @@
       max-height: 160px;
     }
   }
+
+  // 主列容器（横排筛选 + 表格，纵向堆叠）
+  .hub-local-column {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  // 顶部横排高级筛选行
+  .hub-filter-row {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+    background: var(--Colors-Use-Basic-Background);
+
+    .hub-filter-row-title {
+      flex: 0 0 auto;
+      padding: 4px 0;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+      font-size: 12px;
+      line-height: 16px;
+      white-space: nowrap;
+    }
+
+    .hub-filter-row-groups {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 20px;
+      max-height: 96px;
+      overflow-y: auto;
+    }
+
+    .hub-filter-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 6px;
+
+      .hub-filter-group-name {
+        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+        font-size: 12px;
+        line-height: 16px;
+        margin-right: 2px;
+      }
+
+      .hub-filter-group-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        align-items: center;
+      }
+    }
+
+    .hub-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      background: var(--Colors-Use-Neutral-Bg);
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+      font-size: 12px;
+      line-height: 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+
+      .hub-filter-chip-count {
+        font-style: normal;
+        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+        font-size: 11px;
+      }
+
+      &:hover {
+        border-color: var(--Colors-Use-Main-Border);
+        color: var(--Colors-Use-Main-Primary);
+      }
+    }
+
+    .hub-filter-chip-active {
+      border-color: var(--Colors-Use-Main-Primary);
+      background: var(--Colors-Use-Main-Focus);
+      color: var(--Colors-Use-Main-Primary);
+
+      .hub-filter-chip-count {
+        color: var(--Colors-Use-Main-Primary);
+      }
+    }
+
+    .hub-filter-manage {
+      flex: 0 0 auto;
+      color: var(--Colors-Use-Main-Primary);
+      font-size: 12px;
+      line-height: 16px;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+  }
+
+  // 表格容器
+  .hub-local-table-wrap {
+    flex: 1 1 0;
+    height: 100%;
+    overflow: hidden;
+
+    :global {
+      .ant-table-wrapper,
+      .ant-table {
+        height: 100%;
+      }
+      .ant-table-tbody > tr.ant-table-row:hover > td {
+        background: var(--Colors-Use-Neutral-Bg-Hover) !important;
+      }
+      .ant-table-thead > tr > th {
+        background: var(--Colors-Use-Neutral-Bg) !important;
+        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+        font-size: 12px;
+      }
+      .ant-table-tbody > tr > td {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .hub-local-table-row {
+    cursor: pointer;
+  }
+
+  .col-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+
+    .col-name-img {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+
+    .col-name-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+    }
+
+    .col-name-badge {
+      flex: 0 0 auto;
+    }
+  }
+
+  .col-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+
+    .col-tags-more {
+      color: var(--Colors-Use-Neutral-Text-3-Secondary);
+      font-size: 12px;
+    }
+  }
+
+  .col-desc {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--Colors-Use-Neutral-Text-3-Secondary);
+    font-size: 12px;
+  }
+
+  .col-placeholder {
+    color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  }
+
+  .col-ops {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
 }
 .plugin-hub-tab-detail-list {
   width: 410px;

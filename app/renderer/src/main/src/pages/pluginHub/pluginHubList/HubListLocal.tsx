@@ -1,12 +1,15 @@
 import React, { memo, useRef, useMemo, useState, useReducer, useEffect } from 'react'
 import { useMemoizedFn, useDebounceFn, useUpdateEffect, useInViewport, useDebounceEffect } from 'ahooks'
 import {
+  OutlineClouddownloadIcon,
   OutlineClouduploadIcon,
   OutlineExclamationcircleIcon,
+  OutlinePencilaltIcon,
   OutlinePluscircleIcon,
   OutlinePlusIcon,
   OutlineRefreshIcon,
   OutlineReplyIcon,
+  OutlineTrashIcon,
   OutlineXIcon,
 } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
@@ -30,15 +33,8 @@ import {
 } from '@/pages/plugins/utils'
 import { yakitNotify } from '@/utils/notification'
 import cloneDeep from 'lodash/cloneDeep'
-import {
-  HubOuterList,
-  HubGridList,
-  HubGridOpt,
-  HubListFilter,
-  LocalOptFooterExtra,
-  HubDetailList,
-  HubDetailListOpt,
-} from './funcTemplate'
+import { formatDate } from '@/utils/timeUtil'
+import { HubOuterList, LocalOptFooterExtra, HubDetailList, HubDetailListOpt } from './funcTemplate'
 import { useStore } from '@/store'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { HubListBaseProps } from '../type'
@@ -68,7 +64,7 @@ import {
   TagsAndGroupRender,
   YakFilterRemoteObj,
 } from '@/pages/mitm/MITMServerHijacking/MITMPluginLocalList'
-import { Tooltip } from 'antd'
+import { Table, Tooltip } from 'antd'
 import { ModifyYakitPlugin } from '@/pages/pluginEditor/modifyYakitPlugin/ModifyYakitPlugin'
 import { ModifyPluginCallback } from '@/pages/pluginEditor/pluginEditor/PluginEditor'
 import { grpcFetchLocalPluginDetail, grpcQueryYakScriptSkipUpdate, grpcSetYakScriptSkipUpdate } from '../utils/grpc'
@@ -1134,6 +1130,127 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
     return 'var(--Colors-Use-Main-Primary)'
   }, [allChecked, selectList.length])
 
+  // 高级筛选-横排单项切换
+  const toggleFilter = useMemoizedFn((groupKey: string, data: API.PluginsSearchData, check: boolean) => {
+    const selected = { ...(filters as Record<string, API.PluginsSearchData[]>) }
+    if (check) selected[groupKey] = [...(selected[groupKey] || []), data]
+    else selected[groupKey] = (selected[groupKey] || []).filter((item) => item.value !== data.value)
+    setFilters({ ...selected })
+  })
+
+  // 表格滚动容器-触底加载更多
+  const tableWrapRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const wrap = tableWrapRef.current
+    if (!wrap) return
+    const body = wrap.querySelector('.ant-table-body') as HTMLElement | null
+    if (!body) return
+    const onScroll = () => {
+      if (loading) return
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 48) {
+        if (hasMore.current) onUpdateList()
+      }
+    }
+    body.addEventListener('scroll', onScroll)
+    return () => body.removeEventListener('scroll', onScroll)
+  }, [listLength, loading, onUpdateList])
+
+  // 表格列定义
+  const tableColumns = useMemo<any[]>(() => {
+    const selectedSet = new Set(selectList.map((item) => item.ScriptName))
+    return [
+      {
+        title: () => (
+          <YakitCheckbox
+            indeterminate={!allChecked && selectList.length > 0}
+            checked={allChecked}
+            onChange={(e) => onCheck(e.target.checked)}
+          />
+        ),
+        dataIndex: 'ScriptName',
+        width: 44,
+        render: (_: any, record: YakScript) => (
+          <YakitCheckbox
+            checked={allChecked || selectedSet.has(record.ScriptName)}
+            onChange={(e) => optCheck(record, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      },
+      {
+        title: t('HubListLocal.pluginName'),
+        dataIndex: 'ScriptName',
+        ellipsis: true,
+        render: (text: string, record: YakScript) => (
+          <div className={styles['col-name']}>
+            {!!record.HeadImg && <img className={styles['col-name-img']} src={record.HeadImg} alt="" />}
+            <span className={styles['col-name-text']}>{text || '-'}</span>
+            {!!record.IsCorePlugin && <YakitTag className={styles['col-name-badge']}>core</YakitTag>}
+          </div>
+        ),
+      },
+      {
+        title: t('HubListLocal.tag'),
+        dataIndex: 'Tags',
+        width: 220,
+        render: (tags: string) => {
+          const arr = (tags || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+          if (!arr.length) return <span className={styles['col-placeholder']}>-</span>
+          return (
+            <div className={styles['col-tags']}>
+              {arr.slice(0, 4).map((tg) => (
+                <YakitTag key={tg} color="info">
+                  {tg}
+                </YakitTag>
+              ))}
+              {arr.length > 4 && <span className={styles['col-tags-more']}>+{arr.length - 4}</span>}
+            </div>
+          )
+        },
+      },
+      {
+        title: t('HubListLocal.pluginDesc'),
+        dataIndex: 'Help',
+        ellipsis: true,
+        render: (text: string) => (
+          <Tooltip title={text || ''} overlayClassName="plugins-tooltip">
+            <span className={styles['col-desc']}>{text || '-'}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: t('HubListLocal.createdAt'),
+        dataIndex: 'UpdatedAt',
+        width: 160,
+        render: (ts?: number) => (ts ? formatDate(ts) : '-'),
+      },
+      {
+        title: t('HubListLocal.operation'),
+        width: 150,
+        render: (_: any, record: YakScript) => (
+          <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
+            <Tooltip title={t('YakitButton.edit')} overlayClassName="plugins-tooltip">
+              <YakitButton type="text2" icon={<OutlinePencilaltIcon />} onClick={() => handleOpenEditHint(record)} />
+            </Tooltip>
+            <Tooltip title={t('YakitButton.export')} overlayClassName="plugins-tooltip">
+              <YakitButton
+                type="text2"
+                icon={<OutlineClouddownloadIcon />}
+                onClick={() => onFooterExtraExport(record)}
+              />
+            </Tooltip>
+            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
+              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
+            </Tooltip>
+          </div>
+        ),
+      },
+    ]
+  }, [allChecked, selectList, t, i18n.language])
+
   return (
     <section className={classNames(styles['plugin-hub-tab-list'], styles['plugin-hub-local-shell'])}>
       <YakitSpin
@@ -1153,259 +1270,266 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
             <span className={styles['hub-local-rail-divider']} />
             <div className={styles['hub-local-rail-hint']}>{t('PluginTabName.localPlugin')}</div>
           </aside>
-          <div className={classNames(styles['list-filter'], { [styles['hidden-view']]: hiddenFilter })}>
-            <HubListFilter
-              groupList={filterGroup}
-              selecteds={filters as Record<string, API.PluginsSearchData[]>}
-              onSelect={setFilters}
-              groupItemExtra={(info) => {
-                if (info.groupKey === 'plugin_group') {
+          <div className={styles['hub-local-column']}>
+            <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
+              <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
+              <div className={styles['hub-filter-row-groups']}>
+                {filterGroup.map((group) => {
+                  const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                    []) as API.PluginsSearchData[]
                   return (
-                    <>
-                      <YakitButton type="text" onClick={onOpenPluginGroup}>
-                        {t('HubListLocal.manage')}
-                      </YakitButton>
-                      <div className={styles['local-list-divider-style']} />
-                    </>
-                  )
-                }
-                return null
-              }}
-            />
-          </div>
-
-          <main className={styles['list-body']}>
-            <HubOuterList
-              title={
-                <>
-                  {t('PluginTabName.localPlugin')}
-                  {!!externalSearchParams && (
-                    <YakitButton
-                      onClick={() => onChangeOnline?.(getSearch())}
-                      type="primary"
-                      size="small"
-                      icon={<OutlineReplyIcon />}
-                      style={{ marginLeft: 8 }}
-                    >
-                      {t('YakitButton.back')}
-                    </YakitButton>
-                  )}
-                </>
-              }
-              headerExtra={
-                <div className={styles['hub-list-header-extra']}>
-                  <FuncFilterPopover
-                    maxWidth={1200}
-                    icon={<SolidChevrondownIcon />}
-                    name={t('YakitButton.batchOperation')}
-                    disabled={selectedNum === 0}
-                    button={{
-                      type: 'outline2',
-                      size: 'large',
-                    }}
-                    menu={{
-                      type: 'primary',
-                      data: [
-                        { key: 'export', label: t('YakitButton.export') },
-                        {
-                          key: 'upload',
-                          label: t('YakitButton.upload'),
-                          disabled: allChecked || batchUploadLoading,
-                        },
-                        { key: 'remove', label: t('YakitButton.delete'), disabled: batchDelLoading },
-                      ],
-                      onClick: ({ key }) => {
-                        switch (key) {
-                          case 'export':
-                            onHeaderExtraExport()
-                            break
-                          case 'upload':
-                            onHeaderExtraUpload()
-                            break
-                          case 'remove':
-                            onHeaderExtraDel()
-                            break
-                          default:
-                            return
-                        }
-                      },
-                    }}
-                    placement="bottomRight"
-                  />
-                </div>
-              }
-              listHeaderRightExtra={
-                <div className={styles['hub-list-header-right-extra']}>
-                  <YakitCheckbox
-                    disabled={!(selectList.length || allChecked)}
-                    checked={skipUpdate}
-                    onChange={setYakScriptSkipUpdate}
-                  >
-                    {t('HubListLocal.doNotDownload')}{' '}
-                    <Tooltip title={t('HubListLocal.skipNotDownloadTooltip')} align={{ offset: [0, 10] }}>
-                      <OutlineExclamationcircleIcon className={styles['exclamationcircleIcon']} />
-                    </Tooltip>
-                  </YakitCheckbox>
-                  <div className={styles['divider-style']}></div>
-                  {showGroupList.length > 0 && (
-                    <div className={styles['header-filter-tag']}>
-                      {showGroupList.length <= 2 ? (
-                        showGroupList.map((group) => {
+                    <div className={styles['hub-filter-group']} key={group.groupKey}>
+                      <span className={styles['hub-filter-group-name']}>{group.groupName}</span>
+                      <div className={styles['hub-filter-group-items']}>
+                        {(group.data || []).map((opt) => {
+                          const active = selected.some((s) => s.value === opt.value)
                           return (
-                            <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
-                              {group}
-                            </YakitTag>
-                          )
-                        })
-                      ) : (
-                        <YakitPopover
-                          overlayClassName={styles['hub-outer-list-group-popover']}
-                          content={
-                            <div className={styles['hub-outer-list-filter']}>
-                              {showGroupList.map((group) => {
-                                return (
-                                  <Tooltip title={group} placement="top" overlayClassName="plugins-tooltip" key={group}>
-                                    <YakitTag closable onClose={() => onRemoveGroup(group)}>
-                                      {group}
-                                    </YakitTag>
-                                  </Tooltip>
-                                )
+                            <span
+                              key={opt.value}
+                              className={classNames(styles['hub-filter-chip'], {
+                                [styles['hub-filter-chip-active']]: active,
                               })}
-                            </div>
-                          }
-                          trigger="hover"
-                          onVisibleChange={setGroupTagShow}
-                          placement="bottom"
-                        >
-                          <div
-                            className={classNames(styles['tag-total'], {
-                              [styles['tag-total-active']]: groupTagShow,
-                            })}
-                          >
-                            <span>
-                              {t('HubListLocal.pluginGroup')}{' '}
-                              <span className={styles['total-style']}>{showGroupList.length}</span>
+                              onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                            >
+                              <span className={styles['hub-filter-chip-label']}>{opt.label}</span>
+                              {!!opt.count && <em className={styles['hub-filter-chip-count']}>{opt.count}</em>}
                             </span>
-                            <OutlineXIcon onClick={() => onRemoveAllGroup()} />
-                          </div>
-                        </YakitPopover>
-                      )}
-                    </div>
-                  )}
-                  <YakitPopover
-                    visible={addGroupVisible}
-                    overlayClassName={styles['add-group-popover']}
-                    placement="bottomRight"
-                    trigger="click"
-                    content={
-                      <UpdateGroupList
-                        ref={updateGroupListRef}
-                        originGroupList={groupList}
-                        onOk={updateGroupList}
-                        onCanle={() => setAddGroupVisible(false)}
-                      ></UpdateGroupList>
-                    }
-                    onVisibleChange={(visible) => {
-                      setAddGroupVisible(visible)
-                    }}
-                  >
-                    {showGroupList.length ? (
-                      <div className={styles['ui-op-btn-wrapper']}>
-                        <div
-                          className={classNames(styles['op-btn-body'], {
-                            [styles['op-btn-body-hover']]: addGroupVisible,
-                          })}
-                        >
-                          <OutlinePluscircleIcon
-                            className={classNames(
-                              addGroupVisible ? styles['icon-hover-style'] : styles['icon-style'],
-                              styles['plus-icon'],
-                            )}
-                          />
-                        </div>
+                          )
+                        })}
+                        {group.groupKey === 'plugin_group' && (
+                          <span className={styles['hub-filter-manage']} onClick={onOpenPluginGroup}>
+                            {t('HubListLocal.manage')}
+                          </span>
+                        )}
                       </div>
-                    ) : (
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <main className={styles['list-body']}>
+              <HubOuterList
+                title={
+                  <>
+                    {t('PluginTabName.localPlugin')}
+                    {!!externalSearchParams && (
                       <YakitButton
-                        disabled={!selectList.length && !allChecked}
-                        type={'text'}
-                        icon={<OutlinePluscircleIcon />}
-                        style={{
-                          color: addGroupBtnColor,
-                        }}
+                        onClick={() => onChangeOnline?.(getSearch())}
+                        type="primary"
+                        size="small"
+                        icon={<OutlineReplyIcon />}
+                        style={{ marginLeft: 8 }}
                       >
-                        {t('HubListLocal.addGroup')}
+                        {t('YakitButton.back')}
                       </YakitButton>
                     )}
-                  </YakitPopover>
-                </div>
-              }
-              allChecked={allChecked}
-              setAllChecked={onCheck}
-              total={response.Total}
-              selected={selectedNum}
-              search={search}
-              setSearch={setSearch}
-              onSearch={onSearch}
-              filters={filters as Record<string, API.PluginsSearchData[]>}
-              setFilters={setFilters}
-            >
-              {listLength > 0 ? (
-                <HubGridList
-                  data={response.Data || []}
-                  keyName="ScriptName"
-                  loading={loading}
-                  hasMore={hasMore.current}
-                  updateList={onUpdateList}
-                  showIndex={showIndex.current}
-                  setShowIndex={setShowIndex}
-                  gridNode={(info) => {
-                    const { index, data } = info
-                    const check = allChecked || selectList.findIndex((ele) => ele.ScriptName === data.ScriptName) !== -1
-                    return (
-                      <HubGridOpt
-                        order={index}
-                        info={data}
-                        checked={check}
-                        onCheck={optCheck}
-                        title={data.ScriptName}
-                        type={data.Type}
-                        tags={data.Tags}
-                        help={data.Help || ''}
-                        img={data.HeadImg || ''}
-                        user={data.Author || ''}
-                        prImgs={(data.CollaboratorInfo || []).map((ele) => ele.HeadImg)}
-                        time={data.UpdatedAt || 0}
-                        isCorePlugin={!!data.IsCorePlugin}
-                        official={!!data.OnlineOfficial}
-                        extraFooter={extraFooter}
-                        subTitle={optSubTitle}
-                        onClick={onOptClick}
-                      />
-                    )
-                  }}
-                />
-              ) : listTotal > 0 ? (
-                <YakitEmpty
-                  image={emptyImageTarget}
-                  imageStyle={{ margin: '0 auto 24px', width: 274, height: 180 }}
-                  title={t('YakitEmpty.searchEmpty')}
-                  className={styles['hub-list-empty']}
-                />
-              ) : (
-                <div className={styles['hub-list-empty']}>
-                  <YakitEmpty title={t('YakitEmpty.noData')} description={t('HubListLocal.noDataDesc')} />
-                  <div className={styles['refresh-buttons']}>
-                    <YakitButton type="outline1" icon={<OutlinePlusIcon />} onClick={onNewPlugin}>
-                      {t('HubListLocal.newPlugin')}
-                    </YakitButton>
-                    <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefresh}>
-                      {t('YakitButton.refresh')}
-                    </YakitButton>
+                  </>
+                }
+                headerExtra={
+                  <div className={styles['hub-list-header-extra']}>
+                    <FuncFilterPopover
+                      maxWidth={1200}
+                      icon={<SolidChevrondownIcon />}
+                      name={t('YakitButton.batchOperation')}
+                      disabled={selectedNum === 0}
+                      button={{
+                        type: 'outline2',
+                        size: 'large',
+                      }}
+                      menu={{
+                        type: 'primary',
+                        data: [
+                          { key: 'export', label: t('YakitButton.export') },
+                          {
+                            key: 'upload',
+                            label: t('YakitButton.upload'),
+                            disabled: allChecked || batchUploadLoading,
+                          },
+                          { key: 'remove', label: t('YakitButton.delete'), disabled: batchDelLoading },
+                        ],
+                        onClick: ({ key }) => {
+                          switch (key) {
+                            case 'export':
+                              onHeaderExtraExport()
+                              break
+                            case 'upload':
+                              onHeaderExtraUpload()
+                              break
+                            case 'remove':
+                              onHeaderExtraDel()
+                              break
+                            default:
+                              return
+                          }
+                        },
+                      }}
+                      placement="bottomRight"
+                    />
                   </div>
-                </div>
-              )}
-            </HubOuterList>
-          </main>
+                }
+                listHeaderRightExtra={
+                  <div className={styles['hub-list-header-right-extra']}>
+                    <YakitCheckbox
+                      disabled={!(selectList.length || allChecked)}
+                      checked={skipUpdate}
+                      onChange={setYakScriptSkipUpdate}
+                    >
+                      {t('HubListLocal.doNotDownload')}{' '}
+                      <Tooltip title={t('HubListLocal.skipNotDownloadTooltip')} align={{ offset: [0, 10] }}>
+                        <OutlineExclamationcircleIcon className={styles['exclamationcircleIcon']} />
+                      </Tooltip>
+                    </YakitCheckbox>
+                    <div className={styles['divider-style']}></div>
+                    {showGroupList.length > 0 && (
+                      <div className={styles['header-filter-tag']}>
+                        {showGroupList.length <= 2 ? (
+                          showGroupList.map((group) => {
+                            return (
+                              <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
+                                {group}
+                              </YakitTag>
+                            )
+                          })
+                        ) : (
+                          <YakitPopover
+                            overlayClassName={styles['hub-outer-list-group-popover']}
+                            content={
+                              <div className={styles['hub-outer-list-filter']}>
+                                {showGroupList.map((group) => {
+                                  return (
+                                    <Tooltip
+                                      title={group}
+                                      placement="top"
+                                      overlayClassName="plugins-tooltip"
+                                      key={group}
+                                    >
+                                      <YakitTag closable onClose={() => onRemoveGroup(group)}>
+                                        {group}
+                                      </YakitTag>
+                                    </Tooltip>
+                                  )
+                                })}
+                              </div>
+                            }
+                            trigger="hover"
+                            onVisibleChange={setGroupTagShow}
+                            placement="bottom"
+                          >
+                            <div
+                              className={classNames(styles['tag-total'], {
+                                [styles['tag-total-active']]: groupTagShow,
+                              })}
+                            >
+                              <span>
+                                {t('HubListLocal.pluginGroup')}{' '}
+                                <span className={styles['total-style']}>{showGroupList.length}</span>
+                              </span>
+                              <OutlineXIcon onClick={() => onRemoveAllGroup()} />
+                            </div>
+                          </YakitPopover>
+                        )}
+                      </div>
+                    )}
+                    <YakitPopover
+                      visible={addGroupVisible}
+                      overlayClassName={styles['add-group-popover']}
+                      placement="bottomRight"
+                      trigger="click"
+                      content={
+                        <UpdateGroupList
+                          ref={updateGroupListRef}
+                          originGroupList={groupList}
+                          onOk={updateGroupList}
+                          onCanle={() => setAddGroupVisible(false)}
+                        ></UpdateGroupList>
+                      }
+                      onVisibleChange={(visible) => {
+                        setAddGroupVisible(visible)
+                      }}
+                    >
+                      {showGroupList.length ? (
+                        <div className={styles['ui-op-btn-wrapper']}>
+                          <div
+                            className={classNames(styles['op-btn-body'], {
+                              [styles['op-btn-body-hover']]: addGroupVisible,
+                            })}
+                          >
+                            <OutlinePluscircleIcon
+                              className={classNames(
+                                addGroupVisible ? styles['icon-hover-style'] : styles['icon-style'],
+                                styles['plus-icon'],
+                              )}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <YakitButton
+                          disabled={!selectList.length && !allChecked}
+                          type={'text'}
+                          icon={<OutlinePluscircleIcon />}
+                          style={{
+                            color: addGroupBtnColor,
+                          }}
+                        >
+                          {t('HubListLocal.addGroup')}
+                        </YakitButton>
+                      )}
+                    </YakitPopover>
+                  </div>
+                }
+                allChecked={allChecked}
+                setAllChecked={onCheck}
+                total={response.Total}
+                selected={selectedNum}
+                search={search}
+                setSearch={setSearch}
+                onSearch={onSearch}
+                filters={filters as Record<string, API.PluginsSearchData[]>}
+                setFilters={setFilters}
+              >
+                {listLength > 0 ? (
+                  <div className={styles['hub-local-table-wrap']} ref={tableWrapRef}>
+                    <Table<YakScript>
+                      rowKey="ScriptName"
+                      size="small"
+                      columns={tableColumns}
+                      dataSource={response.Data || []}
+                      pagination={false}
+                      scroll={{ y: 'calc(100vh - 280px)', x: 'max-content' }}
+                      loading={loading}
+                      onRow={(record) => {
+                        const idx = (response.Data || []).findIndex((ele) => ele.ScriptName === record.ScriptName)
+                        return {
+                          onClick: () => onOptClick(record, idx),
+                          className: styles['hub-local-table-row'],
+                        }
+                      }}
+                    />
+                  </div>
+                ) : listTotal > 0 ? (
+                  <YakitEmpty
+                    image={emptyImageTarget}
+                    imageStyle={{ margin: '0 auto 24px', width: 274, height: 180 }}
+                    title={t('YakitEmpty.searchEmpty')}
+                    className={styles['hub-list-empty']}
+                  />
+                ) : (
+                  <div className={styles['hub-list-empty']}>
+                    <YakitEmpty title={t('YakitEmpty.noData')} description={t('HubListLocal.noDataDesc')} />
+                    <div className={styles['refresh-buttons']}>
+                      <YakitButton type="outline1" icon={<OutlinePlusIcon />} onClick={onNewPlugin}>
+                        {t('HubListLocal.newPlugin')}
+                      </YakitButton>
+                      <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefresh}>
+                        {t('YakitButton.refresh')}
+                      </YakitButton>
+                    </div>
+                  </div>
+                )}
+              </HubOuterList>
+            </main>
+          </div>
         </div>
       </YakitSpin>
 
