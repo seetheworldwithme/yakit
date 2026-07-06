@@ -30,8 +30,6 @@ import {
 } from '@/pages/plugins/utils'
 import { yakitNotify } from '@/utils/notification'
 import cloneDeep from 'lodash/cloneDeep'
-import useListenWidth from '../hooks/useListenWidth'
-import { HubButton } from '../hubExtraOperate/funcTemplate'
 import {
   HubOuterList,
   HubGridList,
@@ -116,7 +114,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
 
   const emptyImageTarget = useEmptyImage('search')
   const divRef = useRef<HTMLDivElement>(null)
-  const wrapperWidth = useListenWidth(divRef)
   const [inViewPort = true] = useInViewport(divRef)
 
   const userinfo = useStore((s) => s.userInfo)
@@ -1138,12 +1135,24 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
   }, [allChecked, selectList.length])
 
   return (
-    <div className={styles['plugin-hub-tab-list']}>
+    <section className={classNames(styles['plugin-hub-tab-list'], styles['plugin-hub-local-shell'])}>
       <YakitSpin
         wrapperClassName={isDetailList ? styles['hidden-view'] : ''}
         spinning={loading && isInitLoading.current}
       >
         <div className={styles['outer-list']} ref={divRef}>
+          <aside className={styles['hub-local-rail']}>
+            <Tooltip title={t('HubListLocal.newPlugin')} overlayClassName="plugins-tooltip">
+              <YakitButton
+                type="primary"
+                className={styles['hub-local-create-btn']}
+                icon={<SolidPluscircleIcon />}
+                onClick={onNewPlugin}
+              />
+            </Tooltip>
+            <span className={styles['hub-local-rail-divider']} />
+            <div className={styles['hub-local-rail-hint']}>{t('PluginTabName.localPlugin')}</div>
+          </aside>
           <div className={classNames(styles['list-filter'], { [styles['hidden-view']]: hiddenFilter })}>
             <HubListFilter
               groupList={filterGroup}
@@ -1165,7 +1174,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
             />
           </div>
 
-          <div className={styles['list-body']}>
+          <main className={styles['list-body']}>
             <HubOuterList
               title={
                 <>
@@ -1222,14 +1231,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                       },
                     }}
                     placement="bottomRight"
-                  />
-                  <HubButton
-                    width={wrapperWidth}
-                    iconWidth={900}
-                    icon={<SolidPluscircleIcon />}
-                    size="large"
-                    name={t('HubListLocal.newPlugin')}
-                    onClick={onNewPlugin}
                   />
                 </div>
               }
@@ -1404,7 +1405,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                 </div>
               )}
             </HubOuterList>
-          </div>
+          </main>
         </div>
       </YakitSpin>
 
@@ -1543,6 +1544,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         visible={uploadHint}
         callback={uploadHintCallback}
       />
-    </div>
+    </section>
   )
 })
