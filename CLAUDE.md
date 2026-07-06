@@ -66,7 +66,7 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
    - SCSS 查花括号配平（`{` 数 == `}` 数）。
 3. **删 `export` 前**全仓 grep 确认无外部引用（如 `convertToBytes`）。
 4. **大段 SCSS 删除**（多块 + 多档 `@media`）：用「按 selector + 花括号配准」的 python 脚本批量删，避免逐块手改导致行号漂移；删完查配平。脚本骨架：遍历行，匹配 `selector {` 起，按 `{`/`}` 计深度到配平，整段删 + 去一个尾空行。
-5. 验证通过即 `git commit`（**不 push**，走 feature 分支）——见下「提交策略」。
+5. 验证通过即 `git commit` 并 `git push` 到 `main`——见下「提交策略」。
 
 ## 开发与预览
 - 社区版开发：根目录 `yarn start-render`（react-app-rewired start，保存即热更新）
@@ -92,7 +92,8 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 
 ### 提交策略
 - **测试通过即 commit，无需问**：换皮改动只要满足「构建无报错（`tsc` / 启动无错）+ 功能正常（`regression-check.py` 过 / 关键页可点）+ 视觉走查通过」就直接 `git commit`，**不必停下来征求确认**。各 phase 的「Commit」步骤按此执行。
-- 仍遵守：**不 push**（推远端是 outward 操作，另问）；换皮代码走 feature 分支（不在 `master` 直接堆叠实现提交，文档 / 基线除外）。
+- **直接在 `main` 上开发并提交**：**不走 feature 分支**，所有改动落在 `main`；验证通过即 `git commit` 并 `git push` 到远端 `main`。推远端是 outward 操作，push 前确认分支与暂存范围无误。
+- 仍遵守：外科式改动 + 只动 UI 不动逻辑；提交前自查不卷入无关 WIP。
 
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
