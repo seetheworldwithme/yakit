@@ -1,12 +1,13 @@
 <!doctype html>
+<!-- aux 辅助窗口模板：终端 / AI 并发流等子页面挂载于此 -->
 <html lang="zh-cn" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Yakit Aux Window" />
-    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <title>Yakit</title>
     <style>
       html,
@@ -18,42 +19,41 @@
       }
 
       #initial-loading {
+        height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 100vh;
         background: var(--yakit-colors-Neutral-0, #171717);
       }
 
       #initial-loading span {
-        margin-right: 10px;
         font-size: 16px;
+        margin-right: 10px;
         color: var(--yakit-colors-Neutral-80, #868c97);
       }
 
       #initial-loading .initial-spinner {
+        box-sizing: border-box;
         width: 16px;
         height: 16px;
-        border: 2px solid var(--yakit-colors-Neutral-40, #ccd0d6);
-        border-top: 2px solid var(--yakit-colors-Neutral-80, #868c97);
         border-radius: 50%;
-        animation: initial-spinner 0.8s linear infinite;
-        box-sizing: border-box;
+        border: 2px solid var(--yakit-colors-Neutral-40, #ccd0d6);
+        border-top-color: var(--yakit-colors-Neutral-80, #868c97);
+        animation: sentinel-aux-spin 0.8s linear infinite;
       }
 
-      @keyframes initial-spinner {
-        0% {
+      @keyframes sentinel-aux-spin {
+        from {
           transform: rotate(0deg);
         }
-
-        100% {
+        to {
           transform: rotate(360deg);
         }
       }
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>启用 JavaScript 后才能使用辅助窗口。</noscript>
     <div id="root">
       <div id="initial-loading">
         <span>正在加载</span>

@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, startTransition, useEffect, useMemo, useState } from 'react'
 import { yakitAuxWindow } from '@/services/electronBridge'
 import ChatIPCContext from '@/pages/ai-agent/useContext/ChatIPCContent/ChatIPCContent'
-import ConcurrentStreamSkeleton from '@/auxWindow/components/ConcurrentStreamSkeleton/ConcurrentStreamSkeleton'
+import SentinelStreamSkeleton from '@/auxWindow/components/SentinelStreamSkeleton/SentinelStreamSkeleton'
 import {
   type ConcurrentStreamFramePayload,
   isConcurrentStreamFrame,
@@ -106,7 +106,7 @@ const AIConcurrentStream: React.FC<AIConcurrentStreamProps> = ({ windowId }) => 
   }
 
   if (!frame || loadingContents || !contextValue) {
-    return <ConcurrentStreamSkeleton variant="page" />
+    return <SentinelStreamSkeleton mode="page" />
   }
 
   return (
@@ -114,7 +114,7 @@ const AIConcurrentStream: React.FC<AIConcurrentStreamProps> = ({ windowId }) => 
       <div className={styles.page}>
         <div className={styles.divider} />
         <div className={styles.wrapper}>
-          <Suspense fallback={<ConcurrentStreamSkeleton variant="card" />}>
+          <Suspense fallback={<SentinelStreamSkeleton mode="card" />}>
             {isTaskDefaultGroup ? (
               <AITaskDefaultGroupCard
                 key={cardKey}

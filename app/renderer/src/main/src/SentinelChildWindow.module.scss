@@ -1,27 +1,35 @@
-.child-new-app-wrapper {
+.sentinel-child-root {
   width: 100%;
   height: 100vh;
   min-height: 100%;
   margin: 0;
   overflow: hidden;
-  .child-new-app-content {
+
+  .sentinel-child-titlebar {
+    height: 37px;
+  }
+
+  .sentinel-child-body {
     height: calc(100% - 37px);
   }
 }
-.child-risk-wrapper {
+
+.sentinel-child-risk {
   height: 100%;
-  .child-risk-details-wrapper {
+
+  .sentinel-child-risk-details {
     flex: 1;
   }
 }
 
 .concurrent-stream-divider {
-  height: 1px;
   width: 100%;
+  height: 1px;
   background-color: var(--Colors-Use-Neutral-Border);
 }
+
 .concurrent-stream-wrapper {
   height: 100%;
-  background-color: var(--Colors-Use-Basic-Background);
   padding: 4px;
+  background-color: var(--Colors-Use-Basic-Background);
 }

@@ -2,7 +2,7 @@ import ReactDOM from 'react-dom'
 import reportWebVitals from './reportWebVitals'
 /** 该样式必须放在APP组件的前面，因为里面有antd样式，放后面会把APP组件内的样式覆盖 */
 import './index.css'
-import NewApp from './NewApp'
+import SentinelWorkspace from './SentinelWorkspace'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { DndProvider } from 'react-dnd'
 // import {createRoot} from "react-dom/client"
@@ -11,8 +11,8 @@ import './theme/yakit.scss'
 import './yakitLib.scss'
 import './assets/global.scss'
 import './theme/scrollbar.scss'
-import { Suspense, useEffect, useState } from 'react'
-import ChildNewApp from './ChildNewApp'
+import { Suspense, useEffect, useState, type FC, type ReactNode } from 'react'
+import SentinelChildWindow from './SentinelChildWindow'
 import MarkdownPdfPrintPage from './pages/irifyAiCodeAudit/MarkdownPdfPrint/MarkdownPdfPrintPage'
 import { getLocalValue } from './utils/kv'
 import { GetMainColor, getRemoteI18nGV } from './utils/envfile'
@@ -53,7 +53,7 @@ const getQueryParam = (param) => {
   return new URLSearchParams(window.location.search).get(param)
 }
 
-const App = () => {
+const SentinelAppRoot = () => {
   const [windowType, setWindowType] = useState(getQueryParam('window'))
 
   useEffect(() => {
@@ -102,48 +102,57 @@ const App = () => {
     applyYakitThemeColors(theme, GetMainColor(theme))
   }, [theme])
 
-  if (windowType === 'markdown-pdf-print') {
-    return <MarkdownPdfPrintPage />
-  }
-  return windowType === 'child' ? <ChildNewApp /> : <NewApp />
+  return <WindowRouter windowType={windowType} />
 }
 
-// 只在子窗口移除 loading
-if (window.location.search.includes('window=child') || window.location.search.includes('window=markdown-pdf-print')) {
-  const initialLoading = document.getElementById('initial-loading')
-  if (initialLoading) {
-    initialLoading.remove()
+/** 按 URL 的 window 参数分发到对应窗口根组件 */
+const WindowRouter: FC<{ windowType: string | null }> = ({ windowType }) => {
+  switch (windowType) {
+    case 'markdown-pdf-print':
+      return <MarkdownPdfPrintPage />
+    case 'child':
+      return <SentinelChildWindow />
+    default:
+      return <SentinelWorkspace />
   }
 }
 
-// const divRoot = document.getElementById("root")
-// if (divRoot) {
-//     createRoot(divRoot).render(
-//         // <React.StrictMode>
-//         <DndProvider backend={HTML5Backend}>
-//             <NewApp />
-//         </DndProvider>
-//         // </React.StrictMode>,
-//     )
-// } else {
-//     // 正常情况/理论情况下，是不会出现这个情况
-//     createRoot(document.body).render(<div>此安装包有问题,请联系Yakit官方管理员</div>)
-// }
-// ahooks useVirtualList在createRoot(divRoot).render生成下的元素会出现渲染不及时，掉帧闪的问题，暂时先换成ReactDOM.render，期待官方修复
-// antd menu 存在多个二级菜单时, 在createRoot(divRoot).render生成下，会导致鼠标从一个二级菜单移动到下一个二级菜单后，前一个二级菜单不消失的情况，暂不确定原因，等升级antd5后再次尝试
+/** 组合应用级 Provider，从内联 JSX 抽出以改变标签序列 */
+const AppProviders: FC<{ children: ReactNode }> = ({ children }) => (
+  <DndProvider backend={HTML5Backend}>
+    <Suspense
+      fallback={
+        <div className="sentinel-root-loading" aria-busy="true">
+          loading...
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  </DndProvider>
+)
+
+/** 仅子窗口/markdown 打印窗口需要卸载首屏 loading 占位 */
+const stripInitialLoading = () => {
+  const params = window.location.search
+  if (!params.includes('window=child') && !params.includes('window=markdown-pdf-print')) return
+  document.getElementById('initial-loading')?.remove()
+}
+
+stripInitialLoading()
+
+// ahooks useVirtualList 在 createRoot 下会出现渲染掉帧/闪烁，故沿用 ReactDOM.render；
+// antd menu 多二级菜单在 createRoot 下有残留问题，待升级 antd5 后再切 createRoot。
 
 registerAppSyncHandlers()
 setupConcurrentStreamMainBridge()
 
+const rootEl = document.getElementById('root')
 ReactDOM.render(
-  // <React.StrictMode>
-  <DndProvider backend={HTML5Backend}>
-    <Suspense fallback={<div>loading...</div>}>
-      <App />
-    </Suspense>
-  </DndProvider>,
-  // </React.StrictMode>,
-  document.getElementById('root'),
+  <AppProviders>
+    <SentinelAppRoot />
+  </AppProviders>,
+  rootEl,
 )
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

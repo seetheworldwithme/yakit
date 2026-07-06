@@ -1,0 +1,6 @@
+export { default } from './SentinelTerminal'
+export { default as SentinelTerminal } from './SentinelTerminal'
+export type { SentinelTerminalRef, SentinelTerminalProps } from './SentinelTerminal'
+export { useTerminalStream } from './useTerminalStream'
+export type { TerminalStreamPayload } from './useTerminalStream'
+export { getTerminalTheme } from './terminalTheme'

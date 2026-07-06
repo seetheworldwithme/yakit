@@ -6,8 +6,8 @@
 }
 
 .divider {
-  height: 1px;
   width: 100%;
+  height: 1px;
   background-color: var(--Colors-Use-Neutral-Border);
 }
 
@@ -17,7 +17,7 @@
   padding: 4px;
 }
 
-.card {
+.panel {
   width: 100%;
   padding: 4px 8px;
   border-radius: 8px;
@@ -38,7 +38,7 @@
   }
 }
 
-.goal {
+.objective {
   margin: 2px 0 6px 20px;
 
   :global(.ant-skeleton-paragraph) {
@@ -46,11 +46,11 @@
   }
 }
 
-.content-box {
+.thread-window {
   width: 100%;
-  background-color: var(--Colors-Use-Basic-Background);
   padding: 4px;
   border-radius: 8px;
+  background-color: var(--Colors-Use-Basic-Background);
 }
 
 .content-only {
@@ -59,17 +59,17 @@
   overflow: hidden;
 }
 
-.message-list {
+.chat-thread {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.message-card {
+.chat-bubble {
   width: 100%;
   padding: 4px 8px;
-  background-color: var(--Colors-Use-Neutral-Bg-Hover);
   border-radius: 8px;
+  background-color: var(--Colors-Use-Neutral-Bg-Hover);
 
   :global {
     .ant-skeleton-header {

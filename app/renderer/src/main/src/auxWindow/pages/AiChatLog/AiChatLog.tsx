@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import AuxXterm, { type AuxXtermRef, useAuxTerminalPush } from '@/auxWindow/components/AuxXterm'
+import SentinelTerminal, { type SentinelTerminalRef, useTerminalStream } from '@/auxWindow/components/SentinelTerminal'
 import styles from '@/auxWindow/styles/terminalPage.module.scss'
 
 interface AiChatLogProps {
@@ -7,13 +7,13 @@ interface AiChatLogProps {
 }
 
 const AiChatLog: React.FC<AiChatLogProps> = ({ windowId }) => {
-  const xtermRef = useRef<AuxXtermRef>(null)
+  const terminalRef = useRef<SentinelTerminalRef>(null)
 
-  useAuxTerminalPush(windowId, xtermRef)
+  useTerminalStream(windowId, terminalRef)
 
   return (
     <div className={styles['aux-terminal-page']}>
-      <AuxXterm ref={xtermRef} options={{ convertEol: true, scrollback: 500 }} />
+      <SentinelTerminal ref={terminalRef} terminalOptions={{ convertEol: true, scrollback: 500 }} />
     </div>
   )
 }

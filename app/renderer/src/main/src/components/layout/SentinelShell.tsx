@@ -81,7 +81,7 @@ import { shallow } from 'zustand/shallow'
 import { NewYakitLoading } from '../basics/NewYakitLoading'
 
 import classNames from 'classnames'
-import styles from './uiLayout.module.scss'
+import styles from './sentinelShell.module.scss'
 import { JSONParseLog } from '@/utils/tool'
 import { closeDuplexConn, startupDuplexConn } from '@/utils/duplex/duplex'
 import { LocalGVS } from '@/enums/localGlobal'
@@ -119,12 +119,12 @@ const DefaultCredential: YaklangEngineWatchDogCredential = {
   Mode: undefined,
 }
 
-export interface UILayoutProp {
+export interface SentinelShellProp {
   children?: React.ReactNode
   linkSuccess?: () => any
 }
 
-const UILayout: React.FC<UILayoutProp> = (props) => {
+const SentinelShell: React.FC<SentinelShellProp> = (props) => {
   const { t, i18n } = useI18nNamespaces(['layout', 'yakitUi', 'projectManage'])
   const mcp = useSyncYakMcpStream({})
   const { currentPageTabRouteKey } = usePageInfo(
@@ -1312,7 +1312,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
               maskClosable: false,
               content: (
                 <>
-                  <div className={styles['ai-describe']}>{t('UILayout.selectAiTypeForApiKey')}</div>
+                  <div className={styles['sentinel-shell-ai-describe']}>{t('UILayout.selectAiTypeForApiKey')}</div>
                   <NewThirdPartyApplicationConfig
                     isOnlyShowAiType={true}
                     onAdd={(data) => {
@@ -1405,22 +1405,22 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
           <YakitButton
             type="primary"
             colors="infoBlue"
-            className={styles['stop-screen-recorder']}
+            className={styles['sentinel-shell-stop-recorder']}
             size="middle"
             onClick={() => {
               emiter.emit('cancelPerformanceSampling')
             }}
           >
-            <div className={styles['stop-icon']}>
+            <div className={styles['sentinel-shell-stop-icon']}>
               <StopIcon />
             </div>
-            <span className={styles['stop-text']}>{t('UILayout.samplingInProgress')}</span>
+            <span className={styles['sentinel-shell-stop-text']}>{t('UILayout.samplingInProgress')}</span>
           </YakitButton>
         ) : (
           <>
             {performanceSamplingInfo.log.length ? (
               <YakitPopover
-                overlayClassName={styles['sampling-popover']}
+                overlayClassName={styles['sentinel-shell-sampling-popover']}
                 content={
                   <div
                     onBlur={() => {
@@ -1428,14 +1428,14 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                     }}
                   >
                     {performanceSamplingInfo.log.map((item, index) => (
-                      <div className={classNames(styles['sampling-info'])} key={index}>
+                      <div className={classNames(styles['sentinel-shell-sampling-info'])} key={index}>
                         <Tooltip
                           title={t('UILayout.clickToOpenFolder')}
                           placement="top"
                           align={{ targetOffset: [-10, -15] }}
                         >
                           <span
-                            className={classNames(styles['sampling-info-item'])}
+                            className={classNames(styles['sentinel-shell-sampling-info-item'])}
                             onClick={() => {
                               yakitFileSystem
                                 .isFileExists(item.path)
@@ -1455,16 +1455,16 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                         <CopyComponents copyText={item.path} />
                       </div>
                     ))}
-                    <div className={classNames(styles['sampling-footer'])}>
+                    <div className={classNames(styles['sentinel-shell-sampling-footer'])}>
                       <div
-                        className={classNames(styles['footer-bottom'], styles['sampling-exit'])}
+                        className={classNames(styles['sentinel-shell-footer'], styles['sentinel-shell-sampling-exit'])}
                         onClick={resetPerformanceSampling}
                       >
                         <OutlineExitIcon />
                         {t('YakitButton.exit')}
                       </div>
                       <div
-                        className={classNames(styles['footer-bottom'], styles['sampling-refresh'])}
+                        className={classNames(styles['sentinel-shell-footer'], styles['sentinel-shell-sampling-refresh'])}
                         onClick={() => {
                           resetPerformanceSampling()
                           emiter.emit('performanceSampling')
@@ -1487,14 +1487,14 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                   <YakitButton
                     type="primary"
                     colors="success"
-                    className={styles['stop-screen-recorder']}
+                    className={styles['sentinel-shell-stop-recorder']}
                     size="middle"
                     onClick={() => setIsShowSamplingInfo(true)}
                   >
-                    <div className={styles['stop-icon']}>
+                    <div className={styles['sentinel-shell-stop-icon']}>
                       <SolidCheckCircleIcon />
                     </div>
-                    <span className={styles['stop-text']}>{t('UILayout.samplingCompleted')}</span>
+                    <span className={styles['sentinel-shell-stop-text']}>{t('UILayout.samplingCompleted')}</span>
                   </YakitButton>
                 </Tooltip>
               </YakitPopover>
@@ -1520,13 +1520,13 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
             }}
             type="primary"
             colors="danger"
-            className={styles['stop-screen-recorder']}
+            className={styles['sentinel-shell-stop-recorder']}
             size="middle"
           >
-            <div className={styles['stop-icon']}>
+            <div className={styles['sentinel-shell-stop-icon']}>
               <StopIcon />
             </div>
-            <span className={styles['stop-text']}>{t('UILayout.recordingInProgress')}</span>
+            <span className={styles['sentinel-shell-stop-text']}>{t('UILayout.recordingInProgress')}</span>
           </YakitButton>
         )}
       </>
@@ -1647,16 +1647,16 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
       onSetEngineMode(undefined)
     })
   })
-  const dropClassName = { [styles['header-title-drop']]: drop }
+  const dropClassName = { [styles['sentinel-shell-bar-title-drop']]: drop }
   const engineModeText = useCreation(() => {
     if ((engineMode || 'local') === 'local' && !dynamicStatus.isDynamicStatus) return '本地链接'
     return EngineModeVerbose(engineMode || 'local', dynamicStatus)
   }, [engineMode, dynamicStatus.isDynamicStatus])
 
   return (
-    <div className={styles['ui-layout-wrapper']}>
-      <div className={styles['ui-layout-container']}>
-        <div className={styles['container-wrapper']}>
+    <section className={styles['sentinel-shell-root']}>
+      <div className={styles['sentinel-shell-frame']}>
+        <main className={styles['sentinel-shell-stage']}>
           <YaklangEngineWatchDog
             credential={credential}
             /* keepalive 开启之后才会触发 Ready 和 Failed */
@@ -1667,13 +1667,13 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
             onFailed={onFailed}
             failedCallback={onWatchDogCallback}
           />
-          <div id="yakit-header" className={styles['ui-layout-header']}>
+          <div id="yakit-header" className={styles['sentinel-shell-header']}>
             {system === 'Darwin' ? (
-              <div className={classNames(styles['header-body'], styles['mac-header-body'])}>
+              <div className={classNames(styles['sentinel-shell-bar'], styles['sentinel-shell-bar-mac'])}>
                 {/* 遮住底部边框线 */}
-                <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
+                <div style={{ left: -45 }} className={styles['sentinel-shell-bar-border-mask']}></div>
 
-                <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
+                <div className={classNames(styles['sentinel-shell-wordmark'])} onDoubleClick={maxScreen}>
                   {!showLoadingPage &&
                     (engineLink ? (
                       <YakitGlobalHost isEngineLink={engineLink} prefix={engineModeText} />
@@ -1682,7 +1682,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                     ))}
                 </div>
 
-                <div className={styles['header-left']}>
+                <div className={styles['sentinel-shell-bar-left']}>
                   <div>
                     <MacUIOp
                       currentProjectId={currentProject?.Id ? currentProject?.Id + '' : ''}
@@ -1690,8 +1690,8 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                     />
                   </div>
                 </div>
-                <div className={classNames(styles['header-title'], dropClassName)} onDoubleClick={maxScreen} />
-                <div className={styles['header-right']}>
+                <div className={classNames(styles['sentinel-shell-bar-title'], dropClassName)} onDoubleClick={maxScreen} />
+                <div className={styles['sentinel-shell-bar-right']}>
                   {performanceSampling}
 
                   {stopScreen}
@@ -1715,7 +1715,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                       />
                       {!showProjectManage && (
                         <>
-                          <div className={styles['divider-wrapper']}></div>
+                          <div className={styles['sentinel-shell-divider']}></div>
                           <GlobalState isEngineLink={engineLink} system={system} mcp={mcp} />
                         </>
                       )}
@@ -1724,10 +1724,10 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                 </div>
               </div>
             ) : (
-              <div className={classNames(styles['header-body'], styles['win-header-body'])}>
-                <div style={{ left: -45 }} className={styles['header-border-yakit-mask']}></div>
+              <div className={classNames(styles['sentinel-shell-bar'], styles['sentinel-shell-bar-win'])}>
+                <div style={{ left: -45 }} className={styles['sentinel-shell-bar-border-mask']}></div>
 
-                <div className={classNames(styles['yakit-header-title'])} onDoubleClick={maxScreen}>
+                <div className={classNames(styles['sentinel-shell-wordmark'])} onDoubleClick={maxScreen}>
                   {!showLoadingPage && (
                     <>
                       {engineLink ? (
@@ -1739,12 +1739,12 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                   )}
                 </div>
 
-                <div className={styles['header-left']}>
+                <div className={styles['sentinel-shell-bar-left']}>
                   {engineLink && (
                     <>
                       {!showProjectManage && <GlobalState isEngineLink={engineLink} system={system} mcp={mcp} />}
 
-                      <div className={styles['divider-wrapper']}></div>
+                      <div className={styles['sentinel-shell-divider']}></div>
                       <div>
                         <FuncDomain
                           isEngineLink={engineLink}
@@ -1771,9 +1771,9 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                   {performanceSampling}
                 </div>
 
-                <div className={classNames(styles['header-title'], dropClassName)} onDoubleClick={maxScreen} />
+                <div className={classNames(styles['sentinel-shell-bar-title'], dropClassName)} onDoubleClick={maxScreen} />
 
-                <div className={styles['header-right']}>
+                <div className={styles['sentinel-shell-bar-right']}>
                   <WinUIOp
                     currentProjectId={currentProject?.Id ? currentProject?.Id + '' : ''}
                     pageChildrenShow={pageShowHome}
@@ -1783,7 +1783,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
             )}
           </div>
 
-          <div id="yakit-uilayout-body" className={styles['ui-layout-body']}>
+          <div id="yakit-uilayout-body" className={styles['sentinel-shell-main']}>
             {!engineLink && !isRemoteEngine && yaklangDownload && (
               // 更新引擎
               <DownloadYaklang
@@ -1830,7 +1830,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
             )}
 
             {engineLink && (yaklangKillPss || yakitDownload) && (
-              <div className={styles['ui-layout-body-mask']}>
+              <div className={styles['sentinel-shell-main-mask']}>
                 <AllKillEngineConfirm
                   title={yaklangKillPssText.title}
                   content={yaklangKillPssText.content}
@@ -1863,7 +1863,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
               onCancel={() => setKillOldEngine(false)}
             />
           </div>
-        </div>
+        </main>
       </div>
       {/* 项目加密导出弹框 */}
       <NewProjectAndFolder
@@ -1957,8 +1957,8 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
         onOkParamsDrawer={onOkParamsDrawer}
         {...paramsValueRef.current}
       />
-    </div>
+    </section>
   )
 }
 
-export default UILayout
+export default SentinelShell
