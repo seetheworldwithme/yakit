@@ -270,7 +270,7 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
     { wait: 200 },
   ).run
   return (
-    <div
+    <section
       className={classNames(styles['http-fuzzer-click-editor'], {
         [styles['box-hidden']]: boxHidden,
       })}
@@ -333,7 +333,7 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
         </div>
       </div>
       {segmentedType === 'insert-tag' && (
-        <div
+        <section
           className={classNames(styles['http-fuzzer-click-editor-menu'])}
           onCompositionStart={() => {
             isComposition.current = true
@@ -349,7 +349,7 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
             maxHeight: menuHeight ? menuHeight : undefined,
           }}
         >
-          <div className={styles['menu-header']}>
+          <header className={styles['menu-header']}>
             <div className={styles['menu-header-left']}>
               {t('HTTPFuzzerClickEditorMenu.commonTags')}
               {!(menuWidth && menuWidth < 220) && (
@@ -365,9 +365,9 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
                 {t('YakitButton.restore')}
               </YakitButton>
             </div>
-          </div>
+          </header>
 
-          <div className={styles['menu-list']}>
+          <section className={styles['menu-list']}>
             <DragDropContext
               onDragEnd={onDragEnd}
               onDragUpdate={onDragUpdate}
@@ -377,14 +377,14 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
             >
               <Droppable droppableId="droppable-editor">
                 {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                  <ul {...provided.droppableProps} ref={provided.innerRef}>
                     {labelData.map((item, index) => (
                       <Draggable key={item?.Description} draggableId={`${item.Id}`} index={index}>
                         {(provided, snapshot) => {
                           const draggablePropsStyle = provided.draggableProps.style as DraggingStyle
 
                           return (
-                            <div
+                            <li
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
@@ -490,22 +490,22 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
                                   )}
                                 </div>
                               </div>
-                            </div>
+                            </li>
                           )
                           // snapshot.isDragging 是否拖拽此项
                         }}
                       </Draggable>
                     ))}
                     {provided.placeholder}
-                  </div>
+                  </ul>
                 )}
               </Droppable>
             </DragDropContext>
-          </div>
-        </div>
+          </section>
+        </section>
       )}
       {segmentedType === 'aiplugin' && (
-        <div
+        <section
           style={{
             ...directionStyle(editorInfo),
             left: ['left'].includes(editorInfo?.direction.x || '')
@@ -520,12 +520,12 @@ export const HTTPFuzzerClickEditorMenu: React.FC<HTTPFuzzerClickEditorMenuProps>
           }}
           className={classNames(styles['http-fuzzer-click-editor-menu'])}
         >
-          <div className={styles['menu-content']}>
+          <section className={styles['menu-content']}>
             {segmentedType === 'aiplugin' && <AIPluginComponent toOpenAiChat={toOpenAiChat} />}
-          </div>
-        </div>
+          </section>
+        </section>
       )}
-    </div>
+    </section>
   )
 }
 

@@ -105,6 +105,12 @@
     margin-top: 8px;
     padding: 0px 4px 4px 4px;
     flex: 1;
+    ul,
+    li {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
     &-item {
       display: flex;
       padding: 2px 8px 2px 12px;

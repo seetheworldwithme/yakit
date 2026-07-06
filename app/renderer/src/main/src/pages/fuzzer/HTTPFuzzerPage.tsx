@@ -2662,7 +2662,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
 
   return (
     <>
-      <div className={styles['http-fuzzer-body']} ref={fuzzerRef}>
+      <main className={styles['http-fuzzer-body']} ref={fuzzerRef}>
         <YakitResizeBox
           freeze={hotPatchVisible || aiTopPanelResizable}
           firstRatio={topPanelFirstRatio}
@@ -2760,52 +2760,62 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             </React.Suspense>
           }
           secondNode={
-            <div className={styles['http-fuzzer-page']}>
-              <div className={styles['fuzzer-heard']}>
-                <div className={styles['fuzzer-heard-left']}>
+            <section className={styles['http-fuzzer-page']}>
+              <div className={styles['fuzzer-workbench']}>
+                <aside className={styles['fuzzer-action-rail']}>
                   {!loading ? (
-                    <>
-                      {!isPause ? (
-                        <YakitButton onClick={resumeAndPause} icon={<SolidPlayIcon />} type={'primary'} size="large">
-                          {t('YakitButton.continue')}
-                        </YakitButton>
-                      ) : (
-                        <>
-                          <YakitButton onClick={sendRequest} type={'primary'} size="large">
-                            {t('YakitButton.sendRequest')}{' '}
-                            {convertKeyboardToUIKey(getHttpFuzzerShortcutKeyEvents()['sendRequest*httpFuzzer'].keys)}
-                          </YakitButton>
-                          {/* AI测试按钮已按功能裁剪方案隐藏（§B8） */}
-                        </>
-                      )}
-                    </>
+                    !isPause ? (
+                      <Tooltip title={t('YakitButton.continue')} placement="right">
+                        <YakitButton
+                          className={styles['fuzzer-rail-btn']}
+                          onClick={resumeAndPause}
+                          icon={<SolidPlayIcon />}
+                          type={'primary'}
+                        />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip
+                        title={`${t('YakitButton.sendRequest')} ${convertKeyboardToUIKey(
+                          getHttpFuzzerShortcutKeyEvents()['sendRequest*httpFuzzer'].keys,
+                        )}`}
+                        placement="right"
+                      >
+                        <YakitButton
+                          className={styles['fuzzer-rail-btn']}
+                          onClick={sendRequest}
+                          type={'primary'}
+                          icon={<SolidPlayIcon />}
+                        />
+                      </Tooltip>
+                    )
                   ) : (
                     <>
-                      <YakitButton
-                        disabled={cachedTotal <= 1}
-                        onClick={resumeAndPause}
-                        icon={<SolidPauseIcon />}
-                        type={'primary'}
-                        size="large"
-                      >
-                        {t('YakitButton.pause')}
-                      </YakitButton>
-                      <YakitButton
-                        onClick={() => {
-                          cancelCurrentHTTPFuzzer()
-                        }}
-                        icon={<StopIcon />}
-                        type={'primary'}
-                        colors="danger"
-                        size="large"
-                      >
-                        {t('YakitButton.stop')}
-                      </YakitButton>
+                      <Tooltip title={t('YakitButton.pause')} placement="right">
+                        <YakitButton
+                          className={styles['fuzzer-rail-btn']}
+                          disabled={cachedTotal <= 1}
+                          onClick={resumeAndPause}
+                          icon={<SolidPauseIcon />}
+                          type={'primary'}
+                        />
+                      </Tooltip>
+                      <Tooltip title={t('YakitButton.stop')} placement="right">
+                        <YakitButton
+                          className={styles['fuzzer-rail-btn']}
+                          onClick={() => {
+                            cancelCurrentHTTPFuzzer()
+                          }}
+                          icon={<StopIcon />}
+                          type={'primary'}
+                          colors="danger"
+                        />
+                      </Tooltip>
                     </>
                   )}
-                  <div className={styles['fuzzer-heard-force']}>
-                    <span className={styles['fuzzer-heard-https']}>{t('HttpQueryAdvancedConfig.force_https')}</span>
+                  <span className={styles['fuzzer-rail-divider']} />
+                  <Tooltip title={t('HttpQueryAdvancedConfig.force_https')} placement="right">
                     <YakitCheckbox
+                      className={styles['fuzzer-rail-https']}
                       checked={advancedConfigValue.isHttps}
                       onChange={(e) => {
                         const isHttps = e.target.checked
@@ -2821,417 +2831,429 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                         })
                       }}
                     />
-                  </div>
-                  <Divider type="vertical" style={{ margin: 0, top: 1 }} />
-                  <div className={styles['display-flex']}>
-                    <YakitPopover
-                      trigger={'click'}
-                      placement={'leftTop'}
-                      destroyTooltipOnHide={true}
-                      content={
-                        <div style={{ width: 400 }}>
-                          <HTTPFuzzerHistorySelector
-                            currentSelectId={currentSelectId}
-                            onSelect={(e, page, showAll) => {
-                              cancelCurrentHTTPFuzzer()
-                              if (!showAll) setCurrentPage(page)
-                              loadHistory(e)
-                            }}
-                            onDeleteAllCallback={() => {
-                              setCurrentPage(0)
-                              getTotal()
-                            }}
-                            fuzzerTabIndex={props.id}
-                          />
+                  </Tooltip>
+                  <YakitPopover
+                    trigger={'click'}
+                    placement={'rightTop'}
+                    destroyTooltipOnHide={true}
+                    content={
+                      <div style={{ width: 400 }}>
+                        <HTTPFuzzerHistorySelector
+                          currentSelectId={currentSelectId}
+                          onSelect={(e, page, showAll) => {
+                            cancelCurrentHTTPFuzzer()
+                            if (!showAll) setCurrentPage(page)
+                            loadHistory(e)
+                          }}
+                          onDeleteAllCallback={() => {
+                            setCurrentPage(0)
+                            getTotal()
+                          }}
+                          fuzzerTabIndex={props.id}
+                        />
+                      </div>
+                    }
+                  >
+                    <YakitButton className={styles['fuzzer-rail-btn']} type="text" icon={<ClockIcon />} />
+                  </YakitPopover>
+                </aside>
+                <div className={styles['fuzzer-stage']}>
+                  <header className={styles['fuzzer-heard']}>
+                    <section className={styles['fuzzer-heard-left']}>
+                      <div
+                        className={styles['blasting-example']}
+                        onClick={() => {
+                          const m = showYakitModal({
+                            type: 'white',
+                            title: (modalT) => modalT('HTTPFuzzerPage.webFuzzerDemo'),
+                            width: 480,
+                            content: <BlastingAnimationAemonstration></BlastingAnimationAemonstration>,
+                            footer: null,
+                            centered: true,
+                            destroyOnClose: true,
+                          })
+                        }}
+                      >
+                        {t('HTTPFuzzerPage.bruteForceExample')}
+                        <QuestionMarkCircleIcon />
+                      </div>
+                      {loading && (
+                        <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
+                          <YakitSpin size={'small'} style={{ width: 'auto' }} />
+                          {loadingText}
                         </div>
-                      }
-                    >
-                      <YakitButton type="text" icon={<ClockIcon />} style={{ padding: '4px 0px' }}>
-                        {t('YakitButton.history')}
-                      </YakitButton>
-                    </YakitPopover>
-                  </div>
-                  <div
-                    className={styles['blasting-example']}
-                    onClick={() => {
-                      const m = showYakitModal({
-                        type: 'white',
-                        title: (modalT) => modalT('HTTPFuzzerPage.webFuzzerDemo'),
-                        width: 480,
-                        content: <BlastingAnimationAemonstration></BlastingAnimationAemonstration>,
-                        footer: null,
-                        centered: true,
-                        destroyOnClose: true,
-                      })
-                    }}
-                  >
-                    {t('HTTPFuzzerPage.bruteForceExample')}
-                    <QuestionMarkCircleIcon />
-                  </div>
-                  {loading && (
-                    <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
-                      <YakitSpin size={'small'} style={{ width: 'auto' }} />
-                      {loadingText}
-                    </div>
-                  )}
+                      )}
 
-                  {onlyOneResponse && httpResponse.Ok && checkRedirect && (
-                    <YakitButton
-                      onClick={() => {
-                        setLoading(true)
-                        const redirectRequestProps: RedirectRequestParams = {
-                          Request: new Buffer(httpResponse.RequestRaw).toString('utf8'),
-                          Response: new Buffer(httpResponse.ResponseRaw).toString('utf8'),
-                          IsHttps: advancedConfigValue.isHttps,
-                          IsGmTLS: advancedConfigValue.isGmTLS,
-                          PerRequestTimeoutSeconds: advancedConfigValue.timeout,
-                          Proxy: (advancedConfigValue.proxy || [])
-                            .filter((item) => !item.startsWith('route'))
-                            .join(','),
-                          Extractors: advancedConfigValue.extractors,
-                          Matchers: advancedConfigValue.matchers,
-                          Params: advancedConfigValue.params || [],
-                        }
-                        ipcRenderer
-                          .invoke('RedirectRequest', redirectRequestProps)
-                          .then((rsp: FuzzerResponse) => {
-                            setRedirectedResponse(rsp)
-                          })
-                          .catch((e) => {
-                            failed(`"ERROR in: ${e}"`)
-                          })
-                          .finally(() => {
-                            setTimeout(() => setLoading(false), 300)
-                          })
-                      }}
-                      type="outline2"
-                    >
-                      {t('HTTPFuzzerPage.followRedirects')}
-                    </YakitButton>
-                  )}
-                  <FuzzerExtraShow
-                    droppedCount={droppedCount}
-                    advancedConfigValue={advancedConfigValue}
-                    setAdvancedConfigValue={setAdvancedConfigValue}
-                    onlyOneResponse={onlyOneResponse}
-                    httpResponse={httpResponse}
-                  />
-                  {renderTLSTags}
-                  {renderHotPatchTag}
-                </div>
-                <div className={styles['fuzzer-heard-right']}>
-                  {fuzzerTaskId && (
-                    <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
-                      <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
-                    </Tooltip>
-                  )}
-                  {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
-                    <ShareImportExportData
-                      module="fuzzer"
-                      getShareContent={getShareContent}
-                      getFuzzerRequestParams={
-                        getFuzzerRequestParams as unknown as () => FuzzerRequestProps[] | FuzzerRequestProps
-                      }
-                    />
-                  ) : null}
-                  <Divider type="vertical" style={{ margin: 8 }} />
+                      {onlyOneResponse && httpResponse.Ok && checkRedirect && (
+                        <YakitButton
+                          onClick={() => {
+                            setLoading(true)
+                            const redirectRequestProps: RedirectRequestParams = {
+                              Request: new Buffer(httpResponse.RequestRaw).toString('utf8'),
+                              Response: new Buffer(httpResponse.ResponseRaw).toString('utf8'),
+                              IsHttps: advancedConfigValue.isHttps,
+                              IsGmTLS: advancedConfigValue.isGmTLS,
+                              PerRequestTimeoutSeconds: advancedConfigValue.timeout,
+                              Proxy: (advancedConfigValue.proxy || [])
+                                .filter((item) => !item.startsWith('route'))
+                                .join(','),
+                              Extractors: advancedConfigValue.extractors,
+                              Matchers: advancedConfigValue.matchers,
+                              Params: advancedConfigValue.params || [],
+                            }
+                            ipcRenderer
+                              .invoke('RedirectRequest', redirectRequestProps)
+                              .then((rsp: FuzzerResponse) => {
+                                setRedirectedResponse(rsp)
+                              })
+                              .catch((e) => {
+                                failed(`"ERROR in: ${e}"`)
+                              })
+                              .finally(() => {
+                                setTimeout(() => setLoading(false), 300)
+                              })
+                          }}
+                          type="outline2"
+                        >
+                          {t('HTTPFuzzerPage.followRedirects')}
+                        </YakitButton>
+                      )}
+                      <FuzzerExtraShow
+                        droppedCount={droppedCount}
+                        advancedConfigValue={advancedConfigValue}
+                        setAdvancedConfigValue={setAdvancedConfigValue}
+                        onlyOneResponse={onlyOneResponse}
+                        httpResponse={httpResponse}
+                      />
+                      {renderTLSTags}
+                      {renderHotPatchTag}
+                    </section>
+                    <section className={styles['fuzzer-heard-right']}>
+                      {fuzzerTaskId && (
+                        <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
+                          <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
+                        </Tooltip>
+                      )}
+                      {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
+                        <ShareImportExportData
+                          module="fuzzer"
+                          getShareContent={getShareContent}
+                          getFuzzerRequestParams={
+                            getFuzzerRequestParams as unknown as () => FuzzerRequestProps[] | FuzzerRequestProps
+                          }
+                        />
+                      ) : null}
+                      <Divider type="vertical" style={{ margin: 8 }} />
 
-                  <FuncBtn
-                    maxWidth={1600}
-                    type="outline2"
-                    icon={<OutlineSwitchhorizontalIcon />}
-                    onClick={onSynWF}
-                    name={t('HTTPFuzzerPage.syncConfig')}
-                    style={{ marginRight: 8 }}
+                      <FuncBtn
+                        maxWidth={1600}
+                        type="outline2"
+                        icon={<OutlineSwitchhorizontalIcon />}
+                        onClick={onSynWF}
+                        name={t('HTTPFuzzerPage.syncConfig')}
+                        style={{ marginRight: 8 }}
+                      />
+                      <YakitDropdownMenu
+                        menu={{
+                          data: [
+                            { key: 'pathTemplate', label: t('HTTPFuzzerPage.generatePathTemplate') },
+                            { key: 'rawTemplate', label: t('HTTPFuzzerPage.generateRawTemplate') },
+                          ],
+                          onClick: ({ key }) => {
+                            switch (key) {
+                              case 'pathTemplate':
+                                handleSkipPluginDebuggerPage('path')
+                                break
+                              case 'rawTemplate':
+                                handleSkipPluginDebuggerPage('raw')
+                                break
+                              default:
+                                break
+                            }
+                          },
+                        }}
+                        dropdown={{
+                          trigger: ['click'],
+                          placement: 'bottom',
+                        }}
+                      >
+                        <FuncBtn
+                          maxWidth={1600}
+                          type="primary"
+                          icon={<OutlineCodeIcon />}
+                          name={t('HTTPFuzzerPage.generateYamlTemplate')}
+                          tooltipPlacement="topRight"
+                        />
+                      </YakitDropdownMenu>
+                    </section>
+                  </header>
+                  <YakitResizeBox
+                    lineDirection="bottom"
+                    firstMinSize={160}
+                    secondMinSize={180}
+                    isShowDefaultLineStyle={false}
+                    style={{ overflow: 'hidden' }}
+                    lineStyle={{ display: firstFull || secondFull ? 'none' : '' }}
+                    secondNodeStyle={{ padding: firstFull ? 0 : undefined, display: firstFull ? 'none' : '' }}
+                    firstNodeStyle={{ padding: secondFull ? 0 : undefined, display: secondFull ? 'none' : '' }}
+                    {...ResizeBoxProps}
+                    firstNode={
+                      <section ref={firstNodeRef} style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+                        <WebFuzzerNewEditor
+                          ref={webFuzzerNewEditorRef}
+                          refreshTrigger={refreshTrigger}
+                          casualEditorApplyNonce={casualEditorApplyNonce}
+                          request={requestRef.current}
+                          setRequest={onSetRequest}
+                          hex={hex}
+                          isHttps={advancedConfigValue.isHttps}
+                          hotPatchCode={hotPatchCodeRef.current}
+                          hotPatchCodeWithParamGetter={hotPatchCodeWithParamGetterRef.current}
+                          setHotPatchCode={setHotPatchCode}
+                          setHotPatchCodeWithParamGetter={setHotPatchCodeWithParamGetter}
+                          firstNodeExtra={firstNodeExtra}
+                          pageId={props.id}
+                          oneResponseValue={
+                            onlyOneResponse
+                              ? {
+                                  originValue: Uint8ArrayToString(httpResponse.ResponseRaw),
+                                  originalPackage: httpResponse.ResponseRaw,
+                                }
+                              : undefined
+                          }
+                          privacy={privacy}
+                        />
+                        {casualReviewQueue[0] ? (
+                          <WebFuzzerCasualReplaceReviewOverlay
+                            roundKey={casualReviewQueue[0].id}
+                            payload={casualReviewQueue[0].payload}
+                            onApplyRound={onCasualRoundApplyMerged}
+                          />
+                        ) : null}
+                      </section>
+                    }
+                    secondNode={
+                      <section ref={secondNodeRef} style={{ height: '100%', overflow: 'hidden' }}>
+                        <article
+                          className={classNames(styles['resize-card'], styles['resize-card-second'])}
+                          style={{ display: firstFull ? 'none' : '' }}
+                        >
+                          <PluginTabs
+                            tabPosition="right"
+                            activeKey={responseSource}
+                            onChange={(key) => setResponseSource(key === 'ai' ? 'ai' : 'manual')}
+                          >
+                            <PluginTabs.TabPane
+                              tab={t('HTTPFuzzerPage.responseTabManual')}
+                              key="manual"
+                              disabled={cachedTotal === 0 && !loading}
+                            >
+                              {onlyOneResponse ? (
+                                <div style={{ height: '100%', overflow: 'hidden' }}>
+                                  <ResponseViewer
+                                    pageId={props.id}
+                                    keepSearchName="fuzzer-response"
+                                    isHttps={advancedConfigValue.isHttps}
+                                    ref={responseViewerRef}
+                                    fuzzerResponse={httpResponse}
+                                    request={requestRef.current}
+                                    defaultResponseSearch={defaultResponseSearch}
+                                    system={props.system}
+                                    showMatcherAndExtraction={showMatcherAndExtraction}
+                                    setShowMatcherAndExtraction={setShowMatcherAndExtraction}
+                                    showExtra={showExtra}
+                                    setShowExtra={setShowExtra}
+                                    matcherValue={{
+                                      matchersList: advancedConfigValue.matchers || [],
+                                    }}
+                                    extractorValue={{
+                                      extractorList: advancedConfigValue.extractors || [],
+                                    }}
+                                    defActiveKey={activeKey}
+                                    defActiveType={activeType}
+                                    defActiveKeyAndOrder={defActiveKeyAndOrder}
+                                    onSaveMatcherAndExtraction={(matcher, extractor) => {
+                                      setAdvancedConfigValue({
+                                        ...advancedConfigValue,
+                                        matchers: matcher.matchersList,
+                                        extractors: extractor.extractorList,
+                                      })
+                                    }}
+                                    webFuzzerValue={requestRef.current}
+                                    showResponseInfoSecondEditor={showResponseInfoSecondEditor}
+                                    setShowResponseInfoSecondEditor={setShowResponseInfoSecondEditor}
+                                    secondNodeTitle={secondNodeTitle}
+                                    secondNodeExtra={secondNodeExtra}
+                                    onSetOnlyOneResEditor={setOnlyOneResEditor}
+                                    loading={loading}
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    height: '100%',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div className={classNames(styles['resize-card-heard'])}>
+                                    <div className={styles['resize-card-heard-title']}>{secondNodeTitle()}</div>
+                                    <div className={styles['resize-card-heard-extra']}></div>
+                                    {secondNodeExtra()}
+                                  </div>
+                                  <div style={{ flex: 1, minHeight: 0 }}>
+                                    {cachedTotal >= 1 ? (
+                                      <>
+                                        {showSuccess === 'true' && (
+                                          <HTTPFuzzerPageTable
+                                            // onSendToWebFuzzer={onSendToWebFuzzer}
+                                            success={true}
+                                            data={successFuzzer}
+                                            setExportData={setExportData}
+                                            query={query}
+                                            setQuery={setQuery}
+                                            extractedMap={extractedMap}
+                                            isEnd={loading}
+                                            pageId={props.id}
+                                            moreLimtAlertMsg={moreLimtAlertMsg}
+                                            noMoreLimtAlertMsg={noMoreLimtAlertMsg}
+                                            fuzzerTableMaxData={fuzzerTableMaxData}
+                                            hasExtractorRules={hasExtractorRules}
+                                          />
+                                        )}
+                                        {showSuccess === 'false' && (
+                                          <HTTPFuzzerPageTable
+                                            success={false}
+                                            data={failedFuzzer}
+                                            query={query}
+                                            setQuery={setQuery}
+                                            isEnd={loading}
+                                            extractedMap={extractedMap}
+                                            pageId={props.id}
+                                          />
+                                        )}
+                                        {showSuccess === 'Concurrent/Load' && (
+                                          <div
+                                            style={{
+                                              height: '100%',
+                                              overflowY: 'auto',
+                                              overflowX: 'hidden',
+                                            }}
+                                            key={i18n.language}
+                                          >
+                                            <FuzzerConcurrentLoad
+                                              inViewportCurrent={inViewport && currentFuzzerPage}
+                                              fuzzerResChartData={fuzzerResChartData}
+                                            />
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <Result
+                                        status={'warning'}
+                                        title={t('HTTPFuzzerPage.editAndSendRequest')}
+                                        subTitle={
+                                          <div>
+                                            {t('HTTPFuzzerPage.fuzzTestResultsInfo')}
+                                            {skipSaveHTTPFlow ? (
+                                              <>
+                                                {t('HTTPFuzzerPage.responseLimitExceeded')}
+                                                <YakitButton
+                                                  type="text"
+                                                  icon={<OutlineCogIcon />}
+                                                  style={{
+                                                    padding: 0,
+                                                    height: 'auto',
+                                                    verticalAlign: 'top',
+                                                  }}
+                                                  onClick={() => {
+                                                    emiter.emit(
+                                                      'menuOpenPage',
+                                                      JSON.stringify({
+                                                        route: YakitRoute.Beta_ConfigNetwork,
+                                                      }),
+                                                    )
+                                                  }}
+                                                >
+                                                  {t('HTTPFuzzerPage.saveHttpTrafficSettings')}
+                                                </YakitButton>
+                                              </>
+                                            ) : (
+                                              ''
+                                            )}
+                                          </div>
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </PluginTabs.TabPane>
+                            <PluginTabs.TabPane
+                              tab={t('HTTPFuzzerPage.responseTabAi')}
+                              key="ai"
+                              disabled={allAiFuzzRuntimeIds.length === 0}
+                            >
+                              {/* AI tab：thin header 承载标题 + 放大/收起按钮，复用 secondFull 状态与手动 tab 共享布局切换 */}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  height: '100%',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <div className={classNames(styles['resize-card-heard'])}>
+                                  <div className={styles['resize-card-heard-title']}>
+                                    {t('HTTPFuzzerPage.aiTabTitle')}
+                                  </div>
+                                  <div className={styles['resize-card-heard-extra']}></div>
+                                  <div
+                                    className={styles['resize-card-icon']}
+                                    onClick={() => setSecondFull(!secondFull)}
+                                  >
+                                    {secondFull ? <ArrowsRetractIcon /> : <ArrowsExpandIcon />}
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, minHeight: 0 }}>
+                                  {effectiveAiRuntimeId ? (
+                                    <HTTPFlowRealTimeTableAndEditor
+                                      key={effectiveAiRuntimeId}
+                                      wrapperStyle={{ padding: 0 }}
+                                      pageType="Plugin"
+                                      runtimeId={effectiveAiRuntimeId}
+                                      params={{ SourceType: 'scan' }}
+                                      filterTagDom={aiFilterTagDom}
+                                      defaultExcludeColumnsKey={aiFuzzTableExcludeColumnsKey}
+                                      httpHistoryTableTitleStyle={{
+                                        paddingTop: 12,
+                                        paddingLeft: 8,
+                                        paddingRight: 8,
+                                      }}
+                                      showSourceType={false}
+                                      showAdvancedSearch={false}
+                                      showProtocolType={false}
+                                      showColorSwatch={false}
+                                      showDelAll={false}
+                                      showBatchActions={false}
+                                      showFlod={false}
+                                      showHistoryAnalysisBtn
+                                      onHistoryAnalysisClick={jumpHTTPHistoryAnalysis}
+                                      titleHeight={47}
+                                    />
+                                  ) : null}
+                                </div>
+                              </div>
+                            </PluginTabs.TabPane>
+                          </PluginTabs>
+                        </article>
+                      </section>
+                    }
                   />
-                  <YakitDropdownMenu
-                    menu={{
-                      data: [
-                        { key: 'pathTemplate', label: t('HTTPFuzzerPage.generatePathTemplate') },
-                        { key: 'rawTemplate', label: t('HTTPFuzzerPage.generateRawTemplate') },
-                      ],
-                      onClick: ({ key }) => {
-                        switch (key) {
-                          case 'pathTemplate':
-                            handleSkipPluginDebuggerPage('path')
-                            break
-                          case 'rawTemplate':
-                            handleSkipPluginDebuggerPage('raw')
-                            break
-                          default:
-                            break
-                        }
-                      },
-                    }}
-                    dropdown={{
-                      trigger: ['click'],
-                      placement: 'bottom',
-                    }}
-                  >
-                    <FuncBtn
-                      maxWidth={1600}
-                      type="primary"
-                      icon={<OutlineCodeIcon />}
-                      name={t('HTTPFuzzerPage.generateYamlTemplate')}
-                      tooltipPlacement="topRight"
-                    />
-                  </YakitDropdownMenu>
                 </div>
               </div>
-              <YakitResizeBox
-                firstMinSize={380}
-                secondMinSize={500}
-                isShowDefaultLineStyle={false}
-                style={{ overflow: 'hidden' }}
-                lineStyle={{ display: firstFull || secondFull ? 'none' : '' }}
-                secondNodeStyle={{ padding: firstFull ? 0 : undefined, display: firstFull ? 'none' : '' }}
-                firstNodeStyle={{ padding: secondFull ? 0 : undefined, display: secondFull ? 'none' : '' }}
-                {...ResizeBoxProps}
-                firstNode={
-                  <div ref={firstNodeRef} style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
-                    <WebFuzzerNewEditor
-                      ref={webFuzzerNewEditorRef}
-                      refreshTrigger={refreshTrigger}
-                      casualEditorApplyNonce={casualEditorApplyNonce}
-                      request={requestRef.current}
-                      setRequest={onSetRequest}
-                      hex={hex}
-                      isHttps={advancedConfigValue.isHttps}
-                      hotPatchCode={hotPatchCodeRef.current}
-                      hotPatchCodeWithParamGetter={hotPatchCodeWithParamGetterRef.current}
-                      setHotPatchCode={setHotPatchCode}
-                      setHotPatchCodeWithParamGetter={setHotPatchCodeWithParamGetter}
-                      firstNodeExtra={firstNodeExtra}
-                      pageId={props.id}
-                      oneResponseValue={
-                        onlyOneResponse
-                          ? {
-                              originValue: Uint8ArrayToString(httpResponse.ResponseRaw),
-                              originalPackage: httpResponse.ResponseRaw,
-                            }
-                          : undefined
-                      }
-                      privacy={privacy}
-                    />
-                    {casualReviewQueue[0] ? (
-                      <WebFuzzerCasualReplaceReviewOverlay
-                        roundKey={casualReviewQueue[0].id}
-                        payload={casualReviewQueue[0].payload}
-                        onApplyRound={onCasualRoundApplyMerged}
-                      />
-                    ) : null}
-                  </div>
-                }
-                secondNode={
-                  <div ref={secondNodeRef} style={{ height: '100%', overflow: 'hidden' }}>
-                    <div
-                      className={classNames(styles['resize-card'], styles['resize-card-second'])}
-                      style={{ display: firstFull ? 'none' : '' }}
-                    >
-                      <PluginTabs
-                        tabPosition="right"
-                        activeKey={responseSource}
-                        onChange={(key) => setResponseSource(key === 'ai' ? 'ai' : 'manual')}
-                      >
-                        <PluginTabs.TabPane
-                          tab={t('HTTPFuzzerPage.responseTabManual')}
-                          key="manual"
-                          disabled={cachedTotal === 0 && !loading}
-                        >
-                          {onlyOneResponse ? (
-                            <div style={{ height: '100%', overflow: 'hidden' }}>
-                              <ResponseViewer
-                                pageId={props.id}
-                                keepSearchName="fuzzer-response"
-                                isHttps={advancedConfigValue.isHttps}
-                                ref={responseViewerRef}
-                                fuzzerResponse={httpResponse}
-                                request={requestRef.current}
-                                defaultResponseSearch={defaultResponseSearch}
-                                system={props.system}
-                                showMatcherAndExtraction={showMatcherAndExtraction}
-                                setShowMatcherAndExtraction={setShowMatcherAndExtraction}
-                                showExtra={showExtra}
-                                setShowExtra={setShowExtra}
-                                matcherValue={{
-                                  matchersList: advancedConfigValue.matchers || [],
-                                }}
-                                extractorValue={{
-                                  extractorList: advancedConfigValue.extractors || [],
-                                }}
-                                defActiveKey={activeKey}
-                                defActiveType={activeType}
-                                defActiveKeyAndOrder={defActiveKeyAndOrder}
-                                onSaveMatcherAndExtraction={(matcher, extractor) => {
-                                  setAdvancedConfigValue({
-                                    ...advancedConfigValue,
-                                    matchers: matcher.matchersList,
-                                    extractors: extractor.extractorList,
-                                  })
-                                }}
-                                webFuzzerValue={requestRef.current}
-                                showResponseInfoSecondEditor={showResponseInfoSecondEditor}
-                                setShowResponseInfoSecondEditor={setShowResponseInfoSecondEditor}
-                                secondNodeTitle={secondNodeTitle}
-                                secondNodeExtra={secondNodeExtra}
-                                onSetOnlyOneResEditor={setOnlyOneResEditor}
-                                loading={loading}
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
-                            >
-                              <div className={classNames(styles['resize-card-heard'])}>
-                                <div className={styles['resize-card-heard-title']}>{secondNodeTitle()}</div>
-                                <div className={styles['resize-card-heard-extra']}></div>
-                                {secondNodeExtra()}
-                              </div>
-                              <div style={{ flex: 1, minHeight: 0 }}>
-                                {cachedTotal >= 1 ? (
-                                  <>
-                                    {showSuccess === 'true' && (
-                                      <HTTPFuzzerPageTable
-                                        // onSendToWebFuzzer={onSendToWebFuzzer}
-                                        success={true}
-                                        data={successFuzzer}
-                                        setExportData={setExportData}
-                                        query={query}
-                                        setQuery={setQuery}
-                                        extractedMap={extractedMap}
-                                        isEnd={loading}
-                                        pageId={props.id}
-                                        moreLimtAlertMsg={moreLimtAlertMsg}
-                                        noMoreLimtAlertMsg={noMoreLimtAlertMsg}
-                                        fuzzerTableMaxData={fuzzerTableMaxData}
-                                        hasExtractorRules={hasExtractorRules}
-                                      />
-                                    )}
-                                    {showSuccess === 'false' && (
-                                      <HTTPFuzzerPageTable
-                                        success={false}
-                                        data={failedFuzzer}
-                                        query={query}
-                                        setQuery={setQuery}
-                                        isEnd={loading}
-                                        extractedMap={extractedMap}
-                                        pageId={props.id}
-                                      />
-                                    )}
-                                    {showSuccess === 'Concurrent/Load' && (
-                                      <div
-                                        style={{
-                                          height: '100%',
-                                          overflowY: 'auto',
-                                          overflowX: 'hidden',
-                                        }}
-                                        key={i18n.language}
-                                      >
-                                        <FuzzerConcurrentLoad
-                                          inViewportCurrent={inViewport && currentFuzzerPage}
-                                          fuzzerResChartData={fuzzerResChartData}
-                                        />
-                                      </div>
-                                    )}
-                                  </>
-                                ) : (
-                                  <Result
-                                    status={'warning'}
-                                    title={t('HTTPFuzzerPage.editAndSendRequest')}
-                                    subTitle={
-                                      <div>
-                                        {t('HTTPFuzzerPage.fuzzTestResultsInfo')}
-                                        {skipSaveHTTPFlow ? (
-                                          <>
-                                            {t('HTTPFuzzerPage.responseLimitExceeded')}
-                                            <YakitButton
-                                              type="text"
-                                              icon={<OutlineCogIcon />}
-                                              style={{
-                                                padding: 0,
-                                                height: 'auto',
-                                                verticalAlign: 'top',
-                                              }}
-                                              onClick={() => {
-                                                emiter.emit(
-                                                  'menuOpenPage',
-                                                  JSON.stringify({
-                                                    route: YakitRoute.Beta_ConfigNetwork,
-                                                  }),
-                                                )
-                                              }}
-                                            >
-                                              {t('HTTPFuzzerPage.saveHttpTrafficSettings')}
-                                            </YakitButton>
-                                          </>
-                                        ) : (
-                                          ''
-                                        )}
-                                      </div>
-                                    }
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </PluginTabs.TabPane>
-                        <PluginTabs.TabPane
-                          tab={t('HTTPFuzzerPage.responseTabAi')}
-                          key="ai"
-                          disabled={allAiFuzzRuntimeIds.length === 0}
-                        >
-                          {/* AI tab：thin header 承载标题 + 放大/收起按钮，复用 secondFull 状态与手动 tab 共享布局切换 */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              height: '100%',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <div className={classNames(styles['resize-card-heard'])}>
-                              <div className={styles['resize-card-heard-title']}>{t('HTTPFuzzerPage.aiTabTitle')}</div>
-                              <div className={styles['resize-card-heard-extra']}></div>
-                              <div className={styles['resize-card-icon']} onClick={() => setSecondFull(!secondFull)}>
-                                {secondFull ? <ArrowsRetractIcon /> : <ArrowsExpandIcon />}
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                              {effectiveAiRuntimeId ? (
-                                <HTTPFlowRealTimeTableAndEditor
-                                  key={effectiveAiRuntimeId}
-                                  wrapperStyle={{ padding: 0 }}
-                                  pageType="Plugin"
-                                  runtimeId={effectiveAiRuntimeId}
-                                  params={{ SourceType: 'scan' }}
-                                  filterTagDom={aiFilterTagDom}
-                                  defaultExcludeColumnsKey={aiFuzzTableExcludeColumnsKey}
-                                  httpHistoryTableTitleStyle={{
-                                    paddingTop: 12,
-                                    paddingLeft: 8,
-                                    paddingRight: 8,
-                                  }}
-                                  showSourceType={false}
-                                  showAdvancedSearch={false}
-                                  showProtocolType={false}
-                                  showColorSwatch={false}
-                                  showDelAll={false}
-                                  showBatchActions={false}
-                                  showFlod={false}
-                                  showHistoryAnalysisBtn
-                                  onHistoryAnalysisClick={jumpHTTPHistoryAnalysis}
-                                  titleHeight={47}
-                                />
-                              ) : null}
-                            </div>
-                          </div>
-                        </PluginTabs.TabPane>
-                      </PluginTabs>
-                    </div>
-                  </div>
-                }
-              />
-            </div>
+            </section>
           }
         />
         <React.Suspense fallback={<>loading...</>}>
@@ -3243,7 +3265,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             setVisible={setVisibleDrawer}
           />
         </React.Suspense>
-      </div>
+      </main>
       {renderHistoryAnalysis()}
     </>
   )

@@ -1,0 +1,84 @@
+.fuzzer-results-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fuzzer-results-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fuzzer-results-body {
+  flex: 1;
+  height: 100%;
+  overflow: auto;
+  padding: 8px;
+}
+
+.fuzzer-results-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.fuzzer-results-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  background-color: var(--Colors-Use-Neutral-Bg);
+  cursor: pointer;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--Colors-Use-Main-Primary);
+    background-color: var(--Colors-Use-Neutral-Bg-Hover);
+  }
+}
+
+.fuzzer-results-grid-item-ok {
+  border-left: 3px solid var(--Colors-Use-Success-Primary, var(--Colors-Use-Main-Primary));
+}
+
+.fuzzer-results-grid-item-err {
+  border-left: 3px solid var(--Colors-Use-Error-Primary);
+}
+
+.fuzzer-results-grid-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fuzzer-results-grid-item-status {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--Colors-Use-Main-Primary);
+  min-width: 36px;
+}
+
+.fuzzer-results-grid-item-host {
+  font-size: 12px;
+  color: var(--Colors-Use-Neutral-Text-1-Title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.fuzzer-results-grid-item-body {
+  margin: 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
