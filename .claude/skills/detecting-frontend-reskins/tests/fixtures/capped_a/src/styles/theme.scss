@@ -1,0 +1,20 @@
+:root {
+  --Nova-Bg-Deep: #0a1929;
+  --Nova-Accent-Cyan: #0ea5e9;
+  --Nova-Grid-Gap: 12px;
+}
+.nova-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--Nova-Grid-Gap);
+  background: var(--Nova-Bg-Deep);
+}
+.nova-card {
+  color: var(--Nova-Accent-Cyan);
+  font-family: 'Inter', sans-serif;
+}
+@media (min-width: 1280px) {
+  .nova-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

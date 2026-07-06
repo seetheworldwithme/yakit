@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Reskin Guide"
+  short_description: "Plan frontend reskin divergence with audit evidence"
+  default_prompt: "Use $detecting-frontend-reskins to compare my source and reskinned frontend projects, then produce the next transformation checklist."

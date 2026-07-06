@@ -1,0 +1,26 @@
+:root {
+  --App-Color-Primary: #1890ff;
+  --App-Color-Bg: #ffffff;
+  --App-Spacing-Base: 8px;
+}
+.home-wrapper {
+  padding: 16px;
+  background: var(--App-Color-Bg);
+}
+.home-header {
+  display: flex;
+  justify-content: space-between;
+}
+.home-nav a {
+  margin-right: 12px;
+  color: var(--App-Color-Primary);
+}
+.home-footer {
+  margin-top: 24px;
+  font-size: 12px;
+}
+@media (max-width: 768px) {
+  .home-nav {
+    display: none;
+  }
+}

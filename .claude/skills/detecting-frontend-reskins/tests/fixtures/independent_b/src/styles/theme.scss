@@ -1,0 +1,20 @@
+:root {
+  --Apollo-Surface-Main: #f7f9fc;
+  --Apollo-Brand-Emerald: #16a34a;
+  --Apollo-Stack-Space: 16px;
+}
+.apollo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--Apollo-Stack-Space);
+  background: var(--Apollo-Surface-Main);
+}
+.apollo-block {
+  border-left: 3px solid var(--Apollo-Brand-Emerald);
+  font-family: 'Source Han Sans', sans-serif;
+}
+@media (max-width: 600px) {
+  .apollo-stack {
+    gap: 8px;
+  }
+}

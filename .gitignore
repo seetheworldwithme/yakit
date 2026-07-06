@@ -61,7 +61,13 @@ yarn.lock
 .serena/
 .ci-changed-files-list.txt
 pr-ci-changed-files-list.txt
-.agents
-.claude
+# agent 工具链（.agents/.claude）纳入版本控制；仅本机权限配置不入库
+.claude/settings.local.json
+# 嵌套 git 仓库（如第三方 clone 的 skill）以普通文件入库，不作为子模块
+**/.git/
+**/.git
+# python 缓存
+__pycache__/
+*.py[cod]
 # graphify 知识图谱（本地生成产物，不入库）
 graphify-out/

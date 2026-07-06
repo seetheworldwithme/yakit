@@ -1,0 +1,22 @@
+:root {
+  --Brand-Tone-Accent: #722ed1;
+  --Brand-Tone-Surface: #fafafa;
+  --Brand-Spacing-Base: 8px;
+}
+.frame-canvas {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--Brand-Tone-Surface);
+}
+.tab-bar {
+  border-bottom: 1px solid #e8e8e8;
+}
+.stage-title h1 {
+  font-size: 20px;
+}
+@media (min-width: 992px) {
+  .frame-canvas {
+    padding: 24px;
+  }
+}

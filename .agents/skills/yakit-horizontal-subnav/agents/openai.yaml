@@ -1,0 +1,7 @@
+interface:
+  display_name: "Yakit 横向子导航"
+  short_description: "将 Yakit 左侧竖向子导航迁移为顶部横向工具条"
+  default_prompt: "Use $yakit-horizontal-subnav to move a Yakit page sidebar sub-navigation into a horizontal row below workspace tabs."
+
+policy:
+  allow_implicit_invocation: true
