@@ -108,4 +108,4 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 - 遇到代码库相关问题时，若 `graphify-out/graph.json` 存在，**优先**用 `graphify query "<问题>"` 查询；用 `graphify path "<A>" "<B>"` 查两个对象之间的关系，用 `graphify explain "<概念>"` 聚焦某个概念。它们返回的是裁剪后的子图，通常比 `GRAPH_REPORT.md` 或裸 `grep` 结果小得多。
 - 若 `graphify-out/wiki/index.md` 存在，用它做整体导航，优于直接翻源码。
 - 只在「需要整体架构审视」或 query / path / explain 仍提供不了足够上下文时，才读 `graphify-out/GRAPH_REPORT.md`。
-- 改完代码后运行 `graphify update .` 保持图谱最新（仅基于 AST，不消耗 API）。
+- 改完代码后无需运行 `graphify update .`；只有用户明确要求更新图谱时才执行。
