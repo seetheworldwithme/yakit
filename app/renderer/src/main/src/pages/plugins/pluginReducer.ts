@@ -14,7 +14,7 @@ export const initialOnlineState: YakitPluginListOnlineResponse = {
   },
 }
 
-type OnlinePluginType = 'add' | 'update' | 'remove' | 'unLikeAndLike' | 'download' | 'clear'
+type OnlinePluginType = 'add' | 'update' | 'remove' | 'unLikeAndLike' | 'download' | 'clear' | 'page'
 
 // 定义 action 的类型
 export interface OnlinePluginAppAction {
@@ -149,6 +149,22 @@ export const pluginOnlineReducer = (
       }
       return state
 
+    // 整页替换（分页）
+    case 'page':
+      if (!response) return state
+      return {
+        data: (response?.data || []).map((ele) => ({
+          ...ele,
+          starsCountString: thousandthConversion(ele.stars),
+          downloadedTotalString: thousandthConversion(ele.downloaded_total),
+        })),
+        pagemeta: response?.pagemeta || {
+          limit: 20,
+          page: 1,
+          total: 0,
+          total_page: 1,
+        },
+      }
     case 'clear':
       return {
         ...cloneDeep(initialOnlineState),

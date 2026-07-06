@@ -3,6 +3,8 @@ import { useMemoizedFn, useDebounceFn, useUpdateEffect, useInViewport } from 'ah
 import { OutlineTrashIcon, OutlineRefreshIcon, OutlineClouddownloadIcon, OutlinePlusIcon } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
+import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
+import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { RemotePluginGV } from '@/enums/plugin'
 import { PluginSearchParams, PluginListPageMeta, PluginFilterParams } from '@/pages/plugins/baseTemplateType'
 import { defaultSearch } from '@/pages/plugins/builtInData'
@@ -22,18 +24,9 @@ import {
 import { getRemoteValue } from '@/utils/kv'
 import { yakitNotify } from '@/utils/notification'
 import cloneDeep from 'lodash/cloneDeep'
-import useListenWidth from '../hooks/useListenWidth'
-import { HubButton } from '../hubExtraOperate/funcTemplate'
+import { formatDate } from '@/utils/timeUtil'
 import { NoPromptHint } from '../utilsUI/UtilsTemplate'
-import {
-  HubOuterList,
-  HubGridList,
-  HubGridOpt,
-  HubListFilter,
-  OwnOptFooterExtra,
-  HubDetailList,
-  HubDetailListOpt,
-} from './funcTemplate'
+import { HubOuterList, OwnOptFooterExtra, HubDetailList, HubDetailListOpt } from './funcTemplate'
 import { useStore } from '@/store'
 import { OnlineJudgment } from '@/pages/plugins/onlineJudgment/OnlineJudgment'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
@@ -45,7 +38,7 @@ import { YakitRoute } from '@/enums/yakitRoute'
 import { YakitGetOnlinePlugin } from '@/pages/mitm/MITMServerHijacking/MITMPluginLocalList'
 import useGetSetState from '../hooks/useGetSetState'
 import { FilterPopoverBtn } from '@/pages/plugins/funcTemplate'
-import { Tooltip } from 'antd'
+import { Table, Tooltip } from 'antd'
 import { SolidPrivatepluginIcon } from '@/assets/icon/colors'
 import { statusTag } from '@/pages/plugins/baseTemplate'
 import { DefaultOnlinePlugin, PluginOperateHint } from '../defaultConstant'
@@ -66,7 +59,6 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
   const emptyImageTarget = useEmptyImage('search')
 
   const divRef = useRef<HTMLDivElement>(null)
-  const wrapperWidth = useListenWidth(divRef)
   const [inViewPort = true] = useInViewport(divRef)
 
   const userinfo = useStore((s) => s.userInfo)
@@ -81,6 +73,10 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
 
   // 列表无条件下的总数
   const [listTotal, setListTotal] = useState<number>(0)
+
+  // 分页
+  const [pageNum, setPageNum] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(20)
 
   const [filterGroup, setFilterGroup] = useState<API.PluginsSearch[]>([])
 
@@ -154,48 +150,54 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
       .catch(() => {})
   })
 
+  // 拉取指定页（整页替换）
+  const fetchPage = useMemoizedFn(async (page: number, limit: number, reset?: boolean) => {
+    if (loading) return
+    if (reset) {
+      fetchInitTotal()
+      isInitLoading.current = true
+      setShowIndex(0)
+    }
+    setLoading(true)
+
+    const params: PluginListPageMeta = { page, limit }
+    const queryFilter = { ...getFilters() }
+    const queryFearch = { ...getSearch() }
+    const query: PluginsQueryProps = convertPluginsRequestParams(queryFilter, queryFearch, params)
+    try {
+      const res = await apiFetchMineList(query)
+      if (!res.data) res.data = []
+      hasMore.current = page * limit < +res.pagemeta.total
+      dispatch({
+        type: 'page',
+        payload: {
+          response: { ...res },
+        },
+      })
+      if (page === 1) {
+        onCheck(false)
+      }
+    } catch (error) {}
+    setTimeout(() => {
+      isInitLoading.current = false
+      setLoading(false)
+    }, 300)
+  })
+
   const fetchList = useDebounceFn(
     useMemoizedFn(async (reset?: boolean) => {
-      if (loading) return
-      if (reset) {
-        fetchInitTotal()
-        isInitLoading.current = true
-        setShowIndex(0)
-      }
-      setLoading(true)
-
-      const params: PluginListPageMeta = !!reset
-        ? { page: 1, limit: 20 }
-        : {
-            page: response.pagemeta.page + 1,
-            limit: response.pagemeta.limit || 20,
-          }
-
-      const queryFilter = { ...getFilters() }
-      const queryFearch = { ...getSearch() }
-      const query: PluginsQueryProps = convertPluginsRequestParams(queryFilter, queryFearch, params)
-      try {
-        const res = await apiFetchMineList(query)
-        if (!res.data) res.data = []
-        const length = +res.pagemeta.page === 1 ? res.data.length : res.data.length + response.data.length
-        hasMore.current = length < +res.pagemeta.total
-        dispatch({
-          type: 'add',
-          payload: {
-            response: { ...res },
-          },
-        })
-        if (+res.pagemeta.page === 1) {
-          onCheck(false)
-        }
-      } catch (error) {}
-      setTimeout(() => {
-        isInitLoading.current = false
-        setLoading(false)
-      }, 300)
+      if (reset) setPageNum(1)
+      await fetchPage(reset ? 1 : pageNum, pageSize, reset)
     }),
     { wait: 200, leading: true },
   ).run
+
+  // 分页切换
+  const onPaginationChange = useMemoizedFn((page: number, limit: number) => {
+    setPageNum(page)
+    setPageSize(limit)
+    fetchPage(page, limit)
+  })
   /** 滚动更多加载 */
   const onUpdateList = useMemoizedFn((reset?: boolean) => {
     fetchList()
@@ -646,41 +648,100 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
   /** ---------- 详情列表操作 End ---------- */
 
   // 批量的删除和还原
-  const headerExtra = () => {
-    return (
-      <div className={styles['hub-list-header-extra']}>
-        <HubButton
-          width={wrapperWidth}
-          iconWidth={900}
-          icon={<OutlineClouddownloadIcon />}
-          type="outline2"
-          size="large"
-          name={selectedNum > 0 ? t('YakitButton.download') : t('YakitButton.oneClickDownload')}
-          loading={batchDownloadLoading}
-          disabled={listTotal === 0}
-          onClick={onHeaderExtraDownload}
-        />
-        <HubButton
-          width={wrapperWidth}
-          iconWidth={900}
-          icon={<OutlineTrashIcon />}
-          size="large"
-          name={selectedNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
-          disabled={listTotal === 0}
-          loading={batchDelLoading}
-          onClick={onHeaderExtraDel}
-        />
-        <HubButton
-          width={wrapperWidth}
-          iconWidth={900}
-          icon={<SolidPluscircleIcon />}
-          size="large"
-          name={t('HubListOwn.newPlugin')}
-          onClick={onNewPlugin}
-        />
-      </div>
-    )
-  }
+  // 高级筛选-横排单项切换
+  const toggleFilter = useMemoizedFn((groupKey: string, data: API.PluginsSearchData, check: boolean) => {
+    const selected = { ...(filters as Record<string, API.PluginsSearchData[]>) }
+    if (check) selected[groupKey] = [...(selected[groupKey] || []), data]
+    else selected[groupKey] = (selected[groupKey] || []).filter((item) => item.value !== data.value)
+    setFilters({ ...selected })
+  })
+
+  // 表格列定义
+  const tableColumns = useMemo<any[]>(() => {
+    const selectedSet = new Set(selectList.map((item) => item.uuid))
+    return [
+      {
+        title: () => (
+          <YakitCheckbox
+            indeterminate={!allChecked && selectList.length > 0}
+            checked={allChecked}
+            onChange={(e) => onCheck(e.target.checked)}
+          />
+        ),
+        dataIndex: 'uuid',
+        width: 44,
+        render: (_: any, record: YakitPluginOnlineDetail) => (
+          <YakitCheckbox
+            checked={allChecked || selectedSet.has(record.uuid)}
+            onChange={(e) => optCheck(record, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      },
+      {
+        title: t('HubListLocal.pluginName'),
+        dataIndex: 'script_name',
+        ellipsis: true,
+        render: (text: string) => <span className={styles['col-name-text']}>{text || '-'}</span>,
+      },
+      {
+        title: t('HubListLocal.tag'),
+        dataIndex: 'tags',
+        width: 220,
+        render: (tags: string) => {
+          const arr = (tags || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+          if (!arr.length) return <span className={styles['col-placeholder']}>-</span>
+          return (
+            <div className={styles['col-tags']}>
+              {arr.slice(0, 4).map((tg) => (
+                <YakitTag key={tg} color="info">
+                  {tg}
+                </YakitTag>
+              ))}
+              {arr.length > 4 && <span className={styles['col-tags-more']}>+{arr.length - 4}</span>}
+            </div>
+          )
+        },
+      },
+      {
+        title: t('HubListLocal.pluginDesc'),
+        dataIndex: 'help',
+        ellipsis: true,
+        render: (text: string) => (
+          <Tooltip title={text || ''} overlayClassName="plugins-tooltip">
+            <span className={styles['col-desc']}>{text || '-'}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: t('HubListLocal.createdAt'),
+        dataIndex: 'updated_at',
+        width: 160,
+        render: (ts?: number) => (ts ? formatDate(ts) : '-'),
+      },
+      {
+        title: t('HubListLocal.operation'),
+        width: 120,
+        render: (_: any, record: YakitPluginOnlineDetail) => (
+          <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
+            <Tooltip title={t('YakitButton.download')} overlayClassName="plugins-tooltip">
+              <YakitButton
+                type="text2"
+                icon={<OutlineClouddownloadIcon />}
+                onClick={() => onFooterExtraDownload(record)}
+              />
+            </Tooltip>
+            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
+              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
+            </Tooltip>
+          </div>
+        ),
+      },
+    ]
+  }, [allChecked, selectList, t])
   // 单项副标题
   const optSubTitle = useMemoizedFn((info: YakitPluginOnlineDetail) => {
     return <>{info.is_private ? <SolidPrivatepluginIcon /> : statusTag[`${info.status}`]}</>
@@ -701,8 +762,8 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
   }
 
   return (
-    <div
-      className={classNames(styles['plugin-hub-tab-list'], {
+    <section
+      className={classNames(styles['plugin-hub-tab-list'], styles['plugin-hub-local-shell'], {
         [styles['plugin-hub-tab-detail-list']]: isDetailList && !hiddenDetailList && !isLogin,
       })}
     >
@@ -712,84 +773,127 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
           spinning={loading && isInitLoading.current}
         >
           <div className={styles['outer-list']}>
-            <div className={classNames(styles['list-filter'], { [styles['hidden-view']]: hiddenFilter })}>
-              <HubListFilter
-                groupList={filterGroup}
-                selecteds={filters as Record<string, API.PluginsSearchData[]>}
-                onSelect={setFilters}
-              />
-            </div>
+            <div className={styles['hub-local-column']}>
+              <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
+                <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
+                <div className={styles['hub-filter-row-groups']}>
+                  {filterGroup.map((group) => {
+                    const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                      []) as API.PluginsSearchData[]
+                    return (
+                      <div className={styles['hub-filter-group']} key={group.groupKey}>
+                        <span className={styles['hub-filter-group-name']}>{group.groupName}</span>
+                        <div className={styles['hub-filter-group-items']}>
+                          {(group.data || []).map((opt) => {
+                            const active = selected.some((s) => s.value === opt.value)
+                            return (
+                              <span
+                                key={opt.value}
+                                className={classNames(styles['hub-filter-chip'], {
+                                  [styles['hub-filter-chip-active']]: active,
+                                })}
+                                onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                              >
+                                <span className={styles['hub-filter-chip-label']}>{opt.label}</span>
+                                {!!opt.count && <em className={styles['hub-filter-chip-count']}>{opt.count}</em>}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
 
-            <div className={styles['list-body']}>
-              <HubOuterList
-                title={t('HubListOwn.myPlugins')}
-                headerExtra={headerExtra()}
-                allChecked={allChecked}
-                setAllChecked={onCheck}
-                total={response.pagemeta.total}
-                selected={selectedNum}
-                search={search}
-                setSearch={setSearch}
-                onSearch={onSearch}
-                filters={filters as Record<string, API.PluginsSearchData[]>}
-                setFilters={setFilters}
-              >
-                {listLength > 0 ? (
-                  <HubGridList
-                    data={response.data}
-                    keyName="uuid"
-                    loading={loading}
-                    hasMore={hasMore.current}
-                    updateList={onUpdateList}
-                    showIndex={showIndex.current}
-                    setShowIndex={setShowIndex}
-                    gridNode={(info) => {
-                      const { index, data } = info
-                      const check = allChecked || selectList.findIndex((ele) => ele.uuid === data.uuid) !== -1
-                      return (
-                        <HubGridOpt
-                          order={index}
-                          info={data}
-                          checked={check}
-                          onCheck={optCheck}
-                          title={data.script_name}
-                          type={data.type}
-                          tags={data.tags}
-                          help={data.help || ''}
-                          img={data.head_img || ''}
-                          user={data.authors || ''}
-                          prImgs={(data.collaborator || []).map((ele) => ele.head_img)}
-                          time={data.updated_at}
-                          isCorePlugin={!!data.isCorePlugin}
-                          official={!!data.official}
-                          subTitle={optSubTitle}
-                          extraFooter={extraFooter}
-                          onClick={onOptClick}
-                        />
-                      )
-                    }}
-                  />
-                ) : listTotal > 0 ? (
-                  <YakitEmpty
-                    image={emptyImageTarget}
-                    imageStyle={{ margin: '0 auto 24px', width: 274, height: 180 }}
-                    title={t('YakitEmpty.searchEmpty')}
-                    className={styles['hub-list-empty']}
-                  />
-                ) : (
-                  <div className={styles['hub-list-empty']}>
-                    <YakitEmpty title={t('YakitEmpty.noData')} description={t('HubListOwn.noDataDesc')} />
-                    <div className={styles['refresh-buttons']}>
-                      <YakitButton type="outline1" icon={<OutlinePlusIcon />} onClick={onNewPlugin}>
+              <main className={styles['list-body']}>
+                <HubOuterList
+                  title={t('HubListOwn.myPlugins')}
+                  headerExtra={
+                    <div className={styles['hub-list-header-extra']}>
+                      <YakitButton type="primary" icon={<SolidPluscircleIcon />} onClick={onNewPlugin}>
                         {t('HubListOwn.newPlugin')}
                       </YakitButton>
-                      <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefresh}>
-                        {t('YakitButton.refresh')}
+                      <YakitButton
+                        type="outline2"
+                        size="large"
+                        icon={<OutlineClouddownloadIcon />}
+                        loading={batchDownloadLoading}
+                        disabled={listTotal === 0}
+                        onClick={onHeaderExtraDownload}
+                      >
+                        {selectedNum > 0 ? t('YakitButton.download') : t('YakitButton.oneClickDownload')}
+                      </YakitButton>
+                      <YakitButton
+                        type="outline2"
+                        size="large"
+                        icon={<OutlineTrashIcon />}
+                        disabled={listTotal === 0}
+                        loading={batchDelLoading}
+                        onClick={onHeaderExtraDel}
+                      >
+                        {selectedNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
                       </YakitButton>
                     </div>
-                  </div>
-                )}
-              </HubOuterList>
+                  }
+                  allChecked={allChecked}
+                  setAllChecked={onCheck}
+                  total={response.pagemeta.total}
+                  selected={selectedNum}
+                  search={search}
+                  setSearch={setSearch}
+                  onSearch={onSearch}
+                  filters={filters as Record<string, API.PluginsSearchData[]>}
+                  setFilters={setFilters}
+                >
+                  {listLength > 0 ? (
+                    <div className={styles['hub-local-table-wrap']}>
+                      <Table<YakitPluginOnlineDetail>
+                        rowKey="uuid"
+                        size="small"
+                        columns={tableColumns}
+                        dataSource={response.data}
+                        pagination={{
+                          current: pageNum,
+                          pageSize: pageSize,
+                          total: +response.pagemeta.total || 0,
+                          showSizeChanger: true,
+                          pageSizeOptions: ['10', '20', '50', '100'],
+                          onChange: onPaginationChange,
+                        }}
+                        scroll={{ y: 'calc(100vh - 320px)', x: 'max-content' }}
+                        loading={loading}
+                        onRow={(record) => {
+                          const idx = (response.data || []).findIndex((ele) => ele.uuid === record.uuid)
+                          return {
+                            onClick: () => onOptClick(record, idx),
+                            className: styles['hub-local-table-row'],
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : listTotal > 0 ? (
+                    <YakitEmpty
+                      image={emptyImageTarget}
+                      imageStyle={{ margin: '0 auto 24px', width: 274, height: 180 }}
+                      title={t('YakitEmpty.searchEmpty')}
+                      className={styles['hub-list-empty']}
+                    />
+                  ) : (
+                    <div className={styles['hub-list-empty']}>
+                      <YakitEmpty title={t('YakitEmpty.noData')} description={t('HubListOwn.noDataDesc')} />
+                      <div className={styles['refresh-buttons']}>
+                        <YakitButton type="outline1" icon={<OutlinePlusIcon />} onClick={onNewPlugin}>
+                          {t('HubListOwn.newPlugin')}
+                        </YakitButton>
+                        <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefresh}>
+                          {t('YakitButton.refresh')}
+                        </YakitButton>
+                      </div>
+                    </div>
+                  )}
+                </HubOuterList>
+              </main>
             </div>
           </div>
         </YakitSpin>
@@ -907,6 +1011,6 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
         cacheKey={RemotePluginGV.SingleDownloadPluginSameNameOverlay}
         onCallback={handleSingleSameNameHint}
       />
-    </div>
+    </section>
   )
 })
