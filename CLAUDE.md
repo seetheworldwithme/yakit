@@ -93,11 +93,23 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 ### 提交策略
 - **测试通过即 commit，无需问**：换皮改动只要满足「构建无报错（`tsc` / 启动无错）+ 功能正常（`regression-check.py` 过 / 关键页可点）+ 视觉走查通过」就直接 `git commit`，**不必停下来征求确认**。各 phase 的「Commit」步骤按此执行。
 - **直接在 `main` 上开发并提交**：**不走 feature 分支**，所有改动落在 `main`；验证通过即 `git commit` 并 `git push` 到远端 `main`。推远端是 outward 操作，push 前确认分支与暂存范围无误。
+- **多窗口并行模式**：可多开 Claude Code 窗口在**同目录同分支(`main`)** 并行改造，关键是**文件不交叉**。每个窗口**只 `git add <自己改的具体文件>`**，**严禁 `git add -A` / `git commit -am` / `git add .`**（会捞走别的窗口半成品）；提交时机错开；共享文件（`package.json` / `tsconfig.json` / `theme/sentinelTheme.ts` / 全局 scss）只由指定窗口动。详见执行手册 §1。
 - 仍遵守：外科式改动 + 只动 UI 不动逻辑；提交前自查不卷入无关 WIP。
 
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
 - `sentinel-rebrand`：按 spec 做系统性换皮改造（组件塑形 / 布局重排）。
+- `detecting-frontend-reskins`：审计本项目与原版 yakit 的**源码相似度**（独立性得分，目标 ≥70）。改完 UI 后用它复跑看分数趋势。命令：`python3 .claude/skills/detecting-frontend-reskins/scripts/reskin_audit.py /Volumes/coding/application/yakit /Volumes/coding/application/yakit-update-ui --output /tmp/ra --format md --lang zh`。
+
+### 反换皮改造（竞标向，进行中）
+> 与 Sentinel 视觉换皮是**两条腿**：视觉换皮改"长相"，反换皮改"源码指纹"（让审计/bidder 看不出与原版 yakit 同源）。两者都做，但别混淆——**仅改样式/文案不降反换皮分数，必须改 JSX 结构/类名/文件组织才降**。
+
+- **执行手册（唯一事实源）**：`docs/换皮修改/反换皮改造执行手册.md`——71 页布局重构 + 依赖/目录/token 的**可粘贴 prompt 清单**，按优先级分阶段（A 串行 → B 并行 → C 并行）。**新开窗口照此手册执行**，粘 §2 通用开场白 + 对应任务块即可。
+- **审计基线**：37.93 / 100（2026-07-06 14:05 报告，identity 已解锁）。历史报告归档 `docs/换皮检查报告/`。
+- **identity 已解锁（勿回退）**：`package.json` version 已升 `2.x`（原 `1.x`）以解除审计「name+主版本相同 → 钳制 ≤39」override。**勿回退到 1.x**。`name` 仍为 yakit（改 name 影响 electron-builder appId / 数据目录，未动）。
+- **改 UI 时同步打散源码指纹**：除视觉外，务必打散 **JSX 标签序列**（栏位互换 / 双栏↔栅格 / `div`→语义标签 `section/main/nav` / 容器拆分重命名 / 拆子组件文件）+ 重命名 class——这些才降审计分。
+- **metric 口径**：layout 维度按文件**可见度加权**（`pages/layout/shell`/入口权重 3，`utils/hooks/store/services` 权重 0.3，普通组件 1）。改一个可见页面分数会**线性下降**；改 utils 几乎不动分。优先改门面页。
+- **P0 已完成的重命名**（新窗口读到旧名时对应过来）：`UILayout→SentinelShell`、`NewApp→SentinelWorkspace`、`ChildNewApp→SentinelChildWindow`、`AuxXterm→SentinelTerminal`、`ConcurrentStreamSkeleton→SentinelStreamSkeleton`、`ResizeLine→SentinelSplitter`。i18n key `t('UILayout.*')`/`t('NewApp.*')` 是翻译键，**保留不动**。
 
 注意，在回答之前，一定要说：好的，徐先生。
 
