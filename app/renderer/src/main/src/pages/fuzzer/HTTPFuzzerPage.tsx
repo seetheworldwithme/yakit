@@ -26,6 +26,7 @@ import {
 import { getRemoteValue, setRemoteValue } from '../../utils/kv'
 import { HTTPFuzzerHistorySelector, HTTPFuzzerTaskDetail } from './HTTPFuzzerHistory'
 import { HTTPFuzzerHotPatchSidebar, HotCodeTemplate, HotPatchTempItem } from './HTTPFuzzerHotPatch'
+import { HTTPFuzzerResultsCard } from './HTTPFuzzerResultsCard'
 import { exportHTTPFuzzerResponse, exportPayloadResponse, exportExtractedDataResponse } from './HTTPFuzzerPageExport'
 import { StringToUint8Array, Uint8ArrayToString } from '../../utils/str'
 import { PacketScanButton } from '@/pages/packetScanner/DefaultPacketScanGroup'
@@ -911,6 +912,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
   const fuzzerTableMaxDataRef = useRef<number>(fuzzerTableMaxData)
 
   const [visibleDrawer, setVisibleDrawer] = useState<boolean>(false)
+  const [historyDockVisible, setHistoryDockVisible] = useState<boolean>(true)
   const [pluginDebugCode, setPluginDebugCode] = useState<string>('')
 
   const [onlyOneResEditor, setOnlyOneResEditor] = useState<IMonacoEditor>()
@@ -1998,8 +2000,8 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
   const [secondFull, setSecondFull] = useState<boolean>(false)
   const ResizeBoxProps = useCreation(() => {
     let p = {
-      firstRatio: '50%',
-      secondRatio: '50%',
+      firstRatio: '46%',
+      secondRatio: '54%',
     }
     if (secondFull) {
       p.firstRatio = '0%'
@@ -2832,30 +2834,14 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       }}
                     />
                   </Tooltip>
-                  <YakitPopover
-                    trigger={'click'}
-                    placement={'rightTop'}
-                    destroyTooltipOnHide={true}
-                    content={
-                      <div style={{ width: 400 }}>
-                        <HTTPFuzzerHistorySelector
-                          currentSelectId={currentSelectId}
-                          onSelect={(e, page, showAll) => {
-                            cancelCurrentHTTPFuzzer()
-                            if (!showAll) setCurrentPage(page)
-                            loadHistory(e)
-                          }}
-                          onDeleteAllCallback={() => {
-                            setCurrentPage(0)
-                            getTotal()
-                          }}
-                          fuzzerTabIndex={props.id}
-                        />
-                      </div>
-                    }
-                  >
-                    <YakitButton className={styles['fuzzer-rail-btn']} type="text" icon={<ClockIcon />} />
-                  </YakitPopover>
+                  <Tooltip title={t('YakitButton.history')} placement="right">
+                    <YakitButton
+                      className={styles['fuzzer-rail-btn']}
+                      type={historyDockVisible ? 'primary' : 'text'}
+                      icon={<ClockIcon />}
+                      onClick={() => setHistoryDockVisible((visible) => !visible)}
+                    />
+                  </Tooltip>
                 </aside>
                 <div className={styles['fuzzer-stage']}>
                   <header className={styles['fuzzer-heard']}>
@@ -2988,9 +2974,10 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                     </section>
                   </header>
                   <YakitResizeBox
+                    isVer={true}
                     lineDirection="bottom"
-                    firstMinSize={160}
-                    secondMinSize={180}
+                    firstMinSize={220}
+                    secondMinSize={220}
                     isShowDefaultLineStyle={false}
                     style={{ overflow: 'hidden' }}
                     lineStyle={{ display: firstFull || secondFull ? 'none' : '' }}
@@ -2998,7 +2985,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                     firstNodeStyle={{ padding: secondFull ? 0 : undefined, display: secondFull ? 'none' : '' }}
                     {...ResizeBoxProps}
                     firstNode={
-                      <section ref={firstNodeRef} style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+                      <section ref={firstNodeRef} className={styles['fuzzer-request-panel']}>
                         <WebFuzzerNewEditor
                           ref={webFuzzerNewEditorRef}
                           refreshTrigger={refreshTrigger}
@@ -3033,13 +3020,17 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       </section>
                     }
                     secondNode={
-                      <section ref={secondNodeRef} style={{ height: '100%', overflow: 'hidden' }}>
+                      <section ref={secondNodeRef} className={styles['fuzzer-response-panel']}>
                         <article
-                          className={classNames(styles['resize-card'], styles['resize-card-second'])}
+                          className={classNames(
+                            styles['resize-card'],
+                            styles['resize-card-second'],
+                            styles['fuzzer-response-card'],
+                          )}
                           style={{ display: firstFull ? 'none' : '' }}
                         >
                           <PluginTabs
-                            tabPosition="right"
+                            tabPosition="top"
                             activeKey={responseSource}
                             onChange={(key) => setResponseSource(key === 'ai' ? 'ai' : 'manual')}
                           >
@@ -3102,37 +3093,9 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                                     <div className={styles['resize-card-heard-extra']}></div>
                                     {secondNodeExtra()}
                                   </div>
-                                  <div style={{ flex: 1, minHeight: 0 }}>
+                                  <div className={styles['fuzzer-response-matrix']}>
                                     {cachedTotal >= 1 ? (
                                       <>
-                                        {showSuccess === 'true' && (
-                                          <HTTPFuzzerPageTable
-                                            // onSendToWebFuzzer={onSendToWebFuzzer}
-                                            success={true}
-                                            data={successFuzzer}
-                                            setExportData={setExportData}
-                                            query={query}
-                                            setQuery={setQuery}
-                                            extractedMap={extractedMap}
-                                            isEnd={loading}
-                                            pageId={props.id}
-                                            moreLimtAlertMsg={moreLimtAlertMsg}
-                                            noMoreLimtAlertMsg={noMoreLimtAlertMsg}
-                                            fuzzerTableMaxData={fuzzerTableMaxData}
-                                            hasExtractorRules={hasExtractorRules}
-                                          />
-                                        )}
-                                        {showSuccess === 'false' && (
-                                          <HTTPFuzzerPageTable
-                                            success={false}
-                                            data={failedFuzzer}
-                                            query={query}
-                                            setQuery={setQuery}
-                                            isEnd={loading}
-                                            extractedMap={extractedMap}
-                                            pageId={props.id}
-                                          />
-                                        )}
                                         {showSuccess === 'Concurrent/Load' && (
                                           <div
                                             style={{
@@ -3147,6 +3110,21 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                                               fuzzerResChartData={fuzzerResChartData}
                                             />
                                           </div>
+                                        )}
+                                        {showSuccess !== 'Concurrent/Load' && (
+                                          <HTTPFuzzerResultsCard
+                                            successResponses={successFuzzer}
+                                            failedResponses={failedFuzzer}
+                                            showSuccess={showSuccess === 'true'}
+                                            setShowSuccess={(value) => {
+                                              setShowSuccess(value ? 'true' : 'false')
+                                              setQuery(undefined)
+                                            }}
+                                            setRequest={(request) => {
+                                              onSetRequest(request)
+                                            }}
+                                            showStatusSwitch={false}
+                                          />
                                         )}
                                       </>
                                     ) : (
@@ -3252,6 +3230,23 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                     }
                   />
                 </div>
+                {historyDockVisible && (
+                  <aside className={styles['fuzzer-history-dock']}>
+                    <HTTPFuzzerHistorySelector
+                      currentSelectId={currentSelectId}
+                      onSelect={(e, page, showAll) => {
+                        cancelCurrentHTTPFuzzer()
+                        if (!showAll) setCurrentPage(page)
+                        loadHistory(e)
+                      }}
+                      onDeleteAllCallback={() => {
+                        setCurrentPage(0)
+                        getTotal()
+                      }}
+                      fuzzerTabIndex={props.id}
+                    />
+                  </aside>
+                )}
               </div>
             </section>
           }

@@ -29,7 +29,9 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 8px 10px;
+  padding: 8px;
+  gap: 8px;
+  background-color: var(--Colors-Use-Neutral-Bg);
 }
 
 .fuzzer-action-rail {
@@ -66,6 +68,77 @@
   align-items: center;
   justify-content: center;
 }
+
+.fuzzer-history-dock {
+  display: flex;
+  flex-direction: column;
+  width: 328px;
+  min-width: 288px;
+  max-width: 360px;
+  flex-shrink: 0;
+  min-height: 0;
+  padding: 8px;
+  border-left: 1px solid var(--Colors-Use-Neutral-Border);
+  background-color: var(--Colors-Use-Basic-Background);
+  overflow: hidden;
+
+  > :global(.ant-card) {
+    height: 100%;
+  }
+
+  :global {
+    .ant-card-body {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: calc(100% - 40px);
+      padding: 8px;
+    }
+  }
+}
+
+.fuzzer-request-panel,
+.fuzzer-response-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.fuzzer-request-panel {
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 6px;
+  background-color: var(--Colors-Use-Basic-Background);
+}
+
+.fuzzer-response-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.fuzzer-response-card {
+  border-radius: 6px;
+  background-color: var(--Colors-Use-Basic-Background);
+
+  :global {
+    .ant-tabs {
+      height: 100%;
+    }
+
+    .ant-tabs-content,
+    .ant-tabs-tabpane {
+      height: 100%;
+      min-height: 0;
+    }
+  }
+}
+
+.fuzzer-response-matrix {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .http-fuzzer-page {
   height: 100%;
   width: 100%;
@@ -88,11 +161,16 @@
   .fuzzer-heard {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border-radius: 6px;
+    background-color: var(--Colors-Use-Basic-Background);
     &-left {
       display: flex;
       align-items: center;
-      // height: 36px;
-      padding-bottom: 12px;
       gap: 8px;
       flex-wrap: wrap;
       .spinning-text {
@@ -124,6 +202,9 @@
     }
     &-right {
       display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
   }
   .fuzzer-firstNode-extra {

@@ -2,12 +2,32 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  :global {
+    .ant-card-head {
+      min-height: 36px;
+      border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+    }
+
+    .ant-card-head-wrapper,
+    .ant-card-extra {
+      min-width: 0;
+    }
+
+    .ant-card-body {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
 }
 
 .fuzzer-results-extra {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .fuzzer-results-body {
@@ -22,7 +42,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
 }
 
@@ -36,6 +56,7 @@
   background-color: var(--Colors-Use-Neutral-Bg);
   cursor: pointer;
   overflow: hidden;
+  min-height: 78px;
 
   &:hover {
     border-color: var(--Colors-Use-Main-Primary);

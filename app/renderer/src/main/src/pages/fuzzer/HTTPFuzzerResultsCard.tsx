@@ -15,6 +15,7 @@ export interface HTTPFuzzerResultsCardProp {
   sendToPlugin?: (request: Uint8Array, isHTTPS: boolean, response?: Uint8Array) => any
   showSuccess: boolean
   setShowSuccess: (b: boolean) => void
+  showStatusSwitch?: boolean
 }
 
 type ResultsViewMode = 'grid' | 'table'
@@ -35,7 +36,7 @@ const briefBody = (r: FuzzerResponse): string => {
 
 export const HTTPFuzzerResultsCard: React.FC<HTTPFuzzerResultsCardProp> = (props) => {
   // const [showSuccess, setShowSuccess] = useState(true);
-  const { showSuccess, setShowSuccess } = props
+  const { showSuccess, setShowSuccess, showStatusSwitch = true } = props
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ResultsViewMode>('grid')
 
@@ -55,10 +56,12 @@ export const HTTPFuzzerResultsCard: React.FC<HTTPFuzzerResultsCardProp> = (props
       className={classNames('flex-card', styles['fuzzer-results-card'])}
       extra={
         <section className={styles['fuzzer-results-extra']}>
-          <Radio.Group value={showSuccess} onChange={(e) => setShowSuccess(e.target.value)} size="small">
-            <Radio.Button value={true}>OK</Radio.Button>
-            <Radio.Button value={false}>Err</Radio.Button>
-          </Radio.Group>
+          {showStatusSwitch && (
+            <Radio.Group value={showSuccess} onChange={(e) => setShowSuccess(e.target.value)} size="small">
+              <Radio.Button value={true}>OK</Radio.Button>
+              <Radio.Button value={false}>Err</Radio.Button>
+            </Radio.Group>
+          )}
           <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} size="small">
             <Radio.Button value="grid">Grid</Radio.Button>
             <Radio.Button value="table">Detail</Radio.Button>
