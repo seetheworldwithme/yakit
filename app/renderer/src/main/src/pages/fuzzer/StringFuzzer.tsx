@@ -266,137 +266,144 @@ export const StringFuzzer = forwardRef<StringFuzzerRef, StringFuzzerProps>((prop
   }
 
   return (
-    <>
-      <div className={styles['stringFuzzer']}>
-        <div className={styles['stringFuzzer-left']}>
-          <YakitSpin spinning={loading} indicator={<></>}>
-            <div className={styles['stringFuzzer-search']}>
-              <YakitInput
-                allowClear
-                prefix={<OutlineSearchIcon className={styles['search-icon']} />}
-                value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
-              ></YakitInput>
-            </div>
-            <div className={styles['stringFuzzer-list']}>
-              {renderList.length > 0 ? (
-                <>
-                  {renderList.map((item) => (
+    <section className={styles.fuzzBuilder}>
+      <aside className={styles.fuzzPalette}>
+        <YakitSpin spinning={loading} indicator={<></>}>
+          <header className={styles.paletteSearch}>
+            <YakitInput
+              allowClear
+              prefix={<OutlineSearchIcon className={styles.paletteSearchIcon} />}
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+            ></YakitInput>
+          </header>
+          <nav className={styles.paletteTags}>
+            {renderList.length > 0 ? (
+              <ul className={styles.tagRoster}>
+                {renderList.map((item) => (
+                  <li className={styles.tagRosterEntry} key={item.VerboseName}>
                     <YakitPopover
                       placement="rightTop"
-                      overlayClassName={styles['stringFuzzer-popover']}
+                      overlayClassName={styles.fuzzPopover}
                       content={
-                        <div className={styles['stringFuzzer-popover-cont']}>
-                          <div className={styles['stringFuzzer-popover-cont-name']}>{item.VerboseName}</div>
-                          <div className={styles['stringFuzzer-popover-cont-Egname']}>{item.Name}</div>
-                          <div className={styles['stringFuzzer-popover-cont-desc']}>
-                            {t('StringFuzzer.description')}
-                            {item.Description}
-                          </div>
-                          <div className={styles['stringFuzzer-popover-cont-example']}>
-                            {t('StringFuzzer.example')}
-                            {item.Examples.join(', ')}
-                          </div>
+                        <div className={styles.fuzzPopoverBody}>
+                          <p className={styles.fuzzPopoverTitle}>{item.VerboseName}</p>
+                          <p className={styles.fuzzPopoverCodename}>
+                            <code>{item.Name}</code>
+                          </p>
+                          <p className={styles.fuzzPopoverDesc}>
+                            <em>{t('StringFuzzer.description')}</em>
+                            <span>{item.Description}</span>
+                          </p>
+                          <p className={styles.fuzzPopoverExample}>
+                            <em>{t('StringFuzzer.example')}</em>
+                            <span>{item.Examples.join(', ')}</span>
+                          </p>
                           {item.ArgumentTypes.length > 0 && (
-                            <>
-                              <div>{t('StringFuzzer.parameter_type_info')}</div>
-                              <table border={1} width="100%" cellPadding={8}>
-                                <tr>
-                                  <th>{t('StringFuzzer.parameter_name')}</th>
-                                  <th>{t('StringFuzzer.default_value')}</th>
-                                  <th>{t('StringFuzzer.description')}</th>
-                                  <th>{t('StringFuzzer.optional_parameter')}</th>
-                                  <th>{t('StringFuzzer.array_parameter')}</th>
-                                  <th>{t('StringFuzzer.delimiter')}</th>
-                                </tr>
-                                {item.ArgumentTypes.map((argItem) => (
-                                  <tr key={argItem.Name}>
-                                    <td>{argItem.Name}</td>
-                                    <td>{argItem.DefaultValue}</td>
-                                    <td>{argItem.Description}</td>
-                                    <td>{argItem.IsOptional + ''}</td>
-                                    <td>{argItem.IsList + ''}</td>
-                                    <td>{argItem.Separators}</td>
-                                  </tr>
-                                ))}
-                              </table>
-                            </>
+                            <div className={styles.paramSheet}>
+                              <div className={styles.paramSheetCaption}>{t('StringFuzzer.parameter_type_info')}</div>
+                              <div className={styles.paramSheetHead}>
+                                <span>{t('StringFuzzer.parameter_name')}</span>
+                                <span>{t('StringFuzzer.default_value')}</span>
+                                <span>{t('StringFuzzer.description')}</span>
+                                <span>{t('StringFuzzer.optional_parameter')}</span>
+                                <span>{t('StringFuzzer.array_parameter')}</span>
+                                <span>{t('StringFuzzer.delimiter')}</span>
+                              </div>
+                              {item.ArgumentTypes.map((argItem) => (
+                                <div className={styles.paramSheetRow} key={argItem.Name}>
+                                  <span>{argItem.Name}</span>
+                                  <span>{argItem.DefaultValue}</span>
+                                  <span>{argItem.Description}</span>
+                                  <span>{argItem.IsOptional + ''}</span>
+                                  <span>{argItem.IsList + ''}</span>
+                                  <span>{argItem.Separators}</span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       }
-                      key={item.VerboseName}
                     >
-                      <div className={styles['stringFuzzer-list-item']}>
-                        <div className={styles['stringFuzzer-list-item-name']}>{item.VerboseName}</div>
-                        <div className={styles['stringFuzzer-list-item-btns']}>
-                          <span className={styles['list-opt-btn']} onClick={() => generateFuzztag('wrap', item)}>
+                      <article className={styles.tagCard}>
+                        <h4 className={styles.tagCardName}>{item.VerboseName}</h4>
+                        <div className={styles.tagCardActions}>
+                          <button
+                            type="button"
+                            className={styles.tagAction}
+                            onClick={() => generateFuzztag('wrap', item)}
+                          >
                             {t('StringFuzzer.nesting')}
-                          </span>
-                          <span className={styles['list-opt-btn']} onClick={() => generateFuzztag('insert', item)}>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.tagAction}
+                            onClick={() => generateFuzztag('insert', item)}
+                          >
                             {t('StringFuzzer.insert')}
-                          </span>
+                          </button>
                         </div>
-                      </div>
+                      </article>
                     </YakitPopover>
-                  ))}
-                </>
-              ) : (
-                <YakitEmpty></YakitEmpty>
-              )}
-            </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <YakitEmpty></YakitEmpty>
+            )}
+          </nav>
+        </YakitSpin>
+      </aside>
+      <main className={styles.fuzzCanvas}>
+        <div className={styles.canvasStage}>
+          <YakitSpin spinning={loading}>
+            <YakitEditor
+              type={'http'}
+              value={template}
+              readOnly={false}
+              setValue={setTemplate}
+              editorDidMount={(editor, monaco) => {
+                setTemplateEditor(editor)
+              }}
+            />
           </YakitSpin>
         </div>
-        <div className={styles['stringFuzzer-right']}>
-          <div className={styles['stringFuzzer-right-editor']}>
-            <YakitSpin spinning={loading}>
-              <YakitEditor
-                type={'http'}
-                value={template}
-                readOnly={false}
-                setValue={setTemplate}
-                editorDidMount={(editor, monaco) => {
-                  setTemplateEditor(editor)
-                }}
-              />
-            </YakitSpin>
-          </div>
-          <div className={styles['stringFuzzer-right-btns']}>
-            {loading ? (
-              <YakitButton type="primary" onClick={handleCancel}>
-                {t('StringFuzzer.cancel')}
+        <footer className={styles.canvasActions}>
+          {loading ? (
+            <YakitButton type="primary" onClick={handleCancel}>
+              {t('StringFuzzer.cancel')}
+            </YakitButton>
+          ) : (
+            <>
+              <YakitButton type="outline2" onClick={onSubmit}>
+                {t('StringFuzzer.viewGeneratedPayload')}
               </YakitButton>
-            ) : (
-              <>
-                <YakitButton type="outline2" onClick={onSubmit}>
-                  {t('StringFuzzer.viewGeneratedPayload')}
-                </YakitButton>
-                {insertCallback && (
-                  <YakitButton
-                    type={'primary'}
-                    onClick={() => {
-                      insertCallback(template)
-                    }}
-                  >
-                    {t('StringFuzzer.insertTagPosition')}
-                  </YakitButton>
-                )}
-                <YakitPopconfirm
-                  title={t('StringFuzzer.confirmResetDictionary')}
-                  onConfirm={() => {
-                    setTemplate('')
+              {insertCallback && (
+                <YakitButton
+                  type={'primary'}
+                  onClick={() => {
+                    insertCallback(template)
                   }}
-                  placement="top"
                 >
-                  <YakitButton type="outline2">{t('YakitButton.reset')}</YakitButton>
-                </YakitPopconfirm>
-                <YakitButton type="outline2" onClick={addToCommonTag}>
-                  {t('StringFuzzer.addToFavoriteTags')}
+                  {t('StringFuzzer.insertTagPosition')}
                 </YakitButton>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
+              )}
+              <YakitPopconfirm
+                title={t('StringFuzzer.confirmResetDictionary')}
+                onConfirm={() => {
+                  setTemplate('')
+                }}
+                placement="top"
+              >
+                <YakitButton type="outline2">{t('YakitButton.reset')}</YakitButton>
+              </YakitPopconfirm>
+              <YakitButton type="outline2" onClick={addToCommonTag}>
+                {t('StringFuzzer.addToFavoriteTags')}
+              </YakitButton>
+            </>
+          )}
+        </footer>
+      </main>
+    </section>
   )
 })

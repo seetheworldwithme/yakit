@@ -63,29 +63,31 @@ const InsertFileFuzzTag: React.FC<InsertFileFuzzTagProp> = (props) => {
         }
       }}
     >
-      <Form.Item label={<></>} colon={false}>
-        <YakitRadioButtons
-          buttonStyle="solid"
-          options={[
-            {
-              value: 'file',
-              label: t('InsertFileFuzzTag.fileContent'),
-            },
-            {
-              value: 'file:line',
-              label: t('InsertFileFuzzTag.readFileByLine'),
-            },
-            {
-              value: 'file:dir',
-              label: t('InsertFileFuzzTag.allInFolder'),
-            },
-          ]}
-          value={mode}
-          onChange={(e) => {
-            setMode(e.target.value)
-          }}
-        />
-      </Form.Item>
+      <section className="insert-file-fuzz-mode">
+        <Form.Item label={<></>} colon={false}>
+          <YakitRadioButtons
+            buttonStyle="solid"
+            options={[
+              {
+                value: 'file',
+                label: t('InsertFileFuzzTag.fileContent'),
+              },
+              {
+                value: 'file:line',
+                label: t('InsertFileFuzzTag.readFileByLine'),
+              },
+              {
+                value: 'file:dir',
+                label: t('InsertFileFuzzTag.allInFolder'),
+              },
+            ]}
+            value={mode}
+            onChange={(e) => {
+              setMode(e.target.value)
+            }}
+          />
+        </Form.Item>
+      </section>
       <YakitFormDragger
         formItemProps={{
           name: 'filename',
@@ -107,11 +109,13 @@ const InsertFileFuzzTag: React.FC<InsertFileFuzzTagProp> = (props) => {
           cacheHistoryDataKey: CacheDropDownGV.WebFuzzerInsertFileFuzzTag,
         }}
       />
-      <Form.Item label={<></>} colon={false}>
-        <YakitButton type="primary" htmlType="submit" size={'large'}>
-          {t('InsertFileFuzzTag.confirmSelection')}
-        </YakitButton>
-      </Form.Item>
+      <footer className="insert-file-fuzz-submit">
+        <Form.Item label={<></>} colon={false}>
+          <YakitButton type="primary" htmlType="submit" size={'large'}>
+            {t('InsertFileFuzzTag.confirmSelection')}
+          </YakitButton>
+        </Form.Item>
+      </footer>
     </Form>
   )
 }
@@ -150,25 +154,27 @@ const InsertTextToFuzzTag: React.FC<InsertFileFuzzTagProp> = (props) => {
           })
       }}
     >
-      <Form.Item colon={false} label={' '}>
-        <YakitRadioButtons
-          buttonStyle="solid"
-          options={[
-            {
-              value: 'file',
-              label: t('InsertTextToFuzzTag.fileContent'),
-            },
-            {
-              value: 'file:line',
-              label: t('InsertTextToFuzzTag.readFileByLine'),
-            },
-          ]}
-          value={mode}
-          onChange={(e) => {
-            setMode(e.target.value)
-          }}
-        />
-      </Form.Item>
+      <section className="insert-text-fuzz-mode">
+        <Form.Item colon={false} label={' '}>
+          <YakitRadioButtons
+            buttonStyle="solid"
+            options={[
+              {
+                value: 'file',
+                label: t('InsertTextToFuzzTag.fileContent'),
+              },
+              {
+                value: 'file:line',
+                label: t('InsertTextToFuzzTag.readFileByLine'),
+              },
+            ]}
+            value={mode}
+            onChange={(e) => {
+              setMode(e.target.value)
+            }}
+          />
+        </Form.Item>
+      </section>
       <InputItem
         label={t('InsertTextToFuzzTag.text')}
         textarea={true}
@@ -176,12 +182,14 @@ const InsertTextToFuzzTag: React.FC<InsertFileFuzzTagProp> = (props) => {
         value={content}
         setValue={setContent}
       />
-      <Form.Item colon={false} label={' '} style={{ textAlign: 'right' }}>
-        <YakitButton type="primary" htmlType="submit" size="large">
-          {' '}
-          {t('InsertTextToFuzzTag.confirmInsertTag')}{' '}
-        </YakitButton>
-      </Form.Item>
+      <footer className="insert-text-fuzz-submit">
+        <Form.Item colon={false} label={' '} style={{ textAlign: 'right' }}>
+          <YakitButton type="primary" htmlType="submit" size="large">
+            {' '}
+            {t('InsertTextToFuzzTag.confirmInsertTag')}{' '}
+          </YakitButton>
+        </Form.Item>
+      </footer>
     </Form>
   )
 }

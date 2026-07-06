@@ -1,13 +1,15 @@
-.stringFuzzer {
+.fuzzBuilder {
   display: flex;
   height: 636px;
-  .stringFuzzer-left {
+  .fuzzPalette {
+    display: flex;
+    flex-direction: column;
     width: 30%;
     border-right: 1px solid var(--Colors-Use-Neutral-Border);
-    .stringFuzzer-search {
-      padding: 8px;
-      padding-bottom: 0;
-      .search-icon {
+    .paletteSearch {
+      flex: 0 0 auto;
+      padding: 8px 8px 0;
+      &Icon {
         color: var(--Colors-Use-Neutral-Text-3-Secondary);
         svg {
           width: 12px;
@@ -18,69 +20,91 @@
         }
       }
     }
-    .stringFuzzer-list {
+    .paletteTags {
+      flex: 1 1 auto;
       overflow-y: auto;
       max-height: 600px;
       padding: 8px;
-      &-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        height: 35px;
-        color: var(--Colors-Use-Neutral-Text-1-Title);
-        &:not(:first-child) {
-          border-top: 1px solid var(--Colors-Use-Neutral-Border);
-        }
-        &:last-child {
-          border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
-        }
-        &:hover {
-          border-color: transparent;
-          background-color: var(--Colors-Use-Neutral-Bg-Hover);
-          & + .stringFuzzer-list-item {
-            border-top-color: transparent;
-          }
-        }
-        &-name {
-          overflow: hidden;
-          padding: 8px;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-        }
-        &-btns {
-          padding: 8px;
-          cursor: pointer;
-          white-space: nowrap;
-          color: var(--Colors-Use-Neutral-Text-4-Help-text);
-          .list-opt-btn {
-            &:hover {
-              color: var(--Colors-Use-Main-Primary);
-            }
-            &:first-of-type {
-              margin-right: 8px;
-            }
-          }
-        }
-      }
     }
   }
-  .stringFuzzer-right {
+  .fuzzCanvas {
+    display: flex;
     flex: 1;
-    &-editor {
-      height: calc(100% - 40px);
+    flex-direction: column;
+    min-width: 0;
+    .canvasStage {
+      flex: 1 1 auto;
+      min-height: 0;
     }
-    &-btns {
+    .canvasActions {
       display: flex;
+      flex: 0 0 auto;
       justify-content: flex-end;
       align-items: center;
       height: 40px;
       padding-right: 8px;
-
       gap: 8px;
     }
   }
 }
-.stringFuzzer-popover {
+
+// tag palette entries — vertical card (title row above, action row below)
+.tagRoster {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  &Entry {
+    &:not(:first-child) {
+      border-top: 1px solid var(--Colors-Use-Neutral-Border);
+    }
+    &:last-child {
+      border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+    }
+  }
+}
+
+.tagCard {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  color: var(--Colors-Use-Neutral-Text-1-Title);
+  cursor: default;
+  &:hover {
+    background-color: var(--Colors-Use-Neutral-Bg-Hover);
+  }
+  &Name {
+    margin: 0 0 4px;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  &Actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.tagAction {
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 4px;
+  color: var(--Colors-Use-Neutral-Text-4-Help-text);
+  &:hover {
+    color: var(--Colors-Use-Main-Primary);
+    border-color: var(--Colors-Use-Main-Primary);
+  }
+}
+
+.fuzzPopover {
   width: 600px;
   :global {
     .ant-popover-inner-content {
@@ -98,37 +122,68 @@
       padding-bottom: 8px;
     }
   }
-  &-cont {
+  &Body {
     display: flex;
     flex-direction: column;
     padding: 8px;
     padding-top: 0;
     font-size: 14px;
-
     gap: 8px;
-    &-name {
+    & > p {
+      margin: 0;
+    }
+    .fuzzPopoverTitle {
       font-size: 16px;
       font-weight: 600;
     }
-    &-Egname {
-      font-size: 16px;
+    .fuzzPopoverCodename code {
+      font-size: 14px;
+      color: var(--Colors-Use-Neutral-Text-2-Body);
     }
-    &-example {
+    .fuzzPopoverExample {
       color: var(--Colors-Use-Main-Primary);
     }
-    &-desc {
+    .fuzzPopoverDesc {
       color: var(--Colors-Use-Neutral-Disable);
       word-wrap: break-word;
+      em {
+        margin-right: 4px;
+        font-style: normal;
+      }
     }
-    th,
-    td {
-      text-align: left;
+  }
+}
+
+// parameter info sheet — CSS grid instead of <table>
+.paramSheet {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  &Caption {
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  &Head,
+  &Row {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    text-align: left;
+  }
+  &Head {
+    background-color: var(--Colors-Use-Neutral-Bg-Hover);
+    span {
+      padding: 6px 8px;
       border: 1px solid var(--Colors-Use-Neutral-Border);
+      font-weight: 600;
     }
-    th {
-      background-color: var(--Colors-Use-Neutral-Bg-Hover);
+  }
+  &Row {
+    span {
+      padding: 6px 8px;
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      word-break: break-word;
     }
-    tr:hover {
+    &:hover {
       background-color: var(--Colors-Use-Neutral-Bg-Hover);
     }
   }
