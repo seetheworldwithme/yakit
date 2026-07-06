@@ -1,69 +1,268 @@
-.ant-modal-content {
-  border-radius: 8px;
+// ===== Sentinel 登录弹窗：左品牌区 + 右表单区分屏 =====
+.sentinel-login-modal-wrap {
+  .ant-modal-content {
+    overflow: hidden;
+    border-radius: 16px;
+    background-color: var(--Colors-Use-Basic-Background);
+    box-shadow: 0px 24px 64px var(--Colors-Use-Basic-Shadow);
+  }
+
+  .ant-modal-body {
+    border-radius: 16px;
+  }
 }
 
-.login-type-body {
-  width: 409px;
-  padding: 56px 40px;
-  border-radius: 8px;
-  text-align: center;
+.sentinel-login-shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  width: 760px;
+  min-height: 480px;
   background-color: var(--Colors-Use-Basic-Background);
   color: var(--Colors-Use-Neutral-Text-1-Title);
+  overflow: hidden;
+}
 
-  .login-text {
-    color: var(--Colors-Use-Neutral-Text-1-Title);
-    line-height: 40px;
-    font-size: 36px;
-    margin-bottom: 48px;
+// ---------- 左半：品牌宣传区 ----------
+.sentinel-login-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 32px;
+  overflow: hidden;
+  color: #ffffff;
+  background: linear-gradient(155deg, var(--Colors-Use-Main-Primary) 0%, var(--Colors-Use-Main-Pressed) 100%);
+
+  // 科技蓝网格底纹层
+  .brand-grid-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 75%);
   }
 
-  .login-subtitle {
-    height: 30px;
-    line-height: 30px;
+  // 中央辉光层，营造科技氛围
+  .brand-grid-glow {
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 240px;
+    height: 240px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+    opacity: 0.8;
   }
 
-  .login-icon-body {
-    cursor: pointer;
+  .brand-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 
-    .login-icon {
-      padding: 12px;
-      margin-bottom: 16px;
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background-color: #ffffff;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.6);
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+  }
+
+  .brand-tagline {
+    position: relative;
+    margin-top: 8px;
+
+    .brand-tagline-title {
+      margin: 0 0 12px;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #ffffff;
+    }
+
+    .brand-tagline-sub {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.78);
+    }
+  }
+
+  .brand-points {
+    position: relative;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+
+    .brand-point {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.88);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .brand-point-dot {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background-color: #ffffff;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+      }
+    }
+  }
+
+  .brand-foot {
+    position: relative;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+// ---------- 右半：登录方式表单区 ----------
+.sentinel-login-main {
+  display: flex;
+  flex-direction: column;
+  padding: 56px 48px 40px;
+  background-color: var(--Colors-Use-Basic-Background);
+
+  .login-main-head {
+    margin-bottom: 32px;
+
+    .login-main-title {
+      margin: 0 0 12px;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+    }
+
+    .login-main-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+
+      .login-step-no {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 20px;
+        padding: 0 6px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 4px;
+        color: #ffffff;
+        background-color: var(--Colors-Use-Main-Primary);
+      }
+
+      .login-step-text {
+        font-size: 13px;
+        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+      }
+    }
+  }
+
+  // 方法卡网格（2 列）
+  .login-method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    flex: 1;
+
+    .method-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px 20px;
+      cursor: pointer;
+      text-align: left;
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      border-radius: 12px;
       background-color: var(--Colors-Use-Neutral-Bg);
-      border-radius: 4px;
+      transition: all 0.18s ease;
 
-      &:hover {
-        background-color: var(--Colors-Use-Neutral-Bg-Hover);
-        box-shadow: 0px 2px 4px var(--Colors-Use-Basic-Shadow);
+      // 序号水印，制造分段步骤感
+      .method-card-index {
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--Colors-Use-Neutral-Text-4-Help-text);
+        opacity: 0.7;
+      }
 
-        .icon-right {
-          color: var(--Colors-Use-Neutral-Text-1-Title);
+      .method-card-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        font-size: 28px;
+        border-radius: 12px;
+        color: var(--Colors-Use-Neutral-Text-1-Title);
+        background-color: var(--Colors-Use-Basic-Background);
+        border: 1px solid var(--Colors-Use-Neutral-Border);
+
+        &.wechat {
+          color: var(--Colors-Use-Green-Primary);
         }
       }
 
-      .login-icon-text {
+      .method-card-title {
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
+        line-height: 1.5;
         color: var(--Colors-Use-Neutral-Text-1-Title);
-        display: flex;
-        align-items: center;
+      }
+
+      .method-card-arrow {
+        position: absolute;
+        bottom: 18px;
+        right: 16px;
+        font-size: 12px;
+        color: var(--Colors-Use-Neutral-Text-4-Help-text);
+        transition: all 0.18s ease;
+      }
+
+      &:hover {
+        border-color: var(--Colors-Use-Main-Primary);
+        background-color: var(--Colors-Use-Neutral-Bg-Hover);
+        box-shadow: 0px 6px 16px var(--Colors-Use-Basic-Shadow);
+
+        .method-card-arrow {
+          color: var(--Colors-Use-Main-Primary);
+          transform: translateX(2px);
+        }
       }
     }
+  }
 
-    .icon-wx {
-      color: var(--Colors-Use-Green-Primary);
-    }
-
-    .type-icon {
-      font-size: 32px;
-      margin-right: 8px;
-      cursor: pointer;
-    }
-
-    .type-icon-img {
-      width: 32px;
-    }
+  .login-main-foot {
+    margin-top: 28px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--Colors-Use-Neutral-Text-4-Help-text);
   }
 }

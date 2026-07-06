@@ -105,30 +105,77 @@ const Login: React.FC<LoginProp> = (props) => {
       footer={null}
       onCancel={() => props.onCancel()}
       bodyStyle={{ padding: 0 }}
-      width={409}
-      style={{ top: '25%' }}
+      width={760}
+      style={{ top: '18%' }}
+      wrapClassName="sentinel-login-modal-wrap"
+      className="sentinel-login-modal"
     >
       <YakitSpin spinning={loading}>
-        <div className="login-type-body">
-          <h2 className="login-text">{t('Login.login')}</h2>
-          <div className="login-icon-body">
-            {/*<div className='login-icon' onClick={() => githubAuth()}>*/}
-            <div className="login-icon" onClick={() => fetchLogin('github')}>
-              <div className="login-icon-text">
-                <GithubOutlined className="type-icon" />
-                {t('Login.loginWithGithub')}
-              </div>
-              <RightOutlined className="icon-right" />
+        <section className="sentinel-login-shell">
+          {/* 左半：品牌宣传区，带 Sentinel 科技蓝网格底纹 */}
+          <aside className="sentinel-login-brand">
+            <div className="brand-grid-bg" aria-hidden="true" />
+            <div className="brand-grid-glow" aria-hidden="true" />
+            <header className="brand-head">
+              <span className="brand-mark" />
+              <span className="brand-name">Sentinel</span>
+            </header>
+            <div className="brand-tagline">
+              <h3 className="brand-tagline-title">企业级安全测试平台</h3>
+              <p className="brand-tagline-sub">一体化渗透测试 · 流量审计 · 资产测绘</p>
             </div>
-            <div className="login-icon" onClick={() => fetchLogin('wechat')}>
-              <div className="login-icon-text">
-                <WechatOutlined className="type-icon icon-wx" />
-                {t('Login.loginWithWechat')}
-              </div>
-              <RightOutlined className="icon-right" />
-            </div>
-          </div>
-        </div>
+            <ul className="brand-points">
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">多源威胁情报与协同检测</span>
+              </li>
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">私有化部署，数据自主可控</span>
+              </li>
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">插件生态与脚本扩展能力</span>
+              </li>
+            </ul>
+            <footer className="brand-foot">© Sentinel Security Platform</footer>
+          </aside>
+
+          {/* 右半：登录方式表单区 */}
+          <main className="sentinel-login-main">
+            <header className="login-main-head">
+              <h2 className="login-main-title">{t('Login.login')}</h2>
+              <p className="login-main-step">
+                <span className="login-step-no">01</span>
+                <span className="login-step-text">选择以下方式完成身份认证</span>
+              </p>
+            </header>
+
+            <nav className="login-method-grid" aria-label="login methods">
+              {/*<div className='login-icon' onClick={() => githubAuth()}>*/}
+              <button type="button" className="method-card" onClick={() => fetchLogin('github')}>
+                <span className="method-card-index">01</span>
+                <span className="method-card-icon github">
+                  <GithubOutlined />
+                </span>
+                <span className="method-card-title">{t('Login.loginWithGithub')}</span>
+                <RightOutlined className="method-card-arrow" />
+              </button>
+              <button type="button" className="method-card" onClick={() => fetchLogin('wechat')}>
+                <span className="method-card-index">02</span>
+                <span className="method-card-icon wechat">
+                  <WechatOutlined />
+                </span>
+                <span className="method-card-title">{t('Login.loginWithWechat')}</span>
+                <RightOutlined className="method-card-arrow" />
+              </button>
+            </nav>
+
+            <footer className="login-main-foot">
+              登录即代表同意将账号与当前终端绑定，认证后可在「我的」中管理授权。
+            </footer>
+          </main>
+        </section>
       </YakitSpin>
     </Modal>
   )
