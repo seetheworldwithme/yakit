@@ -44,7 +44,6 @@ import {
   DraggableProvided,
 } from '@hello-pangea/dnd'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
-import YakitCollapse from '@/components/yakitUI/YakitCollapse/YakitCollapse'
 import { v4 as uuidv4 } from 'uuid'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
@@ -79,9 +78,47 @@ import { handleOpenFileSystemDialog } from '@/utils/fileSystemDialog'
 import { YakitPopconfirm } from '@/components/yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 const { ipcRenderer } = window.require('electron')
-const { YakitPanel } = YakitCollapse
 
 const SaveCodecMethods = 'SaveCodecMethods'
+
+// 客户端仅展示主流编/解码 + 国密(SM2/SM3/SM4) + AES/RSA 加解密；
+// 其余引擎下发的方法（Hash/MAC/签名/Java/Yak脚本/其他等）一律隐藏不展示。
+// 以 yak 引擎下发的 CodecMethod 技术名做精确白名单匹配。
+const ALLOWED_CODEC_METHODS = new Set<string>([
+  // Base64
+  'Base64Encode',
+  'Base64Decode',
+  // HTML
+  'HtmlEncode',
+  'HtmlDecode',
+  // URL（Codec 页面无「双重 URL」，双重 URL 仅在编辑器右键菜单）
+  'URLEncode',
+  'URLDecode',
+  // 十六进制
+  'HexEncode',
+  'HexDecode',
+  // Unicode（含中文）
+  'UnicodeEncode',
+  'UnicodeDecode',
+  // 国密 SM2 / SM3 / SM4（引擎未下发 SM1）
+  'SM2Encrypt',
+  'SM2Decrypt',
+  'SM3',
+  'SM4Encrypt',
+  'SM4Decrypt',
+  // AES 对称（含 GCM / KDF 变体）
+  'AESEncrypt',
+  'AESDecrypt',
+  'AESGCMEncrypt',
+  'AESGCMDecrypt',
+  'AESEncryptKDF',
+  'AESDecryptKDF',
+  // RSA 非对称加解密 + 签名/验证
+  'RSAEncrypt',
+  'RSADecrypt',
+  'RSASign',
+  'RSAVerify',
+])
 
 export interface CodecResponseProps {
   Result: string
@@ -1755,8 +1792,7 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
 interface NewCodecLeftDragListProps {
   fold: boolean
   setFold: (v: boolean) => void
-  leftData: LeftDataProps[]
-  leftCollectData: LeftDataProps[]
+  leftData: CodecMethod[]
   collectList: string[]
   leftSearchData: CodecMethod[]
   isShowSearchList: boolean
@@ -1778,7 +1814,6 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
     fold,
     setFold,
     leftData,
-    leftCollectData,
     collectList,
     searchValue,
     leftSearchData,
@@ -1787,7 +1822,6 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
     getCollectData,
     onClickToRunList,
   } = props
-  const [activeKey, setActiveKey] = useState<string[]>([])
 
   return (
     <div
@@ -1828,74 +1862,15 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
         <YakitSpin spinning={false}>
           {/* 左边列表 */}
           <>
-            {isShowSearchList ? (
-              <div className={styles['left-drag-list-collapse']}>
-                <NewCodecLeftDragListItem
-                  node={leftSearchData}
-                  collectList={collectList}
-                  getCollectData={getCollectData}
-                  onClickToRunList={onClickToRunList}
-                />
-                <div className={styles['to-end']}>{t('YakitEmpty.end_of_list')}</div>
-              </div>
-            ) : (
-              <YakitCollapse
-                expandIcon={() => <></>}
-                accordion={true}
-                activeKey={activeKey}
-                onChange={(key) => {
-                  const arr = key as string[]
-                  setActiveKey(arr)
-                }}
-                className={styles['left-drag-list-collapse']}
-              >
-                {[...leftCollectData, ...leftData].map((item, index) => {
-                  return (
-                    <YakitPanel
-                      header={
-                        (activeKey || []).includes(item.title) ? (
-                          <div className={styles['panel-active-title']}>{item.title}</div>
-                        ) : (
-                          item.title
-                        )
-                      }
-                      key={item.title}
-                      extra={
-                        item.title === t('NewCodecLeftDragList.myFavoriteTools') ? (
-                          <>
-                            {/* <div className={classNames(styles['star-icon'],styles['star-icon-default'])} onClick={(e) => {
-                                                        e.stopPropagation()
-                                                    }}>
-                                                    <OutlineStarIcon/>
-                                                </div> */}
-                            <div
-                              style={{ color: 'var(--Colors-Use-Yellow-Primary)' }}
-                              className={classNames(styles['star-icon'], styles['star-icon-active'])}
-                              // onClick={(e) => {
-                              //     e.stopPropagation()
-                              // }}
-                            >
-                              <SolidStarIcon />
-                            </div>
-                          </>
-                        ) : null
-                      }
-                    >
-                      {item.node.length > 0 && (
-                        <NewCodecLeftDragListItem
-                          node={item.node}
-                          parentItem={item}
-                          collectList={collectList}
-                          getCollectData={getCollectData}
-                          onClickToRunList={onClickToRunList}
-                        />
-                      )}
-                    </YakitPanel>
-                  )
-                })}
-                <div className={styles['to-end']}>{t('YakitEmpty.end_of_list')}</div>
-              </YakitCollapse>
-            )}
+            <div className={styles['left-drag-list-collapse']}>
+              <NewCodecLeftDragListItem
+                node={isShowSearchList ? leftSearchData : leftData}
+                collectList={collectList}
+                getCollectData={getCollectData}
+                onClickToRunList={onClickToRunList}
+              />
+              <div className={styles['to-end']}>{t('YakitEmpty.end_of_list')}</div>
+            </div>
           </>
         </YakitSpin>
       </div>
@@ -2059,9 +2034,7 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
   // 是否全部展开
   const [isExpand, setExpand] = useState<boolean>(false)
   const [rightItems, setRightItems] = useState<RightItemsProps[]>(initialRightItems)
-  const [leftData, setLeftData] = useState<LeftDataProps[]>([])
-  // 我的收藏
-  const [leftCollectData, setLeftCollectData] = useState<LeftDataProps[]>([])
+  const [leftData, setLeftData] = useState<CodecMethod[]>([])
   const [collectList, setCollectList] = useState<string[]>([])
 
   const [leftSearchData, setLeftSearchData] = useState<CodecMethod[]>([])
@@ -2168,75 +2141,16 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
   }, [])
 
   // 计算编码值总和
-  const differentiate = useMemoizedFn((str: string) => {
-    let sum = 0
-    for (let i = 0; i < str.length; i++) {
-      sum += str.charCodeAt(i)
-    }
-    return sum
-  })
-
-  // 构造页面左边列表数据
+  // 构造页面左边列表数据（扁平展示，按显示名首字母排序，不再按 Tag 分组折叠）
   const initLeftData = useMemoizedFn((Methods: CodecMethod[]) => {
-    // 分类的类名
-    let tagList: string[] = []
-    let data: LeftDataProps[] = []
-    // 固定顺序
-    const NewMethods = Methods.sort((a, b) => differentiate(a.CodecName) - differentiate(b.CodecName))
-    NewMethods.forEach((item) => {
-      if (tagList.includes(item.Tag)) {
-        const newData = data.map((itemIn) => {
-          const { title, node } = itemIn
-          if (itemIn.title === item.Tag) {
-            return {
-              title,
-              node: [...node, item],
-            }
-          }
-          return itemIn
-        })
-        data = newData
-      } else {
-        data.push({
-          title: item.Tag,
-          node: [item],
-        })
-        tagList.push(item.Tag)
-      }
-    })
-
-    // 找到 title 为 "其他" 的项的索引
-    const index = data.findIndex((item) => item.title === '其他')
-    // 如果找到了，则将该项移动到数组尾部
-    if (index !== -1) {
-      const otherItem = data.splice(index, 1)[0]
-      data.push(otherItem)
-    }
-    // console.log("initLeftData---", data, Methods)
-    setLeftData(data)
+    const sorted = [...Methods].sort((a, b) => a.CodecName.localeCompare(b.CodecName, 'zh-Hans-CN'))
+    setLeftData(sorted)
   })
 
-  // 获取codec收藏列表
+  // 获取codec收藏列表（仅维护 collectList 星标状态，不再单独渲染收藏分组）
   const getCollectData = useMemoizedFn((star?: string[]) => {
     const setStar = (starList: string[]) => {
-      const filterCodec = cacheCodecRef.current.filter((item) => starList.includes(item.CodecName))
-      /* 此处需要收藏的工具有顺序 则需要根据starList排列filterCodec */
-      filterCodec.sort((a, b) => {
-        const indexA = starList.indexOf(a.CodecName)
-        const indexB = starList.indexOf(b.CodecName)
-        return indexA - indexB
-      })
       setCollectList(starList)
-      if (filterCodec.length > 0) {
-        setLeftCollectData([
-          {
-            title: t('NewCodecLeftDragList.myFavoriteTools'),
-            node: filterCodec,
-          },
-        ])
-      } else {
-        setLeftCollectData([])
-      }
     }
     if (star) {
       setStar(star)
@@ -2249,20 +2163,20 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
             setStar(cacheList)
           } catch (error) {}
         } else {
-          setLeftCollectData([])
           setCollectList([])
         }
       })
     }
   })
 
-  // 获取codec列表
+  // 获取codec列表（仅保留白名单内的主流编/解码与国密/AES/RSA 加解密方法）
   const getLeftData = useMemoizedFn(() => {
     ipcRenderer.invoke('GetAllCodecMethods').then((res: CodecMethods) => {
       const { Methods } = res
-      cacheCodecRef.current = Methods
+      const allowed = Methods.filter((m) => ALLOWED_CODEC_METHODS.has(m.CodecMethod))
+      cacheCodecRef.current = allowed
       getCollectData()
-      initLeftData(Methods)
+      initLeftData(allowed)
     })
   })
 
@@ -2450,7 +2364,6 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
             fold={fold}
             setFold={setFold}
             leftData={leftData}
-            leftCollectData={leftCollectData}
             collectList={collectList}
             leftSearchData={leftSearchData}
             isShowSearchList={isShowSearchList}
