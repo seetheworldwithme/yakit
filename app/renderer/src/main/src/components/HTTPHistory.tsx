@@ -513,7 +513,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
 
   // #region 编辑器部分是否显示
   const [onlyShowFirstNode, setOnlyShowFirstNode] = useControllableValue<boolean>(props, {
-    defaultValue: true,
+    defaultValue: pageType === 'MITM' ? false : true,
     valuePropName: 'onlyShowFirstNode',
     trigger: 'setOnlyShowFirstNode',
   })
@@ -527,10 +527,12 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
     setSecondNodeVisible(!onlyShowFirstNode)
   }, [onlyShowFirstNode])
   const lastRatioRef = useRef<{ firstRatio: string; secondRatio: string }>({
-    firstRatio: '50%',
-    secondRatio: '50%',
+    firstRatio: pageType === 'MITM' ? '38%' : '50%',
+    secondRatio: pageType === 'MITM' ? '62%' : '50%',
   })
+  const isMITMFlowWorkbench = pageType === 'MITM'
   useEffect(() => {
+    if (isMITMFlowWorkbench) return
     getRemoteValue(RemoteGV.historyTableYakitResizeBox).then((res) => {
       if (res) {
         try {
@@ -558,12 +560,14 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
 
   return (
     <div
-      className={styles['hTTPFlowRealTimeTableAndEditor']}
+      className={classNames(styles['hTTPFlowRealTimeTableAndEditor'], {
+        [styles['mitm-flow-workbench']]: pageType === 'MITM',
+      })}
       ref={hTTPFlowRealTimeTableAndEditorRef}
       style={wrapperStyle}
     >
       <YakitResizeBox
-        isVer={true}
+        isVer={!isMITMFlowWorkbench}
         // 隐藏详情只需要展示第一个节点
         onClickHiddenBox={() => setOnlyShowFirstNode(true)}
         firstNode={() => (
@@ -632,17 +636,18 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
             )}
           </div>
         }
-        firstMinSize={80}
-        secondMinSize={200}
+        firstMinSize={isMITMFlowWorkbench ? 280 : 80}
+        secondMinSize={isMITMFlowWorkbench ? 360 : 200}
         secondNodeStyle={{
           display: !secondNodeVisible ? 'none' : '',
           padding: !secondNodeVisible ? 0 : undefined,
         }}
         lineStyle={{
           display: !secondNodeVisible ? 'none' : '',
-          marginTop: pageType === 'MITM' ? 6 : 0, // MITM列表需要和拖拽线有间距
+          marginTop: 0,
+          marginLeft: isMITMFlowWorkbench ? 6 : 0,
         }}
-        lineDirection="top"
+        lineDirection={isMITMFlowWorkbench ? 'left' : 'top'}
         onMouseUp={({ firstSizePercent, secondSizePercent }) => {
           lastRatioRef.current = {
             firstRatio: firstSizePercent,

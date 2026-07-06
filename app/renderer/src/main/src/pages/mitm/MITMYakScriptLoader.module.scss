@@ -1,14 +1,14 @@
 .mitm-plugin-local-item {
-  min-height: 104px;
+  min-height: 118px;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--Colors-Use-Neutral-Border);
   border-radius: 8px;
   background: var(--Colors-Use-Basic-Background);
   flex: 1;
-  gap: 8px;
+  gap: 10px;
   overflow: hidden;
   &:hover {
     background-color: var(--Colors-Use-Neutral-Bg-Hover);
@@ -32,13 +32,13 @@
         display: flex;
         align-items: flex-start;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
         cursor: pointer;
         .plugin-local-headImg {
           margin-right: 0;
         }
         .plugin-local-scriptName {
-          font-size: 12px;
+          font-size: 13px;
           line-height: 16px;
           color: var(--Colors-Use-Neutral-Text-1-Title);
           display: -webkit-box;

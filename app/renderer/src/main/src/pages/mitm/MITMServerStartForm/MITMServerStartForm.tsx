@@ -390,206 +390,239 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
         />
         <Form
           form={form}
+          className={styles['mitm-start-form-grid']}
           onFinish={onStartMITM}
           labelCol={{ span: width > 610 ? 5 : 9 }}
           wrapperCol={{ span: width > 610 ? 15 : 16 }}
         >
-          <Item
-            label={t('MITMServerForm.hijackHost')}
-            help={t('MITMServerForm.hijackHostHelp')}
-            rules={[{ required: true, message: t('YakitForm.requiredField') }]}
-            name="host"
-          >
-            <YakitAutoComplete
-              ref={hostRef}
-              cacheHistoryDataKey={CacheDropDownGV.MITMDefaultHostHistoryList}
-              placeholder={t('YakitInput.please_enter')}
-              initValue={defHost}
-            />
-          </Item>
-          <Item
-            label={t('MITMServerForm.hijackPort')}
-            name="port"
-            rules={[{ required: true, message: t('YakitForm.requiredField') }]}
-          >
-            <YakitInputNumber
-              wrapperClassName={styles['form-input-number']}
-              style={{ width: '100%', maxWidth: 'none' }}
-              min={1}
-              max={65535}
-            />
-          </Item>
-          <Item
-            label={t('MITMServerForm.downstreamProxyLabel')}
-            name="downstreamProxy"
-            extra={
-              <span className={styles['form-rule-help']}>
-                {t('MITMServerForm.downstreamProxyHelp')}
-                <span className={styles['form-rule-help-setting']} onClick={onClickDownstreamProxy}>
-                  {t('AgentConfigModal.proxy_configuration')}
+          <div className={styles['mitm-start-command']}>
+            <div className={styles['mitm-start-command-kicker']}>LISTENER SETUP</div>
+            <div className={styles['mitm-start-command-title']}>代理劫持启动台</div>
+            <div className={styles['mitm-start-command-desc']}>先锁定入口、协议与规则，再启动 MITM 工作区。</div>
+          </div>
+          <section className={styles['mitm-start-section']}>
+            <div className={styles['mitm-start-section-head']}>
+              <span>01</span>
+              <div>
+                <div className={styles['mitm-start-section-title']}>监听入口</div>
+                <div className={styles['mitm-start-section-subtitle']}>主机、端口与下游代理</div>
+              </div>
+            </div>
+            <Item
+              label={t('MITMServerForm.hijackHost')}
+              help={t('MITMServerForm.hijackHostHelp')}
+              rules={[{ required: true, message: t('YakitForm.requiredField') }]}
+              name="host"
+            >
+              <YakitAutoComplete
+                ref={hostRef}
+                cacheHistoryDataKey={CacheDropDownGV.MITMDefaultHostHistoryList}
+                placeholder={t('YakitInput.please_enter')}
+                initValue={defHost}
+              />
+            </Item>
+            <Item
+              label={t('MITMServerForm.hijackPort')}
+              name="port"
+              rules={[{ required: true, message: t('YakitForm.requiredField') }]}
+            >
+              <YakitInputNumber
+                wrapperClassName={styles['form-input-number']}
+                style={{ width: '100%', maxWidth: 'none' }}
+                min={1}
+                max={65535}
+              />
+            </Item>
+            <Item
+              label={t('MITMServerForm.downstreamProxyLabel')}
+              name="downstreamProxy"
+              extra={
+                <span className={styles['form-rule-help']}>
+                  {t('MITMServerForm.downstreamProxyHelp')}
+                  <span className={styles['form-rule-help-setting']} onClick={onClickDownstreamProxy}>
+                    {t('AgentConfigModal.proxy_configuration')}
+                  </span>
+                  <Divider type="vertical" />
+                  <ProxyTest onEchoNode={(downstreamProxy) => form.setFieldsValue({ downstreamProxy })} />
                 </span>
-                <Divider type="vertical" />
-                <ProxyTest onEchoNode={(downstreamProxy) => form.setFieldsValue({ downstreamProxy })} />
-              </span>
-            }
-            getValueFromEvent={(value) => {
-              // 只保留最后一个选中的值
-              if (Array.isArray(value) && value.length > 1) {
-                return [value[value.length - 1]]
               }
-              return value
-            }}
-            validateTrigger={['onChange', 'onBlur']}
-            rules={[
-              {
-                validator: (_, value) => {
-                  if (!value || !Array.isArray(value) || value.length === 0) {
-                    return Promise.resolve()
-                  }
-                  // 获取当前options中的所有值
-                  const existingOptions = proxyRouteOptions.map(({ value }) => value)
-                  // 只校验新输入的值(不在options中的值)
-                  const newValues = value.filter((v) => !existingOptions.includes(v))
-                  // 校验代理地址格式: 协议://地址:端口
-                  for (const v of newValues) {
-                    if (!isValidUrlWithProtocol(v)) {
-                      return Promise.reject(t('ProxyConfig.valid_proxy_address_tip'))
+              getValueFromEvent={(value) => {
+                // 只保留最后一个选中的值
+                if (Array.isArray(value) && value.length > 1) {
+                  return [value[value.length - 1]]
+                }
+                return value
+              }}
+              validateTrigger={['onChange', 'onBlur']}
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value || !Array.isArray(value) || value.length === 0) {
+                      return Promise.resolve()
                     }
-                  }
-                  return Promise.resolve()
-                },
-              },
-            ]}
-          >
-            <YakitSelect
-              ref={downstreamProxyRef}
-              allowClear
-              options={proxyRouteOptions}
-              mode="tags"
-              maxTagCount={4}
-              placeholder={t('MITMServerForm.proxyPlaceholder')}
-            />
-          </Item>
-          <Item
-            label={t('MITMServerForm.http2Support')}
-            name="enableHttp2"
-            help={t('MITMServerForm.http2SupportHelp')}
-            valuePropName="checked"
-          >
-            <YakitSwitch size="large" />
-          </Item>
-          <Item
-            label={t('MITMServerForm.httpsConfig')}
-            name="stateSecretHijacking"
-            initialValue={'stateSecretHijacking'}
-            help={
-              stateSecretHijacking === 'enableGMTLS'
-                ? t('MITMServerForm.httpsConfigHelp.gmTLS')
-                : stateSecretHijacking === 'randomJA3'
-                  ? t('MITMServerForm.httpsConfigHelp.randomJA3')
-                  : t('MITMServerForm.httpsConfigHelp.default')
-            }
-          >
-            <YakitRadioButtons
-              wrapClassName={styles['stateSecretHijacking-btns']}
-              buttonStyle="solid"
-              options={[
-                {
-                  value: 'enableGMTLS',
-                  label: t('MITMServerForm.gmSecret'),
-                },
-                {
-                  value: 'randomJA3',
-                  label: t('MITMServerForm.randomTLS'),
-                },
-                {
-                  value: 'stateSecretHijacking',
-                  label: t('MITMServerForm.default'),
+                    // 获取当前options中的所有值
+                    const existingOptions = proxyRouteOptions.map(({ value }) => value)
+                    // 只校验新输入的值(不在options中的值)
+                    const newValues = value.filter((v) => !existingOptions.includes(v))
+                    // 校验代理地址格式: 协议://地址:端口
+                    for (const v of newValues) {
+                      if (!isValidUrlWithProtocol(v)) {
+                        return Promise.reject(t('ProxyConfig.valid_proxy_address_tip'))
+                      }
+                    }
+                    return Promise.resolve()
+                  },
                 },
               ]}
-            />
-          </Item>
-          <Item
-            label={t('MITMServerForm.disableKeepAlive')}
-            name="ForceDisableKeepAlive"
-            initialValue={true}
-            help={t('MITMServerForm.disableKeepAliveHelp')}
-            valuePropName="checked"
-          >
-            <YakitSwitch size="large" />
-          </Item>
-          <Item
-            label={t('MITMServerForm.contentRule')}
-            help={
-              <span className={styles['form-rule-help']}>
-                {t('MITMServerForm.contentRuleHelp')}
-                <span
-                  className={styles['form-rule-help-setting']}
-                  onClick={() => {
-                    setIsUseDefRules(true)
-                    ruleButtonRef.current.onSetImportVisible(true)
-                  }}
-                >
-                  {t('MITMServerForm.defaultConfig')}&nbsp;
-                  <RefreshIcon />
+            >
+              <YakitSelect
+                ref={downstreamProxyRef}
+                allowClear
+                options={proxyRouteOptions}
+                mode="tags"
+                maxTagCount={4}
+                placeholder={t('MITMServerForm.proxyPlaceholder')}
+              />
+            </Item>
+          </section>
+          <section className={styles['mitm-start-section']}>
+            <div className={styles['mitm-start-section-head']}>
+              <span>02</span>
+              <div>
+                <div className={styles['mitm-start-section-title']}>协议策略</div>
+                <div className={styles['mitm-start-section-subtitle']}>HTTP/2、TLS 指纹与连接保持</div>
+              </div>
+            </div>
+            <Item
+              label={t('MITMServerForm.http2Support')}
+              name="enableHttp2"
+              help={t('MITMServerForm.http2SupportHelp')}
+              valuePropName="checked"
+            >
+              <YakitSwitch size="large" />
+            </Item>
+            <Item
+              label={t('MITMServerForm.httpsConfig')}
+              name="stateSecretHijacking"
+              initialValue={'stateSecretHijacking'}
+              help={
+                stateSecretHijacking === 'enableGMTLS'
+                  ? t('MITMServerForm.httpsConfigHelp.gmTLS')
+                  : stateSecretHijacking === 'randomJA3'
+                    ? t('MITMServerForm.httpsConfigHelp.randomJA3')
+                    : t('MITMServerForm.httpsConfigHelp.default')
+              }
+            >
+              <YakitRadioButtons
+                wrapClassName={styles['stateSecretHijacking-btns']}
+                buttonStyle="solid"
+                options={[
+                  {
+                    value: 'enableGMTLS',
+                    label: t('MITMServerForm.gmSecret'),
+                  },
+                  {
+                    value: 'randomJA3',
+                    label: t('MITMServerForm.randomTLS'),
+                  },
+                  {
+                    value: 'stateSecretHijacking',
+                    label: t('MITMServerForm.default'),
+                  },
+                ]}
+              />
+            </Item>
+            <Item
+              label={t('MITMServerForm.disableKeepAlive')}
+              name="ForceDisableKeepAlive"
+              initialValue={true}
+              help={t('MITMServerForm.disableKeepAliveHelp')}
+              valuePropName="checked"
+            >
+              <YakitSwitch size="large" />
+            </Item>
+          </section>
+          <section className={styles['mitm-start-section']}>
+            <div className={styles['mitm-start-section-head']}>
+              <span>03</span>
+              <div>
+                <div className={styles['mitm-start-section-title']}>拦截载荷</div>
+                <div className={styles['mitm-start-section-subtitle']}>内容规则、插件预载与启动动作</div>
+              </div>
+            </div>
+            <Item
+              label={t('MITMServerForm.contentRule')}
+              help={
+                <span className={styles['form-rule-help']}>
+                  {t('MITMServerForm.contentRuleHelp')}
+                  <span
+                    className={styles['form-rule-help-setting']}
+                    onClick={() => {
+                      setIsUseDefRules(true)
+                      ruleButtonRef.current.onSetImportVisible(true)
+                    }}
+                  >
+                    {t('MITMServerForm.defaultConfig')}&nbsp;
+                    <RefreshIcon />
+                  </span>
                 </span>
-              </span>
-            }
-          >
-            <div className={styles['form-rule-wrapper']}>
-              <div className={styles['form-rule-body']}>
-                <div className={styles['form-rule']} onClick={() => props.setVisible(true)}>
-                  <div className={styles['form-rule-text']}>
-                    {t('MITMServerForm.existingRules', { count: rules.length })}
-                  </div>
-                  <div className={styles['form-rule-icon']}>
-                    <CogIcon />
+              }
+            >
+              <div className={styles['form-rule-wrapper']}>
+                <div className={styles['form-rule-body']}>
+                  <div className={styles['form-rule']} onClick={() => props.setVisible(true)}>
+                    <div className={styles['form-rule-text']}>
+                      {t('MITMServerForm.existingRules', { count: rules.length })}
+                    </div>
+                    <div className={styles['form-rule-icon']}>
+                      <CogIcon />
+                    </div>
                   </div>
                 </div>
+                <div>
+                  <RuleExportAndImportButton
+                    ref={ruleButtonRef}
+                    isUseDefRules={isUseDefRules}
+                    setIsUseDefRules={setIsUseDefRules}
+                    onOkImport={() => getRules()}
+                  />
+                </div>
               </div>
-              <div>
-                <RuleExportAndImportButton
-                  ref={ruleButtonRef}
-                  isUseDefRules={isUseDefRules}
-                  setIsUseDefRules={setIsUseDefRules}
-                  onOkImport={() => getRules()}
-                />
-              </div>
-            </div>
-          </Item>
-          <Item label={t('MITMServerForm.enablePlugin')} name="enableInitialPlugin" valuePropName="checked">
-            <YakitSwitch size="large" onChange={(checked) => onSwitchPlugin(checked)} />
-          </Item>
-          <Item label={' '} colon={false}>
-            <div className={styles['mitm-submit-btns']}>
-              <YakitButton type="primary" size="large" htmlType="submit">
-                {t('MITMServerForm.startHijack')}
-              </YakitButton>
-              {mitmVersion === MITMVersion.V1 && (
-                <YakitButton size="large" onClick={() => toMITMHacker()}>
-                  {t('MITMServerForm.startHijackV2')}
+            </Item>
+            <Item label={t('MITMServerForm.enablePlugin')} name="enableInitialPlugin" valuePropName="checked">
+              <YakitSwitch size="large" onChange={(checked) => onSwitchPlugin(checked)} />
+            </Item>
+            <Item label={' '} colon={false}>
+              <div className={styles['mitm-submit-btns']}>
+                <YakitButton type="primary" size="large" htmlType="submit">
+                  {t('MITMServerForm.startHijack')}
                 </YakitButton>
-              )}
-              <ChromeLauncherButton
-                host={useWatch('host', form)}
-                port={useWatch('port', form)}
-                disableCACertPage={advancedFormRef.current?.getValue().disableCACertPage}
-                onFished={(host, port) => {
-                  const values = {
-                    ...form.getFieldsValue(),
-                    host,
-                    port,
-                  }
-                  execStartMITM(values)
-                }}
-                repRuleFlag={openRepRuleFlag}
-                onSetVisible={props.setVisible}
-              />
-              <YakitButton type="text" size="large" onClick={() => setAdvancedFormVisible(true)}>
-                {t('MITMServerForm.advancedConfig')}
-              </YakitButton>
-            </div>
-          </Item>
+                {mitmVersion === MITMVersion.V1 && (
+                  <YakitButton size="large" onClick={() => toMITMHacker()}>
+                    {t('MITMServerForm.startHijackV2')}
+                  </YakitButton>
+                )}
+                <ChromeLauncherButton
+                  host={useWatch('host', form)}
+                  port={useWatch('port', form)}
+                  disableCACertPage={advancedFormRef.current?.getValue().disableCACertPage}
+                  onFished={(host, port) => {
+                    const values = {
+                      ...form.getFieldsValue(),
+                      host,
+                      port,
+                    }
+                    execStartMITM(values)
+                  }}
+                  repRuleFlag={openRepRuleFlag}
+                  onSetVisible={props.setVisible}
+                />
+                <YakitButton type="text" size="large" onClick={() => setAdvancedFormVisible(true)}>
+                  {t('MITMServerForm.advancedConfig')}
+                </YakitButton>
+              </div>
+            </Item>
+          </section>
         </Form>
         {/* 代理劫持弹窗 */}
         <ProxyRulesConfig visible={agentConfigModalVisible} onClose={() => setAgentConfigModalVisible(false)} />

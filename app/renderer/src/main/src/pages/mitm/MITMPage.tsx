@@ -1078,12 +1078,12 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
 
   const ResizeBoxProps = useCreation(() => {
     let p = {
-      firstRatio: status === 'idle' ? '36%' : '30%',
-      secondRatio: status === 'idle' ? '64%' : '70%',
+      firstRatio: status === 'idle' ? '44%' : '30%',
+      secondRatio: status === 'idle' ? '56%' : '70%',
     }
 
     if (openTabsFlag) {
-      p.firstRatio = status === 'idle' ? '36%' : '30%'
+      p.firstRatio = status === 'idle' ? '44%' : '30%'
     } else {
       p.firstRatio = '24px'
     }
@@ -1095,6 +1095,21 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
     return p
   }, [isFullScreenFirstNode, openTabsFlag, status])
 
+  if (status === 'idle') {
+    return (
+      <main className={style['mitm-idle-workbench']}>
+        <section
+          className={classNames(style['mitm-idle-plugin-deck'], {
+            [style['mitm-idle-plugin-deck-collapsed']]: !openTabsFlag,
+          })}
+        >
+          {onRenderFirstNode()}
+        </section>
+        <section className={style['mitm-idle-start-deck']}>{onRenderSecondNode()}</section>
+      </main>
+    )
+  }
+
   return (
     <YakitResizeBox
       isVer={false}
@@ -1102,7 +1117,8 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
       isRecalculateWH={openTabsFlag}
       firstNode={() => <div className={style['mitm-server-start-pre-first']}>{onRenderFirstNode()}</div>}
       lineStyle={{ display: isFullScreenFirstNode ? 'none' : '' }}
-      firstMinSize={openTabsFlag ? (status === 'idle' ? '420px' : '360px') : '24px'}
+      lineDirection="left"
+      firstMinSize={openTabsFlag ? '360px' : '24px'}
       secondMinSize={520}
       secondNode={() => (
         <div className={style['mitm-server-start-pre-second']} style={{ display: isFullScreenFirstNode ? 'none' : '' }}>

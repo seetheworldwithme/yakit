@@ -66,7 +66,7 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
    - SCSS 查花括号配平（`{` 数 == `}` 数）。
 3. **删 `export` 前**全仓 grep 确认无外部引用（如 `convertToBytes`）。
 4. **大段 SCSS 删除**（多块 + 多档 `@media`）：用「按 selector + 花括号配准」的 python 脚本批量删，避免逐块手改导致行号漂移；删完查配平。脚本骨架：遍历行，匹配 `selector {` 起，按 `{`/`}` 计深度到配平，整段删 + 去一个尾空行。
-5. 验证通过即 `git commit`（**不 push**，走 feature 分支）——见下「提交策略」。
+5. 验证通过即 `git commit` 并 `git push` 到 `main`——见下「提交策略」。
 
 ## 开发与预览
 - 社区版开发：根目录 `yarn start-render`（react-app-rewired start，保存即热更新）
@@ -92,11 +92,27 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 
 ### 提交策略
 - **测试通过即 commit，无需问**：换皮改动只要满足「构建无报错（`tsc` / 启动无错）+ 功能正常（`regression-check.py` 过 / 关键页可点）+ 视觉走查通过」就直接 `git commit`，**不必停下来征求确认**。各 phase 的「Commit」步骤按此执行。
-- 仍遵守：**不 push**（推远端是 outward 操作，另问）；换皮代码走 feature 分支（不在 `master` 直接堆叠实现提交，文档 / 基线除外）。
+- **直接在 `main` 上开发并提交**：**不走 feature 分支**，所有改动落在 `main`；验证通过即 `git commit` 并 `git push` 到远端 `main`。推远端是 outward 操作，push 前确认分支与暂存范围无误。
+- **多窗口并行模式**：可多开 Claude Code 窗口在**同目录同分支(`main`)** 并行改造，关键是**文件不交叉**。每个窗口**只 `git add <自己改的具体文件>`**，**严禁 `git add -A` / `git commit -am` / `git add .`**（会捞走别的窗口半成品）；提交时机错开；共享文件（`package.json` / `tsconfig.json` / `theme/sentinelTheme.ts` / 全局 scss）只由指定窗口动。详见执行手册 §1。
+- 仍遵守：外科式改动 + 只动 UI 不动逻辑；提交前自查不卷入无关 WIP。
 
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
 - `sentinel-rebrand`：按 spec 做系统性换皮改造（组件塑形 / 布局重排）。
+- `detecting-frontend-reskins`：审计本项目与原版 yakit 的**源码相似度**（独立性得分，目标 ≥70）。改完 UI 后用它复跑看分数趋势。命令：`python3 .claude/skills/detecting-frontend-reskins/scripts/reskin_audit.py /Volumes/coding/application/yakit /Volumes/coding/application/yakit-update-ui --output /tmp/ra --format md --lang zh`。
+
+### 反换皮改造（竞标向，进行中）
+> 与 Sentinel 视觉换皮是**两条腿**：视觉换皮改"长相"，反换皮改"源码指纹"（让审计/bidder 看不出与原版 yakit 同源）。两者都做，但别混淆——**仅改样式/文案不降反换皮分数，必须改 JSX 结构/类名/文件组织才降**。
+
+- **执行手册（唯一事实源）**：`docs/换皮修改/反换皮改造执行手册.md`——71 页布局重构 + 依赖/目录/token 的**可粘贴 prompt 清单**，**优先级：B（页面重构·主线·唯一让应用看着变）> C（组件/token·纯刷分·低风险）> A（依赖/目录/配置·纯刷分·默认跳过）**。**新开窗口照此手册执行**，粘 §2 通用开场白 + 对应任务块即可。
+- **阶段 ABC 的真实作用（别期待错）**：**只有 B 让页面"看着变"**（视觉/骨架）；**A 和 C 都是纯刷审计分、零视觉变化**——C 低风险可顺手做（B 做完还差分时按 C2→C1）；**A 默认跳过**（A1 高风险建议永远不做，A3 低风险、A2 中风险，仅刷分需要时再做）。竞标若评视觉，全力 B。
+- **目标变体 = 企业版（EE 免 license）**：验证统一用 `yarn start-render-enterprise-no-license`（**不是** `yarn start-render` 社区版）。重构页面/组件时，文件里 `isEnpriTrace()` / `isEnpriTraceAgent()` / `isEnterpriseEdition()` 条件分支（企业版实际渲染的 JSX）**必须一起改**——只改 `isCommunityYakit` 社区版分支不算改到。每次进**企业版模式**肉眼验。
+- **进度追踪（务必维护）**：手册 **§3.5 进度追踪** 是单一事实源。每完成一项并**验证通过**（tsc 0 error + 企业版模式下进页面肉眼验布局确实变了）后，把对应 `- [ ]` 改成 `- [x]` 并把"总进度"分子 +1。**没验证不算完成，不许 Claude 窗口自己打勾**——必须人抽查企业版实际渲染后才能勾。
+- **审计基线**：37.93 / 100（2026-07-06 14:05 报告，identity 已解锁）。历史报告归档 `docs/换皮检查报告/`。
+- **identity 已解锁（勿回退）**：`package.json` version 已升 `2.x`（原 `1.x`）以解除审计「name+主版本相同 → 钳制 ≤39」override。**勿回退到 1.x**。`name` 仍为 yakit（改 name 影响 electron-builder appId / 数据目录，未动）。
+- **改 UI 时同步打散源码指纹**：除视觉外，务必打散 **JSX 标签序列**（栏位互换 / 双栏↔栅格 / `div`→语义标签 `section/main/nav` / 容器拆分重命名 / 拆子组件文件）+ 重命名 class——这些才降审计分。
+- **metric 口径**：layout 维度按文件**可见度加权**（`pages/layout/shell`/入口权重 3，`utils/hooks/store/services` 权重 0.3，普通组件 1）。改一个可见页面分数会**线性下降**；改 utils 几乎不动分。优先改门面页。
+- **P0 已完成的重命名**（新窗口读到旧名时对应过来）：`UILayout→SentinelShell`、`NewApp→SentinelWorkspace`、`ChildNewApp→SentinelChildWindow`、`AuxXterm→SentinelTerminal`、`ConcurrentStreamSkeleton→SentinelStreamSkeleton`、`ResizeLine→SentinelSplitter`。i18n key `t('UILayout.*')`/`t('NewApp.*')` 是翻译键，**保留不动**。
 
 注意，在回答之前，一定要说：好的，徐先生。
 

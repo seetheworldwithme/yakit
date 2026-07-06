@@ -18,6 +18,45 @@
   }
 }
 
+.mitm-idle-workbench {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(260px, 44%) minmax(360px, 1fr);
+  gap: 8px;
+  overflow: hidden;
+  background: var(--Colors-Use-Basic-Background);
+}
+
+.mitm-idle-plugin-deck,
+.mitm-idle-start-deck {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mitm-idle-plugin-deck {
+  padding: 8px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 8px;
+  background: var(--Colors-Use-Neutral-Bg);
+}
+
+.mitm-idle-start-deck {
+  padding: 10px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 8px;
+  background: var(--Colors-Use-Neutral-Bg);
+}
+
+.mitm-idle-plugin-deck-collapsed {
+  min-height: 42px;
+
+  .mitm-idle-tab-cont-item {
+    display: none;
+  }
+}
+
 .mitm-server-start-pre-first {
   display: flex;
   width: 100%;
@@ -25,6 +64,8 @@
   position: relative;
   flex-direction: column;
   min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
   border-radius: 8px;
   background: var(--Colors-Use-Neutral-Bg);
 
@@ -35,14 +76,17 @@
     height: 100%;
     .mitm-idle-tab-bar {
       flex-shrink: 0;
+      margin-bottom: 8px;
     }
     .mitm-idle-tab-cont-item {
       overflow: auto;
       width: 100%;
       flex: 1;
       min-height: 0;
-      padding-left: 15px;
-      padding-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      border-radius: 8px;
+      background: var(--Colors-Use-Basic-Background);
       display: flex;
       flex-direction: column;
     }
@@ -114,8 +158,18 @@
       .width-25,
       .width-33,
       .width-50 {
-        width: 50% !important;
+        width: 33.3333% !important;
         padding-right: 8px;
+      }
+    }
+
+    @container (max-width: 960px) {
+      :global {
+        .width-25,
+        .width-33,
+        .width-50 {
+          width: 50% !important;
+        }
       }
     }
   }
@@ -157,11 +211,11 @@
   height: 100%;
   position: relative;
   flex-direction: column;
-  padding: 8px;
+  padding: 10px;
   min-width: 0;
   border: 1px solid var(--Colors-Use-Neutral-Border);
   border-radius: 8px;
-  background: var(--Colors-Use-Basic-Background);
+  background: var(--Colors-Use-Neutral-Bg);
 }
 
 .plugin-group-modal {

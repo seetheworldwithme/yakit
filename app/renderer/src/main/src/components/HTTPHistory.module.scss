@@ -234,3 +234,45 @@
   height: 100%;
   padding: 8px;
 }
+
+.mitm-flow-workbench {
+  padding: 0;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 8px;
+  background: var(--Colors-Use-Neutral-Bg);
+  overflow: hidden;
+
+  > div {
+    gap: 0;
+    background: var(--Colors-Use-Neutral-Bg);
+  }
+
+  > div > div:first-child {
+    min-width: 0;
+    border-right: 1px solid var(--Colors-Use-Neutral-Border);
+    background: var(--Colors-Use-Basic-Background);
+  }
+
+  > div > div:last-child {
+    min-width: 0;
+    background: var(--Colors-Use-Neutral-Bg);
+  }
+
+  :global {
+    .ant-table-wrapper,
+    .ant-table,
+    .ant-table-container,
+    .ant-table-content {
+      background: var(--Colors-Use-Basic-Background);
+    }
+
+    .ant-table-thead > tr > th {
+      background: var(--Colors-Use-Neutral-Bg);
+      border-bottom-color: var(--Colors-Use-Neutral-Border);
+    }
+
+    .ant-table-tbody > tr > td {
+      border-bottom-color: var(--Colors-Use-Neutral-Border);
+    }
+  }
+}
