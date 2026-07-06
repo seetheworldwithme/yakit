@@ -1,4 +1,4 @@
-.ui-layout-wrapper {
+.sentinel-shell-root {
   width: 100%;
   height: 100vh;
   min-height: 100%;
@@ -8,13 +8,13 @@
 
   display: flex;
 
-  .ui-layout-container {
+  .sentinel-shell-frame {
     flex: 1;
     height: 100%;
     overflow: hidden;
     background-color: var(--Colors-Use-Neutral-Bg);
 
-    .container-wrapper {
+    .sentinel-shell-stage {
       width: 100%;
       height: 100%;
       display: flex;
@@ -23,7 +23,7 @@
     }
 
     // display: flex;
-    .ui-layout-header {
+    .sentinel-shell-header {
       width: 100%;
       height: 37px;
       background-color: var(--Colors-Use-Basic-Background);
@@ -40,13 +40,13 @@
         }
       }
 
-      .divider-wrapper {
+      .sentinel-shell-divider {
         width: 1px;
         height: 100%;
         border-left: 1px solid var(--Colors-Use-Neutral-Border);
       }
 
-      .header-body {
+      .sentinel-shell-bar {
         width: 100%;
         height: 100%;
         display: flex;
@@ -54,7 +54,7 @@
         border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
         position: relative;
 
-        .header-border-yakit-mask {
+        .sentinel-shell-bar-border-mask {
           position: absolute;
           bottom: -1px;
           width: 45px;
@@ -62,7 +62,7 @@
           background: var(--Colors-Use-Neutral-Bg);
         }
 
-        .yakit-header-title {
+        .sentinel-shell-wordmark {
           // width: 100px;
           height: 36px;
           position: absolute;
@@ -79,22 +79,22 @@
           -webkit-app-region: drag;
         }
 
-        .header-left {
+        .sentinel-shell-bar-left {
           height: 100%;
           display: flex;
           align-items: center;
         }
 
-        .header-title {
+        .sentinel-shell-bar-title {
           flex: 1;
           height: 100%;
         }
 
-        .header-title-drop {
+        .sentinel-shell-bar-title-drop {
           -webkit-app-region: drag;
         }
 
-        .header-right {
+        .sentinel-shell-bar-right {
           height: 100%;
           display: flex;
           align-items: center;
@@ -123,13 +123,13 @@
       }
     }
 
-    .ui-layout-body {
+    .sentinel-shell-main {
       width: 100%;
       flex: 1;
       overflow: hidden;
       position: relative;
 
-      .ui-layout-body-mask {
+      .sentinel-shell-main-mask {
         z-index: 100;
         width: 100%;
         height: 100%;
@@ -248,7 +248,7 @@
   }
 }
 
-.sampling-popover {
+.sentinel-shell-sampling-popover {
   width: 350px;
   padding-top: 10px;
   border-radius: 4px;
@@ -261,7 +261,7 @@
     }
   }
 
-  .sampling-info {
+  .sentinel-shell-sampling-info {
     display: flex;
     align-items: center;
     color: var(--Colors-Use-Main-Primary);
@@ -273,7 +273,7 @@
     }
   }
 
-  .sampling-footer {
+  .sentinel-shell-sampling-footer {
     border-top: 1px solid var(--Colors-Use-Neutral-Border);
     border-radius: 0px 0px 4px 4px;
     width: 100%;
@@ -282,7 +282,7 @@
     height: 28px;
     user-select: none;
     margin-top: 14px;
-    .footer-bottom {
+    .sentinel-shell-footer {
       flex: 1;
       font-weight: 500;
       font-size: 12px;
@@ -294,7 +294,7 @@
       cursor: pointer;
     }
 
-    .sampling-exit {
+    .sentinel-shell-sampling-exit {
       color: var(--Colors-Use-Error-Primary);
       border-right: 1px solid var(--Colors-Use-Neutral-Border);
       svg {
@@ -304,7 +304,7 @@
       }
     }
 
-    .sampling-refresh {
+    .sentinel-shell-sampling-refresh {
       color: var(--Colors-Use-Main-Primary);
       svg {
         width: 16px;
@@ -315,14 +315,14 @@
   }
 }
 
-.stop-screen-recorder {
+.sentinel-shell-stop-recorder {
   display: flex;
   align-items: center;
   padding-left: 2px;
   padding-right: 2px;
   margin-right: 5px;
 
-  .stop-icon {
+  .sentinel-shell-stop-icon {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -335,12 +335,12 @@
     animation: icon-breath 1s linear infinite;
   }
 
-  .stop-text {
+  .sentinel-shell-stop-text {
     animation: text-breath 1s linear infinite;
   }
 }
 
-.ai-describe {
+.sentinel-shell-ai-describe {
   width: 100%;
   background: rgba(86, 201, 145, 0.1);
   color: rgba(133, 137, 158, 1);
@@ -348,11 +348,11 @@
 }
 
 @media screen and (max-width: 1200px) {
-  .stop-screen-recorder {
-    .stop-icon {
+  .sentinel-shell-stop-recorder {
+    .sentinel-shell-stop-icon {
       margin-right: 0;
     }
-    .stop-text {
+    .sentinel-shell-stop-text {
       display: none;
     }
   }

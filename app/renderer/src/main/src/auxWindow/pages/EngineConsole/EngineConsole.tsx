@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import AuxXterm, { type AuxXtermRef, useAuxTerminalPush } from '@/auxWindow/components/AuxXterm'
+import SentinelTerminal, { type SentinelTerminalRef, useTerminalStream } from '@/auxWindow/components/SentinelTerminal'
 import { setClipboardText } from '@/utils/clipboard'
 import styles from '@/auxWindow/styles/terminalPage.module.scss'
 
@@ -8,18 +8,18 @@ interface EngineConsoleProps {
 }
 
 const EngineConsole: React.FC<EngineConsoleProps> = ({ windowId }) => {
-  const xtermRef = useRef<AuxXtermRef>(null)
+  const terminalRef = useRef<SentinelTerminalRef>(null)
 
-  useAuxTerminalPush(windowId, xtermRef)
+  useTerminalStream(windowId, terminalRef)
 
   return (
     <div className={styles['aux-terminal-page']}>
-      <AuxXterm
-        ref={xtermRef}
-        options={{ convertEol: true }}
-        customKeyEventHandler={(event) => {
+      <SentinelTerminal
+        ref={terminalRef}
+        terminalOptions={{ convertEol: true }}
+        onKeyEvent={(event) => {
           if ((event.ctrlKey || event.metaKey) && event.code === 'KeyC') {
-            const selection = xtermRef.current?.terminal.getSelection()
+            const selection = terminalRef.current?.terminal.getSelection()
             if (selection) {
               setClipboardText(selection)
               return false

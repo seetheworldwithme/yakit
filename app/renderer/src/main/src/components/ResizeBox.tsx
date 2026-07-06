@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ResizeLine } from './ResizeLine'
+import { SentinelSplitter } from './SentinelSplitter'
 import { useDebounce, useDebounceFn, useMemoizedFn, useThrottleFn } from 'ahooks'
 import ReactResizeDetector from 'react-resize-detector'
 
@@ -167,7 +167,7 @@ export const ResizeBox: React.FC<ResizeBoxProps> = React.memo((props) => {
         {typeof secondNode === 'function' ? secondNode() : secondNode}
       </div>
       {!props.freeze && (
-        <ResizeLine
+        <SentinelSplitter
           isVer={isVer}
           bodyRef={bodyRef}
           resizeRef={lineRef}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, Suspense, lazy, useState } from 'react'
+import { useRef, useEffect, Suspense, lazy, useState, type FC } from 'react'
 // by types
 import { failed, warn, yakitFailed } from './utils/notification'
 import { getRemoteValue, setRemoteValue } from './utils/kv'
@@ -7,7 +7,7 @@ import { NetWorkApi } from './services/fetch'
 import { API } from './services/swagger/resposeType'
 import { useGoogleChromePluginPath, useStore, yakitDynamicStatus } from './store'
 import { refreshToken } from './utils/login'
-import UILayout from './components/layout/UILayout'
+import SentinelShell from './components/layout/SentinelShell'
 import { getReleaseEditionName, getRemoteHttpSettingGV, isCommunityEdition, isIRify, isMemfit } from '@/utils/envfile'
 import { RemoteGV } from './yakitGV'
 import { coordinate, setChartsColorList } from './pages/globalVariable'
@@ -34,7 +34,7 @@ interface OnlineProfileProps {
   IsCompany?: boolean
 }
 
-function NewApp() {
+function SentinelWorkspace() {
   const { t } = useI18nNamespaces(['layout'])
   const { userInfo } = useStore()
   const { setGoogleChromePluginPath } = useGoogleChromePluginPath()
@@ -333,12 +333,23 @@ function NewApp() {
   }, interval)
 
   return (
-    <UILayout linkSuccess={linkSuccess}>
-      <Suspense fallback={<div>Loading Main</div>}>
-        <Main onErrorConfirmed={() => {}} />
-      </Suspense>
-    </UILayout>
+    <SentinelShell linkSuccess={linkSuccess}>
+      <MainStage />
+    </SentinelShell>
   )
 }
 
-export default NewApp
+/** 主内容舞台：懒加载 MainOperator，并在加载期展示占位 */
+const MainStage: FC = () => (
+  <Suspense
+    fallback={
+      <div className="sentinel-workspace-loading" aria-busy="true">
+        Loading Main
+      </div>
+    }
+  >
+    <Main onErrorConfirmed={() => {}} />
+  </Suspense>
+)
+
+export default SentinelWorkspace
