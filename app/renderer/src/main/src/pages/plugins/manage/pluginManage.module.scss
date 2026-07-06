@@ -1,8 +1,87 @@
-// 插件管理页面-wrapper
-.plugin-manage-layout {
+// 插件审计工作台-外壳（左侧竖向操作栈 + 主舞台）
+.plugin-audit-shell {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: var(--Colors-Use-Basic-Background);
+}
+
+// 左侧竖向操作栈
+.plugin-action-rail {
+  flex: 0 0 auto;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 12px;
+  background: var(--Colors-Use-Neutral-Bg);
+  border-right: 1px solid var(--Colors-Use-Neutral-Border);
+
+  .rail-brand {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--Colors-Use-Main-Primary) 0%, var(--Colors-Use-Blue-Primary) 100%);
+
+    .rail-brand-icon {
+      svg {
+        width: 18px;
+        height: 18px;
+        color: var(--Colors-Use-Basic-White);
+      }
+    }
+  }
+
+  .rail-divider {
+    width: 24px;
+    height: 1px;
+    background: var(--Colors-Use-Neutral-Border);
+  }
+
+  .rail-actions {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+
+    // 圆形 icon-only 操作按钮（覆盖 FuncBtnIcon 大号样式）
+    :global(.ant-btn) {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      padding: 0;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// 主舞台（详情/列表区）
+.plugin-stage {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// 顶栏搜索条（取代原 extra-header-wrapper）
+.audit-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 // 列表单项-额外操作-下拉表

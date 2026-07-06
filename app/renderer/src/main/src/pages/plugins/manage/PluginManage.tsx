@@ -1069,477 +1069,484 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   /** ---------- 同步插件到企业版 end ---------- */
 
   return (
-    <div ref={layoutRef} className={styles['plugin-manage-layout']}>
-      {!!plugin && (
-        <PluginManageDetail
-          ref={detailRef}
-          spinLoading={isLoadingRef.current && loading}
-          listLoading={loading}
-          response={response}
-          dispatch={dispatch}
-          info={plugin}
-          defaultAllCheck={allCheck}
-          defaultSelectList={selectList}
-          defaultSearch={searchs}
-          defaultFilter={filters}
-          downloadLoading={downloadLoading}
-          onBatchDownload={headerExtraDownload}
-          onPluginDel={onDetailDel}
-          currentIndex={showPluginIndex.current}
-          setCurrentIndex={setShowPluginIndex}
-          onBack={onBack}
-          loadMoreData={onUpdateList}
-          onDetailSearch={onDetailSearch}
-        />
-      )}
-      <PluginsLayout
-        title={t('PluginManage.title')}
-        hidden={!!plugin}
-        subTitle={<TypeSelect active={pluginStatusSelect} list={DefaultStatusList} setActive={onSetActive} />}
-        extraHeader={
-          <div className="extra-header-wrapper">
-            <FuncSearch maxWidth={1000} value={searchs} onSearch={onKeywordAndUser} onChange={setSearchs} />
-            <div className="divider-style"></div>
-            <div className="btn-group-wrapper">
-              {admin.ee && (
-                <FuncBtnIcon
-                  icon={<OutlinePaperairplaneIcon />}
-                  type="outline2"
-                  size="large"
-                  name={t('PluginManage.syncToEE')}
-                  onClick={onSyncPluginToEE}
-                />
-              )}
-              {admin.isAdmin && (
-                <FuncBtnIcon
-                  icon={<OutlinePencilaltIcon />}
-                  disabled={selectNum === 0 && !allCheck}
-                  type="outline2"
-                  size="large"
-                  name={t('PluginManage.modifyAuthor')}
-                  onClick={onShowModifyAuthor}
-                />
-              )}
+    <section ref={layoutRef} className={styles['plugin-audit-shell']}>
+      {!plugin && (
+        <aside className={styles['plugin-action-rail']}>
+          <div className={styles['rail-brand']} title={t('PluginManage.title')}>
+            <SolidClouduploadIcon className={styles['rail-brand-icon']} />
+          </div>
+          <span className={styles['rail-divider']} />
+          <nav className={styles['rail-actions']}>
+            {admin.ee && (
               <FuncBtnIcon
-                icon={<OutlineClouddownloadIcon />}
+                icon={<OutlinePaperairplaneIcon />}
                 type="outline2"
                 size="large"
-                loading={downloadLoading}
-                name={selectNum > 0 ? t('YakitButton.download') : t('YakitButton.oneClickDownload')}
-                onClick={() => headerExtraDownload()}
-                disabled={initTotal === 0}
+                name={t('PluginManage.syncToEE')}
+                onClick={onSyncPluginToEE}
               />
-              {admin.isAdmin && (
-                <FuncBtnIcon
-                  icon={<OutlineSaveIcon />}
-                  type="outline2"
-                  size="large"
-                  name={t('PluginManage.importGroup')}
-                  onClick={() => setImportGroupVisible(true)}
-                />
-              )}
-              {admin.ee && admin.isAdmin && (
-                <YakitDropdownMenu
-                  menu={{
-                    data: [
-                      { key: 'resetAll', label: t('YakitButton.resetAll') },
-                      { key: 'uploadPluginLibrary', label: t('PluginManage.uploadPluginLibrary') },
-                    ],
-                    onClick: ({ key }) => {
-                      switch (key) {
-                        case 'resetAll':
-                          let m = showYakitModal({
-                            title: (modalT) => modalT('YakitButton.resetAll'),
-                            centered: true,
-                            width: 400,
-                            closable: true,
-                            maskClosable: false,
-                            footer: (
-                              <div
-                                style={{
-                                  textAlign: 'right',
-                                  width: '100%',
-                                  margin: '0 15px 15px',
+            )}
+            {admin.isAdmin && (
+              <FuncBtnIcon
+                icon={<OutlinePencilaltIcon />}
+                disabled={selectNum === 0 && !allCheck}
+                type="outline2"
+                size="large"
+                name={t('PluginManage.modifyAuthor')}
+                onClick={onShowModifyAuthor}
+              />
+            )}
+            <FuncBtnIcon
+              icon={<OutlineClouddownloadIcon />}
+              type="outline2"
+              size="large"
+              loading={downloadLoading}
+              name={selectNum > 0 ? t('YakitButton.download') : t('YakitButton.oneClickDownload')}
+              onClick={() => headerExtraDownload()}
+              disabled={initTotal === 0}
+            />
+            {admin.isAdmin && (
+              <FuncBtnIcon
+                icon={<OutlineSaveIcon />}
+                type="outline2"
+                size="large"
+                name={t('PluginManage.importGroup')}
+                onClick={() => setImportGroupVisible(true)}
+              />
+            )}
+            {admin.ee && admin.isAdmin && (
+              <YakitDropdownMenu
+                menu={{
+                  data: [
+                    { key: 'resetAll', label: t('YakitButton.resetAll') },
+                    { key: 'uploadPluginLibrary', label: t('PluginManage.uploadPluginLibrary') },
+                  ],
+                  onClick: ({ key }) => {
+                    switch (key) {
+                      case 'resetAll':
+                        let m = showYakitModal({
+                          title: (modalT) => modalT('YakitButton.resetAll'),
+                          centered: true,
+                          width: 400,
+                          closable: true,
+                          maskClosable: false,
+                          footer: (
+                            <div
+                              style={{
+                                textAlign: 'right',
+                                width: '100%',
+                                margin: '0 15px 15px',
+                              }}
+                            >
+                              <YakitButton
+                                type="outline1"
+                                style={{ marginRight: 15 }}
+                                onClick={() => {
+                                  m.destroy()
                                 }}
                               >
-                                <YakitButton
-                                  type="outline1"
-                                  style={{ marginRight: 15 }}
-                                  onClick={() => {
-                                    m.destroy()
-                                  }}
-                                >
-                                  {t('YakitButton.cancel')}
-                                </YakitButton>
-                                <YakitButton
-                                  onClick={() => {
-                                    onResetAll()
-                                    m.destroy()
-                                  }}
-                                >
-                                  {t('YakitButton.confirm')}
-                                </YakitButton>
-                              </div>
-                            ),
-                            content: (modalT) => (
-                              <div style={{ padding: 15 }}>{modalT('PluginManage.resetConfirm')}</div>
-                            ),
-                            onCancel: () => {
-                              m.destroy()
-                            },
-                          })
-                          break
-                        case 'uploadPluginLibrary':
-                          setUploadPluginLibraryVisible(true)
-                          break
-                        default:
-                          break
-                      }
-                    },
-                  }}
-                  dropdown={{
-                    trigger: ['click'],
-                    placement: 'bottom',
-                  }}
-                >
-                  <FuncBtnIcon
-                    icon={<OutlineClouduploadIcon />}
-                    type="outline2"
-                    size="large"
-                    loading={resetLoading}
-                    name={t('YakitButton.resetAll')}
-                  />
-                </YakitDropdownMenu>
-              )}
-              {admin.isAdmin && (
+                                {t('YakitButton.cancel')}
+                              </YakitButton>
+                              <YakitButton
+                                onClick={() => {
+                                  onResetAll()
+                                  m.destroy()
+                                }}
+                              >
+                                {t('YakitButton.confirm')}
+                              </YakitButton>
+                            </div>
+                          ),
+                          content: (modalT) => <div style={{ padding: 15 }}>{modalT('PluginManage.resetConfirm')}</div>,
+                          onCancel: () => {
+                            m.destroy()
+                          },
+                        })
+                        break
+                      case 'uploadPluginLibrary':
+                        setUploadPluginLibraryVisible(true)
+                        break
+                      default:
+                        break
+                    }
+                  },
+                }}
+                dropdown={{
+                  trigger: ['click'],
+                  placement: 'bottom',
+                }}
+              >
                 <FuncBtnIcon
-                  icon={<OutlineTrashIcon />}
+                  icon={<OutlineClouduploadIcon />}
                   type="outline2"
                   size="large"
-                  name={selectNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
-                  onClick={onShowDelPlugin}
-                  disabled={initTotal === 0}
+                  loading={resetLoading}
+                  name={t('YakitButton.resetAll')}
                 />
-              )}
+              </YakitDropdownMenu>
+            )}
+            {admin.isAdmin && (
+              <FuncBtnIcon
+                icon={<OutlineTrashIcon />}
+                type="outline2"
+                size="large"
+                name={selectNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
+                onClick={onShowDelPlugin}
+                disabled={initTotal === 0}
+              />
+            )}
+          </nav>
+        </aside>
+      )}
+      <main className={styles['plugin-stage']}>
+        {!!plugin && (
+          <PluginManageDetail
+            ref={detailRef}
+            spinLoading={isLoadingRef.current && loading}
+            listLoading={loading}
+            response={response}
+            dispatch={dispatch}
+            info={plugin}
+            defaultAllCheck={allCheck}
+            defaultSelectList={selectList}
+            defaultSearch={searchs}
+            defaultFilter={filters}
+            downloadLoading={downloadLoading}
+            onBatchDownload={headerExtraDownload}
+            onPluginDel={onDetailDel}
+            currentIndex={showPluginIndex.current}
+            setCurrentIndex={setShowPluginIndex}
+            onBack={onBack}
+            loadMoreData={onUpdateList}
+            onDetailSearch={onDetailSearch}
+          />
+        )}
+        <PluginsLayout
+          title={t('PluginManage.title')}
+          hidden={!!plugin}
+          subTitle={<TypeSelect active={pluginStatusSelect} list={DefaultStatusList} setActive={onSetActive} />}
+          extraHeader={
+            <div className={styles['audit-search-bar']}>
+              <FuncSearch maxWidth={1000} value={searchs} onSearch={onKeywordAndUser} onChange={setSearchs} />
             </div>
-          </div>
-        }
-      >
-        <PluginsContainer
-          loading={loading && isLoadingRef.current}
-          visible={showFilter}
-          setVisible={onSetShowFilter}
-          selecteds={filters as Record<string, API.PluginsSearchData[]>}
-          onSelect={onFilter}
-          groupList={pluginFilters.map((item) => {
-            if (item.groupKey === 'plugin_group') {
-              item.groupExtraOptBtn = magGroupState() ? (
-                <>
-                  <YakitButton type="text" onClick={onOpenPluginGroup}>
-                    {t('PluginManage.manage')}
-                  </YakitButton>
-                  <div className={styles['divider-style']} />
-                </>
-              ) : (
-                <></>
-              )
-            }
-            return item
-          })}
+          }
         >
-          <PluginsList
-            checked={allCheck}
-            onCheck={onCheck}
-            isList={isList}
-            setIsList={setIsList}
-            total={response.pagemeta.total}
-            selected={selectNum}
-            filters={filters}
-            setFilters={setFilters}
+          <PluginsContainer
+            loading={loading && isLoadingRef.current}
             visible={showFilter}
             setVisible={onSetShowFilter}
-            extraHeader={
-              <div className={styles['hub-list-header-right-extra']}>
-                {magGroupState() ? (
+            selecteds={filters as Record<string, API.PluginsSearchData[]>}
+            onSelect={onFilter}
+            groupList={pluginFilters.map((item) => {
+              if (item.groupKey === 'plugin_group') {
+                item.groupExtraOptBtn = magGroupState() ? (
                   <>
-                    {showGroupList.length > 0 && (
-                      <div className={styles['header-filter-tag']}>
-                        {showGroupList.length <= 2 ? (
-                          showGroupList.map((group) => {
-                            return (
-                              <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
-                                {group}
-                              </YakitTag>
-                            )
-                          })
-                        ) : (
-                          <YakitPopover
-                            overlayClassName={styles['hub-outer-list-group-popover']}
-                            content={
-                              <div className={styles['hub-outer-list-filter']}>
-                                {showGroupList.map((group) => {
-                                  return (
-                                    <Tooltip
-                                      title={group}
-                                      placement="top"
-                                      overlayClassName="plugins-tooltip"
-                                      key={group}
-                                    >
-                                      <YakitTag closable onClose={() => onRemoveGroup(group)}>
-                                        {group}
-                                      </YakitTag>
-                                    </Tooltip>
-                                  )
-                                })}
-                              </div>
-                            }
-                            trigger="hover"
-                            onVisibleChange={setGroupTagShow}
-                            placement="bottom"
-                          >
-                            <div
-                              className={classNames(styles['tag-total'], {
-                                [styles['tag-total-active']]: groupTagShow,
-                              })}
-                            >
-                              <span>
-                                {t('PluginManage.pluginGroupCountLabel')}{' '}
-                                <span className={styles['total-style']}>{showGroupList.length}</span>
-                              </span>
-                              <OutlineXIcon onClick={() => onRemoveAllGroup()} />
-                            </div>
-                          </YakitPopover>
-                        )}
-                      </div>
-                    )}
-                    <YakitPopover
-                      visible={addGroupVisible}
-                      overlayClassName={styles['add-group-popover']}
-                      placement="bottomRight"
-                      trigger="click"
-                      content={
-                        <UpdateGroupList
-                          ref={updateGroupListRef}
-                          originGroupList={groupList}
-                          onOk={updateGroupList}
-                          onCanle={() => setAddGroupVisible(false)}
-                        ></UpdateGroupList>
-                      }
-                      onVisibleChange={(visible) => {
-                        setAddGroupVisible(visible)
-                      }}
-                    >
-                      {showGroupList.length ? (
-                        <div className={styles['ui-op-btn-wrapper']}>
-                          <div
-                            className={classNames(styles['op-btn-body'], {
-                              [styles['op-btn-body-hover']]: addGroupVisible,
-                            })}
-                          >
-                            <OutlinePluscircleIcon
-                              className={classNames(
-                                addGroupVisible ? styles['icon-hover-style'] : styles['icon-style'],
-                                styles['plus-icon'],
-                              )}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <YakitButton
-                          disabled={!selectList.length && !allCheck}
-                          type={'text'}
-                          icon={<OutlinePluscircleIcon />}
-                          style={{
-                            color: addGroupVisible
-                              ? 'var(--Colors-Use-Main-Primary)'
-                              : 'var(--Colors-Use-Neutral-Disable)',
-                          }}
-                        >
-                          添加分组
-                        </YakitButton>
-                      )}
-                    </YakitPopover>
+                    <YakitButton type="text" onClick={onOpenPluginGroup}>
+                      {t('PluginManage.manage')}
+                    </YakitButton>
+                    <div className={styles['divider-style']} />
                   </>
                 ) : (
                   <></>
-                )}
-              </div>
-            }
+                )
+              }
+              return item
+            })}
           >
-            {initTotal > 0 ? (
-              <ListShowContainer<YakitPluginOnlineDetail>
-                id="pluginManage"
-                isList={isList}
-                data={response.data}
-                gridNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
-                  const { index, data } = info
-                  const check = allCheck || selectUUIDs.includes(data.uuid)
-                  return (
-                    <GridLayoutOpt
-                      order={index}
-                      data={data}
-                      checked={check}
-                      onCheck={optCheck}
-                      title={data.script_name}
-                      type={data.type}
-                      tags={data.tags}
-                      help={data.help || ''}
-                      img={data.head_img || ''}
-                      user={data.authors || ''}
-                      prImgs={(data.collaborator || []).map((ele) => ele.head_img)}
-                      time={data.updated_at}
-                      isCorePlugin={!!data.isCorePlugin}
-                      official={data.official}
-                      subTitle={optSubTitle}
-                      extraFooter={optExtraNode}
-                      onClick={optClick}
-                    />
-                  )
-                }}
-                gridHeight={226}
-                listNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
-                  const { index, data } = info
-                  const check = allCheck || selectUUIDs.includes(data.uuid)
-                  return (
-                    <ListLayoutOpt
-                      order={index}
-                      data={data}
-                      checked={check}
-                      onCheck={optCheck}
-                      img={data.head_img}
-                      title={info.index + data.script_name}
-                      help={data.help || ''}
-                      time={data.updated_at}
-                      type={data.type}
-                      isCorePlugin={!!data.isCorePlugin}
-                      official={data.official}
-                      subTitle={optSubTitle}
-                      extraNode={optExtraNode}
-                      onClick={optClick}
-                    />
-                  )
-                }}
-                listHeight={73}
-                loading={loading}
-                hasMore={hasMore}
-                updateList={onUpdateList}
-                showIndex={showPluginIndex.current}
-                setShowIndex={setShowPluginIndex}
-                isShowSearchResultEmpty={+response.pagemeta.total === 0}
-              />
-            ) : (
-              <div className={styles['plugin-manage-empty']}>
-                <YakitEmpty title={t('YakitEmpty.noData')} />
-
-                <div className={styles['plugin-manage-buttons']}>
-                  <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefListAndTotalAndGroup}>
-                    {t('YakitButton.refresh')}
-                  </YakitButton>
+            <PluginsList
+              checked={allCheck}
+              onCheck={onCheck}
+              isList={isList}
+              setIsList={setIsList}
+              total={response.pagemeta.total}
+              selected={selectNum}
+              filters={filters}
+              setFilters={setFilters}
+              visible={showFilter}
+              setVisible={onSetShowFilter}
+              extraHeader={
+                <div className={styles['hub-list-header-right-extra']}>
+                  {magGroupState() ? (
+                    <>
+                      {showGroupList.length > 0 && (
+                        <div className={styles['header-filter-tag']}>
+                          {showGroupList.length <= 2 ? (
+                            showGroupList.map((group) => {
+                              return (
+                                <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
+                                  {group}
+                                </YakitTag>
+                              )
+                            })
+                          ) : (
+                            <YakitPopover
+                              overlayClassName={styles['hub-outer-list-group-popover']}
+                              content={
+                                <div className={styles['hub-outer-list-filter']}>
+                                  {showGroupList.map((group) => {
+                                    return (
+                                      <Tooltip
+                                        title={group}
+                                        placement="top"
+                                        overlayClassName="plugins-tooltip"
+                                        key={group}
+                                      >
+                                        <YakitTag closable onClose={() => onRemoveGroup(group)}>
+                                          {group}
+                                        </YakitTag>
+                                      </Tooltip>
+                                    )
+                                  })}
+                                </div>
+                              }
+                              trigger="hover"
+                              onVisibleChange={setGroupTagShow}
+                              placement="bottom"
+                            >
+                              <div
+                                className={classNames(styles['tag-total'], {
+                                  [styles['tag-total-active']]: groupTagShow,
+                                })}
+                              >
+                                <span>
+                                  {t('PluginManage.pluginGroupCountLabel')}{' '}
+                                  <span className={styles['total-style']}>{showGroupList.length}</span>
+                                </span>
+                                <OutlineXIcon onClick={() => onRemoveAllGroup()} />
+                              </div>
+                            </YakitPopover>
+                          )}
+                        </div>
+                      )}
+                      <YakitPopover
+                        visible={addGroupVisible}
+                        overlayClassName={styles['add-group-popover']}
+                        placement="bottomRight"
+                        trigger="click"
+                        content={
+                          <UpdateGroupList
+                            ref={updateGroupListRef}
+                            originGroupList={groupList}
+                            onOk={updateGroupList}
+                            onCanle={() => setAddGroupVisible(false)}
+                          ></UpdateGroupList>
+                        }
+                        onVisibleChange={(visible) => {
+                          setAddGroupVisible(visible)
+                        }}
+                      >
+                        {showGroupList.length ? (
+                          <div className={styles['ui-op-btn-wrapper']}>
+                            <div
+                              className={classNames(styles['op-btn-body'], {
+                                [styles['op-btn-body-hover']]: addGroupVisible,
+                              })}
+                            >
+                              <OutlinePluscircleIcon
+                                className={classNames(
+                                  addGroupVisible ? styles['icon-hover-style'] : styles['icon-style'],
+                                  styles['plus-icon'],
+                                )}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <YakitButton
+                            disabled={!selectList.length && !allCheck}
+                            type={'text'}
+                            icon={<OutlinePluscircleIcon />}
+                            style={{
+                              color: addGroupVisible
+                                ? 'var(--Colors-Use-Main-Primary)'
+                                : 'var(--Colors-Use-Neutral-Disable)',
+                            }}
+                          >
+                            添加分组
+                          </YakitButton>
+                        )}
+                      </YakitPopover>
+                    </>
+                  ) : (
+                    <></>
+                  )}
                 </div>
-              </div>
-            )}
-          </PluginsList>
-        </PluginsContainer>
-      </PluginsLayout>
-      <ModifyAuthorModal
-        visible={showModifyAuthor}
-        setVisible={setShowModifyAuthor}
-        plugins={selectUUIDs}
-        onOK={onModifyAuthor}
-      />
-      <ReasonModal
-        visible={showReason.visible}
-        setVisible={onCancelReason}
-        type={showReason.type}
-        total={!!activeDelPlugin.current ? 1 : selectNum || response.pagemeta.total}
-        onOK={onReasonCallback}
-      />
-      <PluginGroupDrawer
-        groupType="online"
-        visible={pluginGroupMagDrawer}
-        onClose={onPluginGroupMagDrawerClose}
-      ></PluginGroupDrawer>
-      <ListDelGroupConfirmPop
-        ref={listDelGroupConfirmPopRef}
-        visible={listDelGroupConfirm}
-        content={removeOutGroupContRef.current}
-        onCancel={onRemoveCancel}
-        onOk={onRemoveOk}
-      ></ListDelGroupConfirmPop>
-      {importGroupVisible && (
-        <YakitModal
-          title={t('PluginManage.importGroupTitle')}
-          closable={true}
-          visible={importGroupVisible}
-          maskClosable={false}
-          centered
-          onCancel={() => setImportGroupVisible(false)}
-          footer={null}
-        >
-          <UploadGroupModal importSuccess={fetchPluginFilters} onClose={() => setImportGroupVisible(false)} />
-        </YakitModal>
-      )}
+              }
+            >
+              {initTotal > 0 ? (
+                <ListShowContainer<YakitPluginOnlineDetail>
+                  id="pluginManage"
+                  isList={isList}
+                  data={response.data}
+                  gridNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
+                    const { index, data } = info
+                    const check = allCheck || selectUUIDs.includes(data.uuid)
+                    return (
+                      <GridLayoutOpt
+                        order={index}
+                        data={data}
+                        checked={check}
+                        onCheck={optCheck}
+                        title={data.script_name}
+                        type={data.type}
+                        tags={data.tags}
+                        help={data.help || ''}
+                        img={data.head_img || ''}
+                        user={data.authors || ''}
+                        prImgs={(data.collaborator || []).map((ele) => ele.head_img)}
+                        time={data.updated_at}
+                        isCorePlugin={!!data.isCorePlugin}
+                        official={data.official}
+                        subTitle={optSubTitle}
+                        extraFooter={optExtraNode}
+                        onClick={optClick}
+                      />
+                    )
+                  }}
+                  gridHeight={226}
+                  listNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
+                    const { index, data } = info
+                    const check = allCheck || selectUUIDs.includes(data.uuid)
+                    return (
+                      <ListLayoutOpt
+                        order={index}
+                        data={data}
+                        checked={check}
+                        onCheck={optCheck}
+                        img={data.head_img}
+                        title={info.index + data.script_name}
+                        help={data.help || ''}
+                        time={data.updated_at}
+                        type={data.type}
+                        isCorePlugin={!!data.isCorePlugin}
+                        official={data.official}
+                        subTitle={optSubTitle}
+                        extraNode={optExtraNode}
+                        onClick={optClick}
+                      />
+                    )
+                  }}
+                  listHeight={73}
+                  loading={loading}
+                  hasMore={hasMore}
+                  updateList={onUpdateList}
+                  showIndex={showPluginIndex.current}
+                  setShowIndex={setShowPluginIndex}
+                  isShowSearchResultEmpty={+response.pagemeta.total === 0}
+                />
+              ) : (
+                <div className={styles['plugin-manage-empty']}>
+                  <YakitEmpty title={t('YakitEmpty.noData')} />
 
-      {/* 一键下载 */}
-      {allDownloadHint && (
-        <YakitGetOnlinePlugin
-          listType="check"
-          visible={allDownloadHint}
-          setVisible={(v) => setAllDownloadHint(v)}
-          getContainer={document.getElementById(`main-operator-page-body-${YakitRoute.Plugin_Audit}`) || undefined}
+                  <div className={styles['plugin-manage-buttons']}>
+                    <YakitButton type="outline1" icon={<OutlineRefreshIcon />} onClick={onRefListAndTotalAndGroup}>
+                      {t('YakitButton.refresh')}
+                    </YakitButton>
+                  </div>
+                </div>
+              )}
+            </PluginsList>
+          </PluginsContainer>
+        </PluginsLayout>
+        <ModifyAuthorModal
+          visible={showModifyAuthor}
+          setVisible={setShowModifyAuthor}
+          plugins={selectUUIDs}
+          onOK={onModifyAuthor}
         />
-      )}
-      {/* 批量下载同名覆盖提示 */}
-      <NoPromptHint
-        visible={batchSameNameHint}
-        title={t('PluginManage.sameNameOverlayTitle')}
-        content={t('PluginManage.sameNameOverlayContent')}
-        cacheKey={RemotePluginGV.BatchDownloadPluginSameNameOverlay}
-        onCallback={handleBatchSameNameHint}
-      />
-      {/* 单个下载同名覆盖提示 */}
-      <NoPromptHint
-        visible={singleSameNameHint}
-        title={t('PluginManage.sameNameOverlayTitle')}
-        content={t('PluginManage.sameNameOverlayContent')}
-        cacheKey={RemotePluginGV.SingleDownloadPluginSameNameOverlay}
-        onCallback={handleSingleSameNameHint}
-      />
-      {/* 上传插件库 */}
-      {uploadPluginLibraryVisible && (
-        <YakitModal
-          title={t('PluginManage.uploadPluginLibrary')}
-          closable={true}
-          visible={uploadPluginLibraryVisible}
-          maskClosable={false}
-          onCancel={() => setUploadPluginLibraryVisible(false)}
-          footer={null}
-        >
-          <UploadPluginLibrary
-            onUploadPluginLibrary={onUploadPluginLibrary}
-            onClose={() => setUploadPluginLibraryVisible(false)}
+        <ReasonModal
+          visible={showReason.visible}
+          setVisible={onCancelReason}
+          type={showReason.type}
+          total={!!activeDelPlugin.current ? 1 : selectNum || response.pagemeta.total}
+          onOK={onReasonCallback}
+        />
+        <PluginGroupDrawer
+          groupType="online"
+          visible={pluginGroupMagDrawer}
+          onClose={onPluginGroupMagDrawerClose}
+        ></PluginGroupDrawer>
+        <ListDelGroupConfirmPop
+          ref={listDelGroupConfirmPopRef}
+          visible={listDelGroupConfirm}
+          content={removeOutGroupContRef.current}
+          onCancel={onRemoveCancel}
+          onOk={onRemoveOk}
+        ></ListDelGroupConfirmPop>
+        {importGroupVisible && (
+          <YakitModal
+            title={t('PluginManage.importGroupTitle')}
+            closable={true}
+            visible={importGroupVisible}
+            maskClosable={false}
+            centered
+            onCancel={() => setImportGroupVisible(false)}
+            footer={null}
+          >
+            <UploadGroupModal importSuccess={fetchPluginFilters} onClose={() => setImportGroupVisible(false)} />
+          </YakitModal>
+        )}
+
+        {/* 一键下载 */}
+        {allDownloadHint && (
+          <YakitGetOnlinePlugin
+            listType="check"
+            visible={allDownloadHint}
+            setVisible={(v) => setAllDownloadHint(v)}
+            getContainer={document.getElementById(`main-operator-page-body-${YakitRoute.Plugin_Audit}`) || undefined}
           />
-        </YakitModal>
-      )}
-      <YakitHint
-        visible={percentShow}
-        title={t('PluginManage.uploadPluginLibrary')}
-        heardIcon={<SolidClouduploadIcon style={{ color: 'var(--Colors-Use-Warning-Primary)' }} />}
-        onCancel={onUploadPluginLibraryCancel}
-        okButtonProps={{ style: { display: 'none' } }}
-        isDrag={true}
-        mask={false}
-        getContainer={document.getElementById(`main-operator-page-body-${YakitRoute.Plugin_Audit}`) || undefined}
-        wrapClassName={styles['uploadPluginLibraryModal']}
-      >
-        <Progress
-          strokeColor="var(--Colors-Use-Main-Primary)"
-          trailColor="var(--Colors-Use-Neutral-Bg)"
-          percent={percent}
-          format={(percent) => t('YakitProgress.uploadedPercent', { percent: percent ?? 0 })}
+        )}
+        {/* 批量下载同名覆盖提示 */}
+        <NoPromptHint
+          visible={batchSameNameHint}
+          title={t('PluginManage.sameNameOverlayTitle')}
+          content={t('PluginManage.sameNameOverlayContent')}
+          cacheKey={RemotePluginGV.BatchDownloadPluginSameNameOverlay}
+          onCallback={handleBatchSameNameHint}
         />
-      </YakitHint>
-    </div>
+        {/* 单个下载同名覆盖提示 */}
+        <NoPromptHint
+          visible={singleSameNameHint}
+          title={t('PluginManage.sameNameOverlayTitle')}
+          content={t('PluginManage.sameNameOverlayContent')}
+          cacheKey={RemotePluginGV.SingleDownloadPluginSameNameOverlay}
+          onCallback={handleSingleSameNameHint}
+        />
+        {/* 上传插件库 */}
+        {uploadPluginLibraryVisible && (
+          <YakitModal
+            title={t('PluginManage.uploadPluginLibrary')}
+            closable={true}
+            visible={uploadPluginLibraryVisible}
+            maskClosable={false}
+            onCancel={() => setUploadPluginLibraryVisible(false)}
+            footer={null}
+          >
+            <UploadPluginLibrary
+              onUploadPluginLibrary={onUploadPluginLibrary}
+              onClose={() => setUploadPluginLibraryVisible(false)}
+            />
+          </YakitModal>
+        )}
+        <YakitHint
+          visible={percentShow}
+          title={t('PluginManage.uploadPluginLibrary')}
+          heardIcon={<SolidClouduploadIcon style={{ color: 'var(--Colors-Use-Warning-Primary)' }} />}
+          onCancel={onUploadPluginLibraryCancel}
+          okButtonProps={{ style: { display: 'none' } }}
+          isDrag={true}
+          mask={false}
+          getContainer={document.getElementById(`main-operator-page-body-${YakitRoute.Plugin_Audit}`) || undefined}
+          wrapClassName={styles['uploadPluginLibraryModal']}
+        >
+          <Progress
+            strokeColor="var(--Colors-Use-Main-Primary)"
+            trailColor="var(--Colors-Use-Neutral-Bg)"
+            percent={percent}
+            format={(percent) => t('YakitProgress.uploadedPercent', { percent: percent ?? 0 })}
+          />
+        </YakitHint>
+      </main>
+    </section>
   )
 }
 
