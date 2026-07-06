@@ -272,29 +272,131 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
   ]
   return (
     <div className="private-domain">
-      {enterpriseLogin && (
-        <div className="login-title-show">
-          <div className="icon-box">
-            <img src={yakitImg} className="type-icon-img" />
-          </div>
-          <div className="title-box">{t('ConfigPrivateDomain.enterpriseLogin')}</div>
-        </div>
-      )}
-      <Form {...layout} form={form} name="control-hooks" onFinish={(v) => onFinish(v)} size="small">
-        <Form.Item
-          name="BaseUrl"
-          label={t('ConfigPrivateDomain.privateDomainAddress')}
-          rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgeUrl()]}
-        >
-          <YakitAutoComplete
-            ref={httpHistoryRef}
-            cacheHistoryDataKey={getRemoteConfigBaseUrlGV()}
-            initValue={defaultHttpUrl}
-            placeholder={t('ConfigPrivateDomain.enterPrivateDomain')}
-            defaultOpen={!enterpriseLogin}
-          />
-        </Form.Item>
-        {!enterpriseLogin && (
+      {enterpriseLogin ? (
+        <section className="sentinel-enterprise-shell">
+          {/* 左半:品牌宣传区,Sentinel 科技蓝网格底纹 */}
+          <aside className="sentinel-enterprise-brand">
+            <div className="brand-grid-bg" aria-hidden="true" />
+            <div className="brand-grid-glow" aria-hidden="true" />
+            <header className="brand-head">
+              <span className="brand-mark" />
+              <span className="brand-name">Sentinel</span>
+            </header>
+            <div className="brand-tagline">
+              <h3 className="brand-tagline-title">企业统一身份认证</h3>
+              <p className="brand-tagline-sub">对接私有部署中心,登录后自动同步配置与权限</p>
+            </div>
+            <ul className="brand-points">
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">单点登录,统一账号体系</span>
+              </li>
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">数据自主可控,合规私有化</span>
+              </li>
+              <li className="brand-point">
+                <span className="brand-point-dot" />
+                <span className="brand-point-text">登录后自动同步项目与全局配置</span>
+              </li>
+            </ul>
+            <footer className="brand-foot">© Sentinel Security Platform</footer>
+          </aside>
+
+          {/* 右半:企业登录表单区 */}
+          <main className="sentinel-enterprise-main">
+            <header className="enterprise-main-head">
+              <div className="enterprise-logo-box">
+                <img src={yakitImg} className="type-icon-img" alt="logo" />
+              </div>
+              <h2 className="enterprise-main-title">{t('ConfigPrivateDomain.enterpriseLogin')}</h2>
+              <p className="enterprise-main-step">
+                <span className="enterprise-step-no">01</span>
+                <span className="enterprise-step-text">填写私有域地址与账号信息完成认证</span>
+              </p>
+            </header>
+
+            <Form
+              {...layout}
+              form={form}
+              name="control-hooks"
+              onFinish={(v) => onFinish(v)}
+              size="small"
+              className="enterprise-login-form"
+            >
+              <Form.Item
+                name="BaseUrl"
+                label={t('ConfigPrivateDomain.privateDomainAddress')}
+                rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgeUrl()]}
+              >
+                <YakitAutoComplete
+                  ref={httpHistoryRef}
+                  cacheHistoryDataKey={getRemoteConfigBaseUrlGV()}
+                  initValue={defaultHttpUrl}
+                  placeholder={t('ConfigPrivateDomain.enterPrivateDomain')}
+                  defaultOpen={!enterpriseLogin}
+                />
+              </Form.Item>
+              <div className="form-row-2col">
+                <Form.Item
+                  name="user_name"
+                  label={t('ConfigPrivateDomain.username')}
+                  labelCol={{ span: 24 }}
+                  wrapperCol={{ span: 24 }}
+                  rules={[{ required: true, message: t('YakitForm.requiredField') }]}
+                >
+                  <YakitInput placeholder={t('ConfigPrivateDomain.enterUsername')} allowClear />
+                </Form.Item>
+                <Form.Item
+                  name="pwd"
+                  label={t('ConfigPrivateDomain.password')}
+                  labelCol={{ span: 24 }}
+                  wrapperCol={{ span: 24 }}
+                  rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgePass()]}
+                >
+                  <YakitInput.Password placeholder={t('ConfigPrivateDomain.enterPassword')} allowClear />
+                </Form.Item>
+              </div>
+              <Form.Item label={' '} colon={false} className="form-item-submit">
+                {isShowSkip && (
+                  <YakitButton
+                    style={{ width: 165, marginRight: 12 }}
+                    onClick={() => {
+                      onSuccee && onSuccee()
+                    }}
+                    size="large"
+                  >
+                    {t('YakitButton.skip')}
+                  </YakitButton>
+                )}
+                <YakitButton
+                  size="large"
+                  type="primary"
+                  htmlType="submit"
+                  style={{ width: 165, marginLeft: isShowSkip ? 0 : 43 }}
+                  loading={loading}
+                >
+                  {t('YakitButton.login')}
+                </YakitButton>
+              </Form.Item>
+            </Form>
+          </main>
+        </section>
+      ) : (
+        <Form {...layout} form={form} name="control-hooks" onFinish={(v) => onFinish(v)} size="small">
+          <Form.Item
+            name="BaseUrl"
+            label={t('ConfigPrivateDomain.privateDomainAddress')}
+            rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgeUrl()]}
+          >
+            <YakitAutoComplete
+              ref={httpHistoryRef}
+              cacheHistoryDataKey={getRemoteConfigBaseUrlGV()}
+              initValue={defaultHttpUrl}
+              placeholder={t('ConfigPrivateDomain.enterPrivateDomain')}
+              defaultOpen={!enterpriseLogin}
+            />
+          </Form.Item>
           <Form.Item
             name="Proxy"
             label={
@@ -312,49 +414,6 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
               placeholder={t('ConfigPrivateDomain.setProxy')}
             />
           </Form.Item>
-        )}
-        {enterpriseLogin && (
-          <Form.Item
-            name="user_name"
-            label={t('ConfigPrivateDomain.username')}
-            rules={[{ required: true, message: t('YakitForm.requiredField') }]}
-          >
-            <YakitInput placeholder={t('ConfigPrivateDomain.enterUsername')} allowClear />
-          </Form.Item>
-        )}
-        {enterpriseLogin && (
-          <Form.Item
-            name="pwd"
-            label={t('ConfigPrivateDomain.password')}
-            rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgePass()]}
-          >
-            <YakitInput.Password placeholder={t('ConfigPrivateDomain.enterPassword')} allowClear />
-          </Form.Item>
-        )}
-        {enterpriseLogin ? (
-          <Form.Item label={' '} colon={false} className="form-item-submit">
-            {isShowSkip && (
-              <YakitButton
-                style={{ width: 165, marginRight: 12 }}
-                onClick={() => {
-                  onSuccee && onSuccee()
-                }}
-                size="large"
-              >
-                {t('YakitButton.skip')}
-              </YakitButton>
-            )}
-            <YakitButton
-              size="large"
-              type="primary"
-              htmlType="submit"
-              style={{ width: 165, marginLeft: isShowSkip ? 0 : 43 }}
-              loading={loading}
-            >
-              {t('YakitButton.login')}
-            </YakitButton>
-          </Form.Item>
-        ) : (
           <div className="form-btns">
             <YakitButton type="outline2" onClick={(e) => onClose && onClose()}>
               {t('YakitButton.cancel')}
@@ -363,8 +422,8 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
               {t('YakitButton.ok')}
             </YakitButton>
           </div>
-        )}
-      </Form>
+        </Form>
+      )}
     </div>
   )
 })

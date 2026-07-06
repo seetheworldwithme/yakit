@@ -47,3 +47,213 @@
     }
   }
 }
+
+// ===== 企业版登录:Sentinel 分屏 shell =====
+.sentinel-enterprise-login-wrap {
+  .ant-modal-content {
+    overflow: hidden;
+    border-radius: 16px;
+    background-color: var(--Colors-Use-Basic-Background);
+    box-shadow: 0px 24px 64px var(--Colors-Use-Basic-Shadow);
+  }
+  .ant-modal-body {
+    border-radius: 16px;
+  }
+  // 企业登录态下外层 .private-domain 不再保留默认 padding(由分屏各区自管)
+  .private-domain {
+    padding: 0;
+  }
+}
+
+.sentinel-enterprise-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  width: 760px;
+  min-height: 520px;
+  background-color: var(--Colors-Use-Basic-Background);
+  color: var(--Colors-Use-Neutral-Text-1-Title);
+  overflow: hidden;
+}
+
+// ---------- 左半:品牌宣传区 ----------
+.sentinel-enterprise-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 32px;
+  overflow: hidden;
+  color: #ffffff;
+  background: linear-gradient(155deg, var(--Colors-Use-Main-Primary) 0%, var(--Colors-Use-Main-Pressed) 100%);
+
+  .brand-grid-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 75%);
+  }
+
+  .brand-grid-glow {
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 240px;
+    height: 240px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+    opacity: 0.8;
+  }
+
+  .brand-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background-color: #ffffff;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.6);
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+  }
+
+  .brand-tagline {
+    position: relative;
+    margin-top: 8px;
+
+    .brand-tagline-title {
+      margin: 0 0 12px;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #ffffff;
+    }
+
+    .brand-tagline-sub {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.78);
+    }
+  }
+
+  .brand-points {
+    position: relative;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+
+    .brand-point {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.88);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .brand-point-dot {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background-color: #ffffff;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+      }
+    }
+  }
+
+  .brand-foot {
+    position: relative;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+// ---------- 右半:企业登录表单区 ----------
+.sentinel-enterprise-main {
+  display: flex;
+  flex-direction: column;
+  padding: 48px 44px 40px;
+  background-color: var(--Colors-Use-Basic-Background);
+
+  .enterprise-main-head {
+    margin-bottom: 28px;
+
+    .enterprise-logo-box {
+      margin-bottom: 16px;
+
+      .type-icon-img {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        object-fit: cover;
+        box-shadow: 0px 6px 16px var(--Colors-Use-Basic-Shadow);
+      }
+    }
+
+    .enterprise-main-title {
+      margin: 0 0 12px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+    }
+
+    .enterprise-main-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+
+      .enterprise-step-no {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 20px;
+        padding: 0 6px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 4px;
+        color: #ffffff;
+        background-color: var(--Colors-Use-Main-Primary);
+      }
+
+      .enterprise-step-text {
+        font-size: 13px;
+        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+      }
+    }
+  }
+
+  .enterprise-login-form {
+    // 输入框分组:账号 / 密码两列排列
+    .form-row-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 16px;
+    }
+
+    .form-item-submit {
+      margin-top: 8px;
+    }
+  }
+}

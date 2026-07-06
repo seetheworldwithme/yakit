@@ -31,6 +31,9 @@ const Login: React.FC<LoginProp> = (props) => {
     const m = showModal({
       title: '',
       centered: true,
+      width: 760,
+      bodyStyle: { padding: 0 },
+      wrapClassName: 'sentinel-enterprise-login-wrap',
       content: <ConfigPrivateDomain onClose={() => m.destroy()} enterpriseLogin={true} />,
     })
     return m
