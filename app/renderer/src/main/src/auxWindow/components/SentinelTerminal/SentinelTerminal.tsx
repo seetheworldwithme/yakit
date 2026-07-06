@@ -1,6 +1,7 @@
 import { ForwardedRef, forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import 'xterm/css/xterm.css'
-import { FitAddon, type ITerminalOptions, Terminal } from '@xterm/xterm'
+import { type ITerminalOptions, Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
 import { getTerminalTheme } from './terminalTheme'
 import styles from './SentinelTerminal.module.scss'
 

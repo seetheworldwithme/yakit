@@ -47,7 +47,7 @@ export const SentinelSplitter: React.FC<SentinelSplitterProps> = (props) => {
       document.onmouseup = null
     }
 
-    const beginDrag = (downEvent: MouseEvent) => {
+    const beginDrag = (downEvent: any) => {
       if (onStart) onStart()
       const vertical = readAxis()
       const origin = vertical ? downEvent.layerY : downEvent.layerX
@@ -93,9 +93,7 @@ export const SentinelSplitter: React.FC<SentinelSplitterProps> = (props) => {
       ref={lineRef}
       className={`sentinel-splitter ${vertical ? 'sentinel-splitter-vertical' : 'sentinel-splitter-horizontal'}`}
       style={
-        vertical
-          ? { top: `0px`, borderTop: '2px dashed #434344' }
-          : { left: `0px`, borderLeft: '2px dashed #434344' }
+        vertical ? { top: `0px`, borderTop: '2px dashed #434344' } : { left: `0px`, borderLeft: '2px dashed #434344' }
       }
       draggable
     />
