@@ -40,7 +40,7 @@
     "@viz-js/viz": "^3.7.0",
     "@xterm/addon-fit": "^0.10.0",
     "@yakit-libs/color": "^1.2.0",
-    "ahooks": "3.7.9",
+    "ahooks": "3.8.4",
     "ali-react-table": "2.6.1",
     "antd": "4.21.7",
     "axios": "1.4.0",
