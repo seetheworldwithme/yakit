@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Card, Divider, List, Space } from 'antd'
+import { List } from 'antd'
 import { formatTimestamp } from '../../utils/timeUtil'
 import { ReloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useMemoizedFn } from 'ahooks'
@@ -124,84 +124,51 @@ export const HTTPFuzzerHistorySelector: React.FC<HTTPFuzzerHistorySelectorProp> 
 
   return (
     <YakitCard
-      // size={"small"}
       bordered={false}
+      className={styles['history-panel']}
       title={
-        <Space style={{ lineHeight: '16px' }}>
-          <span>Web Fuzzer History</span>
-          <YakitButton
-            type="text"
-            size={'small'}
-            icon={<ReloadOutlined />}
-            onClick={(e) => {
-              reload(1, limit)
-            }}
-          />
-          <YakitPopconfirm
-            title={t('HTTPFuzzerHistorySelector.confirmDeletePackets')}
-            onConfirm={() => {
-              deleteAll()
-            }}
-          >
-            <YakitButton type="text" size={'small'} colors="danger" icon={<DeleteOutlined />} />
-          </YakitPopconfirm>
-        </Space>
-      }
-      // style={{color: "var(--Colors-Use-Neutral-Text-1-Title)"}}
-      className={styles['history-card-container']}
-    >
-      {/* <Form
-                size={"small"}
-                layout={"inline"}
-                onSubmitCapture={(e) => {
-                    e.preventDefault()
-
-                    reload(1, limit)
-                }}
+        <header className={styles['history-head']}>
+          <span className={styles['history-head-title']}>Web Fuzzer History</span>
+          <div className={styles['history-head-tools']}>
+            <YakitButton
+              type="text"
+              size={'small'}
+              icon={<ReloadOutlined />}
+              onClick={(e) => {
+                reload(1, limit)
+              }}
+            />
+            <YakitPopconfirm
+              title={t('HTTPFuzzerHistorySelector.confirmDeletePackets')}
+              onConfirm={() => {
+                deleteAll()
+              }}
             >
-                <InputItem
-                    label={
-                        <div style={{display: "flex", alignItems: "center"}}>
-                            
-                            <Tooltip title={"快速搜索 Host 与 Request 中的内容"}>
-                                <YakitButton type='text' size={"small"} icon={<QuestionOutlined />} />
-                            </Tooltip>
-                        </div>
-                    }
-                    extraFormItemProps={{style: {marginBottom: 0}}}
-                    value={keyword}
-                    setValue={setKeyword}
-                />
-                <Form.Item style={{marginBottom: 0}}>
-                    <Button type='primary' htmlType='submit' icon={<SearchOutlined />} />
-                </Form.Item>
-            </Form> */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span>{t('HTTPFuzzerHistorySelector.quickSearch')}</span>
-        <YakitInput.Search
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          onSearch={() => reload(1, limit)}
-          onPressEnter={() => reload(1, limit)}
-        />
-        <span>
-          {t('YakitButton.view_all_button')}
+              <YakitButton type="text" size={'small'} colors="danger" icon={<DeleteOutlined />} />
+            </YakitPopconfirm>
+          </div>
+        </header>
+      }
+    >
+      <section className={styles['history-filter']}>
+        <label className={styles['history-filter-search']}>
+          <span className={styles['history-filter-label']}>{t('HTTPFuzzerHistorySelector.quickSearch')}</span>
+          <YakitInput.Search
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => reload(1, limit)}
+            onPressEnter={() => reload(1, limit)}
+          />
+        </label>
+        <label className={styles['history-filter-toggle']}>
+          <span>{t('YakitButton.view_all_button')}</span>
           <YakitSwitch checked={showAll} onChange={onSwitchShowAll} />
-        </span>
-      </div>
-      <Divider
-        style={{
-          marginTop: 10,
-          marginBottom: 6,
-          color: 'var(--Colors-Use-Neutral-Border)',
-          borderTop: '1px solid var(--Colors-Use-Neutral-Border)',
-        }}
-      />
+        </label>
+      </section>
       <List<HTTPFuzzerTaskDetail>
-        className="yakit-list"
+        className={`${styles['history-list']} yakit-list`}
         loading={loading}
         dataSource={tasks}
-        // pagination={{total: tasks.length, size: "small", pageSize: 10}}
         pagination={{
           size: 'small',
           pageSize: limit,
@@ -226,8 +193,10 @@ export const HTTPFuzzerHistorySelector: React.FC<HTTPFuzzerHistorySelectorProp> 
               verbose = rawToStr
             }
           }
+          const host = !!i.Host ? i.Host : formatTimestamp(i.CreatedAt)
+          const ok = i.HTTPFlowSuccessCount === i.HTTPFlowTotal
           return (
-            <List.Item key={i.Id} style={{ padding: 2 }}>
+            <List.Item key={i.Id} className={styles['history-row-item']}>
               <YakitPopover
                 placement={'rightBottom'}
                 content={
@@ -242,45 +211,23 @@ export const HTTPFuzzerHistorySelector: React.FC<HTTPFuzzerHistorySelectorProp> 
                   </div>
                 }
               >
-                <Card
-                  size={'small'}
-                  style={{ marginBottom: 4, width: '100%' }}
-                  bodyStyle={{ paddingTop: 4, paddingBottom: 4 }}
-                  hoverable={true}
+                <article
+                  className={styles['history-row']}
+                  data-active={currentSelectId == i.Id ? 'true' : 'false'}
                   onClick={(e) => {
                     e.preventDefault()
                     const page = (paging.Page - 1) * 10 + index + 1
                     props.onSelect(i.Id, page, showAll)
                   }}
-                  bordered={false}
                 >
-                  <div className={styles['history-item']}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        width: '100%',
-                        gap: 4,
-                        position: 'relative',
-                      }}
-                    >
-                      <div>{`ID:${i.Id}`}</div>
-                      <div style={{ overflow: 'hidden' }}>
-                        <YakitTag
-                          color="info"
-                          style={{
-                            whiteSpace: 'normal',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: 'block',
-                            lineHeight: '14px',
-                          }}
-                        >
-                          {!!i.Host ? i.Host : formatTimestamp(i.CreatedAt)}
-                        </YakitTag>
-                      </div>
-
-                      <YakitTag>
+                  <span className={styles['history-row-status']} data-ok={ok ? 'true' : 'false'} />
+                  <main className={styles['history-row-main']}>
+                    <div className={styles['history-row-host']} title={host}>
+                      {host}
+                    </div>
+                    <div className={styles['history-row-meta']}>
+                      <span className={styles['history-row-id']}>#{i.Id}</span>
+                      <YakitTag color="info">
                         {t('HTTPFuzzerHistorySelector.totalFlows', {
                           HTTPFlowTotal: i.HTTPFlowTotal,
                         })}
@@ -292,10 +239,10 @@ export const HTTPFuzzerHistorySelector: React.FC<HTTPFuzzerHistorySelectorProp> 
                           })}
                         </YakitTag>
                       )}
-                      {currentSelectId == i.Id && <CheckIcon className={styles['check-icon']} />}
                     </div>
-                  </div>
-                </Card>
+                  </main>
+                  {currentSelectId == i.Id && <CheckIcon className={styles['history-row-check']} />}
+                </article>
               </YakitPopover>
             </List.Item>
           )
