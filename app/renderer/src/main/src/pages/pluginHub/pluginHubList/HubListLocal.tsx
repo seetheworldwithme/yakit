@@ -39,10 +39,10 @@ import { useStore } from '@/store'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { HubListBaseProps } from '../type'
 import { API } from '@/services/swagger/resposeType'
-import { SolidChevrondownIcon, SolidPluscircleIcon } from '@/assets/icon/solid'
+import { SolidPluscircleIcon } from '@/assets/icon/solid'
 import emiter from '@/utils/eventBus/eventBus'
 import { YakitRoute } from '@/enums/yakitRoute'
-import { FilterPopoverBtn, FuncFilterPopover } from '@/pages/plugins/funcTemplate'
+import { FilterPopoverBtn } from '@/pages/plugins/funcTemplate'
 import { ExportYakScriptStreamRequest, PluginGroupList } from '@/pages/plugins/local/PluginsLocalType'
 import { QueryYakScriptRequest, YakScript } from '@/pages/invoker/schema'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
@@ -140,6 +140,10 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
   // 列表无条件下的总数
   const [listTotal, setListTotal] = useState<number>(0)
 
+  // 分页
+  const [pageNum, setPageNum] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(20)
+
   const [filterGroup, setFilterGroup] = useState<PluginGroupList[]>([])
 
   // 列表数据
@@ -221,63 +225,69 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
       .catch(() => {})
   })
 
+  // 拉取指定页（整页替换）
+  const fetchPage = useMemoizedFn(async (page: number, limit: number, reset?: boolean) => {
+    if (loading) return
+    if (reset) {
+      fetchInitTotal()
+      isInitLoading.current = true
+      setShowIndex(0)
+    }
+    setLoading(true)
+
+    const params: PluginListPageMeta = { page, limit }
+    const queryFilter = { ...getFilters() }
+    const queryFearch = { ...getSearch() }
+    const query: QueryYakScriptRequest = {
+      ...convertLocalPluginsRequestParams({
+        filter: queryFilter,
+        search: queryFearch,
+        pageParams: params,
+      }),
+    }
+
+    try {
+      const res = await apiQueryYakScript(query)
+      if (!res.Data) res.Data = []
+      const newData = res.Data.filter((ele) => ele.ScriptName !== '').map((ele) => ({
+        ...ele,
+        isLocalPlugin: privateDomain.current !== ele.OnlineBaseUrl,
+      }))
+
+      dispatch({
+        type: 'page',
+        payload: {
+          response: {
+            ...res,
+            Data: newData,
+          },
+        },
+      })
+      hasMore.current = page * limit < +res.Total
+      if (page === 1) {
+        onCheck(false)
+      }
+    } catch (error) {}
+    setTimeout(() => {
+      isInitLoading.current = false
+      setLoading(false)
+    }, 300)
+  })
+
   const fetchList = useDebounceFn(
     useMemoizedFn(async (reset?: boolean) => {
-      if (loading) return
-      if (reset) {
-        fetchInitTotal()
-        isInitLoading.current = true
-        setShowIndex(0)
-      }
-      setLoading(true)
-
-      const params: PluginListPageMeta = !!reset
-        ? { page: 1, limit: 20 }
-        : {
-            page: +response.Pagination.Page + 1 || 1,
-            limit: +response.Pagination.Limit || 20,
-          }
-
-      const queryFilter = { ...getFilters() }
-      const queryFearch = { ...getSearch() }
-      const query: QueryYakScriptRequest = {
-        ...convertLocalPluginsRequestParams({
-          filter: queryFilter,
-          search: queryFearch,
-          pageParams: params,
-        }),
-      }
-
-      try {
-        const res = await apiQueryYakScript(query)
-        if (!res.Data) res.Data = []
-        const length = +res.Pagination.Page === 1 ? res.Data.length : res.Data.length + response.Data.length
-        hasMore.current = length < +res.Total
-        const newData = res.Data.filter((ele) => ele.ScriptName !== '').map((ele) => ({
-          ...ele,
-          isLocalPlugin: privateDomain.current !== ele.OnlineBaseUrl,
-        }))
-
-        dispatch({
-          type: 'add',
-          payload: {
-            response: {
-              ...res,
-              Data: newData,
-            },
-          },
-        })
-        if (+res.Pagination.Page === 1) {
-          onCheck(false)
-        }
-      } catch (error) {}
-      setTimeout(() => {
-        isInitLoading.current = false
-        setLoading(false)
-      }, 300)
+      if (reset) setPageNum(1)
+      await fetchPage(reset ? 1 : pageNum, pageSize, reset)
     }),
     { wait: 200, leading: true },
   ).run
+
+  // 分页切换
+  const onPaginationChange = useMemoizedFn((page: number, limit: number) => {
+    setPageNum(page)
+    setPageSize(limit)
+    fetchPage(page, limit)
+  })
   /** 滚动更多加载 */
   const onUpdateList = useMemoizedFn((reset?: boolean) => {
     fetchList()
@@ -1138,23 +1148,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
     setFilters({ ...selected })
   })
 
-  // 表格滚动容器-触底加载更多
-  const tableWrapRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const wrap = tableWrapRef.current
-    if (!wrap) return
-    const body = wrap.querySelector('.ant-table-body') as HTMLElement | null
-    if (!body) return
-    const onScroll = () => {
-      if (loading) return
-      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 48) {
-        if (hasMore.current) onUpdateList()
-      }
-    }
-    body.addEventListener('scroll', onScroll)
-    return () => body.removeEventListener('scroll', onScroll)
-  }, [listLength, loading, onUpdateList])
-
   // 表格列定义
   const tableColumns = useMemo<any[]>(() => {
     const selectedSet = new Set(selectList.map((item) => item.ScriptName))
@@ -1181,13 +1174,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         title: t('HubListLocal.pluginName'),
         dataIndex: 'ScriptName',
         ellipsis: true,
-        render: (text: string, record: YakScript) => (
-          <div className={styles['col-name']}>
-            {!!record.HeadImg && <img className={styles['col-name-img']} src={record.HeadImg} alt="" />}
-            <span className={styles['col-name-text']}>{text || '-'}</span>
-            {!!record.IsCorePlugin && <YakitTag className={styles['col-name-badge']}>core</YakitTag>}
-          </div>
-        ),
+        render: (text: string) => <span className={styles['col-name-text']}>{text || '-'}</span>,
       },
       {
         title: t('HubListLocal.tag'),
@@ -1258,18 +1245,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         spinning={loading && isInitLoading.current}
       >
         <div className={styles['outer-list']} ref={divRef}>
-          <aside className={styles['hub-local-rail']}>
-            <Tooltip title={t('HubListLocal.newPlugin')} overlayClassName="plugins-tooltip">
-              <YakitButton
-                type="primary"
-                className={styles['hub-local-create-btn']}
-                icon={<SolidPluscircleIcon />}
-                onClick={onNewPlugin}
-              />
-            </Tooltip>
-            <span className={styles['hub-local-rail-divider']} />
-            <div className={styles['hub-local-rail-hint']}>{t('PluginTabName.localPlugin')}</div>
-          </aside>
           <div className={styles['hub-local-column']}>
             <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
               <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
@@ -1328,44 +1303,38 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                 }
                 headerExtra={
                   <div className={styles['hub-list-header-extra']}>
-                    <FuncFilterPopover
-                      maxWidth={1200}
-                      icon={<SolidChevrondownIcon />}
-                      name={t('YakitButton.batchOperation')}
+                    <YakitButton type="primary" icon={<SolidPluscircleIcon />} onClick={onNewPlugin}>
+                      {t('HubListLocal.newPlugin')}
+                    </YakitButton>
+                    <YakitButton
+                      type="outline2"
+                      size="large"
+                      icon={<OutlineClouddownloadIcon />}
                       disabled={selectedNum === 0}
-                      button={{
-                        type: 'outline2',
-                        size: 'large',
-                      }}
-                      menu={{
-                        type: 'primary',
-                        data: [
-                          { key: 'export', label: t('YakitButton.export') },
-                          {
-                            key: 'upload',
-                            label: t('YakitButton.upload'),
-                            disabled: allChecked || batchUploadLoading,
-                          },
-                          { key: 'remove', label: t('YakitButton.delete'), disabled: batchDelLoading },
-                        ],
-                        onClick: ({ key }) => {
-                          switch (key) {
-                            case 'export':
-                              onHeaderExtraExport()
-                              break
-                            case 'upload':
-                              onHeaderExtraUpload()
-                              break
-                            case 'remove':
-                              onHeaderExtraDel()
-                              break
-                            default:
-                              return
-                          }
-                        },
-                      }}
-                      placement="bottomRight"
-                    />
+                      onClick={onHeaderExtraExport}
+                    >
+                      {t('YakitButton.export')}
+                    </YakitButton>
+                    <YakitButton
+                      type="outline2"
+                      size="large"
+                      icon={<OutlineClouduploadIcon />}
+                      disabled={selectedNum === 0 || allChecked || batchUploadLoading}
+                      loading={batchUploadLoading}
+                      onClick={onHeaderExtraUpload}
+                    >
+                      {t('YakitButton.upload')}
+                    </YakitButton>
+                    <YakitButton
+                      type="outline2"
+                      size="large"
+                      icon={<OutlineTrashIcon />}
+                      disabled={selectedNum === 0 || batchDelLoading}
+                      loading={batchDelLoading}
+                      onClick={onHeaderExtraDel}
+                    >
+                      {t('YakitButton.delete')}
+                    </YakitButton>
                   </div>
                 }
                 listHeaderRightExtra={
@@ -1489,14 +1458,21 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                 setFilters={setFilters}
               >
                 {listLength > 0 ? (
-                  <div className={styles['hub-local-table-wrap']} ref={tableWrapRef}>
+                  <div className={styles['hub-local-table-wrap']}>
                     <Table<YakScript>
                       rowKey="ScriptName"
                       size="small"
                       columns={tableColumns}
                       dataSource={response.Data || []}
-                      pagination={false}
-                      scroll={{ y: 'calc(100vh - 280px)', x: 'max-content' }}
+                      pagination={{
+                        current: pageNum,
+                        pageSize: pageSize,
+                        total: +response.Total || 0,
+                        showSizeChanger: true,
+                        pageSizeOptions: ['10', '20', '50', '100'],
+                        onChange: onPaginationChange,
+                      }}
+                      scroll={{ y: 'calc(100vh - 320px)', x: 'max-content' }}
                       loading={loading}
                       onRow={(record) => {
                         const idx = (response.Data || []).findIndex((ele) => ele.ScriptName === record.ScriptName)

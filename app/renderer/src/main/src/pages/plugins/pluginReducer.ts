@@ -172,7 +172,7 @@ export const initialLocalState: QueryYakScriptsResponse = {
   Total: 0,
 }
 
-type LocalPluginType = 'add' | 'update' | 'remove' | 'unshift' | 'replace'
+type LocalPluginType = 'add' | 'update' | 'remove' | 'unshift' | 'replace' | 'page'
 
 // 定义 action 的类型
 export interface LocalPluginAppAction {
@@ -257,6 +257,19 @@ export const pluginLocalReducer = (
         }
       } else {
         return state
+      }
+    // 整页替换（分页）
+    case 'page':
+      if (!response) return state
+      return {
+        Data: response?.Data || [],
+        Pagination: response?.Pagination || {
+          Limit: 20,
+          Page: 1,
+          OrderBy: '',
+          Order: '',
+        },
+        Total: response?.Total || 0,
       }
     // 新数据替换老数据
     case 'replace':
