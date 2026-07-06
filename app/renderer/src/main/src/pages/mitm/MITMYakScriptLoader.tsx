@@ -350,24 +350,6 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
               </div>
             </div>
           </div>
-          <div className={style['mitm-plugin-local-info-right']}>
-            {status === 'idle' || curTabKey === 'loaded' ? (
-              <Tooltip
-                title={pluginIntroduction}
-                placement="topRight"
-                overlayClassName={style['question-tooltip']}
-                onVisibleChange={(v) => {
-                  if (v && !i.Help) {
-                    getScriptInfo(i)
-                  }
-                }}
-              >
-                <OutlineQuestionmarkcircleIcon className={style['plugin-local-icon']} />
-              </Tooltip>
-            ) : (
-              <></>
-            )}
-          </div>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 8, marginRight: 12 }}>
