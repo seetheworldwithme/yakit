@@ -7,7 +7,6 @@ import { failed } from '../../utils/notification'
 import { useCreation, useMemoizedFn } from 'ahooks'
 import style from './MITMYakScriptLoader.module.scss'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
-import { PluginLocalInfoIcon } from '../customizeMenu/CustomizeMenu'
 import classNames from 'classnames'
 import { YakitPopconfirm } from '@/components/yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { grpcFetchLocalPluginDetail } from '../pluginHub/utils/grpc'
@@ -310,7 +309,7 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
   }, [i, p])
 
   const authorImgNode = useMemo(() => {
-    const { IsCorePlugin, Type, HeadImg, OnlineOfficial } = i
+    const { IsCorePlugin, Type, HeadImg } = i
     if (IsCorePlugin) {
       if (!pluginTypeToName[Type]) {
         debugToPrintLogs({
@@ -322,14 +321,12 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
       }
       return <AuthorImg src={YakitLogo} wrapperClassName={style['plugin-local-headImg']} />
     }
-    return (
-      <AuthorImg
-        src={HeadImg || UnLogin}
-        builtInIcon={!!OnlineOfficial ? 'official' : undefined}
-        wrapperClassName={style['plugin-local-headImg']}
-      />
-    )
+    return <AuthorImg src={HeadImg || UnLogin} wrapperClassName={style['plugin-local-headImg']} />
   }, [i])
+  const pluginIntroduction = useMemo(() => {
+    const helpText = (i.Help || '').trim()
+    return helpText || '暂无插件介绍'
+  }, [i.Help])
 
   const hasPluginOutInfo = pluginStreamInfo && Object.keys(pluginStreamInfo).includes(i.ScriptName)
 
@@ -345,12 +342,28 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
               width: '100%',
             }}
           >
-            {authorImgNode}
-            <span className={classNames(style['plugin-local-scriptName'])}>{i.ScriptName}</span>
+            <div className={style['plugin-local-summary']}>
+              {authorImgNode}
+              <div className={style['plugin-local-copy']}>
+                <span className={classNames(style['plugin-local-scriptName'])}>{i.ScriptName}</span>
+                <span className={style['plugin-local-description']}>{pluginIntroduction}</span>
+              </div>
+            </div>
           </div>
           <div className={style['mitm-plugin-local-info-right']}>
             {status === 'idle' || curTabKey === 'loaded' ? (
-              <PluginLocalInfoIcon plugin={i} getScriptInfo={getScriptInfo} />
+              <Tooltip
+                title={pluginIntroduction}
+                placement="topRight"
+                overlayClassName={style['question-tooltip']}
+                onVisibleChange={(v) => {
+                  if (v && !i.Help) {
+                    getScriptInfo(i)
+                  }
+                }}
+              >
+                <OutlineQuestionmarkcircleIcon className={style['plugin-local-icon']} />
+              </Tooltip>
             ) : (
               <></>
             )}
