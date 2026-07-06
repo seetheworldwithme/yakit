@@ -1,111 +1,165 @@
 .mitm-server {
   height: 100%;
   display: flex;
-  flex-direction: column;
-  .mitm-server-heard {
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+
+  .mitm-control-tower,
+  .mitm-hijack-config-panel {
+    flex-shrink: 0;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    background: var(--Colors-Use-Neutral-Bg);
+    border-radius: 8px;
+  }
+
+  .mitm-control-tower {
+    width: 188px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .mitm-control-tower-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mitm-control-kicker {
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--Colors-Use-Main-Primary);
+  }
+
+  .mitm-control-title {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 22px;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+  }
+
+  .mitm-control-endpoint {
+    padding: 10px;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border-radius: 8px;
+    background: var(--Colors-Use-Basic-Background);
+  }
+
+  .mitm-control-label {
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  }
+
+  .mitm-server-heard-addr {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    color: var(--Colors-Use-Neutral-Text-2-Body);
+    font-size: 12px;
+    line-height: 16px;
+    overflow: hidden;
+
+    .mitm-server-heard-addr-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mitm-server-heard-addr-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
+  .mitm-control-switch-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    .mitm-server-title {
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-      flex: 1;
-      padding-left: 13px;
-      .mitm-server-heard-name {
-        font-weight: 600;
-        font-size: 16px;
-        line-height: 24px;
-        color: var(--Colors-Use-Neutral-Text-1-Title);
-        word-break: keep-all;
-        white-space: nowrap;
-      }
-      .mitm-server-heard-addr {
-        font-weight: 400;
-        font-size: 12px;
-        line-height: 16px;
-        margin-left: 16px;
-        color: var(--Colors-Use-Neutral-Text-4-Help-text);
-        display: flex;
-        align-items: center;
-        overflow: hidden;
-        .mitm-server-heard-addr-text {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          flex-shrink: 1;
-          min-width: 0;
-          margin-right: 8px;
-        }
-        .mitm-server-heard-addr-tags {
-          display: flex;
-          align-items: center;
-          flex-shrink: 0;
-          flex-wrap: nowrap;
-        }
-      }
-    }
-    .mitm-server-extra {
-      display: flex;
-      align-items: center;
-      .mitm-server-links {
-        color: var(--Colors-Use-Main-Primary);
-        font-size: 12px;
-        margin-right: 8px;
-        display: flex;
-        align-items: center;
-        .link-item {
-          cursor: pointer;
-          height: 24px;
-          line-height: 16px;
-          padding: 4px 8px;
-          border-radius: 4px;
-          &:hover {
-            color: var(--Colors-Use-Main-Hover);
-            background-color: var(--Colors-Use-Neutral-Bg);
-          }
-          &:active {
-            color: var(--Colors-Use-Main-Pressed);
-          }
-        }
-        .check-icon {
-          svg {
-            width: 14px;
-            height: 14px;
-          }
-        }
-      }
-    }
-    .mitm-server-extra {
-      .mitm-server-chrome {
-        margin-left: 8px;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-      }
-      .mitm-server-quit-icon {
-        margin-left: 16px;
-        color: var(--Colors-Use-Error-Primary);
-        display: flex;
-        align-items: center;
-      }
+    gap: 8px;
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--Colors-Use-Basic-Background);
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .mitm-control-chrome {
+    padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mitm-control-stop {
+    margin-top: auto;
+    width: 100%;
+
+    svg {
+      width: 16px;
+      height: 16px;
     }
   }
+
+  .mitm-traffic-workbench {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border-radius: 8px;
+    background: var(--Colors-Use-Basic-Background);
+  }
+
   .mitm-server-body {
-    height: calc(100% - 41px);
+    height: 100%;
+    padding: 8px;
   }
-}
 
-.more-popover {
-  :global {
-    .ant-popover-inner {
-      border: 1px solid var(--Colors-Use-Neutral-Border);
-      box-shadow: 0px 8px 16px var(--Colors-Use-Basic-Shadow);
-      border-radius: 4px;
+  .mitm-hijack-config-panel {
+    width: 168px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-      .ant-popover-inner-content {
-        padding: 6px 4px 4px 4px;
-      }
+  .mitm-config-panel-title {
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+  }
+
+  .mitm-config-action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  @media (max-width: 1280px) {
+    .mitm-control-tower {
+      width: 164px;
+    }
+
+    .mitm-hijack-config-panel {
+      width: 148px;
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .mitm-hijack-config-panel {
+      display: none;
     }
   }
 }

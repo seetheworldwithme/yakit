@@ -1,15 +1,13 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Divider, Form, notification, Tooltip, Typography } from 'antd'
+import { Divider, Form, notification, Tooltip } from 'antd'
 import emiter from '@/utils/eventBus/eventBus'
 import ChromeLauncherButton from '@/pages/mitm/MITMChromeLauncher'
 import { info, yakitNotify } from '@/utils/notification'
-import { useCreation, useMemoizedFn, useSize } from 'ahooks'
+import { useCreation, useMemoizedFn } from 'ahooks'
 import { MITMServer, TipPart } from '@/pages/mitm/MITMPage'
 import style from './MITMServerHijacking.module.scss'
 import { QuitIcon } from '@/assets/newIcon'
-import classNames from 'classnames'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
-import { YakitMenu } from '@/components/yakitUI/YakitMenu/YakitMenu'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { MITMConsts } from '../MITMConsts'
@@ -46,7 +44,6 @@ import { checkProxyVersion, isValidUrlWithProtocol } from '@/utils/proxyConfigUt
 import { useStore } from '@/store/mitmState'
 import { useProxy } from '@/hook/useProxy'
 import { debugToPrintLogs } from '@/utils/logCollection'
-import { OutlineCheckIcon, OutlineChevrondownIcon, OutlineChevronupIcon } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { useGlobalHotPatchTag, useGlobalHotPatch } from '@/store/globalHotPatch'
 import { HoldGRPCStreamInfo } from '@/hook/useHoldGRPCStream/useHoldGRPCStreamType'
@@ -57,7 +54,6 @@ import { cloneDeep } from 'lodash'
 import { apiGetSystemProxy, GetSystemProxyResult } from '@/utils/ConfigSystemProxy'
 
 type MITMStatus = 'hijacking' | 'hijacked' | 'idle'
-const { Text } = Typography
 
 export interface MITMServerHijackingProp {
   showPort: string[]
@@ -302,13 +298,6 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
     setIsFilter(flag)
   })
 
-  const heardRef = useRef<HTMLDivElement>(null)
-  const heardSize = useSize(heardRef)
-  const isNarrow = useCreation(() => {
-    return (heardSize?.width || 0) < 1150
-  }, [heardSize?.width])
-
-  const [morePopoverVisible, setMorePopoverVisible] = useState<boolean>(false)
   const [downStreamAgentModalVisible, setDownStreamAgentModalVisible] = useState<boolean>(false)
   const { globalEnabledTemplateName, onDisableGlobalHotPatch } = useGlobalHotPatchTag()
 
@@ -369,11 +358,27 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
     return `${host}:${showPortText}`
   }, [host, showPort])
 
+  const statusText = useMemo(() => {
+    switch (status) {
+      case 'hijacked':
+        return '拦截中'
+      case 'hijacking':
+        return '监听中'
+      default:
+        return '未启动'
+    }
+  }, [status])
+
   return (
     <div className={style['mitm-server']}>
-      <div className={style['mitm-server-heard']} ref={heardRef}>
-        <div className={style['mitm-server-title']}>
-          <div className={style['mitm-server-heard-name']}>劫持 HTTP Request</div>
+      <aside className={style['mitm-control-tower']}>
+        <div className={style['mitm-control-tower-head']}>
+          <div className={style['mitm-control-kicker']}>MITM LIVE</div>
+          <div className={style['mitm-control-title']}>劫持 HTTP Request</div>
+          <YakitTag color={status === 'idle' ? 'info' : 'success'}>{statusText}</YakitTag>
+        </div>
+        <div className={style['mitm-control-endpoint']}>
+          <div className={style['mitm-control-label']}>监听地址</div>
           <div className={style['mitm-server-heard-addr']}>
             <span className={style['mitm-server-heard-addr-text']}>
               <Tooltip title={`${host}:${showPort}`}>{showAddr}</Tooltip>
@@ -450,77 +455,33 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
             </div>
           </div>
         </div>
-        <div className={style['mitm-server-extra']}>
-          <div className={style['mitm-server-links']}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label>
-                过滤WebSocket：
-                <YakitSwitch
-                  size="middle"
-                  checked={filterWebsocket}
-                  onChange={(value) => {
-                    setFilterWebsocket(value)
-                    updateAdvancedConfig({ filterWebsocket: value })
-                    const params: MITMFilterWebsocketRequest = {
-                      filterWebsocket: value,
-                      version: mitmVersion,
-                    }
-                    grpcMITMFilterWebsocket(params)
-                  }}
-                />
-              </label>
-            </div>
-            <Divider type="vertical" style={{ margin: '0 4px', top: 1 }} />
-            <YakitPopover
-              placement="bottom"
-              title={
-                <div className={style['proxy_configuration_top']} onClick={() => setDownStreamAgentModalVisible(true)}>
-                  {t('ProxyConfig.downstream_agent')}
-                </div>
+        <div className={style['mitm-control-switch-card']}>
+          <span>过滤 WebSocket</span>
+          <YakitSwitch
+            size="middle"
+            checked={filterWebsocket}
+            onChange={(value) => {
+              setFilterWebsocket(value)
+              updateAdvancedConfig({ filterWebsocket: value })
+              const params: MITMFilterWebsocketRequest = {
+                filterWebsocket: value,
+                version: mitmVersion,
               }
-              content={
-                <div className={style['proxy_configuration_bottom']}>
-                  <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
-                  <YakitSwitch
-                    size="large"
-                    checked={disableSystemProxy}
-                    onChange={(checked) => {
-                      updateDisableSystemProxy(checked)
-                    }}
-                  />
-                </div>
-              }
-            >
-              <div className={style['link-item']}>{t('AgentConfigModal.proxy_configuration')}</div>
-            </YakitPopover>
-            <Divider type="vertical" style={{ margin: '0 4px', top: 1 }} />
-            {!isNarrow && (
-              <>
-                <div className={style['link-item']} onClick={() => setVisible(true)}>
-                  规则配置
-                </div>
-                <Divider type="vertical" style={{ margin: '0 4px', top: 1 }} />
-              </>
-            )}
-            <div className={style['link-item']} onClick={() => setFiltersVisible(true)}>
-              过滤器
-            </div>
-            {/* 产品要求暂时下掉 */}
-            {/* {isFilter && (
-                            <YakitTag color={"success"} style={{margin: '0 4px'}}>
-                                {t("HttpQueryAdvancedConfig.configured")}
-                                <OutlineCheckIcon className={style["check-icon"]} />
-                            </YakitTag>
-                        )} */}
-            {!isNarrow && (
-              <>
-                <Divider type="vertical" style={{ margin: '0 4px', top: 1 }} />
-                <div className={style['link-item']} onClick={() => setDownloadVisible(true)}>
-                  证书下载
-                </div>
-              </>
-            )}
-          </div>
+              grpcMITMFilterWebsocket(params)
+            }}
+          />
+        </div>
+        <div className={style['mitm-control-switch-card']}>
+          <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
+          <YakitSwitch
+            size="middle"
+            checked={disableSystemProxy}
+            onChange={(checked) => {
+              updateDisableSystemProxy(checked)
+            }}
+          />
+        </div>
+        <div className={style['mitm-control-chrome']}>
           {/*<YakitButton*/}
           {/*    onClick={() => {*/}
           {/*        showConfigSystemProxyForm(`${host === "0.0.0.0" ? "127.0.0.1" : host}:${port}`)*/}
@@ -529,48 +490,74 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
           {/*>*/}
           {/*    系统代理*/}
           {/*</YakitButton>*/}
-          <div className={style['mitm-server-chrome']}>
-            <ChromeLauncherButton isStartMITM={true} host={host} port={port} disableCACertPage={disableCACertPage} />
-          </div>
-          {isNarrow && (
-            <YakitPopover
-              overlayClassName={classNames(style['more-popover'])}
-              placement="bottomRight"
-              trigger="click"
-              visible={morePopoverVisible}
-              onVisibleChange={setMorePopoverVisible}
-              content={
-                <YakitMenu
-                  selectedKeys={[]}
-                  data={[
-                    { key: 'rule-config', label: '规则配置' },
-                    { key: 'cert-download', label: '证书下载' },
-                  ]}
-                  onClick={({ key }) => {
-                    setMorePopoverVisible(false)
-                    switch (key) {
-                      case 'rule-config':
-                        setVisible(true)
-                        break
-                      case 'cert-download':
-                        setDownloadVisible(true)
-                        break
-                    }
-                  }}
-                />
-              }
-            >
-              <YakitButton type="outline2" style={{ marginLeft: 8 }}>
-                更多
-                {morePopoverVisible ? <OutlineChevronupIcon /> : <OutlineChevrondownIcon />}
-              </YakitButton>
-            </YakitPopover>
-          )}
-          <div className={style['mitm-server-quit-icon']}>
-            <QuitIcon onClick={() => stop()} />
-          </div>
+          <ChromeLauncherButton isStartMITM={true} host={host} port={port} disableCACertPage={disableCACertPage} />
         </div>
-      </div>
+        <YakitButton type="outline1" colors="danger" className={style['mitm-control-stop']} onClick={() => stop()}>
+          <QuitIcon />
+          停止监听
+        </YakitButton>
+      </aside>
+      <main className={style['mitm-traffic-workbench']}>
+        <div className={style['mitm-server-body']}>
+          <MITMServer
+            isHasParams={isHasParams}
+            onIsHasParams={onIsHasParams}
+            status={status}
+            setStatus={setStatus}
+            autoForward={autoForward}
+            setAutoForward={setAutoForward}
+            downstreamProxyStr={downstreamProxyStr}
+            showPluginHistoryList={showPluginHistoryList}
+            setShowPluginHistoryList={setShowPluginHistoryList}
+            tempShowPluginHistory={tempShowPluginHistory}
+            setTempShowPluginHistory={setTempShowPluginHistory}
+            setVisible={setVisible}
+            setFiltersVisible={setFiltersVisible}
+            pluginStreamInfo={pluginStreamInfo}
+            showPluginStream={showPluginStream}
+            setShowPluginStream={setShowPluginStream}
+            hasPluginsStreamUpdate={hasPluginsStreamUpdate}
+            updatesPlugins={updatesPlugins}
+            pluginOutputRef={pluginOutputRef}
+          />
+        </div>
+      </main>
+      <aside className={style['mitm-hijack-config-panel']}>
+        <div className={style['mitm-config-panel-title']}>劫持配置</div>
+        <YakitPopover
+          placement="leftTop"
+          title={
+            <div className={style['proxy_configuration_top']} onClick={() => setDownStreamAgentModalVisible(true)}>
+              {t('ProxyConfig.downstream_agent')}
+            </div>
+          }
+          content={
+            <div className={style['proxy_configuration_bottom']}>
+              <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
+              <YakitSwitch
+                size="large"
+                checked={disableSystemProxy}
+                onChange={(checked) => {
+                  updateDisableSystemProxy(checked)
+                }}
+              />
+            </div>
+          }
+        >
+          <YakitButton type="outline2" className={style['mitm-config-action']}>
+            {t('AgentConfigModal.proxy_configuration')}
+          </YakitButton>
+        </YakitPopover>
+        <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setVisible(true)}>
+          规则配置
+        </YakitButton>
+        <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setFiltersVisible(true)}>
+          过滤器
+        </YakitButton>
+        <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setDownloadVisible(true)}>
+          证书下载
+        </YakitButton>
+      </aside>
       <DownStreamAgentModal
         downStreamAgentModalVisible={downStreamAgentModalVisible}
         onCloseModal={() => setDownStreamAgentModalVisible(false)}
@@ -579,30 +566,6 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
         tipParts={tipParts}
         setTipParts={setTipParts}
       ></DownStreamAgentModal>
-      <Divider style={{ margin: '8px 0 0 0' }} />
-      <div className={style['mitm-server-body']}>
-        <MITMServer
-          isHasParams={isHasParams}
-          onIsHasParams={onIsHasParams}
-          status={status}
-          setStatus={setStatus}
-          autoForward={autoForward}
-          setAutoForward={setAutoForward}
-          downstreamProxyStr={downstreamProxyStr}
-          showPluginHistoryList={showPluginHistoryList}
-          setShowPluginHistoryList={setShowPluginHistoryList}
-          tempShowPluginHistory={tempShowPluginHistory}
-          setTempShowPluginHistory={setTempShowPluginHistory}
-          setVisible={setVisible}
-          setFiltersVisible={setFiltersVisible}
-          pluginStreamInfo={pluginStreamInfo}
-          showPluginStream={showPluginStream}
-          setShowPluginStream={setShowPluginStream}
-          hasPluginsStreamUpdate={hasPluginsStreamUpdate}
-          updatesPlugins={updatesPlugins}
-          pluginOutputRef={pluginOutputRef}
-        />
-      </div>
       <React.Suspense fallback={<div>loading...</div>}>
         <MITMFiltersModal
           filterType="filter"

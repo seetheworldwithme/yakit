@@ -342,14 +342,7 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
             className={style['mitm-plugin-local-info-left']}
             onClick={() => onCheckboxClicked()}
             style={{
-              width:
-                status === 'idle'
-                  ? 'calc(100% - 75px)'
-                  : curTabKey === 'loaded'
-                    ? 'calc(100% - 49px)'
-                    : isHasParams
-                      ? 'calc(100% - 2px)'
-                      : 'calc(100% - 12px)',
+              width: '100%',
             }}
           >
             {authorImgNode}
