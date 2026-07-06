@@ -439,6 +439,37 @@ def directory_signature(records: list[FileRecord]) -> set[str]:
     return signature
 
 
+# Path-role visibility weights. Layout/page/entry files define the rendered
+# skeleton a bidder actually sees, so they count more; plumbing (utils/hooks/
+# store/services/lib/...) does not render screens and counts less. This stops
+# long-tail utility files from dominating the "page layout similarity" signal
+# and makes the metric respond proportionally to partial restructuring (the
+# previous top-K mean hid incremental progress behind a 100% cliff).
+_PLUMBING_DIRS = {
+    "utils", "util", "hooks", "hook", "store", "stores", "services", "service",
+    "lib", "libs", "helpers", "helper", "constants", "enums", "types",
+    "interfaces", "models", "api", "schemas",
+}
+_SURFACE_DIRS = {
+    "pages", "page", "layout", "layouts", "routes", "route", "router",
+    "routers", "shell",
+}
+_SURFACE_NAME = re.compile(
+    r"^(index|app|newapp|childnewapp|.*app|.*layout|.*shell|.*workspace|mainoperator)\.(tsx|jsx|vue|svelte)$",
+    re.I,
+)
+
+
+def visibility_weight(rel: str) -> float:
+    segs = rel.lower().split("/")
+    if any(seg in _PLUMBING_DIRS for seg in segs):
+        return 0.3
+    if any(seg in _SURFACE_DIRS for seg in segs) or _SURFACE_NAME.match(segs[-1]):
+        return 3.0
+    return 1.0
+
+
+
 def config_records(records: list[FileRecord], config: dict[str, Any]) -> list[FileRecord]:
     important = set(config["important_filenames"])
     return [record for record in records if Path(record.rel).name in important or record.ext in CONFIG_EXTENSIONS]
@@ -468,16 +499,21 @@ def extract_tag_sequences(records: list[FileRecord]) -> dict[str, list[str]]:
 
 def best_sequence_matches(a: dict[str, list[str]], b: dict[str, list[str]], limit: int = 10) -> tuple[float, list[dict[str, Any]]]:
     matches: list[dict[str, Any]] = []
+    weighted_sum = 0.0
+    weight_total = 0.0
     for rel_a, seq_a in a.items():
+        weight = visibility_weight(rel_a)
+        weight_total += weight
         best = ("", 0.0)
         for rel_b, seq_b in b.items():
             score = sequence_similarity(seq_a, seq_b)
             if score > best[1]:
                 best = (rel_b, score)
+        weighted_sum += weight * best[1]
         if best[1] > 0:
-            matches.append({"project_a": rel_a, "project_b": best[0], "overlap": percent(best[1])})
+            matches.append({"project_a": rel_a, "project_b": best[0], "overlap": percent(best[1]), "weight": weight})
     matches.sort(key=lambda item: item["overlap"], reverse=True)
-    aggregate = sum(item["overlap"] for item in matches[: max(1, min(20, len(matches)))]) / max(1, min(20, len(matches)))
+    aggregate = percent(weighted_sum / weight_total) if weight_total else 0
     return round(aggregate, 2), matches[:limit]
 
 
@@ -649,8 +685,13 @@ def dimension_layout(a: dict[str, Any], b: dict[str, Any]) -> tuple[float, dict[
     section_score = percent(weighted_jaccard(a["classes"], b["classes"]))
     fp_a = a["component_fingerprints"]
     fp_b = b["component_fingerprints"]
+    hashes_a = set(fp_a.values())
+    # visibility-weighted collision rate: a colliding page/layout component
+    # (high visibility) weighs far more than a colliding internal helper.
+    collision_weight = sum(visibility_weight(path) for path, hash_b in fp_b.items() if hash_b in hashes_a)
+    total_weight = sum(visibility_weight(path) for path in fp_b)
+    component_score = percent(collision_weight / total_weight) if total_weight else 0
     common_hashes = set(fp_a.values()) & set(fp_b.values())
-    component_score = percent(len(common_hashes) / max(len(fp_a), len(fp_b), 1))
     responsive_score = percent(weighted_jaccard(a["breakpoints"], b["breakpoints"]))
     layout_utility_score = percent(weighted_jaccard(a["style_tokens"], b["style_tokens"]))
     submetrics = {
