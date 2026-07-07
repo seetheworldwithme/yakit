@@ -315,15 +315,60 @@
   }
 
   // 表格容器
+  // 修高度链：让 HubOuterList 的 children 容器成为有界 flex 项，否则 table-wrap 撑不到高度
+  .hub-outer-list-body-container {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // 表格容器：表头固定 / 表体滚动 / 分页固定底部
   .hub-local-table-wrap {
     flex: 1 1 0;
+    min-height: 0;
     height: 100%;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 
     :global {
-      .ant-table-wrapper,
+      .ant-table-wrapper {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
       .ant-table {
-        height: 100%;
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .ant-table-container {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .ant-table-header {
+        flex: 0 0 auto;
+      }
+      .ant-table-body {
+        flex: 1 1 0;
+        min-height: 0;
+        max-height: none !important;
+        overflow-y: auto !important;
+      }
+      .ant-table-pagination {
+        flex: 0 0 auto;
+        padding: 8px 0;
+        margin: 0 !important;
       }
       .ant-table-tbody > tr.ant-table-row:hover > td {
         background: var(--Colors-Use-Neutral-Bg-Hover) !important;

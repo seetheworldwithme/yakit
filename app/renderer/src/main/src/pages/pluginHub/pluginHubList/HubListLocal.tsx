@@ -1472,7 +1472,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         pageSizeOptions: ['10', '20', '50', '100'],
                         onChange: onPaginationChange,
                       }}
-                      scroll={{ y: 'calc(100vh - 320px)', x: 'max-content' }}
+                      scroll={{ y: 200, x: 'max-content' }}
                       loading={loading}
                       onRow={(record) => {
                         const idx = (response.Data || []).findIndex((ele) => ele.ScriptName === record.ScriptName)
