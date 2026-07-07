@@ -104,9 +104,7 @@ import {
   OutlinePlugsIcon,
   OutlineSearchIcon,
   OutlineFilterIcon,
-  OutlineSwitchhorizontalIcon,
   OutlineCogIcon,
-  OutlineDotsverticalIcon,
 } from '@/assets/icon/outline'
 import emiter from '@/utils/eventBus/eventBus'
 import {
@@ -140,7 +138,6 @@ import { WebFuzzerCasualReplaceReviewOverlay } from '@/pages/fuzzer/WebFuzzerCas
 import blastingIdmp4 from '@/assets/blasting-id.mp4'
 import blastingPwdmp4 from '@/assets/blasting-pwd.mp4'
 import blastingCountmp4 from '@/assets/blasting-count.mp4'
-import { prettifyPacketCode } from '@/utils/prettifyPacket'
 import { WebFuzzerType } from './WebFuzzerPage/WebFuzzerPageType'
 import cloneDeep from 'lodash/cloneDeep'
 import { useGlobalHotPatch, useGlobalHotPatchTag } from '@/store/globalHotPatch'
@@ -206,7 +203,6 @@ import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { useChunkAutoScrollToBottom } from './hooks/useAutoScrollToBottom'
 const tOriginal = i18n.getFixedT(null, ['yakitUi', 'webFuzzer'])
 const PluginDebugDrawer = React.lazy(() => import('./components/PluginDebugDrawer/PluginDebugDrawer'))
-const WebFuzzerSynSetting = React.lazy(() => import('./components/WebFuzzerSynSetting/WebFuzzerSynSetting'))
 const HTTPHistoryAnalysis = React.lazy(() =>
   import('../hTTPHistoryAnalysis/HTTPHistoryAnalysis').then(({ HTTPHistoryAnalysis }) => ({
     default: HTTPHistoryAnalysis,
@@ -2031,34 +2027,6 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             onClick={() => onNextPage()}
           />
         </div>
-        {+(firstNodeSize?.width || 0) < 500 ? (
-          <YakitPopover
-            trigger={'click'}
-            content={
-              <>
-                <div>
-                  {t('YakitButton.privacy_mode')}&nbsp;
-                  <YakitSwitch checked={privacy} onChange={setPrivacy} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  HEX
-                  <YakitSwitch checked={hex} onChange={setHex} />
-                </div>
-              </>
-            }
-          >
-            <OutlineDotsverticalIcon className={styles['resize-card-icon']} />
-          </YakitPopover>
-        ) : (
-          <>
-            <YakitCheckableTag checked={privacy} onChange={setPrivacy} style={{ marginRight: 0 }}>
-              {t('YakitButton.privacy_mode')}
-            </YakitCheckableTag>
-            <YakitCheckableTag checked={hex} onChange={setHex} style={{ marginRight: 0 }}>
-              HEX
-            </YakitCheckableTag>
-          </>
-        )}
         <PacketScanButton
           packetGetter={() => {
             return {
@@ -2067,19 +2035,6 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             }
           }}
         />
-        <YakitButton
-          size="small"
-          type="outline2"
-          onMouseUp={(event) => event.currentTarget.blur()}
-          onClick={async () => {
-            if (!requestRef.current) return
-            const beautifyValue = await prettifyPacketCode(requestRef.current)
-            onSetRequest(Uint8ArrayToString(beautifyValue as Uint8Array, 'utf8'))
-            refreshRequest()
-          }}
-        >
-          {t('YakitButton.beautify')}
-        </YakitButton>
         <div className={styles['hot-patch-trigger']}>
           <YakitButton
             size="small"
@@ -2323,20 +2278,6 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
       yakitFailed(error + '')
     }
   }
-  /**同步WF数据 */
-  const onSynWF = useMemoizedFn(() => {
-    const m = showYakitModal({
-      title: (modalT) => modalT('HTTPFuzzerPage.syncConfig'),
-      content: (
-        <React.Suspense>
-          <WebFuzzerSynSetting pageId={props.id} onClose={() => m.destroy()} />
-        </React.Suspense>
-      ),
-      onCancel: () => m.destroy(),
-      footer: null,
-      bodyStyle: { padding: 0 },
-    })
-  })
   const advancedConfigVisible = useCreation(() => {
     switch (advancedConfigShowType) {
       case 'config':
@@ -2878,22 +2819,13 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
                         <ShareImportExportData
                           module="fuzzer"
+                          supportShare={false}
                           getShareContent={getShareContent}
                           getFuzzerRequestParams={
                             getFuzzerRequestParams as unknown as () => FuzzerRequestProps[] | FuzzerRequestProps
                           }
                         />
                       ) : null}
-                      <Divider type="vertical" style={{ margin: 8 }} />
-
-                      <FuncBtn
-                        maxWidth={1600}
-                        type="outline2"
-                        icon={<OutlineSwitchhorizontalIcon />}
-                        onClick={onSynWF}
-                        name={t('HTTPFuzzerPage.syncConfig')}
-                        style={{ marginRight: 8 }}
-                      />
                       <YakitDropdownMenu
                         menu={{
                           data: [
