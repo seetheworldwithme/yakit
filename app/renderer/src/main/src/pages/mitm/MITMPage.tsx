@@ -41,7 +41,7 @@ import {
   MITMServerStartForm,
 } from './MITMServerStartForm/MITMServerStartForm'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
-import { YakitResizeBox } from '@/components/yakitUI/YakitResizeBox/YakitResizeBox'
+import { YakitDrawer } from '@/components/yakitUI/YakitDrawer/YakitDrawer'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
 import emiter from '@/utils/eventBus/eventBus'
 import { YakitRoute } from '@/enums/yakitRoute'
@@ -612,6 +612,9 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
   }, [mitmContent.mitmStore.version])
 
   const [openTabsFlag, setOpenTabsFlag] = useState<boolean>(true)
+  // 插件区抽屉化：idle / hijacking 都把插件从 inline pane 改为按需抽屉，另一区全宽
+  const [idlePluginDrawerOpen, setIdlePluginDrawerOpen] = useState<boolean>(false)
+  const [hijackPluginDrawerOpen, setHijackPluginDrawerOpen] = useState<boolean>(false)
 
   const { t, i18n } = useI18nNamespaces(['mitm', 'yakitUi'])
 
@@ -1076,61 +1079,49 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
     }
   })
 
-  const ResizeBoxProps = useCreation(() => {
-    let p = {
-      firstRatio: status === 'idle' ? '44%' : '30%',
-      secondRatio: status === 'idle' ? '56%' : '70%',
-    }
-
-    if (openTabsFlag) {
-      p.firstRatio = status === 'idle' ? '44%' : '30%'
-    } else {
-      p.firstRatio = '24px'
-    }
-
-    if (isFullScreenFirstNode) {
-      p.secondRatio = '0%'
-      p.firstRatio = 'calc(100% + 6px)'
-    }
-    return p
-  }, [isFullScreenFirstNode, openTabsFlag, status])
-
   if (status === 'idle') {
     return (
       <main className={style['mitm-idle-workbench']}>
-        <section
-          className={classNames(style['mitm-idle-plugin-deck'], {
-            [style['mitm-idle-plugin-deck-collapsed']]: !openTabsFlag,
-          })}
+        <div className={style['mitm-idle-toolbar']}>
+          <span className={style['mitm-idle-toolbar-title']}>代理劫持启动台</span>
+          <YakitButton type="outline2" onClick={() => setIdlePluginDrawerOpen(true)}>
+            被动插件{total > 0 ? ` (${total})` : ''}
+          </YakitButton>
+        </div>
+        <section className={style['mitm-idle-start-deck']}>{onRenderSecondNode()}</section>
+        <YakitDrawer
+          title="被动插件"
+          placement="right"
+          width={480}
+          visible={idlePluginDrawerOpen}
+          onClose={() => setIdlePluginDrawerOpen(false)}
+          bodyStyle={{ padding: 12, height: 'calc(100% - 55px)', overflow: 'hidden' }}
         >
           {onRenderFirstNode()}
-        </section>
-        <section className={style['mitm-idle-start-deck']}>{onRenderSecondNode()}</section>
+        </YakitDrawer>
       </main>
     )
   }
 
   return (
-    <YakitResizeBox
-      isVer={false}
-      freeze={openTabsFlag}
-      isRecalculateWH={openTabsFlag}
-      firstNode={() => <div className={style['mitm-server-start-pre-first']}>{onRenderFirstNode()}</div>}
-      lineStyle={{ display: isFullScreenFirstNode ? 'none' : '' }}
-      lineDirection="left"
-      firstMinSize={openTabsFlag ? '360px' : '24px'}
-      secondMinSize={520}
-      secondNode={() => (
-        <div className={style['mitm-server-start-pre-second']} style={{ display: isFullScreenFirstNode ? 'none' : '' }}>
-          {onRenderSecondNode()}
-        </div>
-      )}
-      secondNodeStyle={{
-        padding: isFullScreenFirstNode ? 0 : undefined,
-        display: isFullScreenFirstNode ? 'none' : '',
-      }}
-      {...ResizeBoxProps}
-    />
+    <div className={style['mitm-hijack-workbench']}>
+      <div className={style['mitm-hijack-toolbar']}>
+        <YakitButton type="outline2" onClick={() => setHijackPluginDrawerOpen(true)}>
+          插件面板
+        </YakitButton>
+      </div>
+      <div className={style['mitm-server-start-pre-second']}>{onRenderSecondNode()}</div>
+      <YakitDrawer
+        title="插件面板"
+        placement="left"
+        width={560}
+        visible={hijackPluginDrawerOpen}
+        onClose={() => setHijackPluginDrawerOpen(false)}
+        bodyStyle={{ padding: 8, height: 'calc(100% - 55px)', overflow: 'hidden' }}
+      >
+        <div className={style['mitm-server-start-pre-first']}>{onRenderFirstNode()}</div>
+      </YakitDrawer>
+    </div>
   )
 })
 

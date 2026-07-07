@@ -21,11 +21,30 @@
 .mitm-idle-workbench {
   width: 100%;
   height: 100%;
-  display: grid;
-  grid-template-rows: minmax(260px, 44%) minmax(360px, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   overflow: hidden;
+  padding: 8px;
   background: var(--Colors-Use-Basic-Background);
+}
+
+.mitm-idle-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 8px;
+  background: var(--Colors-Use-Neutral-Bg);
+}
+
+.mitm-idle-toolbar-title {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--Colors-Use-Neutral-Text-1-Title);
 }
 
 .mitm-idle-plugin-deck,
@@ -43,6 +62,8 @@
 }
 
 .mitm-idle-start-deck {
+  flex: 1;
+  min-height: 0;
   padding: 10px;
   border: 1px solid var(--Colors-Use-Neutral-Border);
   border-radius: 8px;
@@ -55,6 +76,25 @@
   .mitm-idle-tab-cont-item {
     display: none;
   }
+}
+
+.mitm-hijack-workbench {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.mitm-hijack-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: 8px;
+  background: var(--Colors-Use-Neutral-Bg);
 }
 
 .mitm-server-start-pre-first {
@@ -207,6 +247,8 @@
 
 .mitm-server-start-pre-second {
   display: flex;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
   position: relative;
