@@ -2814,55 +2814,10 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       </Tooltip>
                     </>
                   )}
-                  <span className={styles['fuzzer-rail-divider']} />
-                  <Tooltip title={t('HttpQueryAdvancedConfig.force_https')} placement="right">
-                    <YakitCheckbox
-                      className={styles['fuzzer-rail-https']}
-                      checked={advancedConfigValue.isHttps}
-                      onChange={(e) => {
-                        const isHttps = e.target.checked
-                        setAdvancedConfigValue({
-                          ...advancedConfigValue,
-                          isHttps,
-                          ...(!isHttps
-                            ? {
-                                isGmTLS: false,
-                                randomJA3: false,
-                              }
-                            : {}),
-                        })
-                      }}
-                    />
-                  </Tooltip>
-                  <Tooltip title={t('YakitButton.history')} placement="right">
-                    <YakitButton
-                      className={styles['fuzzer-rail-btn']}
-                      type={historyDockVisible ? 'primary' : 'text'}
-                      icon={<ClockIcon />}
-                      onClick={() => setHistoryDockVisible((visible) => !visible)}
-                    />
-                  </Tooltip>
                 </aside>
                 <div className={styles['fuzzer-stage']}>
                   <header className={styles['fuzzer-heard']}>
                     <section className={styles['fuzzer-heard-left']}>
-                      <div
-                        className={styles['blasting-example']}
-                        onClick={() => {
-                          const m = showYakitModal({
-                            type: 'white',
-                            title: (modalT) => modalT('HTTPFuzzerPage.webFuzzerDemo'),
-                            width: 480,
-                            content: <BlastingAnimationAemonstration></BlastingAnimationAemonstration>,
-                            footer: null,
-                            centered: true,
-                            destroyOnClose: true,
-                          })
-                        }}
-                      >
-                        {t('HTTPFuzzerPage.bruteForceExample')}
-                        <QuestionMarkCircleIcon />
-                      </div>
                       {loading && (
                         <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
                           <YakitSpin size={'small'} style={{ width: 'auto' }} />

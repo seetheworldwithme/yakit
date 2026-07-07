@@ -101,7 +101,7 @@
     "generatePathTemplate": "生成为 Path 模板",
     "generateRawTemplate": "生成为 Raw 模板",
     "generateYamlTemplate": "生成 Yaml 模板",
-    "editAndSendRequest": "请在左边编辑并发送一个 HTTP 请求/模糊测试",
+    "editAndSendRequest": "请编辑并发送请求",
     "fuzzTestResultsInfo": "本栏结果针对模糊测试的多个 HTTP请求结果展示做了优化，可以自动识别单个/多个请求的展示。",
     "responseLimitExceeded": "响应数量超过前端限制请确认开启",
     "saveHttpTrafficSettings": "保存HTTP流量设置",
