@@ -22,10 +22,11 @@ import { JSONParseLog } from '@/utils/tool'
 const { ipcRenderer } = window.require('electron')
 
 export const webFuzzerTabs = (t: TFunction) => {
+  // 按功能裁剪方案：隐藏「热加载」tab（依赖外部脚本热注入，超出需求 5/6 范围）
+  // 保留 hot-patch 字面量、组件与事件链路，仅不展示入口（避免 MITM 被动插件等内部能力受影响）
   return [
     { key: 'config', label: t('WebFuzzerPage.config') },
     { key: 'rule', label: t('WebFuzzerPage.rule') },
-    { key: 'hot-patch', label: t('HTTPFuzzerPage.hotReload') },
     { key: 'sequence', label: t('WebFuzzerPage.sequence') },
     { key: 'concurrency', label: t('WebFuzzerPage.concurrency') },
   ]

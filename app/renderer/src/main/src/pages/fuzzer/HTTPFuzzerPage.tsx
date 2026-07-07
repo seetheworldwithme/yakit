@@ -3082,103 +3082,14 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                                           />
                                         )}
                                       </>
-                                    ) : (
-                                      <Result
-                                        status={'warning'}
-                                        title={t('HTTPFuzzerPage.editAndSendRequest')}
-                                        subTitle={
-                                          <div>
-                                            {t('HTTPFuzzerPage.fuzzTestResultsInfo')}
-                                            {skipSaveHTTPFlow ? (
-                                              <>
-                                                {t('HTTPFuzzerPage.responseLimitExceeded')}
-                                                <YakitButton
-                                                  type="text"
-                                                  icon={<OutlineCogIcon />}
-                                                  style={{
-                                                    padding: 0,
-                                                    height: 'auto',
-                                                    verticalAlign: 'top',
-                                                  }}
-                                                  onClick={() => {
-                                                    emiter.emit(
-                                                      'menuOpenPage',
-                                                      JSON.stringify({
-                                                        route: YakitRoute.Beta_ConfigNetwork,
-                                                      }),
-                                                    )
-                                                  }}
-                                                >
-                                                  {t('HTTPFuzzerPage.saveHttpTrafficSettings')}
-                                                </YakitButton>
-                                              </>
-                                            ) : (
-                                              ''
-                                            )}
-                                          </div>
-                                        }
-                                      />
-                                    )}
+                                    ) : null}
                                   </div>
                                 </div>
                               )}
                             </PluginTabs.TabPane>
-                            <PluginTabs.TabPane
-                              tab={t('HTTPFuzzerPage.responseTabAi')}
-                              key="ai"
-                              disabled={allAiFuzzRuntimeIds.length === 0}
-                            >
-                              {/* AI tab：thin header 承载标题 + 放大/收起按钮，复用 secondFull 状态与手动 tab 共享布局切换 */}
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  height: '100%',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                <div className={classNames(styles['resize-card-heard'])}>
-                                  <div className={styles['resize-card-heard-title']}>
-                                    {t('HTTPFuzzerPage.aiTabTitle')}
-                                  </div>
-                                  <div className={styles['resize-card-heard-extra']}></div>
-                                  <div
-                                    className={styles['resize-card-icon']}
-                                    onClick={() => setSecondFull(!secondFull)}
-                                  >
-                                    {secondFull ? <ArrowsRetractIcon /> : <ArrowsExpandIcon />}
-                                  </div>
-                                </div>
-                                <div style={{ flex: 1, minHeight: 0 }}>
-                                  {effectiveAiRuntimeId ? (
-                                    <HTTPFlowRealTimeTableAndEditor
-                                      key={effectiveAiRuntimeId}
-                                      wrapperStyle={{ padding: 0 }}
-                                      pageType="Plugin"
-                                      runtimeId={effectiveAiRuntimeId}
-                                      params={{ SourceType: 'scan' }}
-                                      filterTagDom={aiFilterTagDom}
-                                      defaultExcludeColumnsKey={aiFuzzTableExcludeColumnsKey}
-                                      httpHistoryTableTitleStyle={{
-                                        paddingTop: 12,
-                                        paddingLeft: 8,
-                                        paddingRight: 8,
-                                      }}
-                                      showSourceType={false}
-                                      showAdvancedSearch={false}
-                                      showProtocolType={false}
-                                      showColorSwatch={false}
-                                      showDelAll={false}
-                                      showBatchActions={false}
-                                      showFlod={false}
-                                      showHistoryAnalysisBtn
-                                      onHistoryAnalysisClick={jumpHTTPHistoryAnalysis}
-                                      titleHeight={47}
-                                    />
-                                  ) : null}
-                                </div>
-                              </div>
-                            </PluginTabs.TabPane>
+                            {/* 按功能裁剪方案 B8（AI 全套）：隐藏「AI 发包」响应区 tab —— 依赖云端大模型存在数据外发合规风险。
+                                保留 responseSource state、useHistoryAIReActChat、onAiTest、openAiPanel、fuzzerAiSlot 等全部 AI 链路，
+                                仅移除该 TabPane 的渲染入口，避免依赖 cascade。 */}
                           </PluginTabs>
                         </article>
                       </section>
