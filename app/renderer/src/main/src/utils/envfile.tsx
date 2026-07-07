@@ -290,6 +290,6 @@ export const GetMainColor = (themeMode: Theme) => {
     case 'enterprise':
     case 'simple-enterprise':
     case 'yakit':
-      return '#116a77'
+      return '#0EA5E9'
   }
 }
