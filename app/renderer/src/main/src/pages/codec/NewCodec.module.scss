@@ -138,6 +138,16 @@
           &:hover {
             background: var(--Colors-Use-Main-Bg);
           }
+          &-active {
+            border-bottom-color: var(--Colors-Use-Green-Border);
+            background: var(--Colors-Use-Green-Bg);
+            .title {
+              .drag-icon,
+              .text {
+                color: var(--Colors-Use-Green-Primary);
+              }
+            }
+          }
         }
         :global {
           .ant-collapse-item-active {
@@ -310,7 +320,6 @@
   .new-codec-editor-box {
     flex: 1;
     overflow: hidden;
-    border-left: 1px solid var(--Colors-Use-Neutral-Border);
     .editor-box {
       display: flex;
       flex-direction: column;
@@ -419,6 +428,9 @@
             font-weight: 500;
             line-height: 16px;
             padding: 4px 0px 4px 4px;
+          }
+          .input-run-btn {
+            min-width: 88px;
           }
         }
       }

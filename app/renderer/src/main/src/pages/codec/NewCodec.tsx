@@ -134,10 +134,13 @@ interface NewCodecRightEditorBoxProps {
   outputResponse?: CodecResponseProps
   setInputEditor: (v: string) => void
   runLoading: boolean
+  runDisabled: boolean
+  onRunCodec: () => void
 }
 // codec右边编辑器
 export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (props) => {
-  const { isExpand, setExpand, outputResponse, inputEditor, setInputEditor, runLoading } = props
+  const { isExpand, setExpand, outputResponse, inputEditor, setInputEditor, runLoading, runDisabled, onRunCodec } =
+    props
   const { t, i18n } = useI18nNamespaces(['codec', 'yakitUi'])
   const [noInputWordwrap, setNoInputWordwrap] = useState<boolean>(false)
   const [noOutputWordwrap, setNoOutputWordwrap] = useState<boolean>(false)
@@ -353,12 +356,16 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
   return (
     <div className={styles['new-codec-editor-box']} ref={editorBoxRef}>
       <YakitResizeBox
-        isVer={true}
+        isVer={false}
         isShowDefaultLineStyle={false}
-        lineDirection="bottom"
+        lineDirection="right"
+        firstRatio="50%"
+        secondRatio="50%"
+        firstMinSize="260px"
+        secondMinSize="260px"
         lineStyle={{
           // backgroundColor: "var(--Colors-Use-Neutral-Bg)",
-          height: 4,
+          width: 4,
         }}
         firstNodeStyle={{ padding: 0 }}
         secondNodeStyle={{ padding: 0 }}
@@ -447,6 +454,17 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                     </div>
                   </YakitDropdownMenu>
                 )}
+                <YakitButton
+                  size="small"
+                  type="primary"
+                  className={styles['input-run-btn']}
+                  icon={<SolidPlayIcon />}
+                  loading={runLoading}
+                  disabled={runDisabled}
+                  onClick={onRunCodec}
+                >
+                  {t('YakitButton.runNow')}
+                </YakitButton>
                 <Divider type={'vertical'} style={{ margin: '4px 0px 0px' }} />
                 <div className={styles['clear']} onClick={onClear}>
                   {t('YakitButton.clear')}
@@ -1626,6 +1644,7 @@ interface NewCodecLeftDragListItemProps {
   collectList: string[]
   getCollectData: (v: string[]) => void
   onClickToRunList: (v: CodecMethod) => void
+  selectedCodecType?: string
   parentItem?: LeftDataProps
 }
 
@@ -1663,7 +1682,7 @@ const getLeftItemStyle = (isDragging, draggableStyle) => {
 
 // 左边拖拽源
 export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> = (props) => {
-  const { node, collectList, parentItem, getCollectData, onClickToRunList } = props
+  const { node, collectList, parentItem, getCollectData, onClickToRunList, selectedCodecType } = props
 
   const dragListItemDom = useMemoizedFn((item: CodecMethod) => (
     <YakitPopover
@@ -1677,7 +1696,12 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
         </div>
       }
     >
-      <div className={styles['drag-list-item']} onClick={() => onClickToRunList(item)}>
+      <div
+        className={classNames(styles['drag-list-item'], {
+          [styles['drag-list-item-active']]: selectedCodecType === item.CodecMethod,
+        })}
+        onClick={() => onClickToRunList(item)}
+      >
         <div className={styles['title']}>
           <div className={styles['drag-icon']}>
             <SolidDragsortIcon />
@@ -1798,6 +1822,7 @@ interface NewCodecLeftDragListProps {
   isShowSearchList: boolean
   getCollectData: (v: string[]) => void
   onClickToRunList: (v: CodecMethod) => void
+  selectedCodecType?: string
   searchValue?: string
   setSearchValue?: (v: string) => void
 }
@@ -1821,6 +1846,7 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
     isShowSearchList,
     getCollectData,
     onClickToRunList,
+    selectedCodecType,
   } = props
 
   return (
@@ -1868,6 +1894,7 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
                 collectList={collectList}
                 getCollectData={getCollectData}
                 onClickToRunList={onClickToRunList}
+                selectedCodecType={selectedCodecType}
               />
               <div className={styles['to-end']}>{t('YakitEmpty.end_of_list')}</div>
             </div>
@@ -2285,13 +2312,11 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
   })
 
   /**
-   * @description: 点击后添加至运行列表
+   * @description: 点击后设为当前编码方法
    */
   const onClickToRunList = useMemoizedFn((item: CodecMethod) => {
     const node = initNode(item)
-    const newRightItems: RightItemsProps[] = JSON.parse(JSON.stringify(rightItems))
-    newRightItems.push({ title: item.CodecName, codecType: item.CodecMethod, key: uuidv4(), node })
-    setRightItems(newRightItems)
+    setRightItems([{ title: item.CodecName, codecType: item.CodecMethod, key: uuidv4(), node }])
     isClickToRunList.current = true
   })
 
@@ -2351,6 +2376,173 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
     // console.log("onDragStart---", result)
   })
 
+  const collectCodecWorkParams = useMemoizedFn((item: RightItemsProps) => {
+    let obj: CodecWorkProps = {
+      CodecType: item.codecType,
+      Params: [],
+    }
+    if (Array.isArray(item.node)) {
+      const node = item.node as (RightItemsTypeProps | RightItemsFlexProps)[]
+      node.forEach((itemIn) => {
+        if (itemIn.type === 'inputSelect') {
+          const { input, select } = itemIn
+          obj.Params.push({
+            Key: input.name,
+            Value: input.value || '',
+          })
+          obj.Params.push({
+            Key: select.name,
+            Value: select.value || '',
+          })
+        } else if (itemIn.type === 'checkbox') {
+          const { name, value = [] } = itemIn
+          obj.Params.push({
+            Key: name,
+            Value: value.includes(name),
+          })
+        } else if (itemIn.type !== 'flex') {
+          const { name, value = '' } = itemIn
+          obj.Params.push({
+            Key: name,
+            Value: value,
+          })
+        }
+      })
+    }
+    return obj
+  })
+
+  const runCodecFun = useMemoizedFn((runItems: RightItemsProps[]) => {
+    let newCodecParams: { Text: string; WorkFlow: CodecWorkProps[] } = {
+      Text: inputEditor,
+      WorkFlow: runItems.map((item) => collectCodecWorkParams(item)),
+    }
+    setRunLoading(true)
+
+    ipcRenderer
+      .invoke('NewCodec', newCodecParams)
+      .then((data: CodecResponseProps) => {
+        setOutputResponse(data)
+      })
+      .catch((e) => {
+        failed(`newCodec failed ${e}`)
+      })
+      .finally(() => {
+        setRunLoading(false)
+      })
+  })
+
+  const runSelectedCodec = useMemoizedFn(() => {
+    if (rightItems.length === 0) {
+      warn(t('NewCodecMiddleRunList.dragHint'))
+      return
+    }
+    if (inputEditor.length === 0) return
+
+    const rightItemsSkip = rightItems.filter((item) => item.status !== 'shield')
+    const rightItemsStop: RightItemsProps[] = []
+    rightItemsSkip.some((item) => {
+      rightItemsStop.push(item)
+      return item.status === 'suspend'
+    })
+
+    const checkFail: CheckFailProps[] = []
+    rightItemsStop.forEach((item) => {
+      const { key, title } = item
+      if (Array.isArray(item.node)) {
+        item.node.forEach((itemIn, indexIn) => {
+          if (itemIn.type === 'input' || itemIn.type === 'text') {
+            const { require, value, regex } = itemIn
+            if (require && !value) {
+              checkFail.push({
+                key,
+                index: indexIn,
+                message: t('YakitForm.field_required_with_label', {
+                  label: `${title}-${itemIn.title}`,
+                }),
+              })
+            }
+            if (regex && value) {
+              const regexp = new RegExp(regex)
+              if (!regexp.test(value)) {
+                checkFail.push({
+                  key,
+                  index: indexIn,
+                  message: t('NewCodecMiddleRunList.regexCheckFailed', {
+                    title: `${title}-${itemIn.title}`,
+                    regex: String(regexp),
+                  }),
+                })
+              }
+            }
+          } else if (itemIn.type === 'select') {
+            const { require, value } = itemIn
+            if (require && !value) {
+              checkFail.push({
+                key,
+                index: indexIn,
+                message: t('YakitForm.field_required_with_label', {
+                  label: `${title}-${itemIn.title}`,
+                }),
+              })
+            }
+          } else if (itemIn.type === 'editor') {
+            const { require, value } = itemIn
+            if (require && !value) {
+              checkFail.push({
+                key,
+                index: indexIn,
+                message: t('YakitForm.field_required_with_label', {
+                  label: `${title}-${itemIn.title}`,
+                }),
+              })
+            }
+          } else if (itemIn.type === 'inputSelect') {
+            const inputItem = itemIn.input
+            const selectItem = itemIn.select
+            const { require, value, regex } = inputItem
+            if (require && !value) {
+              checkFail.push({
+                key,
+                index: indexIn,
+                message: t('YakitForm.field_required_with_label', {
+                  label: `${title}-${inputItem.title}`,
+                }),
+              })
+            }
+            if (regex && value) {
+              const regexp = new RegExp(regex)
+              if (!regexp.test(value)) {
+                checkFail.push({
+                  key,
+                  index: indexIn,
+                  message: t('NewCodecMiddleRunList.regexCheckFailed', {
+                    title: `${title}-${inputItem.title}`,
+                    regex: String(regexp),
+                  }),
+                })
+              }
+            }
+            if (selectItem.require && !selectItem.value) {
+              checkFail.push({
+                key,
+                index: indexIn,
+                message: t('YakitForm.field_required_with_label', {
+                  label: `${title}-${selectItem.title}`,
+                }),
+              })
+            }
+          }
+        })
+      }
+    })
+    if (checkFail.length > 0) {
+      warn(checkFail[0].message)
+    } else {
+      runCodecFun(rightItemsStop)
+    }
+  })
+
   return (
     <div className={styles['new-codec']}>
       {!isExpand && (
@@ -2371,20 +2563,7 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
             setSearchValue={setSearchValue}
             getCollectData={getCollectData}
             onClickToRunList={onClickToRunList}
-          />
-          <NewCodecMiddleRunList
-            ref={newCodecMiddleRunListRef}
-            id={id}
-            fold={fold}
-            setFold={setFold}
-            rightItems={rightItems}
-            setRightItems={setRightItems}
-            inputEditor={inputEditor}
-            setOutputResponse={setOutputResponse}
-            isClickToRunList={isClickToRunList}
-            setRunLoading={setRunLoading}
-            codecFlow={codecFlow}
-            setCodecFlow={setCodecFlow}
+            selectedCodecType={rightItems[0]?.codecType}
           />
         </DragDropContext>
       )}
@@ -2395,6 +2574,8 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
         setInputEditor={setInputEditor}
         outputResponse={outputResponse}
         runLoading={runLoading}
+        runDisabled={rightItems.length === 0 || inputEditor.length === 0}
+        onRunCodec={runSelectedCodec}
       />
     </div>
   )
