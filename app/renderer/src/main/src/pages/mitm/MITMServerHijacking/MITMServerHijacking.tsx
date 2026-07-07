@@ -371,7 +371,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
 
   return (
     <div className={style['mitm-server']}>
-      <aside className={style['mitm-control-tower']}>
+      <header className={style['mitm-control-tower']}>
         <div className={style['mitm-control-tower-head']}>
           <div className={style['mitm-control-kicker']}>MITM LIVE</div>
           <div className={style['mitm-control-title']}>劫持 HTTP Request</div>
@@ -496,36 +496,9 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
           <QuitIcon />
           停止监听
         </YakitButton>
-      </aside>
-      <main className={style['mitm-traffic-workbench']}>
-        <div className={style['mitm-server-body']}>
-          <MITMServer
-            isHasParams={isHasParams}
-            onIsHasParams={onIsHasParams}
-            status={status}
-            setStatus={setStatus}
-            autoForward={autoForward}
-            setAutoForward={setAutoForward}
-            downstreamProxyStr={downstreamProxyStr}
-            showPluginHistoryList={showPluginHistoryList}
-            setShowPluginHistoryList={setShowPluginHistoryList}
-            tempShowPluginHistory={tempShowPluginHistory}
-            setTempShowPluginHistory={setTempShowPluginHistory}
-            setVisible={setVisible}
-            setFiltersVisible={setFiltersVisible}
-            pluginStreamInfo={pluginStreamInfo}
-            showPluginStream={showPluginStream}
-            setShowPluginStream={setShowPluginStream}
-            hasPluginsStreamUpdate={hasPluginsStreamUpdate}
-            updatesPlugins={updatesPlugins}
-            pluginOutputRef={pluginOutputRef}
-          />
-        </div>
-      </main>
-      <aside className={style['mitm-hijack-config-panel']}>
-        <div className={style['mitm-config-panel-title']}>劫持配置</div>
+        <span className={style['mitm-topbar-spacer']} />
         <YakitPopover
-          placement="leftTop"
+          placement="bottomLeft"
           title={
             <div className={style['proxy_configuration_top']} onClick={() => setDownStreamAgentModalVisible(true)}>
               {t('ProxyConfig.downstream_agent')}
@@ -557,7 +530,32 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
         <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setDownloadVisible(true)}>
           证书下载
         </YakitButton>
-      </aside>
+      </header>
+      <main className={style['mitm-traffic-workbench']}>
+        <div className={style['mitm-server-body']}>
+          <MITMServer
+            isHasParams={isHasParams}
+            onIsHasParams={onIsHasParams}
+            status={status}
+            setStatus={setStatus}
+            autoForward={autoForward}
+            setAutoForward={setAutoForward}
+            downstreamProxyStr={downstreamProxyStr}
+            showPluginHistoryList={showPluginHistoryList}
+            setShowPluginHistoryList={setShowPluginHistoryList}
+            tempShowPluginHistory={tempShowPluginHistory}
+            setTempShowPluginHistory={setTempShowPluginHistory}
+            setVisible={setVisible}
+            setFiltersVisible={setFiltersVisible}
+            pluginStreamInfo={pluginStreamInfo}
+            showPluginStream={showPluginStream}
+            setShowPluginStream={setShowPluginStream}
+            hasPluginsStreamUpdate={hasPluginsStreamUpdate}
+            updatesPlugins={updatesPlugins}
+            pluginOutputRef={pluginOutputRef}
+          />
+        </div>
+      </main>
       <DownStreamAgentModal
         downStreamAgentModalVisible={downStreamAgentModalVisible}
         onCloseModal={() => setDownStreamAgentModalVisible(false)}

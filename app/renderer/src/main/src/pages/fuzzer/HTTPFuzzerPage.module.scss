@@ -34,18 +34,6 @@
   background-color: var(--Colors-Use-Neutral-Bg);
 }
 
-.forge-action-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 52px;
-  flex-shrink: 0;
-  padding: 10px 4px;
-  border-right: 1px solid var(--Colors-Use-Neutral-Border);
-  background-color: var(--Colors-Use-Neutral-Bg);
-}
-
 // 横向动作条：原竖向 rail 已并入 header，这里放 发送/暂停/停止
 .forge-action-bar {
   display: flex;
@@ -65,18 +53,6 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-}
-
-.forge-action-divider {
-  width: 24px;
-  height: 1px;
-  background-color: var(--Colors-Use-Neutral-Border);
-  margin: 2px 0;
-}
-
-.forge-action-https {
-  align-items: center;
-  justify-content: center;
 }
 
 .forge-history-dock {

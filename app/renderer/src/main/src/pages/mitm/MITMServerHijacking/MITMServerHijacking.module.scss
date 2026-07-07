@@ -1,24 +1,23 @@
 .mitm-server {
   height: 100%;
   display: flex;
+  flex-direction: column;
   gap: 12px;
   min-width: 0;
   overflow: hidden;
 
-  .mitm-control-tower,
-  .mitm-hijack-config-panel {
+  .mitm-control-tower {
     flex-shrink: 0;
     border: 1px solid var(--Colors-Use-Neutral-Border);
     background: var(--Colors-Use-Neutral-Bg);
     border-radius: 8px;
-  }
-
-  .mitm-control-tower {
-    width: 204px;
-    padding: 14px;
+    width: 100%;
+    padding: 10px 14px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
     overflow: hidden;
   }
 
@@ -43,7 +42,7 @@
   }
 
   .mitm-control-endpoint {
-    padding: 12px;
+    padding: 8px 12px;
     border: 1px solid var(--Colors-Use-Neutral-Border);
     border-radius: 8px;
     background: var(--Colors-Use-Basic-Background);
@@ -96,15 +95,12 @@
   }
 
   .mitm-control-chrome {
-    padding-top: 4px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    align-items: center;
   }
 
   .mitm-control-stop {
-    margin-top: auto;
-    width: 100%;
+    width: auto;
 
     svg {
       width: 16px;
@@ -112,44 +108,17 @@
     }
   }
 
-  .mitm-traffic-workbench {
+  .mitm-topbar-spacer {
     flex: 1;
-    min-width: 0;
-    height: 100%;
-    overflow: hidden;
-    border: 1px solid var(--Colors-Use-Neutral-Border);
-    border-radius: 8px;
-    background: var(--Colors-Use-Basic-Background);
-  }
-
-  .mitm-server-body {
-    height: 100%;
-    padding: 8px;
-  }
-
-  .mitm-hijack-config-panel {
-    width: 224px;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .mitm-config-panel-title {
-    margin-bottom: 2px;
-    font-weight: 600;
-    font-size: 15px;
-    line-height: 22px;
-    color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 
   .mitm-config-action {
-    width: 100%;
-    justify-content: flex-start;
-    min-height: 44px;
-    padding: 8px 10px;
+    width: auto;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 12px;
     border: 1px solid var(--Colors-Use-Neutral-Border);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--Colors-Use-Basic-Background);
 
     &:hover {
@@ -163,20 +132,19 @@
     }
   }
 
-  @media (max-width: 1280px) {
-    .mitm-control-tower {
-      width: 180px;
-    }
-
-    .mitm-hijack-config-panel {
-      width: 190px;
-    }
+  .mitm-traffic-workbench {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border-radius: 8px;
+    background: var(--Colors-Use-Basic-Background);
   }
 
-  @media (max-width: 1100px) {
-    .mitm-hijack-config-panel {
-      display: none;
-    }
+  .mitm-server-body {
+    height: 100%;
+    padding: 8px;
   }
 }
 
