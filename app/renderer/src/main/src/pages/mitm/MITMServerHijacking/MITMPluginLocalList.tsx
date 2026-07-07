@@ -258,8 +258,8 @@ export const MITMPluginLocalList: React.FC<MITMPluginLocalListProps> = React.mem
             IsMITMParamPlugins: isHasParams ? 1 : 2,
           }}
           refresh={refresh}
-          itemHeight={status === 'idle' ? 226 : 238}
-          isGridLayout={true}
+          itemHeight={140}
+          isGridLayout={false}
           onClicked={(script) => {}}
           setTotal={(t) => {
             setTotal(t || 0)
