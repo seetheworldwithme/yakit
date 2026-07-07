@@ -3,6 +3,8 @@ import { useMemoizedFn, useDebounceFn, useInViewport, useUpdateEffect } from 'ah
 import { OutlineTrashIcon, OutlineDatabasebackupIcon, OutlineRefreshIcon } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
+import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
+import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { RemotePluginGV } from '@/enums/plugin'
 import { PluginSearchParams, PluginListPageMeta } from '@/pages/plugins/baseTemplateType'
 import { defaultSearch } from '@/pages/plugins/builtInData'
@@ -19,10 +21,9 @@ import {
 import { getRemoteValue } from '@/utils/kv'
 import { yakitNotify } from '@/utils/notification'
 import cloneDeep from 'lodash/cloneDeep'
-import useListenWidth from '../hooks/useListenWidth'
-import { HubButton } from '../hubExtraOperate/funcTemplate'
+import { formatDate } from '@/utils/timeUtil'
 import { NoPromptHint } from '../utilsUI/UtilsTemplate'
-import { RecycleOptFooterExtra, HubOuterList, HubGridList, HubGridOpt } from './funcTemplate'
+import { RecycleOptFooterExtra, HubOuterList } from './funcTemplate'
 import { useStore } from '@/store'
 import { OnlineJudgment } from '@/pages/plugins/onlineJudgment/OnlineJudgment'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
@@ -30,7 +31,9 @@ import useGetSetState from '../hooks/useGetSetState'
 import emiter from '@/utils/eventBus/eventBus'
 import { PluginOperateHint } from '../defaultConstant'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
+import { Table, Tooltip } from 'antd'
 
+import classNames from 'classnames'
 import styles from './PluginHubList.module.scss'
 import { useEmptyImage } from '@/hook/useResultEmpty/SearchEmpty'
 
@@ -42,7 +45,6 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
   const emptyImageTarget = useEmptyImage('search')
 
   const divRef = useRef<HTMLDivElement>(null)
-  const wrapperWidth = useListenWidth(divRef)
   const [inViewPort = true] = useInViewport(divRef)
 
   const userinfo = useStore((s) => s.userInfo)
@@ -59,6 +61,10 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
 
   // 列表无条件下的总数
   const [listTotal, setListTotal] = useState<number>(0)
+
+  // 分页
+  const [pageNum, setPageNum] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(20)
 
   // 列表数据
   const [response, dispatch] = useReducer(pluginOnlineReducer, initialOnlineState)
@@ -117,46 +123,52 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
       .catch(() => {})
   })
 
+  // 拉取指定页（整页替换）
+  const fetchPage = useMemoizedFn(async (page: number, limit: number, reset?: boolean) => {
+    if (loading) return
+    if (reset) {
+      fetchInitTotal()
+      isInitLoading.current = true
+      setShowIndex(0)
+    }
+    setLoading(true)
+
+    const params: PluginListPageMeta = { page, limit }
+    const query: PluginsQueryProps = convertPluginsRequestParams({}, getSearch(), params)
+    try {
+      const res = await apiFetchRecycleList(query)
+      if (!res.data) res.data = []
+      hasMore.current = page * limit < +res.pagemeta.total
+      dispatch({
+        type: 'page',
+        payload: {
+          response: { ...res },
+        },
+      })
+      if (page === 1) {
+        onCheck(false)
+      }
+    } catch (error) {}
+    setTimeout(() => {
+      isInitLoading.current = false
+      setLoading(false)
+    }, 300)
+  })
+
   const fetchList = useDebounceFn(
     useMemoizedFn(async (reset?: boolean) => {
-      if (loading) return
-      if (reset) {
-        fetchInitTotal()
-        isInitLoading.current = true
-        setShowIndex(0)
-      }
-      setLoading(true)
-
-      const params: PluginListPageMeta = !!reset
-        ? { page: 1, limit: 20 }
-        : {
-            page: response.pagemeta.page + 1,
-            limit: response.pagemeta.limit || 20,
-          }
-
-      const query: PluginsQueryProps = convertPluginsRequestParams({}, getSearch(), params)
-      try {
-        const res = await apiFetchRecycleList(query)
-        if (!res.data) res.data = []
-        const length = +res.pagemeta.page === 1 ? res.data.length : res.data.length + response.data.length
-        hasMore.current = length < +res.pagemeta.total
-        dispatch({
-          type: 'add',
-          payload: {
-            response: { ...res },
-          },
-        })
-        if (+res.pagemeta.page === 1) {
-          onCheck(false)
-        }
-      } catch (error) {}
-      setTimeout(() => {
-        isInitLoading.current = false
-        setLoading(false)
-      }, 300)
+      if (reset) setPageNum(1)
+      await fetchPage(reset ? 1 : pageNum, pageSize, reset)
     }),
     { wait: 200, leading: true },
   ).run
+
+  // 分页切换
+  const onPaginationChange = useMemoizedFn((page: number, limit: number) => {
+    setPageNum(page)
+    setPageSize(limit)
+    fetchPage(page, limit)
+  })
   /** 滚动更多加载 */
   const onUpdateList = useMemoizedFn((reset?: boolean) => {
     fetchList()
@@ -380,35 +392,135 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
     )
   }
 
+  // 单项还原
+  const onFooterExtraRestore = useMemoizedFn((info: YakitPluginOnlineDetail) => {
+    if (!isLogin) {
+      yakitNotify('error', t('RecycleOptFooterExtra.loginRequiredRestore'))
+      return
+    }
+    const request: PluginsRecycleRequest = { uuid: [info.uuid] }
+    apiReductionRecyclePlugin(request)
+      .then(() => {
+        onSingleDelOrRestoreAfter(info, 'restore')
+      })
+      .catch(() => {})
+  })
+
+  // 表格列定义
+  const tableColumns = useMemo<any[]>(() => {
+    const selectedSet = new Set(selectList.map((item) => item.uuid))
+    return [
+      {
+        title: () => (
+          <YakitCheckbox
+            indeterminate={!allChecked && selectList.length > 0}
+            checked={allChecked}
+            onChange={(e) => onCheck(e.target.checked)}
+          />
+        ),
+        dataIndex: 'uuid',
+        width: 44,
+        render: (_: any, record: YakitPluginOnlineDetail) => (
+          <YakitCheckbox
+            checked={allChecked || selectedSet.has(record.uuid)}
+            onChange={(e) => optCheck(record, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      },
+      {
+        title: t('HubListLocal.pluginName'),
+        dataIndex: 'script_name',
+        ellipsis: true,
+        render: (text: string) => <span className={styles['col-name-text']}>{text || '-'}</span>,
+      },
+      {
+        title: t('HubListLocal.tag'),
+        dataIndex: 'tags',
+        width: 220,
+        render: (tags: string) => {
+          const arr = (tags || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+          if (!arr.length) return <span className={styles['col-placeholder']}>-</span>
+          return (
+            <div className={styles['col-tags']}>
+              {arr.slice(0, 4).map((tg) => (
+                <YakitTag key={tg} color="info">
+                  {tg}
+                </YakitTag>
+              ))}
+              {arr.length > 4 && <span className={styles['col-tags-more']}>+{arr.length - 4}</span>}
+            </div>
+          )
+        },
+      },
+      {
+        title: t('HubListLocal.pluginDesc'),
+        dataIndex: 'help',
+        ellipsis: true,
+        render: (text: string) => (
+          <Tooltip title={text || ''} overlayClassName="plugins-tooltip">
+            <span className={styles['col-desc']}>{text || '-'}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: t('HubListLocal.createdAt'),
+        dataIndex: 'updated_at',
+        width: 160,
+        render: (ts?: number) => (ts ? formatDate(ts) : '-'),
+      },
+      {
+        title: t('HubListLocal.operation'),
+        width: 120,
+        render: (_: any, record: YakitPluginOnlineDetail) => (
+          <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
+            <Tooltip title={t('HubListRecycle.restore')} overlayClassName="plugins-tooltip">
+              <YakitButton
+                type="text2"
+                icon={<OutlineDatabasebackupIcon />}
+                onClick={() => onFooterExtraRestore(record)}
+              />
+            </Tooltip>
+            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
+              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
+            </Tooltip>
+          </div>
+        ),
+      },
+    ]
+  }, [allChecked, selectList, t])
+
   return (
-    <div ref={divRef} className={styles['plugin-hub-tab-list']}>
+    <section ref={divRef} className={classNames(styles['plugin-hub-tab-list'], styles['plugin-hub-local-shell'])}>
       <OnlineJudgment isJudgingLogin={true}>
         <YakitSpin spinning={loading && isInitLoading.current}>
           <HubOuterList
             title={t('HubListRecycle.title')}
             headerExtra={
               <div className={styles['hub-list-header-extra']}>
-                <HubButton
-                  width={wrapperWidth}
-                  iconWidth={900}
-                  icon={<OutlineTrashIcon />}
+                <YakitButton
                   type="outline2"
                   size="large"
-                  name={selectedNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
+                  icon={<OutlineTrashIcon />}
                   disabled={listTotal === 0}
                   loading={batchDelLoading}
                   onClick={onHeaderExtraDel}
-                />
-                <HubButton
-                  width={wrapperWidth}
-                  iconWidth={900}
-                  icon={<OutlineDatabasebackupIcon />}
+                >
+                  {selectedNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
+                </YakitButton>
+                <YakitButton
+                  type="outline2"
                   size="large"
-                  name={t('HubListRecycle.restore')}
+                  icon={<OutlineDatabasebackupIcon />}
                   disabled={listTotal === 0}
                   loading={batchRestoreLoading}
                   onClick={onHeaderExtraRestore}
-                />
+                >
+                  {t('HubListRecycle.restore')}
+                </YakitButton>
               </div>
             }
             allChecked={allChecked}
@@ -422,38 +534,24 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
             setFilters={() => {}}
           >
             {listLength > 0 ? (
-              <HubGridList
-                data={response.data}
-                keyName="uuid"
-                loading={loading}
-                hasMore={hasMore.current}
-                updateList={onUpdateList}
-                showIndex={showIndex.current}
-                setShowIndex={setShowIndex}
-                gridNode={(info) => {
-                  const { index, data } = info
-                  const check = allChecked || selectList.findIndex((ele) => ele.uuid === data.uuid) !== -1
-                  return (
-                    <HubGridOpt
-                      order={index}
-                      info={data}
-                      checked={check}
-                      onCheck={optCheck}
-                      title={data.script_name}
-                      type={data.type}
-                      tags={data.tags}
-                      help={data.help || ''}
-                      img={data.head_img || ''}
-                      user={data.authors || ''}
-                      prImgs={(data.collaborator || []).map((ele) => ele.head_img)}
-                      time={data.updated_at}
-                      isCorePlugin={!!data.isCorePlugin}
-                      official={!!data.official}
-                      extraFooter={extraFooter}
-                    />
-                  )
-                }}
-              />
+              <div className={styles['hub-local-table-wrap']}>
+                <Table<YakitPluginOnlineDetail>
+                  rowKey="uuid"
+                  size="small"
+                  columns={tableColumns}
+                  dataSource={response.data}
+                  pagination={{
+                    current: pageNum,
+                    pageSize: pageSize,
+                    total: +response.pagemeta.total || 0,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                    onChange: onPaginationChange,
+                  }}
+                  scroll={{ y: 'calc(100vh - 360px)', x: 'max-content' }}
+                  loading={loading}
+                />
+              </div>
             ) : listTotal > 0 ? (
               <YakitEmpty
                 image={emptyImageTarget}
@@ -482,6 +580,6 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
         cacheKey={RemotePluginGV.RecyclePluginRemoveCheck}
         onCallback={delHintCallback}
       />
-    </div>
+    </section>
   )
 })
