@@ -343,7 +343,8 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
             }}
           >
             <div className={style['plugin-local-summary']}>
-              {authorImgNode}
+              {/* 隐藏插件名称前的图标 */}
+              {/* {authorImgNode} */}
               <div className={style['plugin-local-copy']}>
                 <span className={classNames(style['plugin-local-scriptName'])}>{i.ScriptName}</span>
                 <span className={style['plugin-local-description']}>{pluginIntroduction}</span>

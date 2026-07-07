@@ -890,7 +890,8 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
                 overflowY: 'hidden',
               }}
             >
-              <PluginGroup
+              {/* 隐藏被动插件 Drawer 中的插件组和提示文字区域 */}
+              {/* <PluginGroup
                 selectGroup={selectGroup}
                 setSelectGroup={setSelectGroup}
                 excludeType={['yak', 'codec', 'lua', 'nuclei']}
@@ -916,9 +917,9 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
                 total={total}
                 allChecked={isSelectAll}
                 checkedPlugin={isSelectAll ? [] : noParamsCheckList}
-              />
+              /> */}
 
-              <div className={style['mitm-idle-tab-tips']}>{t('MITMServer.MITMPage_tips')}</div>
+              {/* <div className={style['mitm-idle-tab-tips']}>{t('MITMServer.MITMPage_tips')}</div> */}
               <div style={{ paddingRight: 9 }}>
                 <PluginSearch
                   tag={tags}

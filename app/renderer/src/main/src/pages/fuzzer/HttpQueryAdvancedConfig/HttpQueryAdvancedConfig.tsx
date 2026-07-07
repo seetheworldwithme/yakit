@@ -884,7 +884,95 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
                   </>
                 )}
               </YakitPanel>
-              {/* 按功能裁剪方案：隐藏「并发配置/重试配置/重定向配置」三个折叠面板
+              <YakitPanel
+                header={t('HttpQueryAdvancedConfig.concurrency_config')}
+                key="发包配置"
+                extra={
+                  <YakitButton
+                    type="text"
+                    colors="danger"
+                    className={styles['btn-padding-right-0']}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const restValue = {
+                        concurrent: DefFuzzerConcurrent,
+                        minDelaySeconds: undefined,
+                        maxDelaySeconds: undefined,
+                        repeatTimes: 0,
+                        disableUseConnPool: false,
+                      }
+                      onReset(restValue)
+                    }}
+                    size="small"
+                  >
+                    {t('YakitButton.reset')}
+                  </YakitButton>
+                }
+              >
+                <Form.Item
+                  label={t('HttpQueryAdvancedConfig.disable_connection_pool')}
+                  name={'disableUseConnPool'}
+                  valuePropName="checked"
+                >
+                  <YakitSwitch />
+                </Form.Item>
+                <Form.Item
+                  label={t('HttpQueryAdvancedConfig.repeat_send')}
+                  name="repeatTimes"
+                  help={t('HttpQueryAdvancedConfig.concurrency_test_tip')}
+                >
+                  <YakitInputNumber type="horizontal" size="small" min={0} />
+                </Form.Item>
+                <Form.Item label={t('HttpQueryAdvancedConfig.concurrent_threads')} name="concurrent">
+                  <YakitInputNumber type="horizontal" size="small" min={1} />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className={styles['advanced-config-form-label']}>
+                      {t('HttpQueryAdvancedConfig.random_delay2')}
+                      <Tooltip title={t('HttpQueryAdvancedConfig.multi_proxy_tip')} overlayStyle={{ width: 150 }}>
+                        <InformationCircleIcon className={styles['info-icon']} />
+                      </Tooltip>
+                    </span>
+                  }
+                  style={{ marginBottom: 0 }}
+                >
+                  <div className={styles['advanced-config-delay']}>
+                    <Form.Item
+                      name="minDelaySeconds"
+                      noStyle
+                      normalize={(value) => {
+                        return value.replace(/\D/g, '')
+                      }}
+                    >
+                      <YakitInput
+                        allowClear={false}
+                        prefix="Min"
+                        suffix="s"
+                        size="small"
+                        className={styles['input-left']}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      name="maxDelaySeconds"
+                      noStyle
+                      normalize={(value) => {
+                        return value.replace(/\D/g, '')
+                      }}
+                    >
+                      <YakitInput
+                        allowClear={false}
+                        prefix="Max"
+                        suffix="s"
+                        size="small"
+                        className={styles['input-right']}
+                      />
+                    </Form.Item>
+                  </div>
+                </Form.Item>
+              </YakitPanel>
+              {/* 按功能裁剪方案：隐藏「重试配置/重定向配置」两个折叠面板
                   保留对应表单字段与 defaultAdvancedConfigValue，仅移除 UI 入口 */}
               <YakitPanel
                 header={t('HttpQueryAdvancedConfig.dns_config')}
@@ -996,6 +1084,8 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
                 onSetValue={onSetValue}
                 onApply={onApply}
               />
+              {/* 按功能裁剪方案：隐藏「数据提取器」面板（响应数据提取→链式重放，需求文档无对应）
+                  保留 ExtractorsList 组件、extractors 表单字段与 defaultAdvancedConfigValue，仅不展示入口
               <ExtractorsPanel
                 key="数据提取器"
                 onAddMatchingAndExtractionCard={onAddMatchingAndExtractionCard}
@@ -1003,6 +1093,7 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
                 onSetValue={onSetValue}
                 onApply={onApply}
               />
+              */}
               <VariablePanel
                 key="设置变量"
                 defaultHttpResponse={defaultHttpResponse}

@@ -508,9 +508,7 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
               help={
                 stateSecretHijacking === 'enableGMTLS'
                   ? t('MITMServerForm.httpsConfigHelp.gmTLS')
-                  : stateSecretHijacking === 'randomJA3'
-                    ? t('MITMServerForm.httpsConfigHelp.randomJA3')
-                    : t('MITMServerForm.httpsConfigHelp.default')
+                  : t('MITMServerForm.httpsConfigHelp.default')
               }
             >
               <YakitRadioButtons
@@ -520,10 +518,6 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                   {
                     value: 'enableGMTLS',
                     label: t('MITMServerForm.gmSecret'),
-                  },
-                  {
-                    value: 'randomJA3',
-                    label: t('MITMServerForm.randomTLS'),
                   },
                   {
                     value: 'stateSecretHijacking',
@@ -602,7 +596,8 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                     {t('MITMServerForm.startHijackV2')}
                   </YakitButton>
                 )}
-                <ChromeLauncherButton
+                {/* 隐藏免配置启动按钮 */}
+                {/* <ChromeLauncherButton
                   host={useWatch('host', form)}
                   port={useWatch('port', form)}
                   disableCACertPage={advancedFormRef.current?.getValue().disableCACertPage}
@@ -616,10 +611,11 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                   }}
                   repRuleFlag={openRepRuleFlag}
                   onSetVisible={props.setVisible}
-                />
-                <YakitButton type="text" size="large" onClick={() => setAdvancedFormVisible(true)}>
+                /> */}
+                {/* 隐藏高级配置按钮 */}
+                {/* <YakitButton type="text" size="large" onClick={() => setAdvancedFormVisible(true)}>
                   {t('MITMServerForm.advancedConfig')}
-                </YakitButton>
+                </YakitButton> */}
               </div>
             </Item>
           </section>

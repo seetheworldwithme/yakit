@@ -66,15 +66,15 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
     label: '扩展',
     icon: <AppstoreOutlined />,
     modules: [
-      { route: YakitRoute.YakScript, label: '脚本引擎' },
+      // { route: YakitRoute.YakScript, label: '脚本引擎' },
       { route: YakitRoute.Plugin_Hub, label: '插件市场' },
       { route: YakitRoute.PayloadManager, label: '字典库' },
     ],
   },
-  {
-    key: 'govern',
-    label: '治理',
-    icon: <DashboardOutlined />,
-    modules: [{ route: YakitRoute.NewHome, label: '态势总览' }],
-  },
+  // {
+  //   key: 'govern',
+  //   label: '治理',
+  //   icon: <DashboardOutlined />,
+  //   modules: [{ route: YakitRoute.NewHome, label: '态势总览' }],
+  // },
 ]

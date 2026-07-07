@@ -28,7 +28,9 @@ export const webFuzzerTabs = (t: TFunction) => {
     { key: 'config', label: t('WebFuzzerPage.config') },
     { key: 'rule', label: t('WebFuzzerPage.rule') },
     { key: 'sequence', label: t('WebFuzzerPage.sequence') },
-    { key: 'concurrency', label: t('WebFuzzerPage.concurrency') },
+    // 按功能裁剪方案：隐藏「组并发」tab（批量并行执行，需求文档无对应）
+    // 保留 WebFuzzerType 中 'concurrency' 字面量、FuzzerSequence 组件、store/IPC 链路，仅不展示入口
+    // { key: 'concurrency', label: t('WebFuzzerPage.concurrency') },
   ]
 }
 /**包裹 配置\规则\热加载\AI，不包裹序列 */
