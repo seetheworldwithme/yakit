@@ -389,6 +389,7 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
                 rows: 3,
               }}
               help={t('YakitDraggerContent.drag_files_tip')}
+              showHelp={false}
               disabled={isExecuting}
               onTextAreaType={setInputType}
               textAreaType={inputType}
