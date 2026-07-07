@@ -1,5 +1,5 @@
 @use './HTTPFuzzerPageShare.module.scss' as HTTPFuzzerPageShare;
-.http-fuzzer-body {
+.forge-body {
   display: flex;
   height: 100%;
   position: relative;
@@ -10,7 +10,7 @@
   }
 }
 
-.fuzzer-workbench {
+.forge-workbench {
   display: flex;
   flex-direction: row;
   flex: 1;
@@ -22,7 +22,7 @@
   background-color: var(--Colors-Use-Basic-Background);
 }
 
-.fuzzer-stage {
+.forge-stage {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -34,7 +34,7 @@
   background-color: var(--Colors-Use-Neutral-Bg);
 }
 
-.fuzzer-action-rail {
+.forge-action-rail {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -46,7 +46,17 @@
   background-color: var(--Colors-Use-Neutral-Bg);
 }
 
-.fuzzer-rail-btn {
+// 横向动作条：原竖向 rail 已并入 header，这里放 发送/暂停/停止
+.forge-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--Colors-Use-Neutral-Border);
+}
+
+.forge-action-btn {
   width: 36px !important;
   min-width: 36px !important;
   height: 36px;
@@ -57,19 +67,19 @@
   border-radius: 6px;
 }
 
-.fuzzer-rail-divider {
+.forge-action-divider {
   width: 24px;
   height: 1px;
   background-color: var(--Colors-Use-Neutral-Border);
   margin: 2px 0;
 }
 
-.fuzzer-rail-https {
+.forge-action-https {
   align-items: center;
   justify-content: center;
 }
 
-.fuzzer-history-dock {
+.forge-history-dock {
   display: flex;
   flex-direction: column;
   width: 328px;
@@ -97,26 +107,26 @@
   }
 }
 
-.fuzzer-request-panel,
-.fuzzer-response-panel {
+.forge-request-panel,
+.forge-response-panel {
   height: 100%;
   min-height: 0;
   overflow: hidden;
   position: relative;
 }
 
-.fuzzer-request-panel {
+.forge-request-panel {
   border: 1px solid var(--Colors-Use-Neutral-Border);
   border-radius: 6px;
   background-color: var(--Colors-Use-Basic-Background);
 }
 
-.fuzzer-response-panel {
+.forge-response-panel {
   display: flex;
   flex-direction: column;
 }
 
-.fuzzer-response-card {
+.forge-response-card {
   border-radius: 6px;
   background-color: var(--Colors-Use-Basic-Background);
 
@@ -133,13 +143,13 @@
   }
 }
 
-.fuzzer-response-matrix {
+.forge-response-matrix {
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-.http-fuzzer-page {
+.forge-page {
   height: 100%;
   width: 100%;
   display: flex;
@@ -158,7 +168,7 @@
       border: 1px solid var(--Colors-Use-Main-Primary);
     }
   }
-  .fuzzer-heard {
+  .forge-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;

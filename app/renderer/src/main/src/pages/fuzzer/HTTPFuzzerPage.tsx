@@ -2664,7 +2664,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
 
   return (
     <>
-      <main className={styles['http-fuzzer-body']} ref={fuzzerRef}>
+      <main className={styles['forge-body']} ref={fuzzerRef}>
         <YakitResizeBox
           freeze={hotPatchVisible || aiTopPanelResizable}
           firstRatio={topPanelFirstRatio}
@@ -2762,62 +2762,62 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             </React.Suspense>
           }
           secondNode={
-            <section className={styles['http-fuzzer-page']}>
-              <div className={styles['fuzzer-workbench']}>
-                <aside className={styles['fuzzer-action-rail']}>
-                  {!loading ? (
-                    !isPause ? (
-                      <Tooltip title={t('YakitButton.continue')} placement="right">
-                        <YakitButton
-                          className={styles['fuzzer-rail-btn']}
-                          onClick={resumeAndPause}
-                          icon={<SolidPlayIcon />}
-                          type={'primary'}
-                        />
-                      </Tooltip>
-                    ) : (
-                      <Tooltip
-                        title={`${t('YakitButton.sendRequest')} ${convertKeyboardToUIKey(
-                          getHttpFuzzerShortcutKeyEvents()['sendRequest*httpFuzzer'].keys,
-                        )}`}
-                        placement="right"
-                      >
-                        <YakitButton
-                          className={styles['fuzzer-rail-btn']}
-                          onClick={sendRequest}
-                          type={'primary'}
-                          icon={<SolidPlayIcon />}
-                        />
-                      </Tooltip>
-                    )
-                  ) : (
-                    <>
-                      <Tooltip title={t('YakitButton.pause')} placement="right">
-                        <YakitButton
-                          className={styles['fuzzer-rail-btn']}
-                          disabled={cachedTotal <= 1}
-                          onClick={resumeAndPause}
-                          icon={<SolidPauseIcon />}
-                          type={'primary'}
-                        />
-                      </Tooltip>
-                      <Tooltip title={t('YakitButton.stop')} placement="right">
-                        <YakitButton
-                          className={styles['fuzzer-rail-btn']}
-                          onClick={() => {
-                            cancelCurrentHTTPFuzzer()
-                          }}
-                          icon={<StopIcon />}
-                          type={'primary'}
-                          colors="danger"
-                        />
-                      </Tooltip>
-                    </>
-                  )}
-                </aside>
-                <div className={styles['fuzzer-stage']}>
-                  <header className={styles['fuzzer-heard']}>
-                    <section className={styles['fuzzer-heard-left']}>
+            <section className={styles['forge-page']}>
+              <div className={styles['forge-workbench']}>
+                <div className={styles['forge-stage']}>
+                  <header className={styles['forge-header']}>
+                    <section className={styles['forge-header-left']}>
+                      <div className={styles['forge-action-bar']}>
+                        {!loading ? (
+                          !isPause ? (
+                            <Tooltip title={t('YakitButton.continue')} placement="bottom">
+                              <YakitButton
+                                className={styles['forge-action-btn']}
+                                onClick={resumeAndPause}
+                                icon={<SolidPlayIcon />}
+                                type={'primary'}
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Tooltip
+                              title={`${t('YakitButton.sendRequest')} ${convertKeyboardToUIKey(
+                                getHttpFuzzerShortcutKeyEvents()['sendRequest*httpFuzzer'].keys,
+                              )}`}
+                              placement="bottom"
+                            >
+                              <YakitButton
+                                className={styles['forge-action-btn']}
+                                onClick={sendRequest}
+                                type={'primary'}
+                                icon={<SolidPlayIcon />}
+                              />
+                            </Tooltip>
+                          )
+                        ) : (
+                          <>
+                            <Tooltip title={t('YakitButton.pause')} placement="bottom">
+                              <YakitButton
+                                className={styles['forge-action-btn']}
+                                disabled={cachedTotal <= 1}
+                                onClick={resumeAndPause}
+                                icon={<SolidPauseIcon />}
+                                type={'primary'}
+                              />
+                            </Tooltip>
+                            <Tooltip title={t('YakitButton.stop')} placement="bottom">
+                              <YakitButton
+                                className={styles['forge-action-btn']}
+                                onClick={() => {
+                                  cancelCurrentHTTPFuzzer()
+                                }}
+                                icon={<StopIcon />}
+                                type={'primary'}
+                                colors="danger"
+                              />
+                            </Tooltip>
+                          </>
+                        )}
+                      </div>
                       {loading && (
                         <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
                           <YakitSpin size={'small'} style={{ width: 'auto' }} />
@@ -2869,7 +2869,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       {renderTLSTags}
                       {renderHotPatchTag}
                     </section>
-                    <section className={styles['fuzzer-heard-right']}>
+                    <section className={styles['forge-header-right']}>
                       {fuzzerTaskId && (
                         <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
                           <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
@@ -2940,7 +2940,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                     firstNodeStyle={{ padding: secondFull ? 0 : undefined, display: secondFull ? 'none' : '' }}
                     {...ResizeBoxProps}
                     firstNode={
-                      <section ref={firstNodeRef} className={styles['fuzzer-request-panel']}>
+                      <section ref={firstNodeRef} className={styles['forge-request-panel']}>
                         <WebFuzzerNewEditor
                           ref={webFuzzerNewEditorRef}
                           refreshTrigger={refreshTrigger}
@@ -2975,12 +2975,12 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                       </section>
                     }
                     secondNode={
-                      <section ref={secondNodeRef} className={styles['fuzzer-response-panel']}>
+                      <section ref={secondNodeRef} className={styles['forge-response-panel']}>
                         <article
                           className={classNames(
                             styles['resize-card'],
                             styles['resize-card-second'],
-                            styles['fuzzer-response-card'],
+                            styles['forge-response-card'],
                           )}
                           style={{ display: firstFull ? 'none' : '' }}
                         >
@@ -3048,7 +3048,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                                     <div className={styles['resize-card-heard-extra']}></div>
                                     {secondNodeExtra()}
                                   </div>
-                                  <div className={styles['fuzzer-response-matrix']}>
+                                  <div className={styles['forge-response-matrix']}>
                                     {cachedTotal >= 1 ? (
                                       <>
                                         {showSuccess === 'Concurrent/Load' && (
@@ -3186,7 +3186,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                   />
                 </div>
                 {historyDockVisible && (
-                  <aside className={styles['fuzzer-history-dock']}>
+                  <aside className={styles['forge-history-dock']}>
                     <HTTPFuzzerHistorySelector
                       currentSelectId={currentSelectId}
                       onSelect={(e, page, showAll) => {
