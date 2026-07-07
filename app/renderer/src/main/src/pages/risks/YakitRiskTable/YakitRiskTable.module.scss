@@ -37,6 +37,78 @@ $keyColor: map-keys($tagColor);
     color: map-get($currentColor, 'color');
   }
 }
+
+.ip-filter-popover {
+  :global {
+    .ant-popover-inner {
+      padding: 0;
+    }
+  }
+}
+.ip-filter-content {
+  width: 240px;
+  .ip-filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+    border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+  }
+  .ip-filter-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+}
+.ip-filter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  margin-bottom: 4px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: var(--Colors-Use-Neutral-Bg);
+  }
+  .ip-filter-item-label {
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ip-filter-item-value {
+    color: var(--Colors-Use-Neutral-Disable);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+}
+.ip-filter-item-active {
+  .ip-filter-item-label,
+  .ip-filter-item-value {
+    color: var(--Colors-Use-Main-Primary);
+  }
+}
+.ip-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background-color: var(--Colors-Use-Main-Primary);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+}
 .yakit-risk-table {
   @extend %display-column-center;
   height: 100%;

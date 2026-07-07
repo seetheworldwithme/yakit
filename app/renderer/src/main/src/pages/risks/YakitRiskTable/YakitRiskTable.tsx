@@ -12,7 +12,7 @@ import {
 import styles from './YakitRiskTable.module.scss'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
 import { PacketHistory, Risk } from '../schema'
-import { Badge, CollapseProps, Descriptions, Divider, Form, Tooltip, Typography } from 'antd'
+import { Badge, CollapseProps, Descriptions, Divider, Form, Popover, Tooltip, Typography } from 'antd'
 import { YakScript, genDefaultPagination } from '@/pages/invoker/schema'
 import { YakitPopconfirm } from '@/components/yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
@@ -27,13 +27,11 @@ import {
 } from 'ahooks'
 import { YakitMenuItemProps } from '@/components/yakitUI/YakitMenu/YakitMenu'
 import {
-  OutlineChevrondownIcon,
   OutlineChevronleftIcon,
   OutlineChevronrightIcon,
   OutlineClockIcon,
   OutlineExportIcon,
   OutlineEyeIcon,
-  OutlineOpenIcon,
   OutlinePlayIcon,
   OutlineRefreshIcon,
   OutlineSearchIcon,
@@ -61,10 +59,10 @@ import {
   apiQueryRisks,
   apiQueryRisksIncrementOrderDesc,
   apiRiskFeedbackToOnline,
+  apiRiskFieldGroup,
   apiSetTagForRisk,
 } from './utils'
 import { CopyComponents, YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
-import { YakitTagColor } from '@/components/yakitUI/YakitTag/YakitTagType'
 import { YakitResizeBox, YakitResizeBoxProps } from '@/components/yakitUI/YakitResizeBox/YakitResizeBox'
 import classNames from 'classnames'
 import {
@@ -87,6 +85,7 @@ import { FieldName } from '../RiskTable'
 import { defQueryRisksRequest } from './constants'
 import emiter from '@/utils/eventBus/eventBus'
 import { FuncBtn } from '@/pages/plugins/funcTemplate'
+import { RollingLoadList } from '@/components/RollingLoadList/RollingLoadList'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
 import { StringToUint8Array, Uint8ArrayToString } from '@/utils/str'
 import { YakitRoute } from '@/enums/yakitRoute'
@@ -364,6 +363,8 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
 
   const [tag, setTag] = useState<FieldGroup[]>([])
 
+  const [ipList, setIpList] = useState<FieldGroup[]>([])
+
   const [interval, setInterval] = useState<number | undefined>(undefined) // 控制 Interval
   const [offsetDataInTop, setOffsetDataInTop] = useState<Risk[]>([])
   const [allTotal, setAllTotal] = useControllableValue<number>(props, {
@@ -393,6 +394,7 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
     if (inViewport) {
       getRiskTags()
       getRiskType()
+      getIPList()
     }
     emiter.on('onRefRiskList', onRefRiskList)
     return () => {
@@ -500,11 +502,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
       label: item.Name,
       total: item.Total,
     }))
-    const riskTypeVerboseTable = riskTypeVerbose.map((item) => ({
-      value: item.Verbose,
-      label: item.Verbose,
-      total: item.Total,
-    }))
     const columnArr: ColumnsTypeProps[] = [
       {
         title: t('YakitTable.order'),
@@ -529,57 +526,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
         render: (_, record) => record?.TitleVerbose || record.Title || '-',
       },
       {
-        title: t('YakitRiskTable.type'),
-        dataKey: 'RiskTypeVerbose',
-        filterProps: {
-          filterKey: 'RiskTypeList',
-          filtersType: 'select',
-          filterMultiple: true,
-          filters: riskTypeVerboseTable,
-        },
-      },
-      {
-        title: t('YakitRiskTable.level'),
-        dataKey: 'Severity',
-        width: 100,
-        align: 'center',
-        render: (_, i: Risk) => {
-          const title = SeverityMapTag.filter((item) => item.key.includes(i.Severity || ''))[0]
-          return (
-            <YakitTag color={title?.tag as YakitTagColor} className={styles['table-severity-tag']}>
-              {title ? t(title.nameUi) : i.Severity || '-'}
-            </YakitTag>
-          )
-        },
-        filterProps: {
-          filterKey: 'SeverityList',
-          filtersType: 'select',
-          filterMultiple: true,
-          filters: [
-            {
-              value: 'critical',
-              label: t('YakitTag.critical'),
-            },
-            {
-              value: 'high',
-              label: t('YakitTag.high'),
-            },
-            {
-              value: 'warning',
-              label: t('YakitTag.warning'),
-            },
-            {
-              value: 'low',
-              label: t('YakitTag.low'),
-            },
-            {
-              value: 'info',
-              label: t('YakitTag.info'),
-            },
-          ],
-        },
-      },
-      {
         title: 'IP',
         dataKey: 'IP',
         width: 120,
@@ -594,30 +540,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
         dataKey: 'Url',
       },
       {
-        title: t('YakitRiskTable.disposal_status'),
-        dataKey: 'Tags',
-        filterProps: {
-          filterKey: 'TagList',
-          filtersType: 'select',
-          filterMultiple: true,
-          filters: tagTable,
-        },
-        minWidth: 120,
-        render: (text, record, index) => (
-          <>
-            <div
-              className={styles['table-tag']}
-              onClick={(e) => {
-                onOpenSelect(record)
-              }}
-            >
-              <span>{!!text ? text.replaceAll('|', ',') : '-'}</span>
-              <OutlineChevrondownIcon className={styles['table-tag-icon']} />
-            </div>
-          </>
-        ),
-      },
-      {
         title: t('YakitRiskTable.discovery_time'),
         dataKey: 'CreatedAt',
         filterProps: {
@@ -629,7 +551,7 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
       {
         title: t('YakitTable.action'),
         dataKey: 'action',
-        width: 140,
+        width: 70,
         fixed: 'right',
         render: (text, record: Risk, index) => (
           <>
@@ -642,37 +564,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
               }}
               icon={<OutlineTrashIcon />}
             />
-            <Divider type="vertical" />
-            <Tooltip
-              title={t('YakitRiskTable.retest')}
-              destroyTooltipOnHide={true}
-              overlayStyle={{ paddingBottom: 0 }}
-              placement="top"
-            >
-              <YakitButton
-                type="text"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRetest(record)
-                }}
-                icon={<OutlinePlayIcon />}
-              />
-            </Tooltip>
-            <Divider type="vertical" />
-            <Tooltip
-              title={t('YakitRiskTable.false_positive_feedback')}
-              destroyTooltipOnHide={true}
-              overlayStyle={{ paddingBottom: 0 }}
-              placement="top"
-            >
-              <OutlineUploadIcon
-                className={styles['misstatement-icon']}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onClickRiskFeedbackToOnline(record)
-                }}
-              />
-            </Tooltip>
           </>
         ),
       },
@@ -761,6 +652,24 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
   const getRiskType = useMemoizedFn(() => {
     apiQueryAvailableRiskType().then(setRiskTypeVerbose)
   })
+  const getIPList = useMemoizedFn(() => {
+    apiRiskFieldGroup().then((res) => {
+      setIpList(res.RiskIPGroup)
+    })
+  })
+  const onSelectIP = useMemoizedFn((ipItem: FieldGroup) => {
+    const index = (query.IPList || []).findIndex((ele) => ele === ipItem.Name)
+    let newIPList = query.IPList || []
+    if (index === -1) {
+      newIPList = [...newIPList, ipItem.Name]
+    } else {
+      newIPList.splice(index, 1)
+    }
+    setQuery({ ...query, IPList: [...newIPList] })
+  })
+  const onResetIP = useMemoizedFn(() => {
+    setQuery({ ...query, IPList: [] })
+  })
   const onOpenSelect = useMemoizedFn((record: Risk) => {
     const m = showYakitModal({
       title: (modalT) => (
@@ -828,50 +737,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
           setRiskLoading(false)
         }, 200),
       )
-  })
-  const onExportMenuSelect = useMemoizedFn((key: string) => {
-    switch (key) {
-      case 'export-csv':
-        onExportCSV()
-        break
-      case 'export-html':
-        onExportHTML()
-        break
-      default:
-        break
-    }
-  })
-  const onExportCSV = useMemoizedFn(() => {
-    if (+response.Total === 0) return
-    percentContainerRef.current = currentPageTabRouteKey
-    const exportValue = exportFields(t).map((item) => ({ title: item.label, key: item.value }))
-    const initCheckFields = exportFields(t)
-      .filter((ele) => ele.isDefaultChecked)
-      .map((item) => ({ title: item.label, key: item.value }))
-    const m = showYakitModal({
-      title: (modalT) => modalT('YakitRiskTable.select_export_fields'),
-      content: (
-        <ExportSelect
-          exportValue={exportValue}
-          initCheckValue={initCheckFields}
-          setExportTitle={(v: string[]) => {
-            setExportDataKey([...v])
-          }}
-          exportKey={RemoteGV.RiskExportFields}
-          getData={getExcelData}
-          onClose={() => m.destroy()}
-          fileName={t('YakitRoute.vulnerabilityAndrisk')}
-          getContainer={document.getElementById(`main-operator-page-body-${percentContainerRef.current}`) || undefined}
-        />
-      ),
-      onCancel: () => {
-        m.destroy()
-        setSelectList([])
-      },
-      footer: null,
-      width: 750,
-      getContainer: document.getElementById(`main-operator-page-body-${percentContainerRef.current}`) || undefined,
-    })
   })
   const formatJson = (filterVal, jsonData) => {
     return jsonData.map((v, index) =>
@@ -1339,19 +1204,6 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
               ) : (
                 <div className={styles['table-renderTitle']}>
                   <div className={styles['table-renderTitle-left']}>
-                    {!advancedQuery && (
-                      <Tooltip
-                        title={t('YakitRiskTable.expand_filter')}
-                        placement="topLeft"
-                        overlayClassName="plugins-tooltip"
-                      >
-                        <YakitButton
-                          type="text2"
-                          onClick={onExpend}
-                          icon={<OutlineOpenIcon onClick={onExpend} />}
-                        ></YakitButton>
-                      </Tooltip>
-                    )}
                     <div className={styles['table-renderTitle-text']}>{t('YakitRoute.vulnerabilityAndrisk')}</div>
                     <YakitRadioButtons
                       value={type}
@@ -1370,6 +1222,53 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                         },
                       ]}
                     />
+                    <Popover
+                      placement="bottomLeft"
+                      trigger="click"
+                      overlayClassName={styles['ip-filter-popover']}
+                      content={
+                        <div className={styles['ip-filter-content']}>
+                          <div className={styles['ip-filter-header']}>
+                            <span>{t('IPList.ipStatistics')}</span>
+                            <YakitButton type="text" colors="danger" size="small" onClick={onResetIP}>
+                              {t('YakitButton.reset')}
+                            </YakitButton>
+                          </div>
+                          <div className={styles['ip-filter-list']}>
+                            <RollingLoadList<FieldGroup>
+                              data={ipList}
+                              page={-1}
+                              hasMore={false}
+                              loadMoreData={() => {}}
+                              loading={false}
+                              rowKey="value"
+                              defItemHeight={32}
+                              renderRow={(record) => {
+                                const isSelect = (query.IPList || []).includes(record.Name)
+                                return (
+                                  <div
+                                    className={classNames(styles['ip-filter-item'], {
+                                      [styles['ip-filter-item-active']]: isSelect,
+                                    })}
+                                    onClick={() => onSelectIP(record)}
+                                  >
+                                    <span className={styles['ip-filter-item-label']}>{record.Name}</span>
+                                    <span className={styles['ip-filter-item-value']}>{record.Total}</span>
+                                  </div>
+                                )
+                              }}
+                            />
+                          </div>
+                        </div>
+                      }
+                    >
+                      <YakitButton type="text2">
+                        IP 筛选
+                        {(query.IPList || []).length > 0 && (
+                          <span className={styles['ip-filter-badge']}>{(query.IPList || []).length}</span>
+                        )}
+                      </YakitButton>
+                    </Popover>
                     {
                       <div className={styles['virtual-table-heard-right']}>
                         <div className={styles['virtual-table-heard-right-item']}>
@@ -1400,27 +1299,14 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                       onClick={onAllRead}
                       name={t('YakitRiskTable.mark_all_as_read')}
                     />
-                    <YakitDropdownMenu
-                      menu={{
-                        data: batchExportMenuData(t),
-                        onClick: ({ key }) => {
-                          onExportMenuSelect(key)
-                        },
-                      }}
-                      dropdown={{
-                        trigger: ['hover'],
-                        placement: 'bottom',
-                        disabled: allTotal === 0,
-                      }}
-                    >
-                      <FuncBtn
-                        maxWidth={1200}
-                        type="outline2"
-                        icon={<OutlineExportIcon />}
-                        name={' ' + t('YakitRiskTable.export_as')}
-                        disabled={allTotal === 0}
-                      />
-                    </YakitDropdownMenu>
+                    <FuncBtn
+                      maxWidth={1200}
+                      type="outline2"
+                      icon={<OutlineExportIcon />}
+                      name={'导出为 HTML'}
+                      onClick={() => onExportHTML()}
+                      disabled={allTotal === 0}
+                    />
                     <YakitPopconfirm
                       title={
                         allCheck
