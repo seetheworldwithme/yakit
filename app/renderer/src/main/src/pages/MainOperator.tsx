@@ -43,6 +43,7 @@ import { YakitRoute } from '@/enums/yakitRoute'
 import { YakChatCS } from '@/components/yakChat/chatCS'
 import yakitCattle from '../assets/yakitCattle.png'
 import { MainOperatorContent } from './layout/mainOperatorContent/MainOperatorContent'
+import { WorkbenchShell } from './layout/workbenchShell/WorkbenchShell'
 import { MultipleNodeInfo } from './layout/mainOperatorContent/MainOperatorContentType'
 import { WaterMark } from '@ant-design/pro-layout'
 import emiter from '@/utils/eventBus/eventBus'
@@ -658,40 +659,49 @@ const Main: React.FC<MainProp> = React.memo((props) => {
               <CustomizeMenu visible={isShowCustomizeMenu} onClose={() => setIsShowCustomizeMenu(false)} />
             )}
 
-            <div
-              className="main-operator-shell"
-              style={{
-                display: isShowCustomizeMenu ? 'none' : 'flex',
-                height: '100%',
-              }}
-            >
-              <div className="main-operator-sidebar">
-                {isCommunityEdition() ? (
-                  <PublicMenu
-                    defaultExpand={defaultExpand}
-                    onMenuSelect={openMenu}
-                    setRouteToLabel={(val) => {
-                      val.forEach((value, key) => {
-                        routeKeyToLabel.current.set(key, value)
-                      })
-                    }}
-                  />
-                ) : (
-                  <HeardMenu
-                    defaultExpand={defaultExpand}
-                    onRouteMenuSelect={openMenu}
-                    setRouteToLabel={(val) => {
-                      val.forEach((value, key) => {
-                        routeKeyToLabel.current.set(key, value)
-                      })
-                    }}
-                  />
-                )}
-              </div>
-              <div className="main-operator-workspace">
+            {isEnpriTrace() ? (
+              <WorkbenchShell
+                onOpenRoute={(route) => openMenu({ route })}
+                style={{ display: isShowCustomizeMenu ? 'none' : 'flex', height: '100%' }}
+              >
                 <MainOperatorContent routeKeyToLabel={routeKeyToLabel.current} />
+              </WorkbenchShell>
+            ) : (
+              <div
+                className="main-operator-shell"
+                style={{
+                  display: isShowCustomizeMenu ? 'none' : 'flex',
+                  height: '100%',
+                }}
+              >
+                <div className="main-operator-sidebar">
+                  {isCommunityEdition() ? (
+                    <PublicMenu
+                      defaultExpand={defaultExpand}
+                      onMenuSelect={openMenu}
+                      setRouteToLabel={(val) => {
+                        val.forEach((value, key) => {
+                          routeKeyToLabel.current.set(key, value)
+                        })
+                      }}
+                    />
+                  ) : (
+                    <HeardMenu
+                      defaultExpand={defaultExpand}
+                      onRouteMenuSelect={openMenu}
+                      setRouteToLabel={(val) => {
+                        val.forEach((value, key) => {
+                          routeKeyToLabel.current.set(key, value)
+                        })
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="main-operator-workspace">
+                  <MainOperatorContent routeKeyToLabel={routeKeyToLabel.current} />
+                </div>
               </div>
-            </div>
+            )}
           </AutoSpin>
 
           {loginshow && <Login visible={loginshow} onCancel={() => setLoginShow(false)}></Login>}

@@ -1,0 +1,21 @@
+.wb-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background: var(--Colors-Use-Neutral-Bg);
+  border-top: 1px solid var(--Colors-Use-Neutral-Border);
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  font-size: 11px;
+}
+.wb-status-sep {
+  opacity: 0.5;
+}
+.wb-status-brand {
+  margin-left: auto;
+  letter-spacing: 1px;
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  opacity: 0.7;
+}

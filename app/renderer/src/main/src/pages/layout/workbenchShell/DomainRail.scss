@@ -1,0 +1,59 @@
+.wb-rail {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  flex-shrink: 0;
+  padding: 12px 8px;
+  overflow-y: auto;
+  background: var(--Colors-Use-Neutral-Bg);
+  border-right: 1px solid var(--Colors-Use-Neutral-Border);
+}
+.wb-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 14px;
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.wb-rail-head-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+}
+.wb-rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wb-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--Colors-Use-Neutral-Text-2-Subtitle);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+    background: var(--Colors-Use-Neutral-Bg-Hover);
+  }
+}
+.wb-rail-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
