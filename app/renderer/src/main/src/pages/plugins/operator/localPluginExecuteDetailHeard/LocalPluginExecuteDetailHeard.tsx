@@ -887,6 +887,7 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
     MockHTTPResponse = '',
     inputType,
     setInputType,
+    showScanTargetHelp = true,
     isShowMockHTTPResponse,
   } = props
   const { t, i18n } = useI18nNamespaces(['plugin', 'yakitUi'])
@@ -918,18 +919,6 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
   }, [MockHTTPResponse, i18n.language])
 
   const requestTypeOptions = useCreation(() => {
-    if (type === 'single') {
-      return [
-        {
-          value: 'original',
-          label: t('PluginFixFormParams.original_request'),
-        },
-        {
-          value: 'input',
-          label: t('PluginFixFormParams.request_configuration'),
-        },
-      ]
-    }
     return [
       {
         value: 'original',
@@ -939,18 +928,14 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
         value: 'input',
         label: t('PluginFixFormParams.request_configuration'),
       },
-      {
-        value: 'httpFlowId',
-        label: t('PluginFixFormParams.request_id'),
-      },
     ]
-  }, [type, i18n.language])
+  }, [i18n.language])
   return (
     <>
       <Form.Item label="HTTPS" name="IsHttps" valuePropName="checked" initialValue={false}>
         <YakitSwitch size="large" disabled={disabled} />
       </Form.Item>
-      <Form.Item label={t('PluginFixFormParams.request_type')} name="requestType" initialValue="input">
+      <Form.Item label={t('PluginFixFormParams.request_type')} name="requestType" initialValue="original">
         <YakitRadioButtons buttonStyle="solid" options={requestTypeOptions} disabled={disabled} />
       </Form.Item>
       {requestType === 'original' && <OutputFormComponentsByType item={rawItem} disabled={disabled} />}
@@ -977,6 +962,7 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
                 rows: 3,
               }}
               help={t('YakitDraggerContent.drag_files_tip')}
+              showHelp={showScanTargetHelp}
               disabled={disabled}
               valueSeparator={'\r\n'}
               onTextAreaType={setInputType}
@@ -1003,19 +989,12 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
                 rows: 3,
               }}
               help={t('YakitDraggerContent.drag_files_tip')}
+              showHelp={showScanTargetHelp}
               disabled={disabled}
               valueSeparator={'\r\n'}
             />
           )}
         </>
-      )}
-      {requestType === 'httpFlowId' && (
-        <Form.Item label={t('PluginFixFormParams.request_id')} name="httpFlowId" rules={[{ required: true }]}>
-          <YakitInput.TextArea
-            placeholder={t('PluginFixFormParams.enter_request_id_comma_separated')}
-            disabled={disabled}
-          />
-        </Form.Item>
       )}
       {isShowMockHTTPResponse && (
         <Form.Item

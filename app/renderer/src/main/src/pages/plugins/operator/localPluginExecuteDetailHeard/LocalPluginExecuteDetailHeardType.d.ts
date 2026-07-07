@@ -100,6 +100,7 @@ export interface PluginFixFormParamsProps {
   MockHTTPResponse?: string
   inputType?: 'content' | 'path'
   setInputType?: (v: 'content' | 'path') => void
+  showScanTargetHelp?: boolean
   isShowMockHTTPResponse?: boolean
 }
 

@@ -74,6 +74,7 @@ export interface YakitDraggerContentProps extends Omit<
   /**@description 回显的文本回调事件*/
   onChange?: (s: string) => void
   help?: ReactDOM
+  showHelp?: boolean
   showDefHelp?: boolean
   // InputProps?: InputProps
   // /** 展示组件 input|textarea */

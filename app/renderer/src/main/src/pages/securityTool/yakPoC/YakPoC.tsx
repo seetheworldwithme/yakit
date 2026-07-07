@@ -1153,6 +1153,7 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
               pageId={pageId}
               initRuntimeId={pageInfo.runtimeId}
               hybridScanTaskSource="yakPoc"
+              showScanTargetHelp={false}
             />
           </div>
         </div>

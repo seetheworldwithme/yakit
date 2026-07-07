@@ -274,7 +274,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.portScanDescription',
   },
   poc: {
-    label: '专项漏洞检测',
+    label: '漏洞检测',
     labelUi: 'YakitRoute.vulnTargetedScan',
     describeUi: 'YakitRoute.vulnerabilityDetectionDescription',
   },
@@ -2009,7 +2009,7 @@ export const PrivateExpertRouteMenu: PrivateRouteMenuProps[] = isIRify()
       },
       {
         page: undefined,
-        label: '专项漏洞检测',
+        label: '漏洞检测',
         labelUi: 'YakitRoute.vulnTargetedScan',
         children: routeToChildren([YakitRoute.PoC]),
       },
@@ -2083,7 +2083,7 @@ export const PrivateScanRouteMenu: PrivateRouteMenuProps[] = [
   },
   {
     page: undefined,
-    label: '专项漏洞检测',
+    label: '漏洞检测',
     labelUi: 'YakitRoute.vulnTargetedScan',
     children: routeToChildren([YakitRoute.PoC]),
   },

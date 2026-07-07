@@ -442,6 +442,7 @@ interface HybridScanExecuteContentProps {
   initRuntimeId?: string
 
   hybridScanTaskSource: HybridScanTaskSourceType
+  showScanTargetHelp?: boolean
 }
 export interface HybridScanExecuteContentRefProps {
   onActionHybridScanByRuntimeId: (runtimeId: string, hybridScanMode: HybridScanModeType) => Promise<null>
@@ -466,6 +467,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
       pageId,
       initRuntimeId,
       hybridScanTaskSource,
+      showScanTargetHelp = true,
     } = props
     const { queryPagesDataById, updatePagesDataCacheById } = usePageInfo(
       (s) => ({
@@ -879,6 +881,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
               rawHTTPRequest={initRawHTTPRequest}
               inputType={inputType}
               setInputType={setInputType}
+              showScanTargetHelp={showScanTargetHelp}
             />
             <Form.Item colon={false} label={' '} style={{ marginBottom: 0 }}>
               <div className={styles['plugin-execute-form-operate']}>
@@ -905,9 +908,6 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
                     </YakitButton>
                   </>
                 )}
-                <YakitButton type="text" onClick={openExtraPropsDrawer} disabled={isExecuting} size="large">
-                  额外参数
-                </YakitButton>
               </div>
             </Form.Item>
           </Form>

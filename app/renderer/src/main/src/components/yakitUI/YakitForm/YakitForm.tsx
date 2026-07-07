@@ -637,6 +637,7 @@ export const YakitDraggerContent: React.FC<YakitDraggerContentProps> = React.mem
     textareaProps = {},
     onChange,
     help,
+    showHelp = true,
     showDefHelp,
     valueSeparator = ',',
     ...restProps
@@ -673,14 +674,16 @@ export const YakitDraggerContent: React.FC<YakitDraggerContentProps> = React.mem
             if (textareaProps.onBlur) textareaProps.onBlur(e)
           }}
         />
-        <div
-          className={classNames(styles['dragger-help-middle'], {
-            [styles['dragger-help-small']]: size === 'small',
-            [styles['dragger-help-large']]: size === 'large',
-          })}
-        >
-          {helpNode}
-        </div>
+        {showHelp && (
+          <div
+            className={classNames(styles['dragger-help-middle'], {
+              [styles['dragger-help-small']]: size === 'small',
+              [styles['dragger-help-large']]: size === 'large',
+            })}
+          >
+            {helpNode}
+          </div>
+        )}
       </YakitSpin>
     )
   })
@@ -824,6 +827,7 @@ export const YakitDraggerContentPath: React.FC<YakitDraggerContentPathProps> = R
     textareaProps = {},
     onChange,
     help,
+    showHelp = true,
     showDefHelp,
     valueSeparator = ',',
     textAreaType,
@@ -862,14 +866,16 @@ export const YakitDraggerContentPath: React.FC<YakitDraggerContentPathProps> = R
             if (textareaProps.onBlur) textareaProps.onBlur(e)
           }}
         />
-        <div
-          className={classNames(styles['dragger-help-middle'], {
-            [styles['dragger-help-small']]: size === 'small',
-            [styles['dragger-help-large']]: size === 'large',
-          })}
-        >
-          {helpNode}
-        </div>
+        {showHelp && (
+          <div
+            className={classNames(styles['dragger-help-middle'], {
+              [styles['dragger-help-small']]: size === 'small',
+              [styles['dragger-help-large']]: size === 'large',
+            })}
+          >
+            {helpNode}
+          </div>
+        )}
       </YakitSpin>
     )
   })
