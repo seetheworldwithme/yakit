@@ -648,20 +648,9 @@
 }
 
 .mitm-hijacked-heard-tab {
-  .configuredIcon {
-    svg {
-      color: var(--Colors-Use-Success-Primary);
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .unconfiguredIcon {
+  .hijackFilter-text {
+    font-size: 12px;
     color: var(--Colors-Use-Neutral-Text-1-Title);
-    svg {
-      width: 16px;
-      height: 16px;
-    }
     &:hover {
       color: var(--radio-buttons-primary-font-hover-color);
     }
@@ -682,9 +671,6 @@
   :global {
     .ant-radio-button-wrapper {
       padding: 0 5px;
-    }
-    .ant-radio-button-wrapper:nth-child(2) {
-      padding: 0 2px;
     }
   }
 }

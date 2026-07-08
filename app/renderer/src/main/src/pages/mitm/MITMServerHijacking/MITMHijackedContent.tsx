@@ -14,13 +14,7 @@ import { MITMContentReplacerRule } from '../MITMRule/MITMRuleType'
 import emiter from '@/utils/eventBus/eventBus'
 import { MITMAdvancedFilter, MITMFilterData, MITMFilterSchema } from '../MITMServerStartForm/MITMFilters'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
-import {
-  OutlineConfiguredIcon,
-  OutlineInformationcircleIcon,
-  OutlineRefreshIcon,
-  OutlineUnConfiguredIcon,
-  OutlineXIcon,
-} from '@/assets/icon/outline'
+import { OutlineInformationcircleIcon, OutlineRefreshIcon, OutlineXIcon } from '@/assets/icon/outline'
 import { StringToUint8Array, Uint8ArrayToString } from '@/utils/str'
 import { prettifyPacketCode } from '@/utils/prettifyPacket'
 import { convertLocalMITMFilterRequest, convertMITMFilterUI } from '../MITMServerStartForm/utils'
@@ -1083,17 +1077,9 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
                 },
                 {
                   label: (
-                    <>
-                      <Tooltip title="条件劫持" align={{ offset: [0, 0] }}>
-                        <div style={{ display: 'flex' }} onClick={() => setFiltersVisible(true)}>
-                          {hijackFilterFlag ? (
-                            <OutlineConfiguredIcon className={styles['configuredIcon']} />
-                          ) : (
-                            <OutlineUnConfiguredIcon className={styles['unconfiguredIcon']} />
-                          )}
-                        </div>
-                      </Tooltip>
-                    </>
+                    <span className={styles['hijackFilter-text']} onClick={() => setFiltersVisible(true)}>
+                      条件劫持
+                    </span>
                   ),
                   value: 'hijackFilter',
                 },
