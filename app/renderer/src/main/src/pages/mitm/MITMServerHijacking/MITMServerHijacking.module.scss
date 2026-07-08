@@ -534,8 +534,7 @@
   display: flex;
   flex-direction: column;
   .pluginOutput-select {
-    display: flex;
-    align-items: center;
+    display: none;
   }
   .pluginOutput-pluginName {
     white-space: nowrap;
@@ -544,6 +543,12 @@
   .pluginOutput-execRes {
     flex: 1;
     min-height: 0;
+  }
+}
+
+.mitm-plugin-execute-result {
+  :global(.ant-tabs-nav) {
+    display: none !important;
   }
 }
 

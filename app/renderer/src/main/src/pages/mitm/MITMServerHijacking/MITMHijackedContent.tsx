@@ -1087,7 +1087,7 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
                 {
                   label: (
                     <Badge dot={hasPluginsStreamUpdate} offset={[0, 0]}>
-                      <span className={styles['pluginOut-text']}>插件输出</span>
+                      <span className={styles['pluginOut-text']}>日志</span>
                     </Badge>
                   ),
                   value: 'pluginOutput',
@@ -1154,7 +1154,12 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
             />
           </div>
           <div className={styles['pluginOutput-execRes']} ref={pluginOutputRef}>
-            <PluginExecuteResult streamInfo={pluginStreamInfo[showPluginStream]} runtimeId={''} loading={true} />
+            <PluginExecuteResult
+              streamInfo={pluginStreamInfo[showPluginStream]}
+              runtimeId={''}
+              loading={true}
+              pluginExecuteResultWrapper={styles['mitm-plugin-execute-result']}
+            />
           </div>
         </div>
       )}
