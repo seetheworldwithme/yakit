@@ -90,13 +90,15 @@ const Home: React.FC<HomeProp> = (props) => {
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.PayloadGenerater_New }),
       },
-      {
-        label: t('YakitRoute.DNSLog'),
-        icon: <SentinelHomeDNSLogIcon />,
-        desc: t('YakitRoute.subdomainAutoGenerate'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.DNSLog }),
-      },
+      // 按功能裁剪方案 A9（反连模块整组）：隐藏 DNSLog 入口
+      // 保留路由/页面/IPC（fastjson/shiro 专项检测插件可能需要 OOB 回调），仅隐首页展示
+      // {
+      //   label: t('YakitRoute.DNSLog'),
+      //   icon: <SentinelHomeDNSLogIcon />,
+      //   desc: t('YakitRoute.subdomainAutoGenerate'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.DNSLog }),
+      // },
       {
         label: t('YakitRoute.Codec'),
         icon: <SentinelHomeCodecIcon />,

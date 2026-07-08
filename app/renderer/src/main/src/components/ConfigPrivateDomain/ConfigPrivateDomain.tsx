@@ -327,6 +327,8 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
               <Form.Item
                 name="BaseUrl"
                 label={t('ConfigPrivateDomain.privateDomainAddress')}
+                labelCol={{ span: 24 }}
+                wrapperCol={{ span: 24 }}
                 rules={[{ required: true, message: t('YakitForm.requiredField') }, ...judgeUrl()]}
               >
                 <YakitAutoComplete

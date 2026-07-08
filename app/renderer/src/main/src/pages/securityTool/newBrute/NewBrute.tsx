@@ -10,7 +10,6 @@ import {
 } from './NewBruteType'
 import { useControllableValue, useCreation, useMemoizedFn } from 'ahooks'
 import { apiCancelStartBrute, apiGetAvailableBruteTypes, apiStartBrute, convertStartBruteParams } from './utils'
-import YakitTree from '@/components/yakitUI/YakitTree/YakitTree'
 import { DataNode } from 'antd/lib/tree'
 import styles from './NewBrute.module.scss'
 import {
@@ -21,7 +20,7 @@ import { StreamResult } from '@/hook/useHoldGRPCStream/useHoldGRPCStreamType'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import { PluginExecuteProgress } from '@/pages/plugins/operator/localPluginExecuteDetailHeard/LocalPluginExecuteDetailHeard'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
-import { OutlineArrowscollapseIcon, OutlineArrowsexpandIcon } from '@/assets/icon/outline'
+import { OutlineArrowscollapseIcon, OutlineArrowsexpandIcon, OutlineChevrondownIcon } from '@/assets/icon/outline'
 import classNames from 'classnames'
 import { Divider, Form } from 'antd'
 import useHoldGRPCStream from '@/hook/useHoldGRPCStream/useHoldGRPCStream'
@@ -34,6 +33,7 @@ import { shallow } from 'zustand/shallow'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { defaultBruteExecuteExtraFormValue, defaultBrutePageInfo } from '@/defaultConstants/NewBrute'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
+import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 
 const BruteExecuteParamsDrawer = React.lazy(() => import('./BruteExecuteParamsDrawer'))
 
@@ -60,6 +60,7 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
   const { t } = useI18nNamespaces(['brute'])
   const { hidden } = props
   const [tree, setTree] = useState<DataNode[]>([])
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>([])
 
   const [checkedKeys, setCheckedKeys] = useControllableValue<React.Key[]>(props, {
     defaultValue: [],
@@ -72,10 +73,6 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
   }, [])
   const getAvailableBruteTypes = useMemoizedFn(() => {
     apiGetAvailableBruteTypes().then(setTree)
-  })
-  const onCheck = useMemoizedFn((checkedKeysValue: Key[]) => {
-    const checkedKeys = checkedKeysValue.filter((item) => !(item as string).includes('temporary-id-'))
-    setCheckedKeys(checkedKeys)
   })
   /**点击勾选 */
   const onSelect = useMemoizedFn((keys: Key[]) => {
@@ -105,6 +102,13 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
       }
     }
   })
+  const getNodeTitle = useMemoizedFn((node: DataNode) => {
+    if (typeof node.title === 'string') return node.title
+    return String(node.key)
+  })
+  const onToggleExpand = useMemoizedFn((key: Key) => {
+    setExpandedKeys((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
+  })
   return (
     <div
       className={classNames(styles['tree-list-wrapper'], {
@@ -114,17 +118,67 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
       <div className={styles['tree-heard']}>
         <span className={styles['tree-heard-title']}>{t('BruteTypeTreeList.availableBruteTypes')}</span>
       </div>
-      <YakitTree
-        checkable
-        selectedKeys={[]}
-        checkedKeys={checkedKeys}
-        onCheck={(keys) => onCheck(keys as Key[])}
-        showLine={false}
-        treeData={tree}
-        onSelect={onSelect}
-        classNameWrapper={styles['tree-list']}
-        rootClassName={styles['tree-root']}
-      />
+      <div className={styles['brute-type-grid']}>
+        {tree.map((item) => {
+          const children = item.children || []
+          if (children.length > 0) {
+            const childrenKeys = children.map((ele) => ele.key)
+            const checkedChildren = childrenKeys.filter((key) => checkedKeys.includes(key))
+            const expanded = expandedKeys.includes(item.key)
+            return (
+              <div
+                className={classNames(styles['brute-type-group'], {
+                  [styles['brute-type-group-expanded']]: expanded,
+                })}
+                key={item.key}
+              >
+                <div className={styles['brute-type-group-header']}>
+                  <button
+                    className={classNames(styles['brute-type-expand'], {
+                      [styles['brute-type-expand-open']]: expanded,
+                    })}
+                    type="button"
+                    onClick={() => onToggleExpand(item.key)}
+                  >
+                    <OutlineChevrondownIcon />
+                  </button>
+                  <YakitCheckbox
+                    checked={childrenKeys.length === checkedChildren.length}
+                    indeterminate={checkedChildren.length > 0 && checkedChildren.length < childrenKeys.length}
+                    onChange={() => onSelect([item.key])}
+                  >
+                    {getNodeTitle(item)}
+                  </YakitCheckbox>
+                </div>
+                {expanded && (
+                  <div className={styles['brute-type-children']}>
+                    {children.map((child) => (
+                      <YakitCheckbox
+                        key={child.key}
+                        wrapperClassName={styles['brute-type-child']}
+                        checked={checkedKeys.includes(child.key)}
+                        onChange={() => onSelect([child.key])}
+                      >
+                        {getNodeTitle(child)}
+                      </YakitCheckbox>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }
+          return (
+            <YakitCheckbox
+              key={item.key}
+              wrapperClassName={styles['brute-type-item']}
+              checked={checkedKeys.includes(item.key)}
+              onChange={() => onSelect([item.key])}
+            >
+              {getNodeTitle(item)}
+            </YakitCheckbox>
+          )
+        })}
+      </div>
     </div>
   )
 })
@@ -394,7 +448,8 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
               onTextAreaType={setInputType}
               textAreaType={inputType}
             />
-            <Form.Item label={' '} colon={false}>
+            {/* 隐藏：Target Concurrent / 爆破成功即停止 / 耗尽后 标签 */}
+            {/* <Form.Item label={' '} colon={false}>
               <div className={styles['form-extra']}>
                 <YakitTag>
                   {t('BruteExecuteContent.targetConcurrentLabel')}
@@ -412,7 +467,7 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
                   </YakitTag>
                 )}
               </div>
-            </Form.Item>
+            </Form.Item> */}
             <Form.Item colon={false} label={' '} style={{ marginBottom: 0 }}>
               <div className={styles['plugin-execute-form-operate']}>
                 {isExecuting ? (
@@ -430,7 +485,7 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
                   </YakitButton>
                 )}
                 <YakitButton type="text" onClick={openExtraPropsDrawer} disabled={isExecuting} size="large">
-                  {t('BruteExecuteContent.extraParams')}
+                  {t('BruteExecuteContent.mountDict')}
                 </YakitButton>
               </div>
             </Form.Item>

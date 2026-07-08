@@ -14,7 +14,8 @@
     "stopOnSuccess": "Stop on success",
     "continueOnSuccess": "Continue on success",
     "randomPause": "Random Pause:",
-    "extraParams": "Extra Params"
+    "extraParams": "Extra Params",
+    "mountDict": "Mount Dictionary"
   },
   "BruteSettings": {
     "bruteUserDict": "Brute User Dictionary",

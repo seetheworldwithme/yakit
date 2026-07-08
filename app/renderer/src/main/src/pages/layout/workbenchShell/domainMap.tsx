@@ -47,7 +47,7 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
       { route: YakitRoute.HTTPFuzzer, label: '报文构造台' },
       { route: YakitRoute.Mod_Brute, label: '凭证爆破' },
       { route: YakitRoute.BatchExecutorPage, label: '批量投递' },
-      { route: YakitRoute.DNSLog, label: '反连接收' },
+      // { route: YakitRoute.DNSLog, label: '反连接收' },
     ],
   },
   {

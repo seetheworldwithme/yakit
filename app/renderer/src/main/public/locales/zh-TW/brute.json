@@ -14,7 +14,8 @@
     "stopOnSuccess": "爆破成功即停止",
     "continueOnSuccess": "爆破成功後仍繼續",
     "randomPause": "隨機暫停:",
-    "extraParams": "額外引數"
+    "extraParams": "額外引數",
+    "mountDict": "掛載字典"
   },
   "BruteSettings": {
     "bruteUserDict": "爆破使用者字典",

@@ -44,8 +44,9 @@ const BruteExecuteParamsDrawer: React.FC<BruteExecuteParamsDrawerProps> = React.
       className={styles['brute-execute-extra-params-drawer']}
       visible={visible}
       onClose={onClose}
-      width="max(700px, 60%)"
-      title={t('BruteExecuteContent.extraParams')}
+      placement="bottom"
+      height="max(420px, 60%)"
+      title={t('BruteExecuteContent.mountDict')}
     >
       <Form size="small" labelWrap={true} labelCol={{ span: 6 }} wrapperCol={{ span: 18 }} form={form}>
         <BruteSettings visible={visible} form={form} />
@@ -148,6 +149,7 @@ export const BruteSettings: React.FC<BruteSettingsProps> = React.memo((props) =>
           {t('BruteSettings.useDefaultPasswordDict')}
         </YakitCheckbox>
       </Form.Item>
+      {/* 隐藏并发/停止/延迟配置，保留字段以备恢复
       <Form.Item
         label={t('BruteSettings.targetConcurrent')}
         name="Concurrent"
@@ -177,6 +179,7 @@ export const BruteSettings: React.FC<BruteSettingsProps> = React.memo((props) =>
       <Form.Item label={t('BruteSettings.maxDelay')} name="DelayMax">
         <YakitInputNumber min={delayMin} type="horizontal" />
       </Form.Item>
+      */}
     </>
   )
 })

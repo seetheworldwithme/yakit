@@ -20,29 +20,6 @@
   overflow: hidden;
   border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
   padding: 10px 12px;
-  :global {
-    .ant-tree-switcher {
-      height: 24px;
-    }
-    .ant-tree-list-holder-inner {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px 14px;
-    }
-    .ant-tree-treenode {
-      align-items: center;
-      padding: 0;
-      min-width: 0;
-    }
-    .ant-tree-node-content-wrapper {
-      min-height: 24px;
-      padding: 0 4px;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
   .tree-heard {
     @extend %display-flex-center;
     justify-content: space-between;
@@ -54,15 +31,73 @@
       line-height: 16px;
     }
   }
-  .tree-list {
-    display: flex;
-    flex-shrink: 0;
+  .brute-type-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px 14px;
     overflow: auto;
-    .tree-root {
-      flex: 1;
-      background-color: var(--Colors-Use-Basic-Background);
-      color: var(--Colors-Use-Neutral-Text-1-Title);
+  }
+  .brute-type-item,
+  .brute-type-child,
+  .brute-type-group-header {
+    min-width: 0;
+    padding: 0 4px;
+    :global {
+      .ant-checkbox-wrapper {
+        max-width: 100%;
+      }
+      .ant-checkbox + span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
+  }
+  .brute-type-group {
+    min-width: 0;
+  }
+  .brute-type-group-expanded {
+    grid-column: 1 / -1;
+    padding: 6px 8px 8px;
+    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border-radius: 6px;
+    background-color: var(--Colors-Use-Neutral-Bg-Hover);
+  }
+  .brute-type-group-header {
+    @extend %display-flex-center;
+    gap: 4px;
+  }
+  .brute-type-group-expanded .brute-type-group-header {
+    margin-bottom: 6px;
+  }
+  .brute-type-expand {
+    @extend %display-flex-center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--Colors-Use-Neutral-Text-3-Secondary);
+    cursor: pointer;
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+  .brute-type-expand-open {
+    transform: rotate(0deg);
+  }
+  .brute-type-children {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px 14px;
+    padding-left: 20px;
   }
 }
 
