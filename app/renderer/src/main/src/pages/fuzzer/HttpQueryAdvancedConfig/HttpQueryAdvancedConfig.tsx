@@ -632,258 +632,266 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
               >
                 <YakitInput suffix="M" size="small" className={styles['fuzzer-maxBodySize-input']} />
               </Form.Item>
-              <Form.Item
-                label={
-                  <span className={styles['advanced-config-form-label']}>
-                    {t('HttpQueryAdvancedConfig.sni_config')}
-                  </span>
-                }
-                name="overwriteSNI"
-              >
-                <YakitRadioButtons
-                  buttonStyle="solid"
-                  options={overwriteSNIOptions(t)}
-                  size={'small'}
-                  onChange={(e) => {
-                    if (e.target.value !== 'mandatory') {
-                      onReset({
-                        sNI: '',
-                      })
+              {/* 按功能裁剪方案：隐藏 SNI 配置（需求文档无对应），保留 overwriteSNI/sNI 字段与逻辑，仅不展示入口 */}
+              {false && (
+                <>
+                  <Form.Item
+                    label={
+                      <span className={styles['advanced-config-form-label']}>
+                        {t('HttpQueryAdvancedConfig.sni_config')}
+                      </span>
                     }
-                  }}
-                />
-              </Form.Item>
-              {overwriteSNI === 'mandatory' && (
-                <Form.Item
-                  label={
-                    <span className={styles['advanced-config-form-label']}>
-                      {t('HttpQueryAdvancedConfig.force_sni')}
-                    </span>
-                  }
-                  name="sNI"
-                >
-                  <YakitInput size="small" />
-                </Form.Item>
+                    name="overwriteSNI"
+                  >
+                    <YakitRadioButtons
+                      buttonStyle="solid"
+                      options={overwriteSNIOptions(t)}
+                      size={'small'}
+                      onChange={(e) => {
+                        if (e.target.value !== 'mandatory') {
+                          onReset({
+                            sNI: '',
+                          })
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                  {overwriteSNI === 'mandatory' && (
+                    <Form.Item
+                      label={
+                        <span className={styles['advanced-config-form-label']}>
+                          {t('HttpQueryAdvancedConfig.force_sni')}
+                        </span>
+                      }
+                      name="sNI"
+                    >
+                      <YakitInput size="small" />
+                    </Form.Item>
+                  )}
+                </>
               )}
             </div>
             <YakitCollapse activeKey={activeKey} onChange={(key) => onSwitchCollapse(key)} destroyInactivePanel={true}>
-              <YakitPanel
-                header={t('HttpQueryAdvancedConfig.request_config')}
-                key="请求包配置"
-                extra={
-                  <YakitButton
-                    type="text"
-                    colors="danger"
-                    className={styles['btn-padding-right-0']}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const restValue = {
-                        fuzzTagMode: 'standard',
-                        fuzzTagSyncIndex: false,
-                        isHttps: false,
-                        noFixContentLength: false,
-                        actualHost: '',
-                        dialTimeoutSeconds: 10,
-                        timeout: 30,
-                        batchTarget: new Uint8Array(),
-                        enableRandomChunked: false,
-                        randomChunkedMinLength: defaultAdvancedConfigValue.randomChunkedMinLength,
-                        randomChunkedMaxLength: defaultAdvancedConfigValue.randomChunkedMaxLength,
-                        randomChunkedMinDelay: defaultAdvancedConfigValue.randomChunkedMinDelay,
-                        randomChunkedMaxDelay: defaultAdvancedConfigValue.randomChunkedMaxDelay,
-                      }
-                      onReset(restValue)
-                    }}
-                    size="small"
+              {/* 按功能裁剪方案：隐藏「请求包配置」面板（需求文档无对应），保留字段与逻辑，仅不展示入口 */}
+              {false && (
+                <YakitPanel
+                  header={t('HttpQueryAdvancedConfig.request_config')}
+                  key="请求包配置"
+                  extra={
+                    <YakitButton
+                      type="text"
+                      colors="danger"
+                      className={styles['btn-padding-right-0']}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const restValue = {
+                          fuzzTagMode: 'standard',
+                          fuzzTagSyncIndex: false,
+                          isHttps: false,
+                          noFixContentLength: false,
+                          actualHost: '',
+                          dialTimeoutSeconds: 10,
+                          timeout: 30,
+                          batchTarget: new Uint8Array(),
+                          enableRandomChunked: false,
+                          randomChunkedMinLength: defaultAdvancedConfigValue.randomChunkedMinLength,
+                          randomChunkedMaxLength: defaultAdvancedConfigValue.randomChunkedMaxLength,
+                          randomChunkedMinDelay: defaultAdvancedConfigValue.randomChunkedMinDelay,
+                          randomChunkedMaxDelay: defaultAdvancedConfigValue.randomChunkedMaxDelay,
+                        }
+                        onReset(restValue)
+                      }}
+                      size="small"
+                    >
+                      {t('YakitButton.reset')}
+                    </YakitButton>
+                  }
+                >
+                  <Form.Item label={t('HttpQueryAdvancedConfig.fuzztag_helper')}>
+                    <YakitButton size="small" type="outline1" onClick={() => onInsertYakFuzzer()} icon={<PlusSmIcon />}>
+                      {t('HttpQueryAdvancedConfig.insert_yak_fuzz')}
+                    </YakitButton>
+                  </Form.Item>
+                  <Form.Item
+                    label={
+                      <span className={styles['advanced-config-form-label']}>
+                        {t('HttpQueryAdvancedConfig.render_fuzz')}
+                        <Tooltip title={t('HttpQueryAdvancedConfig.compat_mode_tip')} overlayStyle={{ width: 150 }}>
+                          <InformationCircleIcon className={styles['info-icon']} />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="fuzzTagMode"
                   >
-                    {t('YakitButton.reset')}
-                  </YakitButton>
-                }
-              >
-                <Form.Item label={t('HttpQueryAdvancedConfig.fuzztag_helper')}>
-                  <YakitButton size="small" type="outline1" onClick={() => onInsertYakFuzzer()} icon={<PlusSmIcon />}>
-                    {t('HttpQueryAdvancedConfig.insert_yak_fuzz')}
-                  </YakitButton>
-                </Form.Item>
-                <Form.Item
-                  label={
-                    <span className={styles['advanced-config-form-label']}>
-                      {t('HttpQueryAdvancedConfig.render_fuzz')}
-                      <Tooltip title={t('HttpQueryAdvancedConfig.compat_mode_tip')} overlayStyle={{ width: 150 }}>
-                        <InformationCircleIcon className={styles['info-icon']} />
-                      </Tooltip>
-                    </span>
-                  }
-                  name="fuzzTagMode"
-                >
-                  <YakitRadioButtons buttonStyle="solid" options={fuzzTagModeOptions(t)} size={'small'} />
-                </Form.Item>
+                    <YakitRadioButtons buttonStyle="solid" options={fuzzTagModeOptions(t)} size={'small'} />
+                  </Form.Item>
 
-                <Form.Item label={t('HttpQueryAdvancedConfig.render_mode')} name="fuzzTagSyncIndex">
-                  <YakitRadioButtons buttonStyle="solid" options={fuzzTagSyncOptions(t)} size={'small'} />
-                </Form.Item>
+                  <Form.Item label={t('HttpQueryAdvancedConfig.render_mode')} name="fuzzTagSyncIndex">
+                    <YakitRadioButtons buttonStyle="solid" options={fuzzTagSyncOptions(t)} size={'small'} />
+                  </Form.Item>
 
-                <Form.Item
-                  label={
-                    <span className={styles['advanced-config-form-label']}>
-                      {t('HttpQueryAdvancedConfig.no_fix_length')}
-                      <Tooltip title={t('HttpQueryAdvancedConfig.no_fix_length_tip')} overlayStyle={{ width: 220 }}>
-                        <InformationCircleIcon className={styles['info-icon']} />
-                      </Tooltip>
-                    </span>
-                  }
-                  name="noFixContentLength"
-                  valuePropName="checked"
-                >
-                  <YakitSwitch />
-                </Form.Item>
+                  <Form.Item
+                    label={
+                      <span className={styles['advanced-config-form-label']}>
+                        {t('HttpQueryAdvancedConfig.no_fix_length')}
+                        <Tooltip title={t('HttpQueryAdvancedConfig.no_fix_length_tip')} overlayStyle={{ width: 220 }}>
+                          <InformationCircleIcon className={styles['info-icon']} />
+                        </Tooltip>
+                      </span>
+                    }
+                    name="noFixContentLength"
+                    valuePropName="checked"
+                  >
+                    <YakitSwitch />
+                  </Form.Item>
 
-                <Form.Item label={t('HttpQueryAdvancedConfig.timeout_duration')}>
-                  <div className={styles['advanced-config-timeout']}>
-                    <Form.Item
-                      name="dialTimeoutSeconds"
-                      noStyle
-                      normalize={(value) => {
-                        return value.replace(/\D/g, '')
-                      }}
-                    >
-                      <YakitInput
-                        allowClear={false}
-                        prefix={t('HttpQueryAdvancedConfig.connection')}
-                        suffix="s"
-                        size="small"
-                        className={styles['input-left']}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      name="timeout"
-                      noStyle
-                      normalize={(value) => {
-                        return value.replace(/\D/g, '')
-                      }}
-                    >
-                      <YakitInput
-                        allowClear={false}
-                        prefix={t('HttpQueryAdvancedConfig.response')}
-                        suffix="s"
-                        size="small"
-                        className={styles['input-right']}
-                      />
-                    </Form.Item>
-                  </div>
-                </Form.Item>
-                <Form.Item label={t('HttpQueryAdvancedConfig.batch_target')} name="batchTarget">
-                  <YakitButton
-                    style={{ marginTop: 3 }}
-                    size="small"
-                    type="text"
-                    onClick={() => setBatchTargetModalVisible(true)}
-                    icon={
-                      JSON.stringify(advancedConfigValue.batchTarget) !== '{}' ? (
-                        Uint8ArrayToString(advancedConfigValue.batchTarget || new Uint8Array()) ? (
-                          <OutlineBadgecheckIcon style={{ color: 'var(--Colors-Use-Green-Primary)' }} />
+                  <Form.Item label={t('HttpQueryAdvancedConfig.timeout_duration')}>
+                    <div className={styles['advanced-config-timeout']}>
+                      <Form.Item
+                        name="dialTimeoutSeconds"
+                        noStyle
+                        normalize={(value) => {
+                          return value.replace(/\D/g, '')
+                        }}
+                      >
+                        <YakitInput
+                          allowClear={false}
+                          prefix={t('HttpQueryAdvancedConfig.connection')}
+                          suffix="s"
+                          size="small"
+                          className={styles['input-left']}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        name="timeout"
+                        noStyle
+                        normalize={(value) => {
+                          return value.replace(/\D/g, '')
+                        }}
+                      >
+                        <YakitInput
+                          allowClear={false}
+                          prefix={t('HttpQueryAdvancedConfig.response')}
+                          suffix="s"
+                          size="small"
+                          className={styles['input-right']}
+                        />
+                      </Form.Item>
+                    </div>
+                  </Form.Item>
+                  <Form.Item label={t('HttpQueryAdvancedConfig.batch_target')} name="batchTarget">
+                    <YakitButton
+                      style={{ marginTop: 3 }}
+                      size="small"
+                      type="text"
+                      onClick={() => setBatchTargetModalVisible(true)}
+                      icon={
+                        JSON.stringify(advancedConfigValue.batchTarget) !== '{}' ? (
+                          Uint8ArrayToString(advancedConfigValue.batchTarget || new Uint8Array()) ? (
+                            <OutlineBadgecheckIcon style={{ color: 'var(--Colors-Use-Green-Primary)' }} />
+                          ) : (
+                            <PlusSmIcon />
+                          )
                         ) : (
                           <PlusSmIcon />
                         )
-                      ) : (
-                        <PlusSmIcon />
-                      )
-                    }
-                  >
-                    {JSON.stringify(advancedConfigValue.batchTarget) !== '{}' ? (
-                      Uint8ArrayToString(advancedConfigValue.batchTarget || new Uint8Array()) ? (
-                        <div style={{ color: 'var(--Colors-Use-Green-Primary)' }}>
-                          {t('HttpQueryAdvancedConfig.configured')}
-                        </div>
+                      }
+                    >
+                      {JSON.stringify(advancedConfigValue.batchTarget) !== '{}' ? (
+                        Uint8ArrayToString(advancedConfigValue.batchTarget || new Uint8Array()) ? (
+                          <div style={{ color: 'var(--Colors-Use-Green-Primary)' }}>
+                            {t('HttpQueryAdvancedConfig.configured')}
+                          </div>
+                        ) : (
+                          t('HttpQueryAdvancedConfig.configure_batch_target')
+                        )
                       ) : (
                         t('HttpQueryAdvancedConfig.configure_batch_target')
-                      )
-                    ) : (
-                      t('HttpQueryAdvancedConfig.configure_batch_target')
-                    )}
-                  </YakitButton>
-                </Form.Item>
-                <Form.Item
-                  label={t('HttpQueryAdvancedConfig.random_chunk_transfer')}
-                  name="enableRandomChunked"
-                  valuePropName="checked"
-                  style={{ marginBottom: enableRandomChunked ? 12 : 0 }}
-                >
-                  <YakitSwitch />
-                </Form.Item>
-                {enableRandomChunked && (
-                  <>
-                    <Form.Item label={t('HttpQueryAdvancedConfig.chunk_length')}>
-                      <div className={styles['advanced-config-random-chunked-length']}>
-                        <Form.Item
-                          name="randomChunkedMinLength"
-                          noStyle
-                          normalize={(value) => {
-                            return value.replace(/\D/g, '')
-                          }}
-                        >
-                          <YakitInput
-                            allowClear={false}
-                            prefix="Min"
-                            suffix="B"
-                            size="small"
-                            className={styles['input-left']}
-                          />
-                        </Form.Item>
-                        <Form.Item
-                          name="randomChunkedMaxLength"
-                          noStyle
-                          normalize={(value) => {
-                            return value.replace(/\D/g, '')
-                          }}
-                        >
-                          <YakitInput
-                            allowClear={false}
-                            prefix="Max"
-                            suffix="B"
-                            size="small"
-                            className={styles['input-right']}
-                          />
-                        </Form.Item>
-                      </div>
-                    </Form.Item>
-                    <Form.Item label={t('HttpQueryAdvancedConfig.random_delay')} style={{ marginBottom: 0 }}>
-                      <div className={styles['advanced-config-random-chunked-delay']}>
-                        <Form.Item
-                          name="randomChunkedMinDelay"
-                          noStyle
-                          normalize={(value) => {
-                            return value.replace(/\D/g, '')
-                          }}
-                        >
-                          <YakitInput
-                            allowClear={false}
-                            prefix="Min"
-                            suffix="ms"
-                            size="small"
-                            className={styles['input-left']}
-                          />
-                        </Form.Item>
-                        <Form.Item
-                          name="randomChunkedMaxDelay"
-                          noStyle
-                          normalize={(value) => {
-                            return value.replace(/\D/g, '')
-                          }}
-                        >
-                          <YakitInput
-                            allowClear={false}
-                            prefix="Max"
-                            suffix="ms"
-                            size="small"
-                            className={styles['input-right']}
-                          />
-                        </Form.Item>
-                      </div>
-                    </Form.Item>
-                  </>
-                )}
-              </YakitPanel>
+                      )}
+                    </YakitButton>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('HttpQueryAdvancedConfig.random_chunk_transfer')}
+                    name="enableRandomChunked"
+                    valuePropName="checked"
+                    style={{ marginBottom: enableRandomChunked ? 12 : 0 }}
+                  >
+                    <YakitSwitch />
+                  </Form.Item>
+                  {enableRandomChunked && (
+                    <>
+                      <Form.Item label={t('HttpQueryAdvancedConfig.chunk_length')}>
+                        <div className={styles['advanced-config-random-chunked-length']}>
+                          <Form.Item
+                            name="randomChunkedMinLength"
+                            noStyle
+                            normalize={(value) => {
+                              return value.replace(/\D/g, '')
+                            }}
+                          >
+                            <YakitInput
+                              allowClear={false}
+                              prefix="Min"
+                              suffix="B"
+                              size="small"
+                              className={styles['input-left']}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="randomChunkedMaxLength"
+                            noStyle
+                            normalize={(value) => {
+                              return value.replace(/\D/g, '')
+                            }}
+                          >
+                            <YakitInput
+                              allowClear={false}
+                              prefix="Max"
+                              suffix="B"
+                              size="small"
+                              className={styles['input-right']}
+                            />
+                          </Form.Item>
+                        </div>
+                      </Form.Item>
+                      <Form.Item label={t('HttpQueryAdvancedConfig.random_delay')} style={{ marginBottom: 0 }}>
+                        <div className={styles['advanced-config-random-chunked-delay']}>
+                          <Form.Item
+                            name="randomChunkedMinDelay"
+                            noStyle
+                            normalize={(value) => {
+                              return value.replace(/\D/g, '')
+                            }}
+                          >
+                            <YakitInput
+                              allowClear={false}
+                              prefix="Min"
+                              suffix="ms"
+                              size="small"
+                              className={styles['input-left']}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="randomChunkedMaxDelay"
+                            noStyle
+                            normalize={(value) => {
+                              return value.replace(/\D/g, '')
+                            }}
+                          >
+                            <YakitInput
+                              allowClear={false}
+                              prefix="Max"
+                              suffix="ms"
+                              size="small"
+                              className={styles['input-right']}
+                            />
+                          </Form.Item>
+                        </div>
+                      </Form.Item>
+                    </>
+                  )}
+                </YakitPanel>
+              )}
               <YakitPanel
                 header={t('HttpQueryAdvancedConfig.concurrency_config')}
                 key="发包配置"
@@ -974,97 +982,100 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
               </YakitPanel>
               {/* 按功能裁剪方案：隐藏「重试配置/重定向配置」两个折叠面板
                   保留对应表单字段与 defaultAdvancedConfigValue，仅移除 UI 入口 */}
-              <YakitPanel
-                header={t('HttpQueryAdvancedConfig.dns_config')}
-                key={'DNS配置'}
-                extra={
-                  <YakitButton
-                    type="text"
-                    colors="danger"
-                    className={styles['btn-padding-right-0']}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const restValue = {
-                        dnsServers: [],
-                        etcHosts: [],
-                      }
-                      onReset(restValue)
-                    }}
-                    size="small"
-                  >
-                    {t('YakitButton.reset')}
-                  </YakitButton>
-                }
-              >
-                <Form.Item label={t('HttpQueryAdvancedConfig.dns_server')} name="dnsServers">
-                  <YakitSelect
-                    allowClear
-                    options={['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1'].map((i) => {
-                      return { value: i, label: i }
-                    })}
-                    mode="tags"
-                    size={'small'}
-                    placeholder={t('HttpQueryAdvancedConfig.specify_dns_server')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  label={t('HttpQueryAdvancedConfig.hosts_config')}
-                  name="etcHosts"
-                  style={{ marginBottom: 0 }}
-                >
-                  <Space direction={'vertical'}>
+              {/* 按功能裁剪方案：隐藏「DNS 配置」面板（需求文档无对应），保留字段与逻辑，仅不展示入口 */}
+              {false && (
+                <YakitPanel
+                  header={t('HttpQueryAdvancedConfig.dns_config')}
+                  key={'DNS配置'}
+                  extra={
                     <YakitButton
-                      onClick={() => {
-                        inputHTTPFuzzerHostConfigItem(
-                          (obj) => {
-                            const newEtcHosts = [...etcHosts.filter((i) => i.Key !== obj.Key), obj]
-                            const v = form.getFieldsValue()
-                            onSetValue({
-                              ...v,
-                              etcHosts: newEtcHosts,
-                            })
-                          },
-                          (items) => {
-                            // 批量添加
-                            const newKeys = items.map(({ Key }) => Key)
-                            let newEtcHosts = [...etcHosts.filter(({ Key }) => !newKeys.includes(Key)), ...items]
-                            const v = form.getFieldsValue()
-                            onSetValue({
-                              ...v,
-                              etcHosts: newEtcHosts,
-                            })
-                          },
-                        )
+                      type="text"
+                      colors="danger"
+                      className={styles['btn-padding-right-0']}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const restValue = {
+                          dnsServers: [],
+                          etcHosts: [],
+                        }
+                        onReset(restValue)
                       }}
+                      size="small"
                     >
-                      {t('HttpQueryAdvancedConfig.add_hosts_mapping')}
+                      {t('YakitButton.reset')}
                     </YakitButton>
-                  </Space>
-                </Form.Item>
-                <div className={classNames({ [styles['etcHosts-config']]: etcHosts.length })}>
-                  {(etcHosts || []).map((i, n) => (
-                    <Tooltip
-                      title={getTextWidth(`${i.Key} => ${i.Value}`) >= 123 ? `${i.Key} => ${i.Value}` : ''}
-                      key={`${i.Key} => ${i.Value}`}
-                    >
-                      <YakitTag
-                        closable={true}
-                        onClose={() => {
-                          const newEtcHosts = etcHosts.filter((j) => j.Key !== i.Key)
-                          const v = form.getFieldsValue()
-                          onSetValue({
-                            ...v,
-                            etcHosts: newEtcHosts,
-                          })
+                  }
+                >
+                  <Form.Item label={t('HttpQueryAdvancedConfig.dns_server')} name="dnsServers">
+                    <YakitSelect
+                      allowClear
+                      options={['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1'].map((i) => {
+                        return { value: i, label: i }
+                      })}
+                      mode="tags"
+                      size={'small'}
+                      placeholder={t('HttpQueryAdvancedConfig.specify_dns_server')}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('HttpQueryAdvancedConfig.hosts_config')}
+                    name="etcHosts"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Space direction={'vertical'}>
+                      <YakitButton
+                        onClick={() => {
+                          inputHTTPFuzzerHostConfigItem(
+                            (obj) => {
+                              const newEtcHosts = [...etcHosts.filter((i) => i.Key !== obj.Key), obj]
+                              const v = form.getFieldsValue()
+                              onSetValue({
+                                ...v,
+                                etcHosts: newEtcHosts,
+                              })
+                            },
+                            (items) => {
+                              // 批量添加
+                              const newKeys = items.map(({ Key }) => Key)
+                              let newEtcHosts = [...etcHosts.filter(({ Key }) => !newKeys.includes(Key)), ...items]
+                              const v = form.getFieldsValue()
+                              onSetValue({
+                                ...v,
+                                etcHosts: newEtcHosts,
+                              })
+                            },
+                          )
                         }}
-                        key={`${i.Key}-${n}`}
                       >
-                        <div className={styles.etcHostsText}>{`${i.Key} => ${i.Value}`}</div>
-                      </YakitTag>
-                    </Tooltip>
-                  ))}
-                </div>
-              </YakitPanel>
+                        {t('HttpQueryAdvancedConfig.add_hosts_mapping')}
+                      </YakitButton>
+                    </Space>
+                  </Form.Item>
+                  <div className={classNames({ [styles['etcHosts-config']]: etcHosts.length })}>
+                    {(etcHosts || []).map((i, n) => (
+                      <Tooltip
+                        title={getTextWidth(`${i.Key} => ${i.Value}`) >= 123 ? `${i.Key} => ${i.Value}` : ''}
+                        key={`${i.Key} => ${i.Value}`}
+                      >
+                        <YakitTag
+                          closable={true}
+                          onClose={() => {
+                            const newEtcHosts = etcHosts.filter((j) => j.Key !== i.Key)
+                            const v = form.getFieldsValue()
+                            onSetValue({
+                              ...v,
+                              etcHosts: newEtcHosts,
+                            })
+                          }}
+                          key={`${i.Key}-${n}`}
+                        >
+                          <div className={styles.etcHostsText}>{`${i.Key} => ${i.Value}`}</div>
+                        </YakitTag>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </YakitPanel>
+              )}
             </YakitCollapse>
           </>
         )
