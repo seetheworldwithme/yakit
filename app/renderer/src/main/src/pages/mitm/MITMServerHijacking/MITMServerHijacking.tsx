@@ -455,6 +455,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
             </div>
           </div>
         </div>
+        {/* 隐藏「过滤 WebSocket」开关，保留代码以备恢复
         <div className={style['mitm-control-switch-card']}>
           <span>过滤 WebSocket</span>
           <YakitSwitch
@@ -471,6 +472,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
             }}
           />
         </div>
+        */}
         <div className={style['mitm-control-switch-card']}>
           <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
           <YakitSwitch
@@ -490,7 +492,8 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
           {/*>*/}
           {/*    系统代理*/}
           {/*</YakitButton>*/}
-          <ChromeLauncherButton isStartMITM={true} host={host} port={port} disableCACertPage={disableCACertPage} />
+          {/* 隐藏免配置启动按钮，保留代码以备恢复 */}
+          {/* <ChromeLauncherButton isStartMITM={true} host={host} port={port} disableCACertPage={disableCACertPage} /> */}
         </div>
         <YakitButton type="outline1" colors="danger" className={style['mitm-control-stop']} onClick={() => stop()}>
           <QuitIcon />

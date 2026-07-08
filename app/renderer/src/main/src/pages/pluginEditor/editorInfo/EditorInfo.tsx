@@ -547,168 +547,177 @@ export const EditorInfoForm: React.FC<EditorInfoFormProps> = memo(
             </div>
           </Form.Item>
 
-          <div
-            className={classNames(styles['item-setting'], {
-              // [styles["hidden"]]: !["yak", "codec"].includes(type)
-            })}
-          >
-            <div className={styles['item-setting-header']}>{t('EditorInfo.pluginConfig')}</div>
+          {/* 隐藏插件配置区块（开关/联动/AI配置），保留代码以备恢复，恢复时移除 {false && ( 与对应 )} 即可 */}
+          {false && (
+            <div
+              className={classNames(styles['item-setting'], {
+                // [styles["hidden"]]: !["yak", "codec"].includes(type)
+              })}
+            >
+              <div className={styles['item-setting-header']}>{t('EditorInfo.pluginConfig')}</div>
 
-            <div className={styles['item-switch-group']}>
-              {/* yak 插件专用 ↓↓↓ */}
-              {type === 'yak' && (
-                <>
-                  <div className={styles['switch-wrapper']}>
-                    <YakitSwitch checked={EnablePluginSelector} onChange={handleEnablePluginSelector} />
-                    {t('EditorInfo.enablePluginSelectorUI')}
-                  </div>
-                  {EnablePluginSelector && (
-                    <Form.Item
-                      name="PluginSelectorTypes"
-                      label={
-                        <>
-                          {t('EditorInfo.linkedPluginType')}
-                          <span className="form-item-required">*</span>:
-                        </>
-                      }
-                      required={true}
-                      rules={[{ required: true, message: t('EditorInfo.linkedPluginTypeRequired') }]}
-                      style={{ width: '100%', marginBottom: 0 }}
-                    >
-                      <YakitSelect
-                        wrapperClassName={styles['linkage-plugin-type-select']}
-                        mode="tags"
-                        allowClear
-                        size="large"
+              <div className={styles['item-switch-group']}>
+                {/* yak 插件专用 ↓↓↓ */}
+                {type === 'yak' && (
+                  <>
+                    <div className={styles['switch-wrapper']}>
+                      <YakitSwitch checked={EnablePluginSelector} onChange={handleEnablePluginSelector} />
+                      {t('EditorInfo.enablePluginSelectorUI')}
+                    </div>
+                    {EnablePluginSelector && (
+                      <Form.Item
+                        name="PluginSelectorTypes"
+                        label={
+                          <>
+                            {t('EditorInfo.linkedPluginType')}
+                            <span className="form-item-required">*</span>:
+                          </>
+                        }
+                        required={true}
+                        rules={[{ required: true, message: t('EditorInfo.linkedPluginTypeRequired') }]}
+                        style={{ width: '100%', marginBottom: 0 }}
                       >
-                        <YakitSelect.Option value="mitm">MITM</YakitSelect.Option>
-                        <YakitSelect.Option value="port-scan">端口扫描</YakitSelect.Option>
-                      </YakitSelect>
-                    </Form.Item>
-                  )}
+                        <YakitSelect
+                          wrapperClassName={styles['linkage-plugin-type-select']}
+                          mode="tags"
+                          allowClear
+                          size="large"
+                        >
+                          <YakitSelect.Option value="mitm">MITM</YakitSelect.Option>
+                          <YakitSelect.Option value="port-scan">端口扫描</YakitSelect.Option>
+                        </YakitSelect>
+                      </Form.Item>
+                    )}
 
-                  {YakTypePluginSwitchs.map((item) => {
-                    const check = tags.findIndex((tag) => {
-                      return handleFilterTag(tag, item)
-                    })
-                    return (
-                      <div key={item} className={styles['switch-wrapper']}>
-                        <YakitSwitch
-                          checked={check !== -1}
-                          onChange={(check) => {
-                            handleSwitchToTags(check, item)
-                          }}
-                        />
-                        {PluginSwitchTagToContent[item] || t('EditorInfo.invalidItem')}
-                      </div>
-                    )
-                  })}
-                </>
-              )}
-              {/* codec 插件专用 ↓↓↓ */}
-              {type === 'codec' && (
-                <>
-                  {CodecTypePluginSwitchs.map((item) => {
-                    const check = tags.findIndex((tag) => {
-                      return handleFilterTag(tag, item)
-                    })
-                    return (
-                      <div key={item} className={styles['switch-wrapper']}>
-                        <YakitSwitch
-                          checked={check !== -1}
-                          onChange={(check) => {
-                            handleSwitchToTags(check, item)
-                          }}
-                        />
-                        {PluginSwitchTagToContent[item] || t('EditorInfo.invalidItem')}
-                      </div>
-                    )
-                  })}
-                </>
-              )}
+                    {YakTypePluginSwitchs.map((item) => {
+                      const check = tags.findIndex((tag) => {
+                        return handleFilterTag(tag, item)
+                      })
+                      return (
+                        <div key={item} className={styles['switch-wrapper']}>
+                          <YakitSwitch
+                            checked={check !== -1}
+                            onChange={(check) => {
+                              handleSwitchToTags(check, item)
+                            }}
+                          />
+                          {PluginSwitchTagToContent[item] || t('EditorInfo.invalidItem')}
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
+                {/* codec 插件专用 ↓↓↓ */}
+                {type === 'codec' && (
+                  <>
+                    {CodecTypePluginSwitchs.map((item) => {
+                      const check = tags.findIndex((tag) => {
+                        return handleFilterTag(tag, item)
+                      })
+                      return (
+                        <div key={item} className={styles['switch-wrapper']}>
+                          <YakitSwitch
+                            checked={check !== -1}
+                            onChange={(check) => {
+                              handleSwitchToTags(check, item)
+                            }}
+                          />
+                          {PluginSwitchTagToContent[item] || t('EditorInfo.invalidItem')}
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
 
-              <Form.Item name="YakitPluginAIBaseInfo" noStyle>
-                <AIPluginComponent getCodeContent={getCodeContent} />
-              </Form.Item>
+                <Form.Item name="YakitPluginAIBaseInfo" noStyle>
+                  <AIPluginComponent getCodeContent={getCodeContent} />
+                </Form.Item>
+              </div>
             </div>
-          </div>
+          )}
         </Form>
 
-        {/* 案例文档 */}
-        <div className={styles['temp-example-wrapper']}>
-          <div className={styles['temp-example-title-wrapper']}>
-            <YakitRadioButtons
-              size="small"
-              value={documentType}
-              onChange={(e) => {
-                setDocumentType(e.target.value)
-              }}
-              buttonStyle="solid"
-              options={[
-                {
-                  value: 1,
-                  label: t('EditorInfo.templateExamples'),
-                },
-                {
-                  value: 2,
-                  label: t('EditorInfo.faq'),
-                },
-              ]}
-            />
+        {/* 隐藏案例文档（模板案例/常见问题），保留代码以备恢复，恢复时移除 {false && ( 与对应 )} 即可 */}
+        {false && (
+          <div className={styles['temp-example-wrapper']}>
+            <div className={styles['temp-example-title-wrapper']}>
+              <YakitRadioButtons
+                size="small"
+                value={documentType}
+                onChange={(e) => {
+                  setDocumentType(e.target.value)
+                }}
+                buttonStyle="solid"
+                options={[
+                  {
+                    value: 1,
+                    label: t('EditorInfo.templateExamples'),
+                  },
+                  {
+                    value: 2,
+                    label: t('EditorInfo.faq'),
+                  },
+                ]}
+              />
+            </div>
+            {documentType === 1 ? (
+              <>
+                <div className={styles['temp-example-search-wrapper']}>
+                  <YakitInput.Search onSearch={(value) => setSearchTempExampleVal(value)} allowClear />
+                </div>
+                <div className={styles['temp-example-list-wrapper']}>
+                  {renderTempExampleList.length ? (
+                    <>
+                      {renderTempExampleList.map((item) => (
+                        <div
+                          className={styles['temp-example-list-item']}
+                          key={item.label}
+                          onClick={() => onOpenHelpModal(item)}
+                        >
+                          <div className={styles['temp-example-item-left-wrapper']}>
+                            <div className={styles['temp-example-item-label']} title={item.label}>
+                              {item.label}
+                            </div>
+                          </div>
+                          <div className={styles['temp-example-item-desc']}>{item.desc}</div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <YakitEmpty></YakitEmpty>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles['temp-example-search-wrapper']}>
+                  <YakitInput.Search onSearch={(value) => setSearchQaDocumentVal(value)} allowClear />
+                </div>
+                <div className={styles['document-list-wrapper']}>
+                  {renderQaDocumentList.length ? (
+                    <>
+                      {renderQaDocumentList.map((label) => (
+                        <div
+                          className={styles['document-list-item']}
+                          key={label}
+                          onClick={() => onOpenQaDocModal(label)}
+                        >
+                          <div className={styles['document-item-left-wrapper']}>
+                            <div className={styles['document-item-label']} title={label}>
+                              {label}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <YakitEmpty></YakitEmpty>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          {documentType === 1 ? (
-            <>
-              <div className={styles['temp-example-search-wrapper']}>
-                <YakitInput.Search onSearch={(value) => setSearchTempExampleVal(value)} allowClear />
-              </div>
-              <div className={styles['temp-example-list-wrapper']}>
-                {renderTempExampleList.length ? (
-                  <>
-                    {renderTempExampleList.map((item) => (
-                      <div
-                        className={styles['temp-example-list-item']}
-                        key={item.label}
-                        onClick={() => onOpenHelpModal(item)}
-                      >
-                        <div className={styles['temp-example-item-left-wrapper']}>
-                          <div className={styles['temp-example-item-label']} title={item.label}>
-                            {item.label}
-                          </div>
-                        </div>
-                        <div className={styles['temp-example-item-desc']}>{item.desc}</div>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <YakitEmpty></YakitEmpty>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={styles['temp-example-search-wrapper']}>
-                <YakitInput.Search onSearch={(value) => setSearchQaDocumentVal(value)} allowClear />
-              </div>
-              <div className={styles['document-list-wrapper']}>
-                {renderQaDocumentList.length ? (
-                  <>
-                    {renderQaDocumentList.map((label) => (
-                      <div className={styles['document-list-item']} key={label} onClick={() => onOpenQaDocModal(label)}>
-                        <div className={styles['document-item-left-wrapper']}>
-                          <div className={styles['document-item-label']} title={label}>
-                            {label}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <YakitEmpty></YakitEmpty>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        )}
         <YakitHint
           visible={typeSwitchPopShow}
           title={t('EditorInfo.switchScriptType')}

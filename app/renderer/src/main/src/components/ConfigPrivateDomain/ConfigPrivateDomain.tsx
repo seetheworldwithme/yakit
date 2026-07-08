@@ -311,7 +311,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
               </div>
               <h2 className="enterprise-main-title">{t('ConfigPrivateDomain.enterpriseLogin')}</h2>
               <p className="enterprise-main-step">
-                <span className="enterprise-step-no">01</span>
+                {/* <span className="enterprise-step-no">01</span> */}
                 <span className="enterprise-step-text">填写私有域地址与账号信息完成认证</span>
               </p>
             </header>
