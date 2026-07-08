@@ -322,10 +322,6 @@ export const defSort: SortProps = {
 export const SourceType = [
   { text: (t) => 'MITM', value: 'mitm' },
   { text: (t) => t('HTTPFlowTable.plugin'), value: 'scan' },
-  {
-    text: (t) => t('HTTPFlowTable.crawler'),
-    value: 'basic-crawler',
-  },
 ]
 
 export const contentType: FiltersItemProps[] = [
