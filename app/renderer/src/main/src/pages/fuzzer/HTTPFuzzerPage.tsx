@@ -2525,36 +2525,48 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
     [i18n.language],
   )
 
-  const renderTLSTags = useMemo(
+  const onToggleForceHttps = useMemoizedFn((checked: boolean) => {
+    setAdvancedConfigValue((v) => {
+      const next = { ...v, isHttps: checked }
+      // 关闭强制 HTTPS 时，联动关闭国密 / 随机 TLS
+      if (!checked) {
+        next.isGmTLS = false
+        next.randomJA3 = false
+      }
+      return next
+    })
+  })
+  const onToggleGmTLS = useMemoizedFn((checked: boolean) => {
+    setAdvancedConfigValue((v) => {
+      const next = { ...v, isGmTLS: checked }
+      if (checked) next.isHttps = true
+      return next
+    })
+  })
+  const onToggleRandomJA3 = useMemoizedFn((checked: boolean) => {
+    setAdvancedConfigValue((v) => {
+      const next = { ...v, randomJA3: checked }
+      if (checked) next.isHttps = true
+      return next
+    })
+  })
+  const renderTLSControls = useMemo(
     () => (
-      <>
-        {advancedConfigValue.randomJA3 && (
-          <YakitTag
-            closable
-            onClose={() => {
-              setAdvancedConfigValue({
-                ...advancedConfigValue,
-                randomJA3: false,
-              })
-            }}
-          >
-            {t('HttpQueryAdvancedConfig.random_tls')}
-          </YakitTag>
-        )}
-        {advancedConfigValue.isGmTLS && (
-          <YakitTag
-            closable
-            onClose={() => {
-              setAdvancedConfigValue({
-                ...advancedConfigValue,
-                isGmTLS: false,
-              })
-            }}
-          >
+      <div className={styles['forge-tls-controls']}>
+        <span className={styles['forge-tls-item']}>
+          <span className={styles['forge-tls-label']}>{t('HttpQueryAdvancedConfig.force_https')}</span>
+          <YakitSwitch size="small" checked={advancedConfigValue.isHttps} onChange={onToggleForceHttps} />
+        </span>
+        <span className={styles['forge-tls-item']}>
+          <span className={styles['forge-tls-label']}>{t('HttpQueryAdvancedConfig.tls_config')}</span>
+          <YakitCheckableTag checked={advancedConfigValue.isGmTLS} onChange={onToggleGmTLS}>
             {t('HttpQueryAdvancedConfig.guomi_tls')}
-          </YakitTag>
-        )}
-      </>
+          </YakitCheckableTag>
+          <YakitCheckableTag checked={advancedConfigValue.randomJA3} onChange={onToggleRandomJA3}>
+            {t('HttpQueryAdvancedConfig.random_tls')}
+          </YakitCheckableTag>
+        </span>
+      </div>
     ),
     [advancedConfigValue, i18n.language],
   )
@@ -2794,10 +2806,10 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                         onlyOneResponse={onlyOneResponse}
                         httpResponse={httpResponse}
                       />
-                      {renderTLSTags}
                       {renderHotPatchTag}
                     </section>
                     <section className={styles['forge-header-right']}>
+                      {renderTLSControls}
                       {fuzzerTaskId && (
                         <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
                           <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />

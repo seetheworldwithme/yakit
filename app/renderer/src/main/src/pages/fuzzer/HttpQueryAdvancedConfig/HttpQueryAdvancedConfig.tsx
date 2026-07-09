@@ -153,8 +153,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
   const [httpResponse, setHttpResponse] = useState<string>(defaultHttpResponse)
 
   const [form] = Form.useForm()
-  const isGmTLS = Form.useWatch('isGmTLS', form)
-  const randomJA3 = Form.useWatch('randomJA3', form)
   const overwriteSNI = Form.useWatch('overwriteSNI', form)
   const enableRandomChunked = Form.useWatch('enableRandomChunked', form)
   const queryRef = useRef(null)
@@ -485,41 +483,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
         return (
           <>
             <div className={styles['advanced-config-extra-formItem']}>
-              <Form.Item label={t('HttpQueryAdvancedConfig.force_https')} name="isHttps" valuePropName="checked">
-                <YakitSwitch />
-              </Form.Item>
-              <Form.Item label={t('HttpQueryAdvancedConfig.tls_config')}>
-                <div style={{ display: 'flex' }}>
-                  <Form.Item name="isGmTLS" style={{ marginBottom: 0 }}>
-                    <YakitCheckableTag
-                      checked={isGmTLS}
-                      onChange={(checked) => {
-                        const v = form.getFieldsValue()
-                        onSetValue({
-                          ...v,
-                          isGmTLS: checked,
-                        })
-                      }}
-                    >
-                      {t('HttpQueryAdvancedConfig.guomi_tls')}
-                    </YakitCheckableTag>
-                  </Form.Item>
-                  <Form.Item name="randomJA3" style={{ marginBottom: 0 }}>
-                    <YakitCheckableTag
-                      checked={randomJA3}
-                      onChange={(checked) => {
-                        const v = form.getFieldsValue()
-                        onSetValue({
-                          ...v,
-                          randomJA3: checked,
-                        })
-                      }}
-                    >
-                      {t('HttpQueryAdvancedConfig.random_tls')}
-                    </YakitCheckableTag>
-                  </Form.Item>
-                </div>
-              </Form.Item>
               <Form.Item
                 label={
                   <span className={styles['advanced-config-form-label']}>
@@ -598,36 +561,17 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
               >
                 <YakitSwitch />
               </Form.Item>
-              <Form.Item
-                label={
-                  <span className={styles['advanced-config-form-label']}>
-                    {t('HttpQueryAdvancedConfig.frontend_render_count')}
-                    <Tooltip title={t('HttpQueryAdvancedConfig.frontend_render_tip')} overlayStyle={{ width: 150 }}>
-                      <InformationCircleIcon className={styles['info-icon']} />
-                    </Tooltip>
-                  </span>
-                }
-                name="resNumlimit"
-                style={{ marginBottom: 12 }}
-              >
-                <YakitInputNumber
-                  type="horizontal"
-                  size="small"
-                  min={1}
-                  max={50000}
-                  disabled={!isbuttonIsSendReqStatus}
-                />
-              </Form.Item>
-              <Form.Item
-                label={t('HttpQueryAdvancedConfig.response_body_limit')}
-                name="maxBodySize"
-                style={{ marginBottom: 12 }}
-                normalize={(value) => {
-                  return value.replace(/\D/g, '')
-                }}
-              >
-                <YakitInput suffix="M" size="small" className={styles['fuzzer-maxBodySize-input']} />
-              </Form.Item>
+              {/* 按功能裁剪方案：隐藏前端渲染数量 / 响应体长度限制（功能清单无对应），保留字段与逻辑，仅不展示入口 */}
+              {false && (
+                <>
+                  <Form.Item name="resNumlimit">
+                    <YakitInputNumber disabled={!isbuttonIsSendReqStatus} />
+                  </Form.Item>
+                  <Form.Item name="maxBodySize">
+                    <YakitInput suffix="M" className={styles['fuzzer-maxBodySize-input']} />
+                  </Form.Item>
+                </>
+              )}
               {/* 按功能裁剪方案：隐藏 SNI 配置（需求文档无对应），保留 overwriteSNI/sNI 字段与逻辑，仅不展示入口 */}
               {false && (
                 <>

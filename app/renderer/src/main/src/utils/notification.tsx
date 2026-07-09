@@ -20,7 +20,7 @@ export const success = (msg: React.ReactNode) => {
   yakitNotify('success', msg)
 }
 export const successControlled = (msg: React.ReactNode, time?: number) => {
-  notification['success']({ message: msg, placement: 'bottomLeft', duration: time === undefined ? 4.5 : time })
+  notification['success']({ message: msg, placement: 'topLeft', top: 8, duration: time === undefined ? 4.5 : time })
 }
 
 export const failed = (msg: React.ReactNode) => {
@@ -81,8 +81,8 @@ export const yakitNotify = (
   notification[notifyType]({
     ...newProps,
     icon: getIcon(notifyType),
-    placement: 'bottomLeft',
+    placement: 'topLeft',
     className: `yakit-notification-${notifyType}`,
-    bottom: 8,
+    top: 8,
   })
 }

@@ -71,8 +71,6 @@ import {
 import { KVPair } from '@/models/kv'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { useProxy } from '@/hook/useProxy'
-import { YakitSideTab } from '@/components/yakitSideTab/YakitSideTab'
-import { YakitTabsProps } from '@/components/yakitSideTab/YakitSideTabType'
 import { registerShortcutKeyHandle, unregisterShortcutKeyHandle } from '@/utils/globalShortcutKey/utils'
 import { ShortcutKeyPage } from '@/utils/globalShortcutKey/events/pageMaps'
 import { getStorageMitmShortcutKeyEvents } from '@/utils/globalShortcutKey/events/page/mitm'
@@ -616,17 +614,7 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
   const [idlePluginDrawerOpen, setIdlePluginDrawerOpen] = useState<boolean>(false)
   const [hijackPluginDrawerOpen, setHijackPluginDrawerOpen] = useState<boolean>(false)
 
-  const { t, i18n } = useI18nNamespaces(['mitm', 'yakitUi'])
-
-  const MITMIdleTab: YakitTabsProps[] = useMemo(
-    () => [
-      {
-        label: t('MITMServer.passive_plugin'),
-        value: 'plugin',
-      },
-    ],
-    [i18n.language],
-  )
+  const { t } = useI18nNamespaces(['mitm', 'yakitUi'])
 
   /**
    * @description 插件勾选
@@ -874,16 +862,6 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
       case 'idle':
         return (
           <div className={style['mitm-idle-tab-wrap']} ref={idleTabsRef}>
-            <div className={style['mitm-idle-tab-bar']}>
-              <YakitSideTab
-                type="horizontal"
-                yakitTabs={MITMIdleTab}
-                activeKey={activeKey}
-                onActiveKey={onActiveKey}
-                show={openTabsFlag}
-                setShow={setOpenTabsFlag}
-              />
-            </div>
             <div
               className={style['mitm-idle-tab-cont-item']}
               style={{
@@ -1084,12 +1062,12 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
         <div className={style['mitm-idle-toolbar']}>
           <span className={style['mitm-idle-toolbar-title']}>代理劫持启动台</span>
           <YakitButton type="outline2" onClick={() => setIdlePluginDrawerOpen(true)}>
-            被动插件{total > 0 ? ` (${total})` : ''}
+            插件列表{total > 0 ? ` (${total})` : ''}
           </YakitButton>
         </div>
         <section className={style['mitm-idle-start-deck']}>{onRenderSecondNode()}</section>
         <YakitDrawer
-          title="被动插件"
+          title="插件列表"
           placement="right"
           width={480}
           visible={idlePluginDrawerOpen}

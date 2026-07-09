@@ -192,6 +192,22 @@
       flex-wrap: wrap;
       justify-content: flex-end;
     }
+    .forge-tls-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-right: 8px;
+    }
+    .forge-tls-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .forge-tls-label {
+      color: var(--Colors-Use-Neutral-Text-2-Desc);
+      font-size: 12px;
+      white-space: nowrap;
+    }
   }
   .fuzzer-firstNode-extra {
     display: flex;

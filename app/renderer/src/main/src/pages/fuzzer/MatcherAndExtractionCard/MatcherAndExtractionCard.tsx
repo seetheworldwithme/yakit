@@ -815,7 +815,8 @@ export const MatcherCollapse: React.FC<MatcherCollapseProps> = React.memo(
                       options={filterModeOptions(t)}
                       size={isSmallMode ? 'small' : 'middle'}
                     />
-                    {item.filterMode === 'onlyMatch' && (
+                    {/* 按需隐藏：命中颜色(HitColor),命中结果改用默认色;改 item.filterMode === 'onlyMatch' 可恢复 */}
+                    {false && (
                       <ColorSelect
                         value={item.HitColor}
                         onChange={(value) => {
@@ -824,22 +825,25 @@ export const MatcherCollapse: React.FC<MatcherCollapseProps> = React.memo(
                       />
                     )}
                   </div>
-                  <div className={styles['condition-mode']}>
-                    <span className={styles['condition-mode-text']}>{t('MatcherCollapse.condition_relation')}</span>
-                    <YakitRadioButtons
-                      value={item.SubMatcherCondition}
-                      onChange={(e) => {
-                        onEditMatcher({
-                          field: 'SubMatcherCondition',
-                          value: e.target.value,
-                          index: number,
-                        })
-                      }}
-                      buttonStyle="solid"
-                      options={matchersConditionOptions}
-                      size={isSmallMode ? 'small' : 'middle'}
-                    />
-                  </div>
+                  {/* 按需隐藏：条件关系 AND/OR(子匹配器间逻辑),用默认关系;改 true 可恢复 */}
+                  {false && (
+                    <div className={styles['condition-mode']}>
+                      <span className={styles['condition-mode-text']}>{t('MatcherCollapse.condition_relation')}</span>
+                      <YakitRadioButtons
+                        value={item.SubMatcherCondition}
+                        onChange={(e) => {
+                          onEditMatcher({
+                            field: 'SubMatcherCondition',
+                            value: e.target.value,
+                            index: number,
+                          })
+                        }}
+                        buttonStyle="solid"
+                        options={matchersConditionOptions}
+                        size={isSmallMode ? 'small' : 'middle'}
+                      />
+                    </div>
+                  )}
                 </div>
                 {!notEditable && (
                   <div className={styles['matching-extraction-condition-right']}>
@@ -970,22 +974,27 @@ export const MatcherItem: React.FC<MatcherItemProps> = React.memo((props) => {
             />
           </div>
         </LabelNodeItem>
-        <LabelNodeItem label={t('MatcherItem.condition_relation')} column={isSmallMode}>
-          <YakitRadioButtons
-            value={matcherItem.Condition}
-            onChange={(e) => {
-              onEdit('Condition', e.target.value)
-            }}
-            buttonStyle="solid"
-            options={[
-              { label: 'AND', value: 'and' },
-              { label: 'OR', value: 'or' },
-            ]}
-          />
-        </LabelNodeItem>
-        <LabelNodeItem label={t('MatcherItem.no_match_invert')} column={isSmallMode}>
-          <YakitSwitch checked={matcherItem.Negative} onChange={(checked) => onEdit('Negative', checked)} />
-        </LabelNodeItem>
+        {/* 按需隐藏：条件关系 AND/OR 与 负向匹配(反向)开关,低频高级用法;改 true 可恢复 */}
+        {false && (
+          <>
+            <LabelNodeItem label={t('MatcherItem.condition_relation')} column={isSmallMode}>
+              <YakitRadioButtons
+                value={matcherItem.Condition}
+                onChange={(e) => {
+                  onEdit('Condition', e.target.value)
+                }}
+                buttonStyle="solid"
+                options={[
+                  { label: 'AND', value: 'and' },
+                  { label: 'OR', value: 'or' },
+                ]}
+              />
+            </LabelNodeItem>
+            <LabelNodeItem label={t('MatcherItem.no_match_invert')} column={isSmallMode}>
+              <YakitSwitch checked={matcherItem.Negative} onChange={(checked) => onEdit('Negative', checked)} />
+            </LabelNodeItem>
+          </>
+        )}
       </div>
       <MatcherAndExtractionValueList
         httpResponse={httpResponse}

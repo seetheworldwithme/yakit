@@ -186,6 +186,12 @@
   max-height: 60vh;
   overflow-y: auto;
 }
+
+// 顶部居中弹出（placement: topLeft + 水平居中覆盖）
+.ant-notification-topLeft {
+  left: 50% !important;
+  transform: translateX(-50%);
+}
 .ant-notification-notice {
   border-radius: 4px;
   margin-bottom: 5px;
