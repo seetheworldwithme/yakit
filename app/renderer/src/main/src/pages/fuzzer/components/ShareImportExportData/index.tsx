@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useDebounceFn, useMemoizedFn } from 'ahooks'
-import { OutlineShareIcon, OutlineExportIcon, OutlineImportIcon } from '@/assets/icon/outline'
+import { OutlineShareIcon } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
-import { onImportShare } from '@/pages/fuzzer/components/ShareImport'
 import styles from './index.module.scss'
 import { useStore } from '@/store'
 import { success, yakitNotify, yakitFailed, warn } from '@/utils/notification'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import { NetWorkApi } from '@/services/fetch'
 import { API } from '@/services/swagger/resposeType'
-import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
 import { YakitRadioButtons } from '@/components/yakitUI/YakitRadioButtons/YakitRadioButtons'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { YakitInputNumber } from '@/components/yakitUI/YakitInputNumber/YakitInputNumber'
@@ -117,32 +115,6 @@ export const ShareImportExportData: React.FC<ShareDataProps> = ({
     })
   })
 
-  // 导出
-  const handlExport = useMemoizedFn((e: { clientX: number; clientY: number }) => {
-    showByRightContext(
-      {
-        width: 150,
-        data: [
-          { key: 'pathTemplate', label: t('ShareImportExportData.exportAsPathTemplate') },
-          { key: 'rawTemplate', label: t('ShareImportExportData.exportAsRawTemplate') },
-        ],
-        onClick: ({ key }) => {
-          switch (key) {
-            case 'pathTemplate':
-              onExportToYaml('path')
-              break
-            case 'rawTemplate':
-              onExportToYaml('raw')
-              break
-            default:
-              break
-          }
-        },
-      },
-      e.clientX,
-      e.clientY,
-    )
-  })
   const onExportToYaml = async (tempType: 'path' | 'raw') => {
     const requests = getFuzzerRequestParams()
     const params = {
@@ -171,33 +143,6 @@ export const ShareImportExportData: React.FC<ShareDataProps> = ({
       yakitFailed(error + '')
     }
   }
-
-  // 导入
-  const handlImport = useMemoizedFn((e: { clientX: number; clientY: number }) => {
-    showByRightContext(
-      {
-        width: 150,
-        data: [
-          { key: 'dataPacketId', label: t('ShareImportExportData.importPacketId') },
-          { key: 'yamlDocument', label: t('ShareImportExportData.importYamlFile') },
-        ],
-        onClick: ({ key }) => {
-          switch (key) {
-            case 'dataPacketId':
-              onImportShare()
-              break
-            case 'yamlDocument':
-              onOpenImportYamlPop()
-              break
-            default:
-              break
-          }
-        },
-      },
-      e.clientX,
-      e.clientY,
-    )
-  })
 
   const onOpenImportYamlPop = useMemoizedFn(() => {
     yamlContRef.current = ''
@@ -354,24 +299,14 @@ export const ShareImportExportData: React.FC<ShareDataProps> = ({
       )}
       {supportExport && (
         <FuncBtn
-          maxWidth={1600}
           type="outline2"
-          icon={<OutlineExportIcon />}
           style={{ marginRight: 8 }}
-          onClick={handlExport}
-          name={t('YakitButton.export')}
-          onContextMenuCapture={handlExport}
+          onClick={() => onExportToYaml('raw')}
+          name={t('ShareImportExportData.exportAsRawTemplate')}
         />
       )}
       {supportImport && (
-        <FuncBtn
-          maxWidth={1600}
-          type="outline2"
-          icon={<OutlineImportIcon />}
-          onClick={handlImport}
-          name={t('YakitButton.import')}
-          onContextMenuCapture={handlImport}
-        />
+        <FuncBtn type="outline2" onClick={onOpenImportYamlPop} name={t('ShareImportExportData.importYamlFile')} />
       )}
     </>
   )

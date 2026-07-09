@@ -1,17 +1,10 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import emiter from '@/utils/eventBus/eventBus'
 import styles from './MITMServerHijacking.module.scss'
-import {
-  contentType,
-  HistorySearch,
-  HTTPFlowShield,
-  ShieldData,
-  SourceType,
-} from '@/components/HTTPFlowTable/HTTPFlowTable'
+import { contentType, HistorySearch, HTTPFlowShield, ShieldData } from '@/components/HTTPFlowTable/HTTPFlowTable'
 import { useCreation, useDebounceFn, useMemoizedFn, useSize } from 'ahooks'
 import { yakitNotify } from '@/utils/notification'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
-import { YakitCheckableTag } from '@/components/yakitUI/YakitTag/YakitCheckableTag'
 import { setRemoteValue } from '@/utils/kv'
 import { MITMConsts } from '../MITMConsts'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
@@ -38,24 +31,13 @@ import { cloneDeep } from 'lodash'
 
 const { ipcRenderer } = window.require('electron')
 interface MITMLogHeardExtraProps {
-  sourceType: string
   onSetSourceType: (s: string) => void
-  setShowPluginHistoryList: (s: string[]) => void
-  setTempShowPluginHistory?: (s: string) => void
   tableTotal: number
   tableSelectNum: number
   hasNewData: boolean
 }
 export const MITMLogHeardExtra: React.FC<MITMLogHeardExtraProps> = React.memo((props) => {
-  const {
-    sourceType,
-    onSetSourceType,
-    setShowPluginHistoryList,
-    setTempShowPluginHistory,
-    tableTotal,
-    tableSelectNum,
-    hasNewData,
-  } = props
+  const { onSetSourceType, tableTotal, tableSelectNum, hasNewData } = props
   const { t, i18n } = useI18nNamespaces(['yakitUi', 'history', 'yakitRoute'])
   const mitmContent = useContext(MITMContext)
   const mitmVersion = useCreation(() => {
@@ -236,29 +218,6 @@ export const MITMLogHeardExtra: React.FC<MITMLogHeardExtraProps> = React.memo((p
   return (
     <div ref={headerRef} className={styles['mitm-log-heard']}>
       <div className={styles['mitm-log-heard-left']}>
-        <div style={{ whiteSpace: 'nowrap' }}>
-          {SourceType.map((tag) => (
-            <YakitCheckableTag
-              key={tag.value}
-              checked={!!sourceType.split(',').includes(tag.value)}
-              onChange={(checked) => {
-                emiter.emit('onMitmClearFromPlugin', mitmVersion)
-                setShowPluginHistoryList([])
-                setTempShowPluginHistory && setTempShowPluginHistory('')
-
-                if (checked) {
-                  const selectTypeList = [...(sourceType.split(',') || []), tag.value]
-                  onSetSourceType(selectTypeList.join(','))
-                } else {
-                  const selectTypeList = (sourceType.split(',') || []).filter((ele) => ele !== tag.value)
-                  onSetSourceType(selectTypeList.join(','))
-                }
-              }}
-            >
-              {tag.text(t)}
-            </YakitCheckableTag>
-          ))}
-        </div>
         <TableTotalAndSelectNumber total={tableTotal} selectNum={tableSelectNum} />
       </div>
       <div className={styles['mitm-log-heard-right']}>

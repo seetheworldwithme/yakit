@@ -71,8 +71,6 @@ interface MITMHijackedContentProps {
   downstreamProxyStr: string
   loadedPluginLen: number
   onSelectAll: (e: boolean) => void
-  setShowPluginHistoryList: (l: string[]) => void
-  setTempShowPluginHistory?: (s: string) => void
   onSetRuleVisible: (v: boolean) => void
   onSetFilterVisible: (v: boolean) => void
   pluginStreamInfo: Record<string, HoldGRPCStreamInfo>
@@ -92,8 +90,6 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
     downstreamProxyStr,
     loadedPluginLen,
     onSelectAll,
-    setShowPluginHistoryList,
-    setTempShowPluginHistory,
     onSetRuleVisible,
     onSetFilterVisible,
     pluginStreamInfo,
@@ -156,7 +152,7 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
 
   // 是否有新数据
   const [hasNewData, setHasNewData] = useState<boolean>(false)
-  const [sourceType, setSourceType] = useState<string>('mitm')
+  const [sourceType, setSourceType] = useState<string>('')
   const [tableTotal, setTableTotal] = useState<number>(0)
   const [tableSelectNum, setTableSelectNum] = useState<number>(0)
   const mitmHijackedContentRef = useRef<HTMLDivElement>(null)
@@ -915,10 +911,7 @@ const MITMHijackedContent: React.FC<MITMHijackedContentProps> = React.memo((prop
         {/* 自动放行 */}
         <div style={{ display: autoForward === 'log' ? 'block' : 'none', width: '100%' }}>
           <MITMLogHeardExtra
-            sourceType={sourceType}
             onSetSourceType={setSourceType}
-            setShowPluginHistoryList={setShowPluginHistoryList}
-            setTempShowPluginHistory={setTempShowPluginHistory}
             tableTotal={tableTotal}
             tableSelectNum={tableSelectNum}
             hasNewData={hasNewData}

@@ -202,6 +202,17 @@
       align-items: center;
       gap: 4px;
     }
+    .build-request-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      :global {
+        .ant-form-item {
+          margin-bottom: 0;
+          margin-right: 0;
+        }
+      }
+    }
   }
 }
 .second-node-title {

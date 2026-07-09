@@ -18,7 +18,6 @@ import { shallow } from 'zustand/shallow'
 import { YakitRoute } from '@/enums/yakitRoute'
 import MITMContext, { MITMVersion } from '../Context/MITMContext'
 import { RemoteGV } from '@/yakitGV'
-import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import {
   MITMEnablePluginModeRequest,
   MITMFilterWebsocketRequest,
@@ -500,33 +499,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
           停止监听
         </YakitButton>
         <span className={style['mitm-topbar-spacer']} />
-        <YakitPopover
-          placement="bottomLeft"
-          title={
-            <div className={style['proxy_configuration_top']} onClick={() => setDownStreamAgentModalVisible(true)}>
-              {t('ProxyConfig.downstream_agent')}
-            </div>
-          }
-          content={
-            <div className={style['proxy_configuration_bottom']}>
-              <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
-              <YakitSwitch
-                size="large"
-                checked={disableSystemProxy}
-                onChange={(checked) => {
-                  updateDisableSystemProxy(checked)
-                }}
-              />
-            </div>
-          }
-        >
-          <YakitButton type="outline2" className={style['mitm-config-action']}>
-            {t('AgentConfigModal.proxy_configuration')}
-          </YakitButton>
-        </YakitPopover>
-        <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setVisible(true)}>
-          规则配置
-        </YakitButton>
+        {/* 代理配置 / 规则配置 入口已在启动前表单页提供，劫持后顶栏不再重复展示 */}
         <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setFiltersVisible(true)}>
           过滤器
         </YakitButton>

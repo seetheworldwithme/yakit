@@ -59,7 +59,7 @@ import {
 import { defaultAdvancedConfigValue, DefFuzzerConcurrent } from '@/defaultConstants/HTTPFuzzerPage'
 import { YakitCheckableTag } from '@/components/yakitUI/YakitTag/YakitCheckableTag'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import ProxyRulesConfig, { ProxyTest } from '@/components/configNetwork/ProxyRulesConfig'
+import ProxyRulesConfig from '@/components/configNetwork/ProxyRulesConfig'
 import { checkProxyVersion, isValidUrlWithProtocol } from '@/utils/proxyConfigUtil'
 import { useProxy } from '@/hook/useProxy'
 import i18n from '@/i18n/i18n'
@@ -588,10 +588,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <YakitButton size="small" type="text" onClick={onClickDownstreamProxy} icon={<PlusSmIcon />}>
                     {t('AgentConfigModal.proxy_configuration')}
-                  </YakitButton>
-                  <Divider type="vertical" />
-                  <YakitButton size="small" type="text">
-                    <ProxyTest onEchoNode={(proxy) => form.setFieldsValue({ proxy })} />
                   </YakitButton>
                 </div>
               </Form.Item>

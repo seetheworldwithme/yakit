@@ -17,19 +17,9 @@ import {
 } from '../plugins/operator/localPluginExecuteDetailHeard/LocalPluginExecuteDetailHeardType'
 import { getValueByType, ParamsToGroupByGroupName } from '../plugins/editDetails/utils'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
-import {
-  OutlileHistoryIcon,
-  OutlinePencilaltIcon,
-  OutlinePositionIcon,
-  OutlineQuestionmarkcircleIcon,
-  OutlineTerminalIcon,
-} from '@/assets/icon/outline'
+import { OutlileHistoryIcon, OutlinePencilaltIcon, OutlinePositionIcon } from '@/assets/icon/outline'
 import emiter from '@/utils/eventBus/eventBus'
-import { YakitDropdownMenu } from '@/components/yakitUI/YakitDropdownMenu/YakitDropdownMenu'
-import { SolidDotsverticalIcon, SolidLightningboltIcon } from '@/assets/icon/solid'
-import { YakitMenuItemProps } from '@/components/yakitUI/YakitMenu/YakitMenu'
-import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
-import { YakEditor } from '@/utils/editors'
+import { SolidLightningboltIcon } from '@/assets/icon/solid'
 import { MitmStatus } from './MITMPage'
 import { AuthorImg } from '../plugins/funcTemplate'
 import YakitLogo from '@/assets/yakitLogo.png'
@@ -365,9 +355,9 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
         {status !== 'idle' ? (
           <>
             {curTabKey === 'loaded' ? (
-              <>{hasParamsCheckList.includes(i.ScriptName) ? historyIcon : hotIcon}</>
+              <>{hasParamsCheckList.includes(i.ScriptName) ? historyIcon : null}</>
             ) : (
-              <>{isHasParams ? historyIcon : hotIcon}</>
+              <>{isHasParams ? historyIcon : null}</>
             )}
           </>
         ) : null}
@@ -385,69 +375,6 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
               }}
             />
           </Tooltip>
-        )}
-        {status !== 'idle' && curTabKey !== 'loaded' && (
-          <YakitDropdownMenu
-            menu={{
-              data: [
-                {
-                  key: 'source-code',
-                  label: (
-                    <YakitPopover
-                      placement="right"
-                      overlayClassName={style['terminal-popover']}
-                      content={<YakEditor type={i.Type} value={i.Content} readOnly={true} />}
-                      onVisibleChange={(v) => {
-                        if (v && !i.Content) {
-                          getScriptInfo(i)
-                        }
-                      }}
-                      zIndex={9999}
-                    >
-                      <div className={style['extra-menu']}>
-                        <OutlineTerminalIcon className={style['plugin-local-icon']} />
-                        <div className={style['menu-name']}>源码</div>
-                      </div>
-                    </YakitPopover>
-                  ),
-                },
-                {
-                  key: 'help-info',
-                  label: (
-                    <Tooltip
-                      title={i.Help || 'No Description about it.'}
-                      placement="right"
-                      overlayClassName={style['question-tooltip']}
-                      onVisibleChange={(v) => {
-                        if (v && !i.Help) {
-                          getScriptInfo(i)
-                        }
-                      }}
-                    >
-                      <div className={style['extra-menu']}>
-                        <OutlineQuestionmarkcircleIcon className={style['plugin-local-icon']} />
-                        <div className={style['menu-name']}>帮助信息</div>
-                      </div>
-                    </Tooltip>
-                  ),
-                },
-              ] as YakitMenuItemProps[],
-              onClick: ({ key }) => {
-                switch (key) {
-                  case 'source-code':
-                    break
-                  case 'help-info':
-                    break
-                }
-              },
-            }}
-            dropdown={{
-              trigger: ['click'],
-              placement: 'bottomLeft',
-            }}
-          >
-            <SolidDotsverticalIcon className={style['extra-btns-icon']} />
-          </YakitDropdownMenu>
         )}
       </div>
 

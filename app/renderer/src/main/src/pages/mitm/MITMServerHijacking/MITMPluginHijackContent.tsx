@@ -62,8 +62,6 @@ import { useStore } from '@/store/mitmState'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { YakitRoute } from '@/enums/yakitRoute'
-import { YakitTabsProps } from '@/components/yakitSideTab/YakitSideTabType'
-import { YakitSideTab } from '@/components/yakitSideTab/YakitSideTab'
 import { HoldGRPCStreamInfo } from '@/hook/useHoldGRPCStream/useHoldGRPCStreamType'
 import { ManualHijackTypeProps } from '../MITMManual/MITMManualType'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
@@ -125,28 +123,6 @@ const HotLoadDefaultData: YakScript = {
   UserId: 0,
   UUID: '',
 }
-const MITMHijackTab: YakitTabsProps[] = [
-  {
-    label: '全部',
-    value: 'all',
-  },
-  {
-    label: '已启用',
-    value: 'loaded',
-  },
-  {
-    label: '热加载',
-    value: 'hot-patch',
-  },
-  {
-    value: 'trace',
-    label: '插件追踪',
-  },
-  {
-    value: 'tun-hijack',
-    label: 'Tun劫持',
-  },
-]
 export const MITMPluginHijackContent: React.FC<MITMPluginHijackContentProps> = React.memo((props) => {
   const {
     isHasParams,
@@ -987,20 +963,19 @@ export const MITMPluginHijackContent: React.FC<MITMPluginHijackContentProps> = R
   return (
     <div className={styles['mitm-plugin-hijack-content']} ref={hijackTabsRef}>
       <div className={styles['mitm-hijack-tab-wrap']}>
-        <YakitSideTab
-          yakitTabs={MITMHijackTab}
-          activeKey={curTabKey}
-          onActiveKey={onActiveKey}
-          show={openTabsFlag}
-          setShow={onSetOpenTabsFlag}
-          barHint={() => ''}
-        />
-        <div
-          className={classNames(styles['mitm-hijack-tab-cont-item'])}
-          style={{
-            overflowY: 'hidden',
-          }}
-        >
+        <div className={classNames(styles['mitm-hijack-tab-cont-item'])}>
+          <div className={styles['mitm-plugin-hijack-tabs']}>
+            <YakitRadioButtons
+              buttonStyle="solid"
+              options={[
+                { label: '全部', value: 'all' },
+                { label: '已启用', value: 'loaded' },
+                { label: '插件追踪', value: 'trace' },
+              ]}
+              value={curTabKey}
+              onChange={(e) => onActiveKey(e.target.value)}
+            />
+          </div>
           <div className={styles['mitm-plugin-hijack-heard']}>{onRenderHeardExtra()}</div>
           {onRenderContent()}
           <PluginTunHijack

@@ -1061,8 +1061,6 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
             downstreamProxyStr={downstreamProxyStr}
             loadedPluginLen={loadedPluginLen}
             onSelectAll={onSelectAll}
-            setShowPluginHistoryList={setShowPluginHistoryList}
-            setTempShowPluginHistory={setTempShowPluginHistory}
             onSetRuleVisible={setVisible}
             onSetFilterVisible={(v) => {
               if (setFiltersVisible) {

@@ -100,7 +100,6 @@ import {
   OutlinePayloadIcon,
   OutlinePlusIcon,
   OutlineXIcon,
-  OutlineCodeIcon,
   OutlinePlugsIcon,
   OutlineSearchIcon,
   OutlineFilterIcon,
@@ -2070,72 +2069,56 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
             />
           </div>
         )}
-        <YakitPopover
-          trigger={'click'}
-          content={
-            <div style={{ width: 400 }}>
-              <Form
-                layout={'vertical'}
-                onFinish={(v) => {
-                  setAdvancedConfigValue({
-                    ...advancedConfigValue,
-                    isHttps: false,
-                  })
-                  ipcRenderer
-                    .invoke('Codec', {
-                      ...v,
-                      Text: v.Text.trim(),
+        <Form
+          layout="inline"
+          size={'small'}
+          className={styles['build-request-inline']}
+          onFinish={(v) => {
+            setAdvancedConfigValue({
+              ...advancedConfigValue,
+              isHttps: false,
+            })
+            ipcRenderer
+              .invoke('Codec', {
+                ...v,
+                Text: v.Text.trim(),
+              })
+              .then((e) => {
+                if (e?.Result) {
+                  requestRef.current = e.Result
+                  if (v.Text.includes('https://')) {
+                    setAdvancedConfigValue({
+                      ...advancedConfigValue,
+                      isHttps: true,
                     })
-                    .then((e) => {
-                      if (e?.Result) {
-                        requestRef.current = e.Result
-                        if (v.Text.includes('https://')) {
-                          setAdvancedConfigValue({
-                            ...advancedConfigValue,
-                            isHttps: true,
-                          })
-                        }
-                        refreshRequest()
-                      }
-                    })
-                    .catch((e) => {
-                      failed(e.message)
-                    })
-                    .finally(() => {})
-                }}
-                size={'small'}
-              >
-                <Form.Item name="Type" initialValue="packet-from-url">
-                  <YakitRadioButtons
-                    buttonStyle="solid"
-                    options={[
-                      {
-                        value: 'packet-from-url',
-                        label: 'URL',
-                      },
-                      {
-                        value: 'packet-from-curl',
-                        label: 'cURL',
-                      },
-                    ]}
-                  />
-                </Form.Item>
-                <Form.Item name="Text">
-                  <YakitInput size="small" />
-                </Form.Item>
-                <Form.Item style={{ marginBottom: 8, marginTop: 8 }}>
-                  <YakitButton type={'primary'} htmlType={'submit'}>
-                    {t('HTTPFuzzerPage.buildRequest')}
-                  </YakitButton>
-                </Form.Item>
-              </Form>
-            </div>
-          }
+                  }
+                  refreshRequest()
+                }
+              })
+              .catch((e) => {
+                failed(e.message)
+              })
+              .finally(() => {})
+          }}
         >
-          <YakitButton size={'small'} type={'primary'}>
-            {t('HTTPFuzzerPage.buildRequest')}
-          </YakitButton>
-        </YakitPopover>
+          <Form.Item name="Type" initialValue="packet-from-url" style={{ marginBottom: 0 }}>
+            <YakitRadioButtons
+              buttonStyle="solid"
+              options={[
+                { value: 'packet-from-url', label: 'URL' },
+                { value: 'packet-from-curl', label: 'cURL' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="Text" style={{ marginBottom: 0 }}>
+            <YakitInput size="small" style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <YakitButton type={'primary'} htmlType={'submit'} size="small">
+              {t('HTTPFuzzerPage.buildRequest')}
+            </YakitButton>
+          </Form.Item>
+        </Form>
       </div>
       <div className={styles['resize-card-icon']} onClick={() => setFirstFull(!firstFull)}>
         {firstFull ? <ArrowsRetractIcon /> : <ArrowsExpandIcon />}
@@ -2830,38 +2813,11 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                           }
                         />
                       ) : null}
-                      <YakitDropdownMenu
-                        menu={{
-                          data: [
-                            { key: 'pathTemplate', label: t('HTTPFuzzerPage.generatePathTemplate') },
-                            { key: 'rawTemplate', label: t('HTTPFuzzerPage.generateRawTemplate') },
-                          ],
-                          onClick: ({ key }) => {
-                            switch (key) {
-                              case 'pathTemplate':
-                                handleSkipPluginDebuggerPage('path')
-                                break
-                              case 'rawTemplate':
-                                handleSkipPluginDebuggerPage('raw')
-                                break
-                              default:
-                                break
-                            }
-                          },
-                        }}
-                        dropdown={{
-                          trigger: ['click'],
-                          placement: 'bottom',
-                        }}
-                      >
-                        <FuncBtn
-                          maxWidth={1600}
-                          type="primary"
-                          icon={<OutlineCodeIcon />}
-                          name={t('HTTPFuzzerPage.generateYamlTemplate')}
-                          tooltipPlacement="topRight"
-                        />
-                      </YakitDropdownMenu>
+                      <FuncBtn
+                        type="primary"
+                        name={t('HTTPFuzzerPage.generateRawTemplate')}
+                        onClick={() => handleSkipPluginDebuggerPage('raw')}
+                      />
                     </section>
                   </header>
                   <YakitResizeBox

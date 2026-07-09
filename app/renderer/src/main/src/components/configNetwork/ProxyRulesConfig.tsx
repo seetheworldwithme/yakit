@@ -22,7 +22,6 @@ import { YakitSelect } from '../yakitUI/YakitSelect/YakitSelect'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { YakitPopconfirm } from '../yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { useProxy } from '@/hook/useProxy'
-import { YakitSideTab } from '../yakitSideTab/YakitSideTab'
 import { YakitEmpty } from '../yakitUI/YakitEmpty/YakitEmpty'
 import styles from './ConfigNetworkPage.module.scss'
 import { checkProxyVersion, isValidUrlWithProtocol } from '@/utils/proxyConfigUtil'
@@ -339,7 +338,7 @@ const ProxyRulesConfig = (props: ProxyRulesConfigProps) => {
     return (
       <div style={{ flex: 1, padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          {visible === undefined ? (
+          {!hideRules || visible === undefined ? (
             <YakitRadioButtons
               value={activeKey}
               onChange={(e) => {
@@ -386,19 +385,7 @@ const ProxyRulesConfig = (props: ProxyRulesConfigProps) => {
 
   const drawerContent = (
     <>
-      {hideRules || visible === undefined ? (
-        renderContent()
-      ) : (
-        <YakitSideTab
-          activeShow={true}
-          yakitTabs={tab}
-          activeKey={activeKey}
-          onActiveKey={setActiveKey}
-          btnItemClassName={styles['config-tab-item']}
-        >
-          {renderContent()}
-        </YakitSideTab>
-      )}
+      {renderContent()}
       <YakitModal
         title={t(
           isEndpoints
