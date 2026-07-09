@@ -1,4 +1,4 @@
-import { Divider, Form, Modal, Tooltip } from 'antd'
+import { Divider, Form, Modal } from 'antd'
 import React, { ReactNode, useContext, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import {
   MITMContentReplacerRule,
@@ -8,24 +8,12 @@ import {
   RuleExportAndImportHandle,
 } from './MITMRuleType'
 import styles from './MITMRule.module.scss'
-import {
-  BanIcon,
-  ChevronDownIcon,
-  ExportIcon,
-  PencilAltIcon,
-  PlusIcon,
-  QuestionMarkCircleIcon,
-  RefreshIcon,
-  RemoveIcon,
-  SaveIcon,
-  TrashIcon,
-} from '@/assets/newIcon'
+import { BanIcon, PencilAltIcon, RefreshIcon, RemoveIcon, TrashIcon } from '@/assets/newIcon'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
 import { useCreation, useDebounceFn, useMemoizedFn, useThrottleFn } from 'ahooks'
 import { ColumnsTypeProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
 import classNames from 'classnames'
 import { YakitDrawer } from '@/components/yakitUI/YakitDrawer/YakitDrawer'
-import { openExternalWebsite } from '@/utils/openWebsite'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 
@@ -45,7 +33,6 @@ import { YakitCheckableTag } from '@/components/yakitUI/YakitTag/YakitCheckableT
 import emiter from '@/utils/eventBus/eventBus'
 import { shallow } from 'zustand/shallow'
 import { useMenuHeight } from '@/store/menuHeight'
-import { WebsiteGV } from '@/enums/website'
 import {
   grpcClientMITMContentReplacerUpdate,
   grpcMITMContentReplacers,
@@ -54,7 +41,7 @@ import {
 import MITMContext from '../Context/MITMContext'
 import ReactResizeDetector from 'react-resize-detector'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
-import { OutlineCogIcon, OutlineSearchIcon } from '@/assets/icon/outline'
+import { OutlineSearchIcon } from '@/assets/icon/outline'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { JSONParseLog } from '@/utils/tool'
 
@@ -566,14 +553,29 @@ const MITMRule: React.FC<MITMRuleProp> = React.memo(
         },
       ]
 
-      try {
-        const excludeColumnsKeyArr =
-          JSONParseLog(excludeColumnsKey, { page: 'MITMRule', fun: 'excludeColumnsKey' }) || []
-        return columnArr.filter((ele) => !excludeColumnsKeyArr.includes(ele.dataKey))
-      } catch (error) {
-        return columnArr
+      const excludeColumnsKeyArr = JSONParseLog(excludeColumnsKey || '[]', {
+        page: 'MITMRule',
+        fun: 'excludeColumnsKey',
+        throwOnError: false,
+      })
+      const hiddenColumnKeys = Array.isArray(excludeColumnsKeyArr) ? excludeColumnsKeyArr : []
+      const arr = columnArr.filter((ele) => !hiddenColumnKeys.includes(ele.dataKey))
+      // 主从双栏模式：详情类列移至右侧详情面板，左表保留规则名称/替换结果/操作
+      if (ruleUse === 'mitm') {
+        const splitHiddenDataKeys = [
+          'Index',
+          'Rule',
+          'Drop',
+          'ExtraRepeat',
+          'EnableForRequest',
+          'EffectiveURL',
+          'Color',
+          'ExtraTag',
+        ]
+        return arr.filter((ele) => !splitHiddenDataKeys.includes(ele.dataKey))
       }
-    }, [excludeColumnsKey, i18n.language])
+      return arr
+    }, [excludeColumnsKey, i18n.language, ruleUse])
 
     const onEditRuleAction = useMemoizedFn((checked: boolean, record: MITMContentReplacerRule, item) => {
       record[item.value] = checked
@@ -964,54 +966,35 @@ const MITMRule: React.FC<MITMRuleProp> = React.memo(
     const title = () => {
       return <div className={styles['heard-title']}>{t('MITMRule.content_rule_configuration')}</div>
     }
+    const ruleActionBar = (
+      <>
+        <YakitButton type="text" onClick={() => setWhiteListVisible(true)}>
+          {t('MITMRule.white_list')}
+        </YakitButton>
+        <Divider type="vertical" className={styles['heard-right-operation_divider']} />
+        <RuleExportAndImportButton
+          onOkImport={onOkImport}
+          ref={ruleButtonRef}
+          isUseDefRules={isUseDefRules}
+          setIsUseDefRules={setIsUseDefRules}
+        />
+        <YakitButton type="primary" className={styles['button-save']} onClick={() => onSaveToDataBase()}>
+          {t('YakitButton.save')}
+        </YakitButton>
+      </>
+    )
     const extra = () => {
-      return (
-        <div className={styles['heard-right-operation']}>
-          <YakitButton type="text" icon={<OutlineCogIcon />} onClick={() => setWhiteListVisible(true)}>
-            {t('MITMRule.white_list')}
-          </YakitButton>
-          <Divider type="vertical" className={styles['heard-right-operation_divider']} />
-          <YakitButton
-            type="text"
-            icon={<RefreshIcon />}
-            onClick={() => {
-              setIsUseDefRules(true)
-              ruleButtonRef.current?.onSetImportVisible(true)
-            }}
-          >
-            {t('MITMRule.default_Configuration')}
-          </YakitButton>
-          <Divider type="vertical" className={styles['heard-right-operation_divider']} />
-          <RuleExportAndImportButton
-            onOkImport={onOkImport}
-            ref={ruleButtonRef}
-            isUseDefRules={isUseDefRules}
-            setIsUseDefRules={setIsUseDefRules}
-          />
-          <YakitButton type="primary" className={styles['button-save']} onClick={() => onSaveToDataBase()}>
-            {t('YakitButton.save')}
-          </YakitButton>
-          {ruleUse === 'mitm' && (
-            <>
-              <Tooltip
-                title={t('MITMRule.official_website')}
-                placement="top"
-                overlayClassName={styles['question-tooltip']}
-              >
-                <YakitButton
-                  type="outline2"
-                  className={styles['button-question']}
-                  onClick={() => openExternalWebsite(WebsiteGV.OfficialWebsite)}
-                  icon={<QuestionMarkCircleIcon />}
-                ></YakitButton>
-              </Tooltip>
-              <div onClick={() => onClose()} className={styles['icon-remove']}>
-                <RemoveIcon />
-              </div>
-            </>
-          )}
-        </div>
-      )
+      // mitm 抽屉头只保留关闭按钮，白名单/导入/导出/保存 已下移至左栏表格上方
+      if (ruleUse === 'mitm') {
+        return (
+          <div className={styles['heard-right-operation']}>
+            <div onClick={() => onClose()} className={styles['icon-remove']}>
+              <RemoveIcon />
+            </div>
+          </div>
+        )
+      }
+      return <div className={styles['heard-right-operation']}>{ruleActionBar}</div>
     }
 
     const [addRule, setAddRule] = useState<MITMContentReplacerRule[]>([])
@@ -1098,117 +1081,212 @@ const MITMRule: React.FC<MITMRuleProp> = React.memo(
     const content = () => {
       return (
         <div className={styles['mitm-rule-table']}>
-          <ReactResizeDetector
-            onResize={(width, height) => {
-              if (!width || !height) return
-              setTableTitleBodyWidth(width)
-            }}
-            handleWidth={true}
-            handleHeight={true}
-            refreshMode={'debounce'}
-            refreshRate={50}
-          />
-          <TableVirtualResize<MITMContentReplacerRule>
-            currentIndex={currentIndex}
-            isRefresh={isRefresh}
-            titleHeight={42}
-            title={
-              <div className={styles['table-title-body']}>
-                <div className={styles['table-title']}>{t('MITMRule.existing_mitm_content_rules')}</div>
-                <div className={styles['table-total']}>{t('MITMRule.total_rules_count', { count: rules.length })}</div>
-              </div>
-            }
-            extra={
-              <div className={styles['table-title-body']}>
-                <div className={styles['table-search']}>
-                  <>{tableTitleBodyWidth >= 670 && searchEle}</>
-                  <>
-                    {tableTitleBodyWidth < 670 && (
-                      <YakitPopover content={searchEle}>
-                        <YakitButton icon={<OutlineSearchIcon />} size="small" type="outline2" isHover={searchFlag} />
-                      </YakitPopover>
-                    )}
-                  </>
-                </div>
-                <div className={styles['table-switch']}>
-                  <span className={styles['switch-text']}>{t('YakitButton.disable_all')}</span>
-                  <YakitSwitch checked={isAllBan} onChange={(c) => onAllBan(c)} />
-                </div>
-                {ruleUse === 'mitm' && (
-                  <>
-                    <Divider type="vertical" style={{ margin: '0 16px' }} />
-                    <div className={styles['table-switch']}>
-                      <span className={styles['switch-text']}>{t('MITMRule.no_replace_all')}</span>
-                      <YakitSwitch checked={isNoReplace} onChange={(c) => onAllNoReplace(c)} />
-                    </div>
-                  </>
-                )}
-                <YakitPopover
-                  placement={'bottom'}
-                  arrowPointAtCenter={true}
-                  content={
-                    <YakitMenu
-                      data={batchMenuData(excludeBatchMenuKey, t)}
-                      selectedKeys={[]}
-                      width={92}
-                      onSelect={({ key }) => onMenuSelect(key)}
-                    />
-                  }
-                  trigger="hover"
-                  overlayClassName={classNames(styles['popover-remove'])}
-                >
-                  <YakitButton
-                    type="outline2"
-                    disabled={selectedRowKeys.length === 0}
-                    className={classNames(styles['button-batch-remove'])}
-                  >
-                    {t('YakitButton.batchOperation')}
-                    <ChevronDownIcon />
-                  </YakitButton>
-                </YakitPopover>
-                <YakitButton type="primary" onClick={() => onOpenOrCloseModal(true)}>
-                  <div className={styles['button-add-rule']}>
-                    <PlusIcon />
-                    {t('MITMRule.add_rule')}
+          {ruleUse === 'mitm' && <div className={styles['table-action-bar']}>{ruleActionBar}</div>}
+          <div className={styles['table-wrap']}>
+            <ReactResizeDetector
+              onResize={(width, height) => {
+                if (!width || !height) return
+                setTableTitleBodyWidth(width)
+              }}
+              handleWidth={true}
+              handleHeight={true}
+              refreshMode={'debounce'}
+              refreshRate={50}
+            />
+            <TableVirtualResize<MITMContentReplacerRule>
+              currentIndex={currentIndex}
+              isRefresh={isRefresh}
+              titleHeight={42}
+              title={
+                <div className={styles['table-title-body']}>
+                  <div className={styles['table-title']}>{t('MITMRule.existing_mitm_content_rules')}</div>
+                  <div className={styles['table-total']}>
+                    {t('MITMRule.total_rules_count', { count: rules.length })}
                   </div>
-                </YakitButton>
-                {ruleUse === 'historyAnalysis' && (
-                  <YakitButton
-                    style={{ marginLeft: 8 }}
-                    type="text2"
-                    icon={<RefreshIcon />}
-                    onClick={() => {
-                      onRefreshCom && onRefreshCom()
+                </div>
+              }
+              extra={
+                <div className={styles['table-title-body']}>
+                  <div className={styles['table-search']}>
+                    <>{tableTitleBodyWidth >= 670 && searchEle}</>
+                    <>
+                      {tableTitleBodyWidth < 670 && (
+                        <YakitPopover content={searchEle}>
+                          <YakitButton icon={<OutlineSearchIcon />} size="small" type="outline2" isHover={searchFlag} />
+                        </YakitPopover>
+                      )}
+                    </>
+                  </div>
+                  <div className={styles['table-switch']}>
+                    <span className={styles['switch-text']}>{t('YakitButton.disable_all')}</span>
+                    <YakitSwitch checked={isAllBan} onChange={(c) => onAllBan(c)} />
+                  </div>
+                  <YakitButton type="primary" onClick={() => onOpenOrCloseModal(true)}>
+                    <div className={styles['button-add-rule']}>{t('MITMRule.add_rule')}</div>
+                  </YakitButton>
+                  {ruleUse === 'historyAnalysis' && (
+                    <YakitButton
+                      style={{ marginLeft: 8 }}
+                      type="text2"
+                      icon={<RefreshIcon />}
+                      onClick={() => {
+                        onRefreshCom && onRefreshCom()
+                      }}
+                    />
+                  )}
+                </div>
+              }
+              renderKey="Id"
+              data={searchFlag ? searchRules : rules}
+              rowSelection={
+                ruleUse === 'mitm'
+                  ? undefined
+                  : {
+                      isAll: isAllSelect,
+                      type: 'checkbox',
+                      selectedRowKeys,
+                      onSelectAll: onSelectAll,
+                      onChangeCheckboxSingle: onSelectChange,
+                    }
+              }
+              pagination={{
+                total: searchFlag ? searchRules.length : rules.length,
+                limit: 20,
+                page: 1,
+                onChange: () => {},
+              }}
+              loading={loading}
+              columns={columns}
+              currentSelectItem={currentItem}
+              onRowClick={onSetCurrentRow}
+              onMoveRow={onMoveRow}
+              enableDragSort={true}
+              enableDrag={true}
+              inMouseEnterTable={inMouseEnterTable}
+              onMoveRowEnd={onMoveRowEnd}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    // 主从双栏：右侧选中规则详情面板（复用左表 onEdit / onEditRuleAction / YakitSwitchMemo，零新逻辑）
+    const renderDetailPanel = () => {
+      // 始终从 rules 派生当前规则，保证左表/右栏编辑后双向同步，不出现 stale
+      const currentRule = rules.find((r) => r.Id === currentItem?.Id)
+      const ruleContentText = (() => {
+        let list = (currentRule?.SecondaryStages || []).map(({ Regexp }) => Regexp)
+        if (currentRule?.Rule) list = [currentRule.Rule, ...list]
+        return list.length ? list.join(',') : '-'
+      })()
+      return (
+        <div className={styles['detail-panel']}>
+          <div className={styles['detail-header']}>
+            <span className={styles['detail-title']}>规则详情</span>
+            {currentRule && (
+              <YakitButton
+                type="text2"
+                size="small"
+                icon={<PencilAltIcon />}
+                onClick={() => onOpenAddOrEdit(currentRule)}
+              >
+                编辑
+              </YakitButton>
+            )}
+          </div>
+          {currentRule ? (
+            <div className={styles['detail-body']}>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.rule_name')}</div>
+                <div className={styles['detail-value']} title={currentRule.VerboseName}>
+                  {currentRule.VerboseName || '-'}
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.rule_content')}</div>
+                <div className={styles['detail-value']} title={ruleContentText}>
+                  {ruleContentText}
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.rule_scope')}</div>
+                <div className={styles['detail-tags']}>
+                  {rulesRangeList.map((item) => (
+                    <YakitCheckableTag
+                      key={item.value}
+                      checked={currentRule[item.value]}
+                      onChange={(checked) => onEditRuleAction(checked, currentRule, item)}
+                      disable={currentRule.Disabled}
+                    >
+                      {item.label}
+                    </YakitCheckableTag>
+                  ))}
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.replacement_result')}</div>
+                <div className={styles['detail-switch']}>
+                  <YakitSwitchMemo
+                    ExtraCookies={currentRule.ExtraCookies}
+                    ExtraHeaders={currentRule.ExtraHeaders}
+                    Result={currentRule.Result}
+                    disabled={currentRule.Disabled}
+                    checked={!currentRule.NoReplace}
+                    onChange={(val) => onEdit({ Id: currentRule.Id, NoReplace: !val }, 'NoReplace')}
+                  />
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.discard_result')}</div>
+                <div className={styles['detail-switch']}>
+                  <YakitProtoSwitch
+                    checked={currentRule.Drop}
+                    disabled={currentRule.Disabled}
+                    onChange={(val) => {
+                      if (val) onEdit({ Id: currentRule.Id, Drop: val, NoReplace: false }, 'Drop')
+                      else onEdit({ Id: currentRule.Id, Drop: val }, 'Drop')
                     }}
                   />
-                )}
+                </div>
               </div>
-            }
-            renderKey="Id"
-            data={searchFlag ? searchRules : rules}
-            rowSelection={{
-              isAll: isAllSelect,
-              type: 'checkbox',
-              selectedRowKeys,
-              onSelectAll: onSelectAll,
-              onChangeCheckboxSingle: onSelectChange,
-            }}
-            pagination={{
-              total: searchFlag ? searchRules.length : rules.length,
-              limit: 20,
-              page: 1,
-              onChange: () => {},
-            }}
-            loading={loading}
-            columns={columns}
-            currentSelectItem={currentItem}
-            onRowClick={onSetCurrentRow}
-            onMoveRow={onMoveRow}
-            enableDragSort={true}
-            enableDrag={true}
-            inMouseEnterTable={inMouseEnterTable}
-            onMoveRowEnd={onMoveRowEnd}
-          />
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.auto_resend')}</div>
+                <div className={styles['detail-switch']}>
+                  <YakitProtoSwitch
+                    disabled={currentRule.Disabled}
+                    checked={currentRule.ExtraRepeat}
+                    onChange={(val) => {
+                      if (val) onEdit({ Id: currentRule.Id, ExtraRepeat: val, NoReplace: false }, 'ExtraRepeat')
+                      else onEdit({ Id: currentRule.Id, ExtraRepeat: val }, 'ExtraRepeat')
+                    }}
+                  />
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.effective_url')}</div>
+                <div className={styles['detail-value']} title={currentRule.EffectiveURL}>
+                  {currentRule.EffectiveURL || '-'}
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.hit_color')}</div>
+                <div className={classNames(styles['table-hit-color-content'])}>
+                  <div className={classNames(styles['table-hit-color'], HitColor[currentRule.Color]?.className)} />
+                  {(HitColor[currentRule.Color]?.titleUi
+                    ? t(HitColor[currentRule.Color]?.titleUi)
+                    : HitColor[currentRule.Color]?.title) || '-'}
+                </div>
+              </div>
+              <div className={styles['detail-row']}>
+                <div className={styles['detail-label']}>{t('MITMRule.append_tag')}</div>
+                <div className={styles['detail-value']}>
+                  {currentRule.ExtraTag && currentRule.ExtraTag.length ? currentRule.ExtraTag.join(',') : '-'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles['detail-empty']}>选择左侧规则查看详情</div>
+          )}
         </div>
       )
     }
@@ -1229,7 +1307,10 @@ const MITMRule: React.FC<MITMRuleProp> = React.memo(
             title={title()}
             extra={extra()}
           >
-            {content()}
+            <div className={styles['split-wrapper']}>
+              <div className={styles['split-left']}>{content()}</div>
+              <div className={styles['split-right']}>{renderDetailPanel()}</div>
+            </div>
           </YakitDrawer>
         ) : (
           <>
@@ -1329,13 +1410,12 @@ export const RuleExportAndImportButton: React.FC<RuleExportAndImportButtonProps>
   return (
     <>
       {onBeforeNode}
-      <YakitButton type="text" icon={<SaveIcon />} onClick={() => setImportVisible(true)}>
+      <YakitButton type="text" onClick={() => setImportVisible(true)}>
         {t('RuleExportAndImportButton.import_configuration')}
       </YakitButton>
       <Divider type="vertical" style={{ margin: '0 4px' }} />
       <YakitButton
         type="text"
-        icon={<ExportIcon />}
         className={styles['button-export']}
         onClick={() => {
           setExportVisible(true)

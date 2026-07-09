@@ -29,7 +29,6 @@ import { HTTPCookieSetting, HTTPHeader } from '../MITMContentReplacerHeaderOpera
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
-import { colorSelectNode } from './MITMRule'
 import { ValidateStatus } from 'antd/lib/form/FormItem'
 import { InternalTextAreaProps } from '@/components/yakitUI/YakitInput/YakitInputType'
 import { YakitSizeType } from '@/components/yakitUI/YakitInputNumber/YakitInputNumberType'
@@ -200,7 +199,7 @@ export const MITMRuleFromModal: React.FC<MITMRuleFromModalProps> = (props) => {
         onOk={() => onOk()}
         bodyStyle={{ padding: 0 }}
       >
-        <Form form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 16 }} className={styles['modal-from']}>
+        <Form form={form} layout="vertical" className={classNames(styles['modal-from'], styles['modal-from-vertical'])}>
           {/* <Form.Item
                         label='执行顺序'
                         name='Index'
@@ -225,86 +224,93 @@ export const MITMRuleFromModal: React.FC<MITMRuleFromModalProps> = (props) => {
                     >
                         <YakitInputNumber type='horizontal' min={1} />
                     </Form.Item> */}
-          <Form.Item label={t('MITMRule.rule_name')} name="VerboseName">
-            <YakitInput />
-          </Form.Item>
-          <Form.Item
-            label={
-              <span className={styles['form-label']}>
-                {t('MITMRule.rule_content')}
-                <Tooltip title={t('MITMRule.rule_content_tip')}>
-                  <OutlineInformationcircleIcon className={styles['info-icon']} />
-                </Tooltip>
-              </span>
-            }
-            name="SecondaryStages"
-            rules={[{ required: true, message: t('YakitForm.requiredField') }]}
-          >
-            <RuleContent getRule={getRule} ref={ruleContentRef} />
-          </Form.Item>
-          <Form.Item
-            label={
-              <span className={styles['form-label']}>
-                {t('MITMRule.Literal_matching')}
-                <Tooltip title={t('MITMRule.Literal_matching_desc')}>
-                  <OutlineInformationcircleIcon className={styles['info-icon']} />
-                </Tooltip>
-              </span>
-            }
-            name="ExactMatch"
-            valuePropName="checked"
-          >
-            <YakitSwitch />
-          </Form.Item>
-          <Form.Item label={t('MITMRuleFromModal.format_type')}>
-            <YakitRadioButtons
-              size="large"
-              value={regexpType}
-              onChange={(e) => setRegexpType(e.target.value)}
-              options={[
-                { label: t('MITMRuleFromModal.format_by_group'), value: 'group' },
-                { label: t('MITMRuleFromModal.format_by_template'), value: 'template' },
-              ]}
-              buttonStyle="solid"
-            />
-          </Form.Item>
-          {regexpType === 'group' ? (
-            <Form.Item
-              label={t('MITMRuleFromModal.rule_group')}
-              name="RegexpGroups"
-              help={t('MITMRuleFromModal.group_matching_tip')}
-            >
-              <YakitSelect
-                mode="tags"
-                size="middle"
-                wrapperStyle={{ width: '100%' }}
-                value={regexpGroupsValue}
-                onChange={handleRegexpGroupsChange}
-                searchValue={regexpGroupsSearchVal}
-                onSearch={handleRegexpGroupsSearch}
-                onBlur={() => setRegexpGroupsSearchVal('')}
-              ></YakitSelect>
+          <section className={styles['form-section']}>
+            <div className={styles['form-section-title']}>基础信息</div>
+            <Form.Item label={t('MITMRule.rule_name')} name="VerboseName">
+              <YakitInput />
             </Form.Item>
-          ) : (
+          </section>
+          <section className={styles['form-section']}>
+            <div className={styles['form-section-title']}>匹配规则</div>
             <Form.Item
-              label={t('MITMRuleFromModal.regexp_result_template')}
-              name="RegexpResultTemplate"
-              help={t('MITMRuleFromModal.regexp_result_template_tip')}
+              label={
+                <span className={styles['form-label']}>
+                  {t('MITMRule.rule_content')}
+                  <Tooltip title={t('MITMRule.rule_content_tip')}>
+                    <OutlineInformationcircleIcon className={styles['info-icon']} />
+                  </Tooltip>
+                </span>
+              }
+              name="SecondaryStages"
+              rules={[{ required: true, message: t('YakitForm.requiredField') }]}
             >
-              <YakitInput.TextArea
-                autoSize={{ minRows: 1, maxRows: 3 }}
-                placeholder={t('MITMRuleFromModal.regexp_result_template_placeholder')}
-              />
+              <RuleContent getRule={getRule} ref={ruleContentRef} />
             </Form.Item>
-          )}
-          <Row>
-            <Col span={5}>&nbsp;</Col>
-            <Col span={16}>
-              <Divider dashed style={{ marginTop: 0 }} />
-            </Col>
-          </Row>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <span className={styles['form-label']}>
+                      {t('MITMRule.Literal_matching')}
+                      <Tooltip title={t('MITMRule.Literal_matching_desc')}>
+                        <OutlineInformationcircleIcon className={styles['info-icon']} />
+                      </Tooltip>
+                    </span>
+                  }
+                  name="ExactMatch"
+                  valuePropName="checked"
+                >
+                  <YakitSwitch />
+                </Form.Item>
+              </Col>
+              <Col span={16}>
+                <Form.Item label={t('MITMRuleFromModal.format_type')}>
+                  <YakitRadioButtons
+                    size="large"
+                    value={regexpType}
+                    onChange={(e) => setRegexpType(e.target.value)}
+                    options={[
+                      { label: t('MITMRuleFromModal.format_by_group'), value: 'group' },
+                      { label: t('MITMRuleFromModal.format_by_template'), value: 'template' },
+                    ]}
+                    buttonStyle="solid"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            {regexpType === 'group' ? (
+              <Form.Item
+                label={t('MITMRuleFromModal.rule_group')}
+                name="RegexpGroups"
+                help={t('MITMRuleFromModal.group_matching_tip')}
+              >
+                <YakitSelect
+                  mode="tags"
+                  size="middle"
+                  wrapperStyle={{ width: '100%' }}
+                  value={regexpGroupsValue}
+                  onChange={handleRegexpGroupsChange}
+                  searchValue={regexpGroupsSearchVal}
+                  onSearch={handleRegexpGroupsSearch}
+                  onBlur={() => setRegexpGroupsSearchVal('')}
+                ></YakitSelect>
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label={t('MITMRuleFromModal.regexp_result_template')}
+                name="RegexpResultTemplate"
+                help={t('MITMRuleFromModal.regexp_result_template_tip')}
+              >
+                <YakitInput.TextArea
+                  autoSize={{ minRows: 1, maxRows: 3 }}
+                  placeholder={t('MITMRuleFromModal.regexp_result_template_placeholder')}
+                />
+              </Form.Item>
+            )}
+          </section>
           {ruleUse === 'mitm' && (
-            <>
+            <section className={styles['form-section']}>
+              <div className={styles['form-section-title']}>替换设置</div>
               <Form.Item
                 label={t('MITMRuleFromModal.replacement_result')}
                 help={t('MITMRuleFromModal.http_header_cookie_priority_tip')}
@@ -319,59 +325,36 @@ export const MITMRuleFromModal: React.FC<MITMRuleFromModalProps> = (props) => {
                   buttonStyle="solid"
                 />
               </Form.Item>
-              <>
-                {(resultType === 1 && (
-                  <Form.Item label={t('MITMRuleFromModal.text')} name="Result">
-                    <YakitInput placeholder={t('MITMRuleFromModal.enter_content_to_replace_tip')} />
+              {(resultType === 1 && (
+                <Form.Item label={t('MITMRuleFromModal.text')} name="Result">
+                  <YakitInput placeholder={t('MITMRuleFromModal.enter_content_to_replace_tip')} />
+                </Form.Item>
+              )) || (
+                <>
+                  <Form.Item label="HTTP Header" name="ExtraHeaders">
+                    <ExtraHTTPSelect
+                      tip="Header"
+                      onSave={getExtraHeaders}
+                      list={headers}
+                      onRemove={onRemoveExtraHeaders}
+                    />
                   </Form.Item>
-                )) || (
-                  <>
-                    <Form.Item label="HTTP Header" name="ExtraHeaders">
-                      <ExtraHTTPSelect
-                        tip="Header"
-                        onSave={getExtraHeaders}
-                        list={headers}
-                        onRemove={onRemoveExtraHeaders}
-                      />
-                    </Form.Item>
-                    <Form.Item label="HTTP Cookie" name="ExtraCookies">
-                      <ExtraHTTPSelect
-                        tip="Cookie"
-                        onSave={getExtraCookies}
-                        list={cookies.map((item) => ({
-                          ...item,
-                          Header: item.Key,
-                          Value: item.Value,
-                        }))}
-                        onRemove={onRemoveExtraCookies}
-                      />
-                    </Form.Item>
-                  </>
-                )}
-              </>
-              <Row>
-                <Col span={5}>&nbsp;</Col>
-                <Col span={16}>
-                  <Divider dashed style={{ marginTop: 0 }} />
-                </Col>
-              </Row>
-            </>
+                  <Form.Item label="HTTP Cookie" name="ExtraCookies">
+                    <ExtraHTTPSelect
+                      tip="Cookie"
+                      onSave={getExtraCookies}
+                      list={cookies.map((item) => ({
+                        ...item,
+                        Header: item.Key,
+                        Value: item.Value,
+                      }))}
+                      onRemove={onRemoveExtraCookies}
+                    />
+                  </Form.Item>
+                </>
+              )}
+            </section>
           )}
-          <Form.Item
-            label={t('MITMRuleFromModal.effective_url')}
-            name="EffectiveURL"
-            help={t('MITMRuleFromModal.url_specific_rule_tip')}
-          >
-            <YakitInput />
-          </Form.Item>
-          <Form.Item label={t('MITMRuleFromModal.hit_color')} name="Color">
-            <YakitSelect size="middle" wrapperStyle={{ width: '100%' }} allowClear>
-              {colorSelectNode(t)}
-            </YakitSelect>
-          </Form.Item>
-          <Form.Item label={t('MITMRuleFromModal.tag')} name="ExtraTag">
-            <YakitSelect size="middle" mode="tags" wrapperStyle={{ width: '100%' }} />
-          </Form.Item>
         </Form>
       </YakitModal>
     </>
