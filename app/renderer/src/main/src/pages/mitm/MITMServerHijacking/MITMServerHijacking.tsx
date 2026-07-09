@@ -373,8 +373,8 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
     <div className={style['mitm-server']}>
       <header className={style['mitm-control-tower']}>
         <div className={style['mitm-control-tower-head']}>
-          <div className={style['mitm-control-kicker']}>MITM LIVE</div>
-          <div className={style['mitm-control-title']}>劫持 HTTP Request</div>
+          {/* <div className={style['mitm-control-kicker']}>MITM LIVE</div> */}
+          <div className={style['mitm-control-title']}>劫持 HTTP 请求</div>
           <YakitTag color={status === 'idle' ? 'info' : 'success'}>{statusText}</YakitTag>
         </div>
         <div className={style['mitm-control-endpoint']}>

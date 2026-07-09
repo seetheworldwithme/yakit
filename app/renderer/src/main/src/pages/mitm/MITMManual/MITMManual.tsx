@@ -6,8 +6,6 @@ import {
   MITMManualProps,
   MITMV2ManualEditorProps,
   PackageTypeProps,
-  RenderAndHexTypeOptions,
-  RenderAndHexTypeOptionVal,
 } from './MITMManualType'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
 import {
@@ -80,8 +78,6 @@ import {
   ShortcutKeyFocusType,
 } from '@/utils/globalShortcutKey/events/global'
 import useShortcutKeyTrigger from '@/utils/globalShortcutKey/events/useShortcutKeyTrigger'
-import { formatPacketRender, prettifyPacketCode, prettifyPacketRender } from '@/utils/prettifyPacket'
-import { YakitCheckableTag } from '@/components/yakitUI/YakitTag/YakitCheckableTag'
 import { YakitKeyBoard, YakitKeyMod } from '@/utils/globalShortcutKey/keyboard'
 import { YakEditorOptionShortcutKey } from '@/utils/globalShortcutKey/events/page/yakEditor'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
@@ -261,9 +257,9 @@ const MITMManual: React.FC<MITMManualProps> = React.memo(
                 newEditorShowIndexShowIndex = 0
               }
               newData.push(item)
-              if (item.Status === ManualHijackListStatus.Hijacking_Request && isOnlyLookResponse) {
+              if (item.Status === ManualHijackListStatus.Hijacking_Request) {
                 setLoading(taskID, true)
-                // 该状态下默认劫持响应为true时,自动发送劫持响应数据
+                // 默认劫持响应：请求到达后自动发送劫持响应数据，无需手动点击「劫持响应」按钮
                 const params: MITMV2HijackedCurrentResponseRequest = {
                   TaskID: taskID,
                   SendPacket: true,
@@ -586,19 +582,19 @@ const MITMManual: React.FC<MITMManualProps> = React.memo(
           title: 'URL',
           dataKey: 'URL',
         },
-        {
-          title: '标记颜色',
-          dataKey: 'Tags',
-          width: 200,
-          render: (text) => {
-            return text
-              ? `${text}`
-                  .split('|')
-                  .filter((i) => i.startsWith('YAKIT_COLOR_'))
-                  .join(', ')
-              : ''
-          },
-        },
+        // {
+        //   title: '标记颜色',
+        //   dataKey: 'Tags',
+        //   width: 200,
+        //   render: (text) => {
+        //     return text
+        //       ? `${text}`
+        //           .split('|')
+        //           .filter((i) => i.startsWith('YAKIT_COLOR_'))
+        //           .join(', ')
+        //       : ''
+        //   },
+        // },
       ]
     }, [])
     const onlyShowFirstNode = useCreation(() => {
@@ -1270,76 +1266,6 @@ const MITMV2ManualEditor: React.FC<MITMV2ManualEditorProps> = React.memo((props)
     return info.Status === ManualHijackListStatus.WaitHijack
   }, [info])
 
-  // #region 美化、渲染、hex
-  const [renderAndHexTypeOptions, setRenderAndHexTypeOptions] = useState<RenderAndHexTypeOptions[]>([])
-  const [renderAndHexTag, setRenderAndHexTag] = useState<RenderAndHexTypeOptionVal>()
-  const [renderHtml, setRenderHtml] = useState<React.ReactNode>()
-  const updateRender = useMemoizedFn(() => {
-    setRenderAndHexTypeOptions([
-      {
-        value: 'hex',
-        label: 'HEX',
-      },
-    ])
-    setRenderAndHexTag(undefined)
-    setRenderHtml(undefined)
-    if (modifiedPacket) {
-      if (isResponse) {
-        formatPacketRender(StringToUint8Array(modifiedPacket), (packet) => {
-          if (packet) {
-            setRenderAndHexTypeOptions([
-              {
-                value: 'hex',
-                label: 'HEX',
-              },
-              {
-                value: 'render',
-                label: '渲染',
-              },
-            ])
-          }
-        })
-      }
-    }
-  })
-  useEffect(() => {
-    updateRender()
-  }, [currentPacket])
-  const onSetBeautify = useMemoizedFn(() => {
-    setRenderAndHexTag(undefined)
-    setRenderHtml(undefined)
-    if (modifiedPacket === '') {
-      return
-    }
-    const encoder = new TextEncoder()
-    const bytes = encoder.encode(modifiedPacket)
-    const mb = bytes.length / 1024 / 1024
-    if (mb > 0.5) {
-      return
-    } else {
-      prettifyPacketCode(modifiedPacket).then((res) => {
-        if (!!res) {
-          setModifiedPacket(Uint8ArrayToString(res as Uint8Array))
-          setRefreshTrigger((prev) => !prev)
-        }
-      })
-    }
-  })
-  const onSetRenderHTML = useMemoizedFn(async () => {
-    let renderValue = await prettifyPacketRender(StringToUint8Array(modifiedPacket))
-    setRenderHtml(
-      <iframe srcDoc={renderValue as string} style={{ width: '100%', height: '100%', border: 'none' }} sandbox="" />,
-    )
-  })
-  useEffect(() => {
-    if (renderAndHexTag === 'render') {
-      onSetRenderHTML()
-    } else {
-      setRenderHtml(undefined)
-    }
-  }, [renderAndHexTag])
-  // #endregion
-
   return (
     <NewHTTPPacketEditor
       noMinimap={!isResponse}
@@ -1433,62 +1359,31 @@ const MITMV2ManualEditor: React.FC<MITMV2ManualEditorProps> = React.memo((props)
       }
       extra={
         <div className={styles['mitm-v2-manual-editor-btn']}>
-          <>
-            {!disabled && (
-              <>
-                {!isResponse && !info.IsWebsocket && (
-                  <YakitButton disabled={btnDisable} type="outline1" size="small" onClick={onHijackCurrentResponse}>
-                    劫持响应
-                    {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.HijackResponseMitm].keys)}
-                  </YakitButton>
-                )}
-                <YakitButton
-                  disabled={btnDisable}
-                  type="outline1"
-                  size="small"
-                  onClick={() => onDiscardData && onDiscardData(info)}
-                >
-                  丢弃
-                  {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.DropDataMitm].keys)}
-                </YakitButton>
-                <YakitButton
-                  disabled={btnDisable}
-                  type="primary"
-                  size="small"
-                  onClick={() => onSubmitData && onSubmitData(info)}
-                >
-                  放行
-                  {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.SubmitDataMitm].keys)}
-                </YakitButton>
-              </>
-            )}
+          {!disabled && (
             <>
-              <YakitButton type="primary" size="small" onClick={onSetBeautify}>
-                美化
+              <YakitButton
+                disabled={btnDisable}
+                type="outline1"
+                size="small"
+                onClick={() => onDiscardData && onDiscardData(info)}
+              >
+                丢弃
+                {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.DropDataMitm].keys)}
               </YakitButton>
-              <div>
-                {renderAndHexTypeOptions.map((item) => (
-                  <YakitCheckableTag
-                    key={item.value}
-                    checked={renderAndHexTag === item.value}
-                    onChange={(checked) => {
-                      if (checked) {
-                        setRenderAndHexTag(item.value as RenderAndHexTypeOptionVal)
-                      } else {
-                        setRenderAndHexTag(undefined)
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </YakitCheckableTag>
-                ))}
-              </div>
+              <YakitButton
+                disabled={btnDisable}
+                type="primary"
+                size="small"
+                onClick={() => onSubmitData && onSubmitData(info)}
+              >
+                放行
+                {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.SubmitDataMitm].keys)}
+              </YakitButton>
             </>
-          </>
+          )}
         </div>
       }
-      noShowHex={renderAndHexTag != 'hex'}
-      renderHtml={renderHtml}
+      noShowHex
       defaultHttps={info.IsHttps}
       url={info.URL}
       originValue={modifiedPacket}
@@ -1504,7 +1399,7 @@ const MITMV2ManualEditor: React.FC<MITMV2ManualEditorProps> = React.memo((props)
         isShowSelectRangeMenu: true,
       }}
       showDownBodyMenu={false}
-      sendToWebFuzzer={!isResponse && !info.IsWebsocket}
+      sendToWebFuzzer={false}
       onClickOpenPacketNewWindowMenu={useMemoizedFn(() => {
         openPacketNewWindow({
           request: {

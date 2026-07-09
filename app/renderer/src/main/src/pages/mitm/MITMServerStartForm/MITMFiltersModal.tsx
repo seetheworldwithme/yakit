@@ -380,21 +380,23 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
               ? (editFilterName ? `${t('YakitButton.edit')}` : '') + t('MITMFiltersModal.hijack_condition')
               : (editFilterName ? `${t('YakitButton.edit')}` : '') + t('MITMFiltersModal.filter_configuration')}
           </span>
-          <YakitRadioButtons
-            value={type}
-            onChange={onSetType}
-            buttonStyle="solid"
-            options={[
-              {
-                value: 'base-setting',
-                label: t('MITMFiltersModal.base_configuration'),
-              },
-              {
-                value: 'advanced-setting',
-                label: t('MITMFiltersModal.advanced_configuration'),
-              },
-            ]}
-          />
+          {filterType !== 'hijackFilter' && (
+            <YakitRadioButtons
+              value={type}
+              onChange={onSetType}
+              buttonStyle="solid"
+              options={[
+                {
+                  value: 'base-setting',
+                  label: t('MITMFiltersModal.base_configuration'),
+                },
+                {
+                  value: 'advanced-setting',
+                  label: t('MITMFiltersModal.advanced_configuration'),
+                },
+              ]}
+            />
+          )}
         </div>
       }
       width={730}
@@ -439,31 +441,35 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
             </>
           )}
 
-          <YakitButton
-            style={{ padding: '3px 8px' }}
-            icon={<OutlineStorageIcon />}
-            type="text"
-            onClick={onSaveFilter}
-          />
-          <YakitPopover
-            overlayClassName={styles['http-history-table-drop-down-popover']}
-            content={
-              <MitmFilterHistoryStore
-                editFilterName={editFilterName}
-                onSetEditFilterName={setEditFilterName}
-                onSelect={(v) => onMenuSelect(v)}
-                popoverVisible={popoverVisible}
-                setPopoverVisible={setPopoverVisible}
-                removeFilterKey={removeFilterKey}
-              />
-            }
-            trigger="click"
-            placement="bottom"
-            onVisibleChange={setPopoverVisible}
-            visible={popoverVisible}
-          >
-            <YakitButton style={{ padding: '3px 8px' }} icon={<OutlineClockIcon />} type="text" />
-          </YakitPopover>
+          {filterType !== 'hijackFilter' && (
+            <YakitButton
+              style={{ padding: '3px 8px' }}
+              icon={<OutlineStorageIcon />}
+              type="text"
+              onClick={onSaveFilter}
+            />
+          )}
+          {filterType !== 'hijackFilter' && (
+            <YakitPopover
+              overlayClassName={styles['http-history-table-drop-down-popover']}
+              content={
+                <MitmFilterHistoryStore
+                  editFilterName={editFilterName}
+                  onSetEditFilterName={setEditFilterName}
+                  onSelect={(v) => onMenuSelect(v)}
+                  popoverVisible={popoverVisible}
+                  setPopoverVisible={setPopoverVisible}
+                  removeFilterKey={removeFilterKey}
+                />
+              }
+              trigger="click"
+              placement="bottom"
+              onVisibleChange={setPopoverVisible}
+              visible={popoverVisible}
+            >
+              <YakitButton style={{ padding: '3px 8px' }} icon={<OutlineClockIcon />} type="text" />
+            </YakitPopover>
+          )}
 
           <YakitButton type="text" onClick={() => onClearFilters()}>
             {t('YakitButton.clear')}
@@ -487,17 +493,12 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
       okText={editFilterName ? t('MITMFiltersModal.save_and_apply') : t('YakitButton.confirm')}
       bodyStyle={{ padding: 0 }}
     >
-      <div className={styles.infoBox}>
-        <div>{t('MITMFiltersModal.tip')}</div>
-        {filterType === 'hijackFilter' ? (
-          <>
-            <div>1、{t('MITMFiltersModal.hijack_tip_1')}</div>
-            <div>2、{t('MITMFiltersModal.hijack_tip_2')}</div>
-          </>
-        ) : (
+      {filterType !== 'hijackFilter' && (
+        <div className={styles.infoBox}>
+          <div>{t('MITMFiltersModal.tip')}</div>
           <div>{t('MITMFiltersModal.hijack_tip_2')}</div>
-        )}
-      </div>
+        </div>
+      )}
       <MITMFilters
         filterType={filterType}
         visible={type === 'base-setting'}
