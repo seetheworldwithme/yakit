@@ -59,8 +59,6 @@ import {
 import { defaultAdvancedConfigValue, DefFuzzerConcurrent } from '@/defaultConstants/HTTPFuzzerPage'
 import { YakitCheckableTag } from '@/components/yakitUI/YakitTag/YakitCheckableTag'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import ProxyRulesConfig from '@/components/configNetwork/ProxyRulesConfig'
-import { checkProxyVersion, isValidUrlWithProtocol } from '@/utils/proxyConfigUtil'
 import { useProxy } from '@/hook/useProxy'
 import i18n from '@/i18n/i18n'
 
@@ -134,7 +132,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
     matchSubmitFun,
     showFormContentType,
     fuzzerAiSlot,
-    proxyListRef,
     isbuttonIsSendReqStatus,
     cachedTotal,
   } = props
@@ -160,7 +157,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
 
   const [batchTargetModalVisible, setBatchTargetModalVisible] = useState<boolean>(false)
   const {
-    proxyRouteOptions,
     proxyConfig: { Endpoints = [] },
   } = useProxy()
 
@@ -403,8 +399,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
     matchSubmitFun()
   })
 
-  const [agentConfigModalVisible, setAgentConfigModalVisible] = useState<boolean>(false)
-
   const methodGetRef = useRef<any>()
   const methodPostRef = useRef<any>()
   const headersRef = useRef<any>()
@@ -465,102 +459,13 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
     },
   )
 
-  const onClickDownstreamProxy = useMemoizedFn(async () => {
-    try {
-      const versionValid = await checkProxyVersion()
-      if (!versionValid) {
-        return
-      }
-      setAgentConfigModalVisible(true)
-    } catch (error) {
-      console.error('error:', error)
-    }
-  })
-
   const renderContent = useMemoizedFn(() => {
     switch (showFormContentType) {
       case 'config':
         return (
           <>
             <div className={styles['advanced-config-extra-formItem']}>
-              <Form.Item
-                label={
-                  <span className={styles['advanced-config-form-label']}>
-                    {t('HttpQueryAdvancedConfig.real_host')}
-                    <Tooltip title={t('HttpQueryAdvancedConfig.host_collision_tip')} overlayStyle={{ width: 150 }}>
-                      <InformationCircleIcon className={styles['info-icon']} />
-                    </Tooltip>
-                  </span>
-                }
-                name="actualHost"
-              >
-                <YakitInput placeholder={t('YakitInput.please_enter')} size="small" allowClear />
-              </Form.Item>
-              <Form.Item
-                label={
-                  <span className={styles['advanced-config-form-label']}>
-                    {t('HttpQueryAdvancedConfig.set_proxy')}
-                    <Tooltip title={t('HttpQueryAdvancedConfig.multi_proxy_tip')} overlayStyle={{ width: 150 }}>
-                      <InformationCircleIcon className={styles['info-icon']} />
-                    </Tooltip>
-                  </span>
-                }
-                name="proxy"
-                style={{ marginBottom: 5 }}
-                getValueFromEvent={(value) => {
-                  // 只保留最后一个选中的值
-                  if (Array.isArray(value) && value.length > 1) {
-                    return [value[value.length - 1]]
-                  }
-                  return value
-                }}
-                validateTrigger={['onChange', 'onBlur']}
-                rules={[
-                  {
-                    validator: (_, value) => {
-                      if (!value || !Array.isArray(value) || value.length === 0) {
-                        return Promise.resolve()
-                      }
-                      // 获取当前options中的所有值
-                      const existingOptions = proxyRouteOptions.map(({ value }) => value)
-                      // 只校验新输入的值(不在options中的值)
-                      const newValues = value.filter((v) => !existingOptions.includes(v))
-                      // 校验代理地址格式: 协议://地址:端口
-                      for (const v of newValues) {
-                        if (!isValidUrlWithProtocol(v)) {
-                          return Promise.reject(t('ProxyConfig.valid_proxy_address_tip'))
-                        }
-                      }
-                      return Promise.resolve()
-                    },
-                  },
-                ]}
-              >
-                <YakitSelect
-                  ref={proxyListRef}
-                  options={proxyRouteOptions}
-                  allowClear
-                  placeholder={t('YakitInput.please_enter')}
-                  mode="tags"
-                  size="small"
-                  maxTagCount={1}
-                  dropdownMatchSelectWidth={245}
-                />
-              </Form.Item>
-              <Form.Item label={<> </>}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <YakitButton size="small" type="text" onClick={onClickDownstreamProxy} icon={<PlusSmIcon />}>
-                    {t('AgentConfigModal.proxy_configuration')}
-                  </YakitButton>
-                </div>
-              </Form.Item>
-              <Form.Item
-                label={t('HttpQueryAdvancedConfig.disable_system_proxy')}
-                name={'noSystemProxy'}
-                valuePropName="checked"
-              >
-                <YakitSwitch />
-              </Form.Item>
+              {/* 真实 Host / 设置代理 / 代理配置 已上移至主页 header（使用 HTTPS 下方） */}
               {/* 按功能裁剪方案：隐藏前端渲染数量 / 响应体长度限制（功能清单无对应），保留字段与逻辑，仅不展示入口 */}
               {false && (
                 <>
@@ -1248,7 +1153,6 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
         onSave={onSave}
         hasApplyBtn={!!cachedTotal}
       />
-      <ProxyRulesConfig visible={agentConfigModalVisible} onClose={() => setAgentConfigModalVisible(false)} />
       <BatchTargetModal
         batchTargetModalVisible={batchTargetModalVisible}
         onCloseModal={() => setBatchTargetModalVisible(false)}

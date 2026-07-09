@@ -13,7 +13,6 @@ export interface PluginListByGroupProps {
   total: number
   setTotal: (s: number) => void
   hidden: boolean
-  type: 'keyword' | 'group'
 }
 export interface PluginGroupByKeyWordProps {
   pageId: string
@@ -26,15 +25,6 @@ export interface PluginGroupByKeyWordProps {
   /**搜索框的默认值 */
   defGroupKeywords?: string
 }
-export interface PluginGroupGridProps {
-  inViewport: boolean
-  hidden: boolean
-  /**选择的插件组列表 */
-  selectGroupList?: string[]
-  setSelectGroupList?: (s: string[]) => void
-  setResponseToSelect: (s: GroupCount[]) => void
-}
-
 export interface YakPoCExecuteContentProps {
   hidden: boolean
   setHidden: (b: boolean) => void
@@ -47,13 +37,8 @@ export interface YakPoCExecuteContentProps {
   pageId: string
   pageInfo: PocPageInfoProps
   onInitInputValueAfter?: (value: HybridScanControlAfterRequest) => void
-  type: 'keyword' | 'group'
-}
-
-export interface PluginGroupGridItemProps {
-  item: GroupCount
-  selected: boolean
-  onSelect: (g: GroupCount) => void
+  setShowType: (s: 'plugin' | 'log') => void
+  setPluginExecuteLog: (s: StreamResult.PluginExecuteLog[]) => void
 }
 
 export interface PluginGroupByKeyWordItemProps {

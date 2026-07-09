@@ -44,14 +44,10 @@
     max-width: 432px;
     min-width: 320px;
   }
-  .yakpoc-tab-wrap {
-    flex-shrink: 0;
-    width: 100%;
-  }
   .left-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
@@ -73,49 +69,58 @@
         }
       }
     }
+    .left-group-section {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 360px;
+      min-height: 220px;
+      overflow: hidden;
+    }
+    .left-plugin-detail-section {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      gap: 8px;
+      border-top: 1px solid var(--Colors-Use-Neutral-Border);
+      padding-top: 8px;
+      .midden-heard {
+        @extend %display-flex-center;
+        gap: 4px;
+        height: 24px;
+        flex-shrink: 0;
+        .heard-right {
+          @extend %display-flex-center;
+          justify-content: space-between;
+          flex: 1;
+          min-width: 0;
+          .heard-tip {
+            color: var(--Colors-Use-Neutral-Disable);
+            font-size: 12px;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 16px; /* 133.333% */
+          }
+          .heard-number {
+            color: var(--Colors-Use-Main-Primary);
+            margin-left: 4px;
+          }
+        }
+      }
+      .plugin-list-by-group-wrapper {
+        display: flex;
+        flex: 1;
+        justify-content: center;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .plugin-list-by-group-wrapper-hidden {
+        display: none;
+      }
+    }
   }
   .left-wrapper-hidden {
     display: none;
-  }
-  .midden-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-    border-right: 1px solid var(--Colors-Use-Neutral-Border);
-    padding: 12px 8px;
-    gap: 8px;
-    flex-shrink: 0;
-    .midden-heard {
-      @extend %display-flex-center;
-      gap: 4px;
-      height: 24px;
-      .heard-right {
-        @extend %display-flex-center;
-        justify-content: space-between;
-        flex: 1;
-        .heard-tip {
-          color: var(--Colors-Use-Neutral-Disable);
-          font-size: 12px;
-          font-style: normal;
-          font-weight: 400;
-          line-height: 16px; /* 133.333% */
-        }
-        .heard-number {
-          color: var(--Colors-Use-Main-Primary);
-          margin-left: 4px;
-        }
-      }
-    }
-    .plugin-list-by-group-wrapper {
-      display: flex;
-      flex: 1;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .plugin-list-by-group-wrapper-hidden {
-      display: none;
-    }
   }
 }
 .plugin-execute-log-wrapper {

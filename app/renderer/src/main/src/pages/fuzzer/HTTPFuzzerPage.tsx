@@ -44,7 +44,11 @@ import {
   ArrowsRetractIcon,
   ArrowsExpandIcon,
   QuestionMarkCircleIcon,
+  PlusSmIcon,
+  InformationCircleIcon,
 } from '@/assets/newIcon'
+import ProxyRulesConfig from '@/components/configNetwork/ProxyRulesConfig'
+import { checkProxyVersion } from '@/utils/proxyConfigUtil'
 import classNames from 'classnames'
 import { PaginationSchema, genDefaultPagination } from '../invoker/schema'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
@@ -783,7 +787,19 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
   )
   const { t, i18n } = useI18nNamespaces(['webFuzzer', 'yakitUi', 'yakitRoute'])
   const { renderHistoryAIReActChat, setShowFreeChat, historyAIReActChatBridge, focusModeLoop } = useHistoryAIReActChat()
-  const { checkProxyEndpoints, getProxyValue } = useProxy()
+  const { checkProxyEndpoints, getProxyValue, proxyRouteOptions } = useProxy()
+  const [agentConfigModalVisible, setAgentConfigModalVisible] = useState<boolean>(false)
+  const onClickDownstreamProxy = useMemoizedFn(async () => {
+    try {
+      const versionValid = await checkProxyVersion()
+      if (!versionValid) {
+        return
+      }
+      setAgentConfigModalVisible(true)
+    } catch (error) {
+      console.error('error:', error)
+    }
+  })
   const initWebFuzzerPageInfo = useMemoizedFn(() => {
     const currentItem: PageNodeItemProps | undefined = queryPagesDataById(YakitRoute.HTTPFuzzer, props.id)
     if (currentItem && currentItem.pageParamsInfo.webFuzzerPageInfo) {
@@ -2758,80 +2774,161 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                           </>
                         )}
                       </div>
-                      {loading && (
-                        <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
-                          <YakitSpin size={'small'} style={{ width: 'auto' }} />
-                          {loadingText}
-                        </div>
-                      )}
-
-                      {onlyOneResponse && httpResponse.Ok && checkRedirect && (
-                        <YakitButton
-                          onClick={() => {
-                            setLoading(true)
-                            const redirectRequestProps: RedirectRequestParams = {
-                              Request: new Buffer(httpResponse.RequestRaw).toString('utf8'),
-                              Response: new Buffer(httpResponse.ResponseRaw).toString('utf8'),
-                              IsHttps: advancedConfigValue.isHttps,
-                              IsGmTLS: advancedConfigValue.isGmTLS,
-                              PerRequestTimeoutSeconds: advancedConfigValue.timeout,
-                              Proxy: (advancedConfigValue.proxy || [])
-                                .filter((item) => !item.startsWith('route'))
-                                .join(','),
-                              Extractors: advancedConfigValue.extractors,
-                              Matchers: advancedConfigValue.matchers,
-                              Params: advancedConfigValue.params || [],
-                            }
-                            ipcRenderer
-                              .invoke('RedirectRequest', redirectRequestProps)
-                              .then((rsp: FuzzerResponse) => {
-                                setRedirectedResponse(rsp)
-                              })
-                              .catch((e) => {
-                                failed(`"ERROR in: ${e}"`)
-                              })
-                              .finally(() => {
-                                setTimeout(() => setLoading(false), 300)
-                              })
-                          }}
-                          type="outline2"
-                        >
-                          {t('HTTPFuzzerPage.followRedirects')}
-                        </YakitButton>
-                      )}
-                      <FuzzerExtraShow
-                        droppedCount={droppedCount}
-                        advancedConfigValue={advancedConfigValue}
-                        setAdvancedConfigValue={setAdvancedConfigValue}
-                        onlyOneResponse={onlyOneResponse}
-                        httpResponse={httpResponse}
-                      />
-                      {renderHotPatchTag}
-                    </section>
-                    <section className={styles['forge-header-right']}>
-                      {renderTLSControls}
-                      {fuzzerTaskId && (
-                        <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
-                          <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
-                        </Tooltip>
-                      )}
-                      {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
-                        <ShareImportExportData
-                          module="fuzzer"
-                          supportShare={false}
-                          getShareContent={getShareContent}
-                          getFuzzerRequestParams={
-                            getFuzzerRequestParams as unknown as () => FuzzerRequestProps[] | FuzzerRequestProps
+                      <div className={styles['forge-system-proxy-switch']}>
+                        <span>{t('HttpQueryAdvancedConfig.disable_system_proxy')}</span>
+                        <YakitSwitch
+                          size="small"
+                          checked={advancedConfigValue.noSystemProxy}
+                          onChange={(checked) =>
+                            setAdvancedConfigValue((value) => ({
+                              ...value,
+                              noSystemProxy: checked,
+                            }))
                           }
                         />
-                      ) : null}
-                      <FuncBtn
-                        type="primary"
-                        name={t('HTTPFuzzerPage.generateRawTemplate')}
-                        onClick={() => handleSkipPluginDebuggerPage('raw')}
-                      />
+                      </div>
+                      <div className={styles['forge-header-left-status']}>
+                        {loading && (
+                          <div className={classNames(styles['spinning-text'], styles['display-flex'])}>
+                            <YakitSpin size={'small'} style={{ width: 'auto' }} />
+                            {loadingText}
+                          </div>
+                        )}
+
+                        {onlyOneResponse && httpResponse.Ok && checkRedirect && (
+                          <YakitButton
+                            onClick={() => {
+                              setLoading(true)
+                              const redirectRequestProps: RedirectRequestParams = {
+                                Request: new Buffer(httpResponse.RequestRaw).toString('utf8'),
+                                Response: new Buffer(httpResponse.ResponseRaw).toString('utf8'),
+                                IsHttps: advancedConfigValue.isHttps,
+                                IsGmTLS: advancedConfigValue.isGmTLS,
+                                PerRequestTimeoutSeconds: advancedConfigValue.timeout,
+                                Proxy: (advancedConfigValue.proxy || [])
+                                  .filter((item) => !item.startsWith('route'))
+                                  .join(','),
+                                Extractors: advancedConfigValue.extractors,
+                                Matchers: advancedConfigValue.matchers,
+                                Params: advancedConfigValue.params || [],
+                              }
+                              ipcRenderer
+                                .invoke('RedirectRequest', redirectRequestProps)
+                                .then((rsp: FuzzerResponse) => {
+                                  setRedirectedResponse(rsp)
+                                })
+                                .catch((e) => {
+                                  failed(`"ERROR in: ${e}"`)
+                                })
+                                .finally(() => {
+                                  setTimeout(() => setLoading(false), 300)
+                                })
+                            }}
+                            type="outline2"
+                          >
+                            {t('HTTPFuzzerPage.followRedirects')}
+                          </YakitButton>
+                        )}
+                        <FuzzerExtraShow
+                          droppedCount={droppedCount}
+                          advancedConfigValue={advancedConfigValue}
+                          setAdvancedConfigValue={setAdvancedConfigValue}
+                          onlyOneResponse={onlyOneResponse}
+                          httpResponse={httpResponse}
+                        />
+                        {renderHotPatchTag}
+                      </div>
+                    </section>
+                    <section className={styles['forge-header-right']}>
+                      <div className={styles['forge-header-rows']}>
+                        <div className={styles['forge-config-col']}>
+                          <div className={styles['forge-config-row']}>{renderTLSControls}</div>
+                          <div className={styles['forge-config-row']}>
+                            <span className={styles['forge-config-label']}>
+                              {t('HttpQueryAdvancedConfig.real_host')}
+                              <Tooltip
+                                title={t('HttpQueryAdvancedConfig.host_collision_tip')}
+                                overlayStyle={{ width: 150 }}
+                              >
+                                <InformationCircleIcon className={styles['forge-info-icon']} />
+                              </Tooltip>
+                            </span>
+                            <YakitInput
+                              wrapperClassName={styles['forge-host-input']}
+                              placeholder={t('YakitInput.please_enter')}
+                              size="small"
+                              allowClear
+                              value={advancedConfigValue.actualHost}
+                              onChange={(e) =>
+                                setAdvancedConfigValue({ ...advancedConfigValue, actualHost: e.target.value })
+                              }
+                            />
+                          </div>
+                          <div className={classNames(styles['forge-config-row'], styles['forge-proxy-row'])}>
+                            <span className={styles['forge-config-label']}>
+                              {t('HttpQueryAdvancedConfig.set_proxy')}
+                              <Tooltip
+                                title={t('HttpQueryAdvancedConfig.multi_proxy_tip')}
+                                overlayStyle={{ width: 150 }}
+                              >
+                                <InformationCircleIcon className={styles['forge-info-icon']} />
+                              </Tooltip>
+                            </span>
+                            <YakitSelect
+                              ref={proxyListRef as any}
+                              wrapperClassName={styles['forge-proxy-select']}
+                              options={proxyRouteOptions}
+                              allowClear
+                              placeholder={t('YakitInput.please_enter')}
+                              mode="tags"
+                              size="small"
+                              maxTagCount={1}
+                              dropdownMatchSelectWidth={245}
+                              value={advancedConfigValue.proxy}
+                              onChange={(value: any) => {
+                                const v = Array.isArray(value) && value.length > 1 ? [value[value.length - 1]] : value
+                                setAdvancedConfigValue({ ...advancedConfigValue, proxy: v })
+                              }}
+                            />
+                            <YakitButton
+                              size="small"
+                              type="text"
+                              onClick={onClickDownstreamProxy}
+                              icon={<PlusSmIcon />}
+                            >
+                              代理配置
+                            </YakitButton>
+                          </div>
+                        </div>
+                        <div className={styles['forge-action-col']}>
+                          {fuzzerTaskId && (
+                            <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
+                              <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
+                            </Tooltip>
+                          )}
+                          {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
+                            <ShareImportExportData
+                              module="fuzzer"
+                              supportShare={false}
+                              getShareContent={getShareContent}
+                              getFuzzerRequestParams={
+                                getFuzzerRequestParams as unknown as () => FuzzerRequestProps[] | FuzzerRequestProps
+                              }
+                            />
+                          ) : null}
+                          <FuncBtn
+                            type="primary"
+                            name={t('HTTPFuzzerPage.generateRawTemplate')}
+                            onClick={() => handleSkipPluginDebuggerPage('raw')}
+                          />
+                        </div>
+                      </div>
                     </section>
                   </header>
+                  <ProxyRulesConfig
+                    visible={agentConfigModalVisible}
+                    onClose={() => setAgentConfigModalVisible(false)}
+                  />
                   <YakitResizeBox
                     isVer={true}
                     lineDirection="bottom"
@@ -3174,7 +3271,7 @@ export const FuzzerExtraShow: React.FC<FuzzerExtraShowProps> = React.memo((props
       )}
       {isShowSystemProxy && (
         <YakitTag
-          color="green"
+          color="info"
           closable={true}
           onClose={() => {
             setAdvancedConfigValue({
