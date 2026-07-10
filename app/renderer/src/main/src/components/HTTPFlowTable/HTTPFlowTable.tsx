@@ -2534,7 +2534,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 </YakitButton>
               </YakitDropdownMenu>
             )}
-            {showSetting && (
+            {showSetting && pageType !== 'History' && (
               <YakitButton
                 icon={<OutlineCogIcon />}
                 type={isAdvancedSet ? 'text' : 'text2'}
