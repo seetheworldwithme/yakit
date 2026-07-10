@@ -36,6 +36,7 @@ export interface HTTPFlowTableColumnActionHandlers {
   onToggleFavorite: (e: React.MouseEvent, rowData: HTTPFlow, favorite: boolean) => void
   onOpenInBrowser: (e: React.MouseEvent, rowData: HTTPFlow) => void
   onExpand: (e: React.MouseEvent, rowData: HTTPFlow) => void
+  onDelete: (e: React.MouseEvent, rowData: HTTPFlow) => void
 }
 
 export interface BuildHTTPFlowTableColumnsContext {
@@ -429,9 +430,15 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
                 <div className={style['divider-style']} />
               </>
             )}
-            <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onExpand(e, rowData)}>
-              详情
-            </YakitButton>
+            {ctx.pageType === 'History' ? (
+              <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onDelete(e, rowData)}>
+                删除
+              </YakitButton>
+            ) : (
+              <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onExpand(e, rowData)}>
+                详情
+              </YakitButton>
+            )}
           </div>
         )
       },

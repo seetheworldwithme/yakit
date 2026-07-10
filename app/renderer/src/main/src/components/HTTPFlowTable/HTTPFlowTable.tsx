@@ -1107,6 +1107,20 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
           bodyStyle: { paddingTop: 5 },
         })
       },
+      onDelete: (e: React.MouseEvent, rowData: HTTPFlow) => {
+        e.stopPropagation()
+        setLoading(true)
+        ipcRenderer
+          .invoke('DeleteHTTPFlows', { Id: [rowData.Id] })
+          .then(() => {
+            yakitNotify('info', t('YakitNotification.deleted'))
+            refreshTabsContRef.current = true
+            updateData()
+          })
+          .finally(() => {
+            setTimeout(() => setLoading(false), 100)
+          })
+      },
     }),
     [downstreamProxyStr, onlyFavorite, pageType, t],
   )
