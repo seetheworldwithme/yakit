@@ -2,6 +2,7 @@ import { StreamResult } from '@/hook/useHoldGRPCStream/useHoldGRPCStreamType'
 import { HybridScanControlAfterRequest } from '@/models/HybridScan'
 import { GroupCount } from '@/pages/invoker/schema'
 import { DataScanParamsProps } from '@/pages/plugins/pluginBatchExecutor/pluginBatchExecutor'
+import { ReactNode } from 'react'
 
 export interface YakPoCProps {
   pageId: string
@@ -31,6 +32,8 @@ export interface YakPoCExecuteContentProps {
   pageInfo: PocPageInfoProps
   onInitInputValueAfter?: (value: HybridScanControlAfterRequest) => void
   setPluginExecuteLog: (s: StreamResult.PluginExecuteLog[]) => void
+  /**内联到「插件执行」表单中的节点（渲染在扫描目标下方、开始执行上方）*/
+  groupListNode?: ReactNode
 }
 
 export interface PluginGroupByKeyWordItemProps {

@@ -192,24 +192,9 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
 
   return (
     <div className={styles['yak-poc-wrapper']} ref={pluginGroupRef}>
-      <div className={styles['yak-poc-left-section']}>
-        <div
-          className={classNames(styles['left-wrapper'], {
-            [styles['left-wrapper-hidden']]: hidden,
-          })}
-        >
-          <div className={styles['left-group-section']}>
-            <PluginGroupByKeyWord
-              pageId={pageId}
-              inViewport={inViewport}
-              hidden={false}
-              defGroupKeywords={pageInfo.defGroupKeywords || ''}
-              selectGroupListByKeyWord={pageInfo.selectGroupListByKeyWord || []}
-              setSelectGroupListByKeyWord={onSetSelectGroupListByKeyWord}
-              setResponseToSelect={setKeyWordResponseToSelect}
-            />
-          </div>
-          {isExecuting && (
+      {isExecuting && (
+        <div className={styles['yak-poc-left-section']}>
+          <div className={styles['left-wrapper']}>
             <div className={styles['left-plugin-detail-section']}>
               <div className={styles['midden-heard']}>
                 <span className={styles['heard-title']}>{t('YakPoCExecuteContent.pluginLog')}</span>
@@ -220,9 +205,9 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
                 isExecuting={executeStatus === 'process'}
               />
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
       <YakPoCExecuteContent
         hidden={hidden}
         setHidden={setHidden}
@@ -234,6 +219,19 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
         pageInfo={pageInfo}
         onInitInputValueAfter={onInitInputValueAfter}
         setPluginExecuteLog={setPluginExecuteLog}
+        groupListNode={
+          <div className={styles['inline-plugin-group']}>
+            <PluginGroupByKeyWord
+              pageId={pageId}
+              inViewport={inViewport}
+              hidden={false}
+              defGroupKeywords={pageInfo.defGroupKeywords || ''}
+              selectGroupListByKeyWord={pageInfo.selectGroupListByKeyWord || []}
+              setSelectGroupListByKeyWord={onSetSelectGroupListByKeyWord}
+              setResponseToSelect={setKeyWordResponseToSelect}
+            />
+          </div>
+        }
       />
     </div>
   )
@@ -676,7 +674,7 @@ const PluginGroupByKeyWordItem: React.FC<PluginGroupByKeyWordItemProps> = React.
 })
 const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((props) => {
   const { t } = useI18nNamespaces(['yakPoC', 'yakitUi'])
-  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setPluginExecuteLog } = props
+  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setPluginExecuteLog, groupListNode } = props
   const pluginBatchExecuteContentRef = useRef<HybridScanExecuteContentRefProps>(null)
 
   const [hidden, setHidden] = useControllableValue<boolean>(props, {
@@ -838,6 +836,7 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
               initRuntimeId={pageInfo.runtimeId}
               hybridScanTaskSource="yakPoc"
               showScanTargetHelp={false}
+              extraFormNode={groupListNode}
             />
           </div>
         </div>

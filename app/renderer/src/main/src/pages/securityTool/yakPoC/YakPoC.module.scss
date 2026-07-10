@@ -324,3 +324,23 @@
 .plugin-by-group-list-wrapper {
   width: 100%;
 }
+
+/* 内联到「插件执行」表单中的分组列表：两列网格，展开项占整行 */
+.inline-plugin-group {
+  .plugin-group-wrapper {
+    height: auto;
+    max-height: 320px;
+  }
+  .group-list-flex {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .group-item-wrapper {
+    flex: initial;
+    min-width: 0;
+  }
+  .group-item-wrapper-expanded {
+    flex: initial;
+    grid-column: 1 / -1;
+  }
+}

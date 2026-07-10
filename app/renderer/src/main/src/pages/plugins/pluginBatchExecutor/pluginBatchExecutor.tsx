@@ -443,6 +443,8 @@ interface HybridScanExecuteContentProps {
 
   hybridScanTaskSource: HybridScanTaskSourceType
   showScanTargetHelp?: boolean
+  /**内联到表单中的额外节点（渲染在扫描目标下方、开始执行上方）*/
+  extraFormNode?: React.ReactNode
 }
 export interface HybridScanExecuteContentRefProps {
   onActionHybridScanByRuntimeId: (runtimeId: string, hybridScanMode: HybridScanModeType) => Promise<null>
@@ -468,6 +470,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
       initRuntimeId,
       hybridScanTaskSource,
       showScanTargetHelp = true,
+      extraFormNode,
     } = props
     const { queryPagesDataById, updatePagesDataCacheById } = usePageInfo(
       (s) => ({
@@ -883,6 +886,11 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
               setInputType={setInputType}
               showScanTargetHelp={showScanTargetHelp}
             />
+            {extraFormNode && (
+              <Form.Item colon={false} label={' '} wrapperCol={{ span: 18 }} style={{ marginBottom: 16 }}>
+                {extraFormNode}
+              </Form.Item>
+            )}
             <Form.Item colon={false} label={' '} style={{ marginBottom: 0 }}>
               <div className={styles['plugin-execute-form-operate']}>
                 {isExecuting ? (
