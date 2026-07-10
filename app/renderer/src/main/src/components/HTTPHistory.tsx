@@ -19,6 +19,7 @@ import {
 import { useStore } from '@/store/mitmState'
 import { MitmExtractAggregateFlowFilterRow, YakQueryHTTPFlowRequest } from '@/utils/yakQueryHTTPFlow'
 import { YakitResizeBox } from './yakitUI/YakitResizeBox/YakitResizeBox'
+import { YakitDrawer } from './yakitUI/YakitDrawer/YakitDrawer'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { v4 as uuidv4 } from 'uuid'
 import classNames from 'classnames'
@@ -143,15 +144,14 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
   const { renderHistoryAIReActChat, setShowFreeChat, historyAIReActChatBridge, focusModeLoop } = useHistoryAIReActChat()
   const { pageType, ...historyProps } = props
   const { t, i18n } = useI18nNamespaces(['history'])
-  // #region 左侧tab
+  // #region 左侧抽屉（网站树 / 筛选 / 规则数据），默认收起，列表平铺整页
   const [activeKey, setActiveKey] = useState<string>('web-tree')
-  const [openTabsFlag, setOpenTabsFlag] = useState<boolean>(true)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState<boolean>(false)
   useEffect(() => {
     getRemoteValue(RemoteHistoryGV.HistoryLeftTabs).then((setting: string) => {
       if (setting) {
         try {
           const tabs = JSONParseLog(setting, { page: 'HTTPHistory', fun: 'RemoteHistoryGV.HistoryLeftTabs' })
-          setOpenTabsFlag(tabs.contShow)
           onActiveKey(tabs.key)
         } catch (error) {}
       }
@@ -167,25 +167,11 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
 
   useDebounceEffect(
     () => {
-      setRemoteValue(RemoteHistoryGV.HistoryLeftTabs, JSON.stringify({ contShow: openTabsFlag, key: activeKey }))
+      setRemoteValue(RemoteHistoryGV.HistoryLeftTabs, JSON.stringify({ key: activeKey }))
     },
-    [openTabsFlag, activeKey],
+    [activeKey],
     { wait: 300 },
   )
-
-  const ResizeBoxProps = useCreation(() => {
-    let p = {
-      firstRatio: '20%',
-      secondRatio: '80%',
-    }
-
-    if (activeKey === 'rules' && openTabsFlag) {
-      p.firstRatio = '470px'
-    } else {
-      p.firstRatio = '20%'
-    }
-    return p
-  }, [openTabsFlag, activeKey])
   // #endregion
 
   // #region 网站树、进程
@@ -263,7 +249,7 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
       const val = JSONParseLog(value, { page: 'HTTPHistory', fun: 'onJumpWebTree' })
       const host = val.host
       webTreeRef.current.onJumpWebTree(host)
-      setOpenTabsFlag(true)
+      setFilterDrawerOpen(true)
       onActiveKey('web-tree')
     }
   })
@@ -283,108 +269,101 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
 
   return (
     <div className={styles.hTTPHistory} ref={httpHistoryRef}>
-      <YakitResizeBox
-        isVer={false}
-        freeze={openTabsFlag}
-        isRecalculateWH={openTabsFlag}
-        firstNode={() => (
-          <div className={styles['hTTPHistory-left']}>
-            <YakitSideTab
-              key={i18n.language}
-              t={t}
-              yakitTabs={HistoryTab}
-              activeKey={activeKey}
-              onActiveKey={onActiveKey}
-              type="horizontal"
-              className={styles['history-side-tabs']}
+      <div className={styles['history-filter-rail']}>
+        <Tooltip title={t('HTTPHistory.websiteTree')}>
+          <YakitButton type="text" onClick={() => setFilterDrawerOpen(true)} className={styles['filter-rail-btn']}>
+            <OutlineFilterIcon />
+          </YakitButton>
+        </Tooltip>
+      </div>
+      <div className={styles['hTTPHistory-right']}>
+        <HTTPFlowRealTimeTableAndEditor
+          pageType={pageType}
+          includeInUrl={includeInUrl}
+          curProcess={curProcess}
+          curTags={curTags}
+          builtinTagList={builtinTagList}
+          mitmAggregateFilterRows={mitmAggregateFilterRows}
+          onQueryParams={onQueryParams}
+          onSetTableTotal={setHttpFlowTableDataLength}
+          onSetSelectedHttpFlowIds={onSetSelectedHttpFlowIds}
+          onRegisterTableSelectApi={onRegisterTableSelectApi}
+          setOnlyShowFirstNode={setOnlyShowFirstNode}
+          setSecondNodeVisible={setSecondNodeVisible}
+          showHistoryAnalysisBtn
+          {...historyProps}
+        />
+      </div>
+      <YakitDrawer
+        visible={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        width={460}
+        placement="left"
+        title={t('HTTPHistory.websiteTree')}
+        bodyStyle={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}
+      >
+        <div className={styles['hTTPHistory-left']}>
+          <YakitSideTab
+            key={i18n.language}
+            t={t}
+            yakitTabs={HistoryTab}
+            activeKey={activeKey}
+            onActiveKey={onActiveKey}
+            type="horizontal"
+            className={styles['history-side-tabs']}
+          />
+          <div className={styles['tab-content']}>
+            <ReactResizeDetector
+              onResize={(width, height) => {
+                if (!width || !height) return
+                setTreeWrapHeight(height)
+              }}
+              handleWidth={true}
+              handleHeight={true}
+              refreshMode={'debounce'}
+              refreshRate={50}
             />
-            <div className={styles['tab-content']}>
-              <ReactResizeDetector
-                onResize={(width, height) => {
-                  if (!width || !height) return
-                  setTreeWrapHeight(height)
+            <div className={styles['webTree-wrapper']} style={{ display: activeKey === 'web-tree' ? 'block' : 'none' }}>
+              <WebTree
+                ref={webTreeRef}
+                height={treeWrapHeight - 30}
+                searchPlaceholder={t('HTTPHistory.pleaseEnterDomainToSearch')}
+                treeExtraQueryparams={treeQueryparams}
+                refreshTreeFlag={refreshFlag}
+                multiple
+                onSelectNodesKeys={(selectKeys) => setIncludeInUrl(selectKeys.map((i) => i + ''))}
+              ></WebTree>
+            </div>
+            <div className={styles['process-wrapper']} style={{ display: activeKey === 'process' ? 'block' : 'none' }}>
+              <HistoryProcess
+                queryparamsStr={processQueryparams}
+                refreshProcessFlag={refreshFlag}
+                curProcess={curProcess}
+                curTags={curTags}
+                onSetCurTags={setCurTags}
+                onSetCurProcess={setCurProcess}
+                setBuiltinTagList={setBuiltinTagList}
+                resetTableAndEditorShow={(table, editor) => {
+                  setOnlyShowFirstNode(table)
+                  setSecondNodeVisible(editor)
                 }}
-                handleWidth={true}
-                handleHeight={true}
-                refreshMode={'debounce'}
-                refreshRate={50}
+              ></HistoryProcess>
+            </div>
+            <div className={styles['process-wrapper']} style={{ display: activeKey === 'rules' ? 'block' : 'none' }}>
+              <HTTPFlowRuleDataFilter
+                baseParams={historyProps.params}
+                queryparamsStr={rulesQueryparams}
+                onSetFilterRows={setMitmAggregateFilterRows}
+                httpFlowTableDataLength={httpFlowTableDataLength}
+                resetTableAndEditorShow={(table, editor) => {
+                  setOnlyShowFirstNode(table)
+                  setSecondNodeVisible(editor)
+                }}
               />
-              <div
-                className={styles['webTree-wrapper']}
-                style={{ display: activeKey === 'web-tree' ? 'block' : 'none' }}
-              >
-                <WebTree
-                  ref={webTreeRef}
-                  height={treeWrapHeight - 30}
-                  searchPlaceholder={t('HTTPHistory.pleaseEnterDomainToSearch')}
-                  treeExtraQueryparams={treeQueryparams}
-                  refreshTreeFlag={refreshFlag}
-                  multiple
-                  onSelectNodesKeys={(selectKeys) => setIncludeInUrl(selectKeys.map((i) => i + ''))}
-                ></WebTree>
-              </div>
-              <div
-                className={styles['process-wrapper']}
-                style={{ display: activeKey === 'process' ? 'block' : 'none' }}
-              >
-                <HistoryProcess
-                  queryparamsStr={processQueryparams}
-                  refreshProcessFlag={refreshFlag}
-                  curProcess={curProcess}
-                  curTags={curTags}
-                  onSetCurTags={setCurTags}
-                  onSetCurProcess={setCurProcess}
-                  setBuiltinTagList={setBuiltinTagList}
-                  resetTableAndEditorShow={(table, editor) => {
-                    setOnlyShowFirstNode(table)
-                    setSecondNodeVisible(editor)
-                  }}
-                ></HistoryProcess>
-              </div>
-              <div className={styles['process-wrapper']} style={{ display: activeKey === 'rules' ? 'block' : 'none' }}>
-                <HTTPFlowRuleDataFilter
-                  baseParams={historyProps.params}
-                  queryparamsStr={rulesQueryparams}
-                  onSetFilterRows={setMitmAggregateFilterRows}
-                  httpFlowTableDataLength={httpFlowTableDataLength}
-                  resetTableAndEditorShow={(table, editor) => {
-                    setOnlyShowFirstNode(table)
-                    setSecondNodeVisible(editor)
-                  }}
-                />
-              </div>
             </div>
           </div>
-        )}
-        lineStyle={{ display: '' }}
-        firstMinSize="325px"
-        secondMinSize={720}
-        secondNode={
-          <div className={styles['hTTPHistory-right']}>
-            <HTTPFlowRealTimeTableAndEditor
-              pageType={pageType}
-              includeInUrl={includeInUrl}
-              curProcess={curProcess}
-              curTags={curTags}
-              builtinTagList={builtinTagList}
-              mitmAggregateFilterRows={mitmAggregateFilterRows}
-              onQueryParams={onQueryParams}
-              onSetTableTotal={setHttpFlowTableDataLength}
-              onSetSelectedHttpFlowIds={onSetSelectedHttpFlowIds}
-              onRegisterTableSelectApi={onRegisterTableSelectApi}
-              setOnlyShowFirstNode={setOnlyShowFirstNode}
-              setSecondNodeVisible={setSecondNodeVisible}
-              showHistoryAnalysisBtn
-              {...historyProps}
-            />
-          </div>
-        }
-        secondNodeStyle={{
-          padding: undefined,
-          display: '',
-        }}
-        {...ResizeBoxProps}
-      />
+        </div>
+      </YakitDrawer>
     </div>
   )
 }
