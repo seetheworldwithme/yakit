@@ -81,7 +81,6 @@ import MITMContext from '@/pages/mitm/Context/MITMContext'
 import { RemoteGV } from '@/yakitGV'
 import { cloneDeep } from 'lodash'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import { YakitSideTab } from './yakitSideTab/YakitSideTab'
 import { YakitTabsProps } from './yakitSideTab/YakitSideTabType'
 import { JSONParseLog } from '@/utils/tool'
 import { histroyAiStore } from '@/pages/ai-agent/store/ChatDataStore'
@@ -90,7 +89,6 @@ import YakitCollapse from './yakitUI/YakitCollapse/YakitCollapse'
 import { YakitPopover } from './yakitUI/YakitPopover/YakitPopover'
 import { yakitNotify } from '@/utils/notification'
 import { FiltersItemProps } from './TableVirtualResize/TableVirtualResizeType'
-import { HTTPFlowRuleDataFilter } from './HTTPFlowTable/HTTPFlowRuleDataFilter'
 import { useCampare } from '@/hook/useCompare/useCompare'
 import { useBuiltinTagList } from './HTTPFlowTable/useBuiltinTagList'
 
@@ -303,15 +301,6 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
         bodyStyle={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}
       >
         <div className={styles['hTTPHistory-left']}>
-          <YakitSideTab
-            key={i18n.language}
-            t={t}
-            yakitTabs={HistoryTab}
-            activeKey={activeKey}
-            onActiveKey={onActiveKey}
-            type="horizontal"
-            className={styles['history-side-tabs']}
-          />
           <div className={styles['tab-content']}>
             <ReactResizeDetector
               onResize={(width, height) => {
@@ -323,7 +312,7 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
               refreshMode={'debounce'}
               refreshRate={50}
             />
-            <div className={styles['webTree-wrapper']} style={{ display: activeKey === 'web-tree' ? 'block' : 'none' }}>
+            <div className={styles['webTree-wrapper']}>
               <WebTree
                 ref={webTreeRef}
                 height={treeWrapHeight - 30}
@@ -333,33 +322,6 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
                 multiple
                 onSelectNodesKeys={(selectKeys) => setIncludeInUrl(selectKeys.map((i) => i + ''))}
               ></WebTree>
-            </div>
-            <div className={styles['process-wrapper']} style={{ display: activeKey === 'process' ? 'block' : 'none' }}>
-              <HistoryProcess
-                queryparamsStr={processQueryparams}
-                refreshProcessFlag={refreshFlag}
-                curProcess={curProcess}
-                curTags={curTags}
-                onSetCurTags={setCurTags}
-                onSetCurProcess={setCurProcess}
-                setBuiltinTagList={setBuiltinTagList}
-                resetTableAndEditorShow={(table, editor) => {
-                  setOnlyShowFirstNode(table)
-                  setSecondNodeVisible(editor)
-                }}
-              ></HistoryProcess>
-            </div>
-            <div className={styles['process-wrapper']} style={{ display: activeKey === 'rules' ? 'block' : 'none' }}>
-              <HTTPFlowRuleDataFilter
-                baseParams={historyProps.params}
-                queryparamsStr={rulesQueryparams}
-                onSetFilterRows={setMitmAggregateFilterRows}
-                httpFlowTableDataLength={httpFlowTableDataLength}
-                resetTableAndEditorShow={(table, editor) => {
-                  setOnlyShowFirstNode(table)
-                  setSecondNodeVisible(editor)
-                }}
-              />
             </div>
           </div>
         </div>
