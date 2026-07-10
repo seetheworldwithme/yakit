@@ -7,13 +7,6 @@ export interface YakPoCProps {
   pageId: string
 }
 
-export interface PluginListByGroupProps {
-  /**选择的插件组列表 */
-  selectGroupList: string[]
-  total: number
-  setTotal: (s: number) => void
-  hidden: boolean
-}
 export interface PluginGroupByKeyWordProps {
   pageId: string
   inViewport: boolean
@@ -37,7 +30,6 @@ export interface YakPoCExecuteContentProps {
   pageId: string
   pageInfo: PocPageInfoProps
   onInitInputValueAfter?: (value: HybridScanControlAfterRequest) => void
-  setShowType: (s: 'plugin' | 'log') => void
   setPluginExecuteLog: (s: StreamResult.PluginExecuteLog[]) => void
 }
 
@@ -45,6 +37,16 @@ export interface PluginGroupByKeyWordItemProps {
   item: GroupCount
   selected: boolean
   onSelect: (g: GroupCount) => void
+  /**是否展开内联插件列表 */
+  expanded: boolean
+  /**切换展开/收起 */
+  onToggleExpand: (value: string) => void
+}
+
+/**单分组内联插件列表 */
+export interface PluginGroupPluginInlineProps {
+  /**分组名 */
+  group: string
 }
 
 export interface PluginExecuteLogProps {

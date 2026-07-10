@@ -3,7 +3,7 @@ import {
   PluginExecuteLogProps,
   PluginGroupByKeyWordItemProps,
   PluginGroupByKeyWordProps,
-  PluginListByGroupProps,
+  PluginGroupPluginInlineProps,
   PluginLogProps,
   TimeConsumingProps,
   YakPoCExecuteContentProps,
@@ -57,7 +57,6 @@ import {
   hybridScanParamsConvertToInputValue,
 } from '@/pages/plugins/utils'
 import emiter from '@/utils/eventBus/eventBus'
-import { YakitRadioButtons } from '@/components/yakitUI/YakitRadioButtons/YakitRadioButtons'
 import { apiFetchQueryYakScriptGroupLocalByPoc } from './utils'
 import { PluginListPageMeta } from '@/pages/plugins/baseTemplateType'
 import { initialLocalState, pluginLocalReducer } from '@/pages/plugins/pluginReducer'
@@ -114,8 +113,6 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
   const [hidden, setHidden] = useState<boolean>(false)
 
   const [executeStatus, setExecuteStatus] = useState<ExpandAndRetractExcessiveState>('default')
-  const [total, setTotal] = useState<number>(0)
-  const [showType, setShowType] = useState<'plugin' | 'log'>('plugin')
   const [pluginExecuteLog, setPluginExecuteLog] = useState<StreamResult.PluginExecuteLog[]>([])
 
   // LINK #deleted-init-group-all
@@ -192,12 +189,6 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
     if (executeStatus === 'paused') return true
     return false
   }, [executeStatus])
-  const isShowPluginAndLog = useCreation(() => {
-    return selectGroupListAll.length > 0 || isExecuting
-  }, [selectGroupListAll, isExecuting])
-  const pluginLogDisabled = useCreation(() => {
-    return !isExecuting
-  }, [isExecuting])
 
   return (
     <div className={styles['yak-poc-wrapper']} ref={pluginGroupRef}>
@@ -218,48 +209,13 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
               setResponseToSelect={setKeyWordResponseToSelect}
             />
           </div>
-          {isShowPluginAndLog && (
+          {isExecuting && (
             <div className={styles['left-plugin-detail-section']}>
               <div className={styles['midden-heard']}>
-                <YakitRadioButtons
-                  size="small"
-                  value={showType}
-                  onChange={(e) => {
-                    setShowType(e.target.value)
-                  }}
-                  buttonStyle="solid"
-                  options={[
-                    {
-                      value: 'plugin',
-                      label: t('YakPoCExecuteContent.selectedPlugin'),
-                    },
-                    {
-                      value: 'log',
-                      label: t('YakPoCExecuteContent.pluginLog'),
-                      disabled: pluginLogDisabled,
-                    },
-                  ]}
-                />
-                {showType === 'plugin' && (
-                  <div className={styles['heard-right']}>
-                    <span className={styles['heard-tip']}>
-                      Total
-                      <span className={styles['heard-number']}>{total}</span>
-                    </span>
-                    <YakitButton type="text" danger onClick={onClearAll}>
-                      {t('YakitButton.clear')}
-                    </YakitButton>
-                  </div>
-                )}
+                <span className={styles['heard-title']}>{t('YakPoCExecuteContent.pluginLog')}</span>
               </div>
-              <PluginListByGroup
-                hidden={showType !== 'plugin'}
-                selectGroupList={selectGroupListAll}
-                total={total}
-                setTotal={setTotal}
-              />
               <PluginExecuteLog
-                hidden={showType !== 'log'}
+                hidden={false}
                 pluginExecuteLog={pluginExecuteLog}
                 isExecuting={executeStatus === 'process'}
               />
@@ -277,24 +233,25 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
         pageId={pageId}
         pageInfo={pageInfo}
         onInitInputValueAfter={onInitInputValueAfter}
-        setShowType={setShowType}
         setPluginExecuteLog={setPluginExecuteLog}
       />
     </div>
   )
 })
 
-const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) => {
+/**单分组内联插件列表（展开卡片时使用，只读展示该分组下的插件）*/
+const PluginGroupPluginInline: React.FC<PluginGroupPluginInlineProps> = React.memo((props) => {
   const { t } = useI18nNamespaces(['yakPoC'])
-  const { selectGroupList, setTotal, hidden } = props
+  const { group } = props
   const isLoadingRef = useRef<boolean>(true)
   const [response, dispatch] = useReducer(pluginLocalReducer, initialLocalState)
   const [loading, setLoading] = useState<boolean>(false)
   const [hasMore, setHasMore] = useState<boolean>(true)
+  /**已加载过且非空的分组缓存，避免重复请求 */
+  const loadedGroupRef = useRef<string>('')
 
   const privateDomainRef = useRef<string>('') // 连接地址
 
-  // 获取筛选栏展示状态
   useEffect(() => {
     getPrivateDomainAndRefList()
   }, [])
@@ -311,29 +268,11 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
 
   useEffect(() => {
     fetchList(true)
-  }, [selectGroupList])
+  }, [group])
 
   const fetchList = useDebounceFn(
     useMemoizedFn(async (reset?: boolean) => {
-      if (selectGroupList.length === 0) {
-        setTotal(0)
-        dispatch({
-          type: 'add',
-          payload: {
-            response: {
-              Pagination: {
-                Limit: 20,
-                Page: 1,
-                OrderBy: '',
-                Order: '',
-              },
-              Total: 0,
-              Data: [],
-            },
-          },
-        })
-        return
-      }
+      if (!group) return
       if (reset) {
         isLoadingRef.current = true
       }
@@ -354,7 +293,7 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
           Order: 'desc',
         },
       }
-      query.Group = { UnSetGroup: false, Group: selectGroupList }
+      query.Group = { UnSetGroup: false, Group: [group] }
       query.Type = batchPluginType
       try {
         const res = await apiQueryYakScript(query)
@@ -375,7 +314,7 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
           },
         })
         if (+res.Pagination.Page === 1) {
-          setTotal(+res.Total)
+          loadedGroupRef.current = group
         }
       } catch (error) {}
       setTimeout(() => {
@@ -399,13 +338,9 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
     }
   })
   return (
-    <div
-      className={classNames(styles['plugin-list-by-group-wrapper'], {
-        [styles['plugin-list-by-group-wrapper-hidden']]: hidden,
-      })}
-    >
-      {selectGroupList.length === 0 || +response.Total === 0 ? (
-        <YakitEmpty title={t('PluginListByGroup.selectPrompt')} style={{ paddingTop: 48 }} />
+    <div className={styles['group-inline-list-wrapper']}>
+      {+response.Total === 0 && !loading ? (
+        <YakitEmpty title={t('YakitEmpty.noData')} style={{ padding: '24px 0' }} />
       ) : (
         <RollingLoadList<YakScript>
           data={response.Data}
@@ -443,7 +378,7 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
           rowKey="ScriptName"
           isRef={loading && isLoadingRef.current}
           classNameRow="plugin-details-opt-wrapper"
-          classNameList={styles['plugin-by-group-list-wrapper']}
+          classNameList={styles['group-inline-list-inner']}
         />
       )}
     </div>
@@ -465,6 +400,8 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
   const [response, setResponse] = useState<GroupCount[]>([])
   const [isRef, setIsRef] = useState<boolean>(false)
   const [visibleOnline, setVisibleOnline] = useState<boolean>(false)
+  /**已展开内联插件列表的分组（可多个同时展开）*/
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
 
   const initialResponseRef = useRef<GroupCount[]>([])
   const pocPluginKeywordsRef = useRef<YakitAutoCompleteRefProps>({
@@ -515,6 +452,9 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
     }
     setKeywords('')
     onSearch('')
+  })
+  const onToggleExpand = useMemoizedFn((value: string) => {
+    setExpandedGroups((list) => (list.includes(value) ? list.filter((ele) => ele !== value) : [...list, value]))
   })
   const total = useCreation(() => {
     return response.length
@@ -659,23 +599,22 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
           </div>
         </div>
       ) : (
-        <RollingLoadList<GroupCount>
-          data={response}
-          loadMoreData={() => {}}
-          renderRow={(rowData: GroupCount, index: number) => {
+        <div className={styles['group-list-flex']}>
+          {response.map((rowData: GroupCount) => {
             const checked = selectGroupList.includes(rowData.Value)
-            return <PluginGroupByKeyWordItem item={rowData} onSelect={onSelect} selected={checked} />
-          }}
-          page={1}
-          hasMore={false}
-          loading={loading}
-          defItemHeight={70}
-          isGridLayout
-          defCol={3}
-          classNameList={styles['group-list-wrapper']}
-          rowKey="Value"
-          isRef={isRef}
-        />
+            const expanded = expandedGroups.includes(rowData.Value)
+            return (
+              <PluginGroupByKeyWordItem
+                key={rowData.Value}
+                item={rowData}
+                onSelect={onSelect}
+                selected={checked}
+                expanded={expanded}
+                onToggleExpand={onToggleExpand}
+              />
+            )
+          })}
+        </div>
       )}
       <YakitGetOnlinePlugin
         visible={visibleOnline}
@@ -694,27 +633,50 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
 
 const PluginGroupByKeyWordItem: React.FC<PluginGroupByKeyWordItemProps> = React.memo((props) => {
   const { t } = useI18nNamespaces(['yakPoC'])
-  const { item, onSelect, selected } = props
+  const { item, onSelect, selected, expanded, onToggleExpand } = props
   return (
     <div
       className={classNames(styles['group-item-wrapper'], styles['group-keyword-item-wrapper'], {
         [styles['group-item-wrapper-checked']]: selected,
+        [styles['group-item-wrapper-expanded']]: expanded,
       })}
-      onClick={() => onSelect(item)}
     >
-      <div className={styles['item-tip']}>
-        <span className={styles['item-tip-name']}>{item.Value}</span>
+      <div className={styles['group-card-header']}>
+        <YakitCheckbox checked={selected} onClick={(e) => e.stopPropagation()} onChange={() => onSelect(item)} />
+        <span
+          className={classNames(styles['item-tip-name'], 'yakit-content-single-ellipsis')}
+          title={item.Value}
+          onClick={() => onToggleExpand(item.Value)}
+        >
+          {item.Value}
+        </span>
         <span className={styles['item-tip-number']}>
           {item.Total}
           {t('PluginGroupByKeyWordItem.plugins')}
         </span>
+        <YakitButton
+          type="text2"
+          className={styles['group-card-expand-btn']}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleExpand(item.Value)
+          }}
+        >
+          {expanded ? <OutlineArrowscollapseIcon /> : <OutlineArrowsexpandIcon />}
+          <span className={styles['group-card-expand-text']}>{expanded ? '收起' : '展开'}</span>
+        </YakitButton>
       </div>
+      {expanded && (
+        <div className={styles['group-card-body']}>
+          <PluginGroupPluginInline group={item.Value} />
+        </div>
+      )}
     </div>
   )
 })
 const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((props) => {
   const { t } = useI18nNamespaces(['yakPoC', 'yakitUi'])
-  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setShowType, setPluginExecuteLog } = props
+  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setPluginExecuteLog } = props
   const pluginBatchExecuteContentRef = useRef<HybridScanExecuteContentRefProps>(null)
 
   const [hidden, setHidden] = useControllableValue<boolean>(props, {
@@ -788,18 +750,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
 
   const onSetExecuteStatus = useMemoizedFn((val) => {
     setExecuteStatus(val)
-    switch (val) {
-      case 'process':
-      case 'paused':
-        setShowType('log')
-        break
-      case 'error':
-      case 'finished':
-        setShowType('plugin')
-        break
-      default:
-        break
-    }
   })
   const onPause = useMemoizedFn((e) => {
     pluginBatchExecuteContentRef.current?.onPause()
