@@ -61,6 +61,7 @@ export interface ResolveHTTPFlowTableColumnsOptions {
   columnsOrder: string[]
   excludeColumnsKey: string[]
   setIdFixed: (fixed: boolean) => void
+  pageType?: string
 }
 
 export interface ResolveHTTPFlowTableColumnsResult {
@@ -145,7 +146,7 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
     {
       title: 'URL',
       dataKey: 'Url',
-      width: 400,
+      width: 200,
       filterProps: {
         filterKey: 'SearchURL',
         filtersType: 'input',
@@ -446,6 +447,7 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
       'GetParamsTotal',
       'PathSuffix',
       'RequestSizeVerbose',
+      'DurationMs',
     ]
     return allColumns.filter((c) => !hiddenInHistory.includes(c.dataKey))
   }
@@ -456,11 +458,22 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
 export const resolveHTTPFlowTableColumns = (
   options: ResolveHTTPFlowTableColumnsOptions,
 ): ResolveHTTPFlowTableColumnsResult => {
-  const { columnArr, columnsOrder, excludeColumnsKey, setIdFixed } = options
+  const { columnArr, columnsOrder, excludeColumnsKey, setIdFixed, pageType } = options
 
   let finalColumns: ColumnsTypeProps[] = []
 
-  if (columnsOrder.length) {
+  if (pageType === 'History') {
+    // 流量档案页固定列与顺序：序号 / 方法 / 状态码 / IP / Host / URL / 响应长度 / 请求时间 / 操作
+    const historyOrder = ['Method', 'StatusCode', 'IPAddress', 'Host', 'Url', 'BodyLength', 'UpdatedAt']
+    const idColumn = columnArr.find((col) => col.dataKey === 'Id')
+    const actionColumn = columnArr.find((col) => col.dataKey === 'action')
+    const middles = historyOrder
+      .map((key) => columnArr.find((col) => col.dataKey === key))
+      .filter(Boolean) as ColumnsTypeProps[]
+    if (idColumn) finalColumns.push(idColumn)
+    middles.forEach((col) => finalColumns.push(col))
+    if (actionColumn) finalColumns.push(actionColumn)
+  } else if (columnsOrder.length) {
     const idColumn = columnArr.find((col) => col.dataKey === 'Id')
     const actionColumn = columnArr.find((col) => col.dataKey === 'action')
     const middleColumns = columnArr.filter((item) => !['Id', 'action', ...noColumnsKey].includes(item.dataKey))

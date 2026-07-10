@@ -1141,6 +1141,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
       columnsOrder,
       excludeColumnsKey,
       setIdFixed,
+      pageType,
     })
     configColumnRef.current = configColumns
     return realColumns
