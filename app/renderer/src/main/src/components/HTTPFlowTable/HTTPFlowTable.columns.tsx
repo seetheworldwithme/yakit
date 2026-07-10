@@ -52,6 +52,7 @@ export interface BuildHTTPFlowTableColumnsContext {
   setParams: (updater: (prev: YakQueryHTTPFlowRequest) => YakQueryHTTPFlowRequest) => void
   actionHandlers: HTTPFlowTableColumnActionHandlers
   comBuiltinTagList: FiltersItemProps[]
+  pageType?: string
 }
 
 export interface ResolveHTTPFlowTableColumnsOptions {
@@ -400,27 +401,31 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
               [style[`hover-${colorType}-row`]]: !!colorType,
             })}
           >
-            {favorite ? (
-              <SolidStarIcon
-                className={classNames(style['favorite-icon-active'], style['icon-hover'])}
-                onClick={(e) => actionHandlers.onToggleFavorite(e, rowData, false)}
-              />
-            ) : (
-              <OutlineStarIcon
-                className={classNames(style['favorite-icon'], style['icon-hover'], {
-                  [style['icon-style']]: !colorType,
-                })}
-                onClick={(e) => actionHandlers.onToggleFavorite(e, rowData, true)}
-              />
+            {ctx.pageType !== 'History' && (
+              <>
+                {favorite ? (
+                  <SolidStarIcon
+                    className={classNames(style['favorite-icon-active'], style['icon-hover'])}
+                    onClick={(e) => actionHandlers.onToggleFavorite(e, rowData, false)}
+                  />
+                ) : (
+                  <OutlineStarIcon
+                    className={classNames(style['favorite-icon'], style['icon-hover'], {
+                      [style['icon-style']]: !colorType,
+                    })}
+                    onClick={(e) => actionHandlers.onToggleFavorite(e, rowData, true)}
+                  />
+                )}
+                <div className={style['divider-style']} />
+                <ChromeFrameSvgIcon
+                  className={classNames(style['icon-hover'], {
+                    [style['icon-style']]: !colorType,
+                  })}
+                  onClick={(e) => actionHandlers.onOpenInBrowser(e, rowData)}
+                />
+                <div className={style['divider-style']} />
+              </>
             )}
-            <div className={style['divider-style']} />
-            <ChromeFrameSvgIcon
-              className={classNames(style['icon-hover'], {
-                [style['icon-style']]: !colorType,
-              })}
-              onClick={(e) => actionHandlers.onOpenInBrowser(e, rowData)}
-            />
-            <div className={style['divider-style']}></div>
             <ArrowCircleRightSvgIcon
               className={classNames(style['icon-hover'], {
                 [style['icon-style']]: !colorType,

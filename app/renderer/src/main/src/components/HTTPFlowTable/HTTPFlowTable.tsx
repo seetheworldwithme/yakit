@@ -1134,6 +1134,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
       setParams,
       actionHandlers: columnActionHandlers,
       comBuiltinTagList,
+      pageType,
     })
     const { columns: realColumns, configColumns } = resolveHTTPFlowTableColumns({
       columnArr,

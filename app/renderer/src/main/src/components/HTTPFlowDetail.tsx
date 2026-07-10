@@ -1666,7 +1666,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
           </YakitButton>
         </YakitDropdownMenu>,
       )
-    } else {
+    } else if (pageType !== 'History') {
       extraBtn.push(
         <Button
           key="chrome"
@@ -1756,7 +1756,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
           <NewHTTPPacketEditor
             fromMITM={fromMITM}
             keepSearchName={`${pageType}-request`}
-            isShowBeautifyRender={!flow?.IsTooLargeRequest}
+            isShowBeautifyRender={pageType !== 'History' && !flow?.IsTooLargeRequest}
             title={(() => {
               let titleEle: ReactNode[] = []
               if (isShowBeforeData && beforeResValue.length > 0) {
@@ -1821,7 +1821,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
             foldBinaryFuzztag={true}
             webFuzzerValue={originResValue}
             noLineNumber={true}
-            sendToWebFuzzer={sendToWebFuzzer}
+            sendToWebFuzzer={pageType !== 'History' && sendToWebFuzzer}
             downstreamProxyStr={downstreamProxyStr}
             defaultHeight={defaultHeight}
             loading={flowRequestLoad}
@@ -1903,7 +1903,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
                 setRemoteValue(RemoteGV.HistoryResponseEditorBeautify, '')
               }
             }}
-            isShowBeautifyRender={!flow?.IsTooLargeResponse}
+            isShowBeautifyRender={pageType !== 'History' && !flow?.IsTooLargeResponse}
             title={(() => {
               let titleEle = [
                 <span style={{ fontSize: 12, display: 'inline-block', height: 20 }} key={'title-Response'}>
@@ -1955,7 +1955,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
             extra={secondNodeResExtraBtn()}
             AfterBeautifyRenderBtn={
               <>
-                {showEditTag && (
+                {showEditTag && pageType !== 'History' && (
                   <YakitButton
                     size="small"
                     onClick={() => {
