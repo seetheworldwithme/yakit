@@ -2324,7 +2324,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
             </div>
           </div>
           <div className={style['http-history-table-right']}>
-            {showAdvancedSearch && (
+            {showAdvancedSearch && pageType !== 'History' && (
               <>
                 {size?.width && size?.width > 920 ? (
                   <YakitButton
@@ -2384,6 +2384,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 setSearchVal={setSearchVal}
                 showPopoverSearch={size?.width ? size?.width <= 1200 : true}
                 handleSearch={handleSearch}
+                hint={pageType !== 'History'}
                 addonBeforeOption={[
                   {
                     label: t('HistorySearch.keyword'),
@@ -2400,17 +2401,19 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 ]}
               />
             )}
-            <Tooltip title={t('HTTPFlowTable.favorites')} placement="top">
-              <YakitButton
-                type={onlyFavorite ? 'outline1' : 'outline2'}
-                icon={<SolidStarIcon />}
-                onClick={(e) => {
-                  e.currentTarget.blur()
-                  onToggleOnlyFavorite()
-                }}
-              />
-            </Tooltip>
-            {showColorSwatch && (
+            {pageType !== 'History' && (
+              <Tooltip title={t('HTTPFlowTable.favorites')} placement="top">
+                <YakitButton
+                  type={onlyFavorite ? 'outline1' : 'outline2'}
+                  icon={<SolidStarIcon />}
+                  onClick={(e) => {
+                    e.currentTarget.blur()
+                    onToggleOnlyFavorite()
+                  }}
+                />
+              </Tooltip>
+            )}
+            {showColorSwatch && pageType !== 'History' && (
               <div className={style['http-history-table-color-swatch']}>
                 <YakitPopover
                   overlayClassName={style['http-history-table-color-popover']}

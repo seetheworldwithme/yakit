@@ -288,7 +288,6 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
           onRegisterTableSelectApi={onRegisterTableSelectApi}
           setOnlyShowFirstNode={setOnlyShowFirstNode}
           setSecondNodeVisible={setSecondNodeVisible}
-          showHistoryAnalysisBtn
           {...historyProps}
         />
       </div>
