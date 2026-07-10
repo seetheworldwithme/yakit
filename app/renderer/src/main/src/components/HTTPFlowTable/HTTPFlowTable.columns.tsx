@@ -1,13 +1,14 @@
 import React from 'react'
 import type { DebouncedFunc } from 'lodash'
 import classNames from 'classnames'
-import { CheckCircleIcon, ArrowCircleRightSvgIcon, ChromeFrameSvgIcon } from '@/assets/newIcon'
+import { CheckCircleIcon, ChromeFrameSvgIcon } from '@/assets/newIcon'
 import { OutlineSearchIcon, OutlineSelectorIcon, OutlineStarIcon } from '@/assets/icon/outline'
 import { SolidStarIcon } from '@/assets/icon/solid'
 import { YakQueryHTTPFlowRequest } from '@/utils/yakQueryHTTPFlow'
 import { ColumnsTypeProps, FiltersItemProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
 import { isCellRedSingleColor, getSingleColorType } from '@/components/TableVirtualResize/utils'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
+import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { formatTimestamp } from '@/utils/timeUtil'
 import { formatHTTPFlowPathSuffix } from './HTTPFlowPathSuffix'
 import { contentType, HTTP_FLOW_FAVORITE_TAG } from './HTTPFlowTable.constants'
@@ -84,9 +85,10 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
     setParams,
     actionHandlers,
     comBuiltinTagList,
+    pageType,
   } = ctx
 
-  return [
+  const allColumns: ColumnsTypeProps[] = [
     {
       title: t('YakitTable.order'),
       dataKey: 'Id',
@@ -426,17 +428,28 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
                 <div className={style['divider-style']} />
               </>
             )}
-            <ArrowCircleRightSvgIcon
-              className={classNames(style['icon-hover'], {
-                [style['icon-style']]: !colorType,
-              })}
-              onClick={(e) => actionHandlers.onExpand(e, rowData)}
-            />
+            <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onExpand(e, rowData)}>
+              详情
+            </YakitButton>
           </div>
         )
       },
     },
   ]
+  // 流量档案页隐藏部分列
+  if (pageType === 'History') {
+    const hiddenInHistory = [
+      'Path',
+      'FromPlugin',
+      'Tags',
+      'HtmlTitle',
+      'GetParamsTotal',
+      'PathSuffix',
+      'RequestSizeVerbose',
+    ]
+    return allColumns.filter((c) => !hiddenInHistory.includes(c.dataKey))
+  }
+  return allColumns
 }
 
 /** 按用户配置排序、过滤列，并生成高级设置所需的列配置 */
