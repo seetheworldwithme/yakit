@@ -219,7 +219,9 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
     emiter.on('openMatcherAndExtraction', openDrawer)
     getRemoteValue(WEB_FUZZ_Advanced_Config_ActiveKey).then((data) => {
       try {
-        setActiveKey(data ? JSON.parse(data) : '请求包配置')
+        const parsed = data ? JSON.parse(data) : '请求包配置'
+        const arr = Array.isArray(parsed) ? parsed : [parsed]
+        setActiveKey(arr.includes('发包配置') ? arr : [...arr, '发包配置'])
       } catch (error) {
         yakitFailed(t('HttpQueryAdvancedConfig.collapse_active_key_error') + error)
       }
@@ -265,8 +267,10 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
    * @description 切换折叠面板，缓存activeKey
    */
   const onSwitchCollapse = useMemoizedFn((key) => {
-    setActiveKey(key)
-    setRemoteValue(WEB_FUZZ_Advanced_Config_ActiveKey, JSON.stringify(key))
+    const arr = Array.isArray(key) ? key : [key]
+    const next = arr.includes('发包配置') ? arr : [...arr, '发包配置']
+    setActiveKey(next)
+    setRemoteValue(WEB_FUZZ_Advanced_Config_ActiveKey, JSON.stringify(next))
   })
   const onReset = useMemoizedFn((restValue) => {
     const v = form.getFieldsValue()
@@ -740,6 +744,8 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
               <YakitPanel
                 header={t('HttpQueryAdvancedConfig.concurrency_config')}
                 key="发包配置"
+                collapsible="disabled"
+                className={styles['concurrency-panel-flat']}
                 extra={
                   <YakitButton
                     type="text"
@@ -789,7 +795,7 @@ export const HttpQueryAdvancedConfig: React.FC<HttpQueryAdvancedConfigProps> = R
                       </Tooltip>
                     </span>
                   }
-                  style={{ marginBottom: 0 }}
+                  style={{ display: 'none' }}
                 >
                   <div className={styles['advanced-config-delay']}>
                     <Form.Item

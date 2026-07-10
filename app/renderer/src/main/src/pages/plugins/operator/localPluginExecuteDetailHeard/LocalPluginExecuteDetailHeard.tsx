@@ -932,7 +932,7 @@ export const PluginFixFormParams: React.FC<PluginFixFormParamsProps> = React.mem
   }, [i18n.language])
   return (
     <>
-      <Form.Item label="HTTPS" name="IsHttps" valuePropName="checked" initialValue={false}>
+      <Form.Item label="是否开启 HTTPS" name="IsHttps" valuePropName="checked" initialValue={false}>
         <YakitSwitch size="large" disabled={disabled} />
       </Form.Item>
       <Form.Item label={t('PluginFixFormParams.request_type')} name="requestType" initialValue="original">

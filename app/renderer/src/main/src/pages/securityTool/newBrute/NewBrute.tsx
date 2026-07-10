@@ -133,6 +133,13 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
                 key={item.key}
               >
                 <div className={styles['brute-type-group-header']}>
+                  <YakitCheckbox
+                    checked={childrenKeys.length === checkedChildren.length}
+                    indeterminate={checkedChildren.length > 0 && checkedChildren.length < childrenKeys.length}
+                    onChange={() => onSelect([item.key])}
+                  >
+                    {getNodeTitle(item)}
+                  </YakitCheckbox>
                   <button
                     className={classNames(styles['brute-type-expand'], {
                       [styles['brute-type-expand-open']]: expanded,
@@ -142,13 +149,6 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
                   >
                     <OutlineChevrondownIcon />
                   </button>
-                  <YakitCheckbox
-                    checked={childrenKeys.length === checkedChildren.length}
-                    indeterminate={checkedChildren.length > 0 && checkedChildren.length < childrenKeys.length}
-                    onChange={() => onSelect([item.key])}
-                  >
-                    {getNodeTitle(item)}
-                  </YakitCheckbox>
                 </div>
                 {expanded && (
                   <div className={styles['brute-type-children']}>
@@ -508,6 +508,14 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
             loading={isExecuting}
             defaultActiveKey={''}
             pluginExecuteResultWrapper={styles['brute-execute-result-wrapper']}
+            cardAsTable
+            tableTabNameMap={{ 可用爆破结果表: '结果表' }}
+            columnTitleMap={{
+              TYPE: '类型',
+              TARGET: '目标',
+              USERNAME: '用户名',
+              PASSWORD: '密码',
+            }}
           />
         )}
         <React.Suspense fallback={<div>loading...</div>}>

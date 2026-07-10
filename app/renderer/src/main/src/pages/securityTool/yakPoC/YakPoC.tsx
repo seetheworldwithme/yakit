@@ -207,11 +207,6 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
             [styles['left-wrapper-hidden']]: hidden,
           })}
         >
-          <div className={styles['left-header-search']}>
-            <div className={styles['header-type-wrapper']}>
-              <span className={styles['header-text']}>{t('YakPoC.selectPlugin')}</span>
-            </div>
-          </div>
           <div className={styles['left-group-section']}>
             <PluginGroupByKeyWord
               pageId={pageId}
@@ -435,6 +430,9 @@ const PluginListByGroup: React.FC<PluginListByGroupProps> = React.memo((props) =
                 extra={optExtra}
                 enableClick={false}
                 enableCheck={false}
+                hideHeadImg
+                hideHelpIcon
+                hideSourceIcon
               />
             )
           }}

@@ -10,6 +10,12 @@ export interface PluginExecuteResultProps {
   pluginExecuteResultWrapper?: string
   PluginTabsRightNode?: React.ReactNode
   isCrawler?: boolean
+  /** Data Card 是否改用表格展示（默认卡片流） */
+  cardAsTable?: boolean
+  /** 自定义表（type=table）tab 名映射：引擎原名 -> 展示名 */
+  tableTabNameMap?: Record<string, string>
+  /** 自定义表（type=table）列标题映射：引擎原标题 -> 中文标题 */
+  columnTitleMap?: Record<string, string>
 }
 
 export interface VulnerabilitiesRisksTableProps {
@@ -49,6 +55,8 @@ export interface PluginExecutePortTableProps {
 
 export interface PluginExecuteCustomTableProps {
   tableInfo: HoldGRPCStreamProps.InfoTable
+  /** 列标题映射：引擎原标题 -> 展示标题（不影响 dataKey） */
+  columnTitleMap?: Record<string, string>
 }
 
 export interface PluginExecuteCodeProps {

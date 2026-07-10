@@ -27,7 +27,7 @@ import emiter from '@/utils/eventBus/eventBus'
 import { RouteToPageProps } from '@/pages/layout/publicMenu/PublicMenu'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
-import { SortProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
+import { ColumnsTypeProps, SortProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
 import { formatJson } from '@/pages/yakitStore/viewers/base'
 import { EngineConsole } from '@/components/baseConsole/BaseConsole'
 import { WebTree } from '@/components/WebTree/WebTree'
@@ -71,6 +71,9 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     pluginExecuteResultWrapper = '',
     PluginTabsRightNode,
     isCrawler = false,
+    cardAsTable = false,
+    tableTabNameMap,
+    columnTitleMap,
   } = props
   const { t, i18n } = useI18nNamespaces(['yakitRoute'])
 
@@ -145,7 +148,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
         tableInfo.data = tableInfo.data.filter((item) =>
           Object.values(item).every((value) => !(typeof value === 'object')),
         )
-        return <PluginExecuteCustomTable tableInfo={tableInfo} />
+        return <PluginExecuteCustomTable tableInfo={tableInfo} columnTitleMap={columnTitleMap} />
       case 'text':
         const textInfo: HoldGRPCStreamProps.InfoText = streamInfo.tabsInfoState[ele.tabName] || {
           content: '',
@@ -178,7 +181,9 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
       )
     }
 
-    return tab.tabName
+    const mappedName =
+      tab.type === 'table' && tableTabNameMap?.[tab.tabName] ? tableTabNameMap[tab.tabName] : tab.tabName
+    return mappedName
   })
   const cardState = useCreation(() => {
     return streamInfo.cardState.filter((item) => item.tag !== 'no display')
@@ -191,7 +196,11 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     <div className={classNames(styles['plugin-execute-result'], pluginExecuteResultWrapper)}>
       {cardState.length > 0 && (
         <div className={styles['plugin-execute-result-wrapper']}>
-          <HorizontalScrollCard title={'Data Card'} data={cardState} />
+          {cardAsTable ? (
+            <CardStateTable data={cardState} />
+          ) : (
+            <HorizontalScrollCard title={'Data Card'} data={cardState} />
+          )}
         </div>
       )}
       {showTabs.length > 0 && (
@@ -565,10 +574,16 @@ const PluginExecuteResultTabContent: React.FC<PluginExecuteResultTabContentProps
 const PluginExecuteCustomTable: React.FC<PluginExecuteCustomTableProps> = React.memo((props) => {
   const {
     tableInfo: { columns = [], data = [], name = '' },
+    columnTitleMap,
   } = props
   const { t } = useI18nNamespaces(['plugin', 'yakitUi'])
+  /**应用列标题映射（不影响 dataKey，仅改展示标题） */
+  const displayColumns = useCreation(() => {
+    if (!columnTitleMap) return columns
+    return columns.map((ele) => (columnTitleMap[ele.title] ? { ...ele, title: columnTitleMap[ele.title] } : ele))
+  }, [columns, columnTitleMap])
   const [tableData, setTableData] = useState(data)
-  const [columnsData, setColumnsData] = useState(columns)
+  const [columnsData, setColumnsData] = useState(displayColumns)
 
   const [sorterTable, setSorterTable] = useState<SortProps>()
 
@@ -600,7 +615,7 @@ const PluginExecuteCustomTable: React.FC<PluginExecuteCustomTableProps> = React.
   }, [query, sorterTable])
   const onSetColumns = useMemoizedFn((item) => {
     if (!item) return
-    const newColumns = columns.map((ele) => ({
+    const newColumns = displayColumns.map((ele) => ({
       ...ele,
       sorterProps: {
         sorter: !Number.isNaN(Number(item[ele.dataKey])),
@@ -676,7 +691,7 @@ const PluginExecuteCustomTable: React.FC<PluginExecuteCustomTableProps> = React.
   })
   const getData = useMemoizedFn(() => {
     return new Promise((resolve) => {
-      const header = columns.map((ele) => ele.title)
+      const header = displayColumns.map((ele) => ele.title)
       const exportData = formatJson(header, data)
       const params = {
         header,
@@ -749,6 +764,73 @@ const PluginExecuteCustomTable: React.FC<PluginExecuteCustomTableProps> = React.
         />
       </PluginExecuteResultTabContent>
     </ErrorBoundary>
+  )
+})
+
+/**Data Card 改表格展示：每个爆破类别一行，列固定为 类别/失败次数/总尝试次数/漏洞·风险·指纹 */
+const CardStateTable: React.FC<{ data: HoldGRPCStreamProps.InfoCards[] }> = React.memo((props) => {
+  const { data = [] } = props
+  const RISK_KEYS = ['漏洞', '风险', '指纹']
+  /**判断是否为风险汇总卡片（不作为类别行） */
+  const isRiskCard = useMemoizedFn((tag: string) => RISK_KEYS.some((k) => (tag || '').includes(k)))
+  /**在卡片 info 中按关键字取数值，取不到返回 '-' */
+  const pickValue = useMemoizedFn((info: HoldGRPCStreamProps.InfoCard[] | undefined, keys: string[]): string => {
+    if (!info) return '-'
+    const hit = info.find((i) => keys.some((k) => (i.Id || '').includes(k)))
+    return hit ? hit.Data : '-'
+  })
+  const tableData = useCreation(() => {
+    // 风险汇总卡片：取其数值作为全局风险计数，填入「漏洞/风险/指纹」列，不单独成行
+    const riskCard = data.find((c) => isRiskCard(c.tag))
+    const globalRisk = riskCard ? pickValue(riskCard.info, RISK_KEYS) : '-'
+    // 仅服务类型卡片作为类别行
+    return data
+      .filter((c) => !isRiskCard(c.tag))
+      .map((c) => {
+        const ownRisk = pickValue(c.info, RISK_KEYS)
+        return {
+          key: c.tag,
+          category: c.tag,
+          failed: pickValue(c.info, ['失败次数']),
+          total: pickValue(c.info, ['总尝试次数']),
+          risk: ownRisk !== '-' ? ownRisk : globalRisk,
+        }
+      })
+  }, [data])
+  const columns: ColumnsTypeProps[] = [
+    { title: '类别', dataKey: 'category', width: 80 },
+    { title: '失败次数', dataKey: 'failed', width: 90 },
+    { title: '总尝试次数', dataKey: 'total', width: 100 },
+    { title: '漏洞/风险/指纹', dataKey: 'risk', width: 130 },
+  ]
+  return (
+    <div style={{ maxWidth: 420 }}>
+      <PluginExecuteResultTabContent
+        title={
+          <span className={styles['table-title']}>
+            数据概览<span className={styles['table-title-number']}>{tableData.length}</span>
+          </span>
+        }
+        className={styles['plugin-execute-custom-table']}
+      >
+        <TableVirtualResize
+          size="small"
+          isShowTitle={false}
+          isRefresh={false}
+          enableDrag={true}
+          data={tableData}
+          renderKey={'key'}
+          pagination={{
+            page: 1,
+            limit: 50,
+            total: tableData.length,
+            onChange: () => {},
+          }}
+          columns={columns}
+          containerClassName={styles['custom-table-container']}
+        />
+      </PluginExecuteResultTabContent>
+    </div>
   )
 })
 

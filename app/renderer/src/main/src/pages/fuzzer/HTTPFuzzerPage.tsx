@@ -37,13 +37,11 @@ import { ShareImportExportData } from './components/ShareImportExportData'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  ChromeSvgIcon,
   ClockIcon,
   SearchIcon,
   StopIcon,
   ArrowsRetractIcon,
   ArrowsExpandIcon,
-  QuestionMarkCircleIcon,
   PlusSmIcon,
   InformationCircleIcon,
 } from '@/assets/newIcon'
@@ -98,7 +96,6 @@ import { YakitRoute } from '@/enums/yakitRoute'
 import { FUZZER_LABEL_LIST_NUMBER } from './HTTPFuzzerEditorMenu'
 import { WebFuzzerNewEditor } from './WebFuzzerNewEditor/WebFuzzerNewEditor'
 import {
-  OutlineAnnotationIcon,
   OutlineBeakerIcon,
   OutlineExportIcon,
   OutlinePayloadIcon,
@@ -2901,11 +2898,6 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                           </div>
                         </div>
                         <div className={styles['forge-action-col']}>
-                          {fuzzerTaskId && (
-                            <Tooltip title={`TaskId: ${fuzzerTaskId}`}>
-                              <YakitButton type="text2" icon={<QuestionMarkCircleIcon />} />
-                            </Tooltip>
-                          )}
                           {getFuzzerRequestParams && typeof getFuzzerRequestParams === 'function' ? (
                             <ShareImportExportData
                               module="fuzzer"
@@ -3501,19 +3493,6 @@ export const SecondNodeExtra: React.FC<SecondNodeExtraProps> = React.memo((props
               type="vertical"
               style={{ margin: 0, top: 1, backgroundColor: 'var(--Colors-Use-Neutral-Border)' }}
             />
-            <ChromeSvgIcon
-              className={styles['extra-chrome-btn']}
-              onClick={() => {
-                ipcRenderer
-                  .invoke('ExtractUrl', { Request: request, IsHTTPS: isHttps })
-                  .then((data: { Url: string }) => {
-                    openExternalWebsite(data.Url)
-                  })
-                  .catch((error) => {
-                    yakitNotify('error', error + '')
-                  })
-              }}
-            />
             {((rsp.Payloads && rsp.Payloads.length > 0) ||
               rsp.ExtractedResults.filter((i) => i.Key !== '' || i.Value !== '').length > 0) && (
               <YakitButton type="outline2" size={size} onClick={() => setShowExtra(true)}>
@@ -3578,22 +3557,6 @@ export const SecondNodeExtra: React.FC<SecondNodeExtraProps> = React.memo((props
         >
           {t('YakitButton.detail')}
         </YakitButton>
-        <Tooltip
-          title={
-            showResponseInfoSecondEditor ? t('SecondNodeExtra.hideResponseInfo') : t('SecondNodeExtra.showResponseInfo')
-          }
-        >
-          <YakitButton
-            type="text2"
-            size="small"
-            icon={<OutlineAnnotationIcon />}
-            isActive={showResponseInfoSecondEditor}
-            onClick={() => {
-              setRemoteValue(HTTP_PACKET_EDITOR_Response_Info, `${!showResponseInfoSecondEditor}`)
-              setShowResponseInfoSecondEditor(!showResponseInfoSecondEditor)
-            }}
-          />
-        </Tooltip>
       </div>
     )
   }
@@ -4497,7 +4460,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = React.memo(
             <NewHTTPPacketEditor
               keepSearchName={keepSearchName}
               language={fuzzerResponse?.DisableRenderStyles ? 'text' : undefined}
-              isShowBeautifyRender={!fuzzerResponse?.IsTooLargeResponse}
+              isShowBeautifyRender={false}
               defaultHttps={isHttps}
               defaultSearchKeyword={defaultResponseSearch}
               originValue={currentOriginValue}

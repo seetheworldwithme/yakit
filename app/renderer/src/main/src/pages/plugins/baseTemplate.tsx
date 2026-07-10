@@ -944,6 +944,9 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
     onPluginClick,
     enableCheck = true,
     enableClick = true,
+    hideHeadImg = false,
+    hideHelpIcon = false,
+    hideSourceIcon = false,
   } = props
   const onCheck = useMemoizedFn((e: CheckboxChangeEvent) => {
     if (enableCheck) optCheck(plugin, e.target.checked)
@@ -1001,7 +1004,7 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
               onChange={onCheck}
             />
           )}
-          {authorImgNode}
+          {!hideHeadImg && authorImgNode}
           <div
             className={classNames('plugin-details-item-info-text-style', 'yakit-content-single-ellipsis')}
             title={pluginName}
@@ -1011,16 +1014,20 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
         </div>
         <div className={'plugin-details-item-show'}>
           {extraNode()}
-          <Tooltip title={help || 'No Description about it.'} placement="topRight" overlayClassName="plugins-tooltip">
-            <OutlineQuestionmarkcircleIcon className={'plugin-details-item-show-icon-style'} />
-          </Tooltip>
-          <YakitPopover
-            placement="topRight"
-            overlayClassName={'terminal-popover'}
-            content={<YakEditor type={pluginType} value={content} readOnly={true} />}
-          >
-            <OutlineTerminalIcon className={'plugin-details-item-show-icon-style'} />
-          </YakitPopover>
+          {!hideHelpIcon && (
+            <Tooltip title={help || 'No Description about it.'} placement="topRight" overlayClassName="plugins-tooltip">
+              <OutlineQuestionmarkcircleIcon className={'plugin-details-item-show-icon-style'} />
+            </Tooltip>
+          )}
+          {!hideSourceIcon && (
+            <YakitPopover
+              placement="topRight"
+              overlayClassName={'terminal-popover'}
+              content={<YakEditor type={pluginType} value={content} readOnly={true} />}
+            >
+              <OutlineTerminalIcon className={'plugin-details-item-show-icon-style'} />
+            </YakitPopover>
+          )}
         </div>
       </div>
     </div>

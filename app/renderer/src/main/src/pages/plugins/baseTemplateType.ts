@@ -228,6 +228,12 @@ export interface PluginDetailsListItemProps<T> {
   enableCheck?: boolean
   /**是否可以点击 */
   enableClick?: boolean
+  /**隐藏前置头像/类型图标 */
+  hideHeadImg?: boolean
+  /**隐藏右侧帮助(问号)图标 */
+  hideHelpIcon?: boolean
+  /**隐藏右侧源码(终端)图标 */
+  hideSourceIcon?: boolean
 }
 
 export interface PluginContributesListItemProps {

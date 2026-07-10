@@ -439,3 +439,15 @@
     }
   }
 }
+
+.concurrency-panel-flat {
+  :global {
+    .ant-collapse-arrow {
+      display: none !important;
+    }
+
+    .ant-collapse-header {
+      cursor: default !important;
+    }
+  }
+}
