@@ -106,6 +106,19 @@
   display: none;
 }
 
+// 内联至表单内（输入目标下方）：去外框/边框，列数收窄对齐输入框宽度
+.tree-list-wrapper-inline {
+  border-bottom: none;
+  padding: 0;
+  .brute-type-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: 200px;
+  }
+  .brute-type-children {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .brute-execute-wrapper {
   @include securityTool.execute-title('brute');
 }

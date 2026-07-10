@@ -59,6 +59,8 @@ export interface BruteExecuteContentRefProps {
 export interface BruteExecuteContentProps {
   ref?: React.ForwardedRef<BruteExecuteContentRefProps>
   bruteType: React.Key[]
+  setBruteType: (v: React.Key[]) => void
+  hidden: boolean
   isExpand: boolean
   setIsExpand: (b: boolean) => void
   executeStatus: ExpandAndRetractExcessiveState

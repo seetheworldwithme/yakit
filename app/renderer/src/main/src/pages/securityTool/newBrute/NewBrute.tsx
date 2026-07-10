@@ -44,7 +44,6 @@ export const NewBrute: React.FC<NewBruteProps> = React.memo((props) => {
 
   return (
     <div className={styles['brute-wrapper']}>
-      <BruteTypeTreeList hidden={hidden} bruteType={bruteType} setBruteType={setBruteType} />
       <BruteExecute
         hidden={hidden}
         setHidden={setHidden}
@@ -111,7 +110,7 @@ const BruteTypeTreeList: React.FC<BruteTypeTreeListProps> = React.memo((props) =
   })
   return (
     <div
-      className={classNames(styles['tree-list-wrapper'], {
+      className={classNames(styles['tree-list-wrapper'], styles['tree-list-wrapper-inline'], {
         [styles['tree-list-wrapper-hidden']]: hidden,
       })}
     >
@@ -286,6 +285,8 @@ const BruteExecute: React.FC<BruteExecuteProps> = React.memo((props) => {
         <BruteExecuteContent
           ref={bruteExecuteContentRef}
           bruteType={bruteType}
+          setBruteType={setBruteType}
+          hidden={hidden}
           isExpand={isExpand}
           setIsExpand={setIsExpand}
           executeStatus={executeStatus}
@@ -302,8 +303,18 @@ const BruteExecute: React.FC<BruteExecuteProps> = React.memo((props) => {
 const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
   forwardRef((props, ref) => {
     const { t, i18n } = useI18nNamespaces(['brute', 'yakitUi', 'yakitRoute'])
-    const { bruteType, isExpand, executeStatus, setExecuteStatus, setIsExpand, selectNum, setProgressList, pageInfo } =
-      props
+    const {
+      bruteType,
+      setBruteType,
+      hidden,
+      isExpand,
+      executeStatus,
+      setExecuteStatus,
+      setIsExpand,
+      selectNum,
+      setProgressList,
+      pageInfo,
+    } = props
     const [form] = Form.useForm()
     const [runtimeId, setRuntimeId] = useState<string>('')
 
@@ -448,6 +459,10 @@ const BruteExecuteContent: React.FC<BruteExecuteContentProps> = React.memo(
               onTextAreaType={setInputType}
               textAreaType={inputType}
             />
+            {/* 可用爆破类型：内联至输入目标下方，宽度对齐输入框（wrapperCol span 12） */}
+            <Form.Item colon={false} label={' '} wrapperCol={{ span: 12 }} style={{ marginBottom: 16 }}>
+              <BruteTypeTreeList hidden={hidden} bruteType={bruteType} setBruteType={setBruteType} />
+            </Form.Item>
             {/* 隐藏：Target Concurrent / 爆破成功即停止 / 耗尽后 标签 */}
             {/* <Form.Item label={' '} colon={false}>
               <div className={styles['form-extra']}>
