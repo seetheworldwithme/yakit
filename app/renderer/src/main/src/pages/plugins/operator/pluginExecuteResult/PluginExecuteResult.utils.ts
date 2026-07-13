@@ -15,8 +15,14 @@ export const getTaskDetailHTTPFlowOptions = (isTaskDetail: boolean) => {
       hideDataCard: false,
       hideConsoleTab: false,
       httpTabName: undefined,
+      riskTabName: undefined,
       defaultExcludeColumnsKey: undefined,
       showActionIcons: true,
+      showHistorySearchHint: true,
+      showFavorites: true,
+      resetQueryOnRefresh: false,
+      hostColumnWidth: undefined,
+      compactRiskDetail: false,
     }
   }
 
@@ -24,7 +30,13 @@ export const getTaskDetailHTTPFlowOptions = (isTaskDetail: boolean) => {
     hideDataCard: true,
     hideConsoleTab: true,
     httpTabName: '流量信息',
+    riskTabName: '漏洞',
     defaultExcludeColumnsKey: taskDetailHTTPFlowExcludeColumns,
     showActionIcons: false,
+    showHistorySearchHint: false,
+    showFavorites: false,
+    resetQueryOnRefresh: true,
+    hostColumnWidth: 134,
+    compactRiskDetail: true,
   }
 }

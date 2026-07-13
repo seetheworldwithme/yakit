@@ -78,6 +78,12 @@
     border: 0 !important;
     border-top: 1px solid var(--Colors-Use-Neutral-Border) !important;
   }
+  .current-http-table-container-task-detail {
+    :global(.virtual-table-title .virtual-title) {
+      justify-content: center;
+      text-align: center;
+    }
+  }
 }
 
 .plugin-execute-custom-table {

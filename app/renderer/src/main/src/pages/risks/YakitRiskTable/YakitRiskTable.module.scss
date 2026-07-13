@@ -237,6 +237,19 @@ $keyColor: map-keys($tagColor);
         }
       }
     }
+
+    &.content-heard-left-compact {
+      justify-content: center;
+      width: 100%;
+
+      .content-heard-body {
+        flex: 0 1 auto;
+      }
+
+      .content-heard-body-title {
+        text-align: center;
+      }
+    }
   }
   .content-heard-right {
     @extend %display-flex-center;

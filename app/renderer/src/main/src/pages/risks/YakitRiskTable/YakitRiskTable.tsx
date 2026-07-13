@@ -327,6 +327,7 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
     tableVirtualResizeProps,
     yakitRiskDetailsBorder = true,
     excludeColumnsKey = [],
+    compactRiskDetail = false,
   } = props
   const { t, i18n } = useI18nNamespaces(['risk', 'yakitUi', 'yakitRoute'])
   const { currentPageTabRouteKey } = usePageInfo(
@@ -1378,6 +1379,7 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
               border={yakitRiskDetailsBorder}
               isShowExtra={!excludeColumnsKey.includes('action')}
               onRetest={onRetest}
+              compactRiskDetail={compactRiskDetail}
             />
           )
         }
@@ -1481,6 +1483,7 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
     onRetest,
     boxStyle,
     detailClassName = '',
+    compactRiskDetail = false,
   } = props
   const { t, i18n } = useI18nNamespaces(['risk', 'yakitUi'])
   const [isShowCode, setIsShowCode] = useState<boolean>(true)
@@ -1587,7 +1590,7 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
     return (
       <NewHTTPPacketEditor
         readOnly={true}
-        isShowBeautifyRender={true}
+        isShowBeautifyRender={!compactRiskDetail}
         bordered={true}
         isResponse={!isRequest}
         title={
@@ -1615,50 +1618,52 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
                     }}
                   ></YakitButton>
                 </Tooltip>
-                <YakitDropdownMenu
-                  menu={{
-                    className: styles['packetHistoryDropdownMenu'],
-                    data: packetHistory.map((item, index) => {
-                      const urlNode = (
-                        <Typography.Text ellipsis={{ tooltip: item.Url }} style={{ maxWidth: 300 }}>
-                          {item.Url || '-'}
-                        </Typography.Text>
-                      )
-                      if (index === 0) {
+                {!compactRiskDetail && (
+                  <YakitDropdownMenu
+                    menu={{
+                      className: styles['packetHistoryDropdownMenu'],
+                      data: packetHistory.map((item, index) => {
+                        const urlNode = (
+                          <Typography.Text ellipsis={{ tooltip: item.Url }} style={{ maxWidth: 300 }}>
+                            {item.Url || '-'}
+                          </Typography.Text>
+                        )
+                        if (index === 0) {
+                          return {
+                            key: index + '',
+                            label: (
+                              <>
+                                {urlNode}
+                                <YakitTag color="warning" size="small" border={false}>
+                                  {t('YakitRiskDetails.originReq')}
+                                </YakitTag>
+                              </>
+                            ),
+                          }
+                        }
                         return {
                           key: index + '',
                           label: (
                             <>
-                              {urlNode}
-                              <YakitTag color="warning" size="small" border={false}>
-                                {t('YakitRiskDetails.originReq')}
-                              </YakitTag>
+                              {index}&nbsp;&nbsp;{urlNode}
                             </>
                           ),
                         }
-                      }
-                      return {
-                        key: index + '',
-                        label: (
-                          <>
-                            {index}&nbsp;&nbsp;{urlNode}
-                          </>
-                        ),
-                      }
-                    }),
-                    onClick: ({ key }) => {
-                      setPacketIndex(Number(key))
-                    },
-                  }}
-                  dropdown={{
-                    trigger: ['click'],
-                    placement: 'bottomLeft',
-                  }}
-                >
-                  <YakitButton type="outline1" size="small" icon={<OutlineClockIcon />}>
-                    {t('YakitRiskDetails.verificationRecord')}
-                  </YakitButton>
-                </YakitDropdownMenu>
+                      }),
+                      onClick: ({ key }) => {
+                        setPacketIndex(Number(key))
+                      },
+                    }}
+                    dropdown={{
+                      trigger: ['click'],
+                      placement: 'bottomLeft',
+                    }}
+                  >
+                    <YakitButton type="outline1" size="small" icon={<OutlineClockIcon />}>
+                      {t('YakitRiskDetails.verificationRecord')}
+                    </YakitButton>
+                  </YakitDropdownMenu>
+                )}
               </div>
             ) : (
               <span>Response</span>
@@ -1723,7 +1728,11 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
         )}
       >
         <div className={styles['content-heard']}>
-          <div className={styles['content-heard-left']}>
+          <div
+            className={classNames(styles['content-heard-left'], {
+              [styles['content-heard-left-compact']]: compactRiskDetail,
+            })}
+          >
             <div className={styles['content-heard-severity']}>
               {severityInfo.icon}
               <span
@@ -1737,38 +1746,40 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
               <div className={classNames(styles['content-heard-body-title'], 'content-ellipsis')}>
                 {info.Title || '-'}
               </div>
-              <div className={styles['content-heard-body-description']}>
-                <YakitTag color="info" style={{ cursor: 'pointer' }} onClick={onClickIP}>
-                  ID:{info.Id}
-                </YakitTag>
-                <span>IP:{info.IP || '-'}</span>
-                <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
-                <span className={styles['description-port']}>
-                  {t('YakitRiskDetails.port_colon')}
-                  {info.Port || '-'}
-                </span>
-                <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
-                <span className={styles['url-info']}>
-                  URL:
-                  <span className={classNames(styles['url'], 'content-ellipsis')}>{info?.Url || '-'}</span>
-                  <CopyComponents copyText={info?.Url || '-'} />
-                </span>
-                {isShowTime && (
-                  <>
-                    <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
-                    <span className={styles['content-heard-body-time']}>
-                      {t('YakitRiskDetails.discovery_time_colon')}
-                      {!!info.CreatedAt ? formatTimestamp(info.CreatedAt) : '-'}
-                    </span>
-                  </>
-                )}
-                {!isShowCode && (
-                  <>
-                    <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
-                    <YakitTag color="warning">{t('YakitRiskDetails.no_data_packet')}</YakitTag>
-                  </>
-                )}
-              </div>
+              {!compactRiskDetail && (
+                <div className={styles['content-heard-body-description']}>
+                  <YakitTag color="info" style={{ cursor: 'pointer' }} onClick={onClickIP}>
+                    ID:{info.Id}
+                  </YakitTag>
+                  <span>IP:{info.IP || '-'}</span>
+                  <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
+                  <span className={styles['description-port']}>
+                    {t('YakitRiskDetails.port_colon')}
+                    {info.Port || '-'}
+                  </span>
+                  <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
+                  <span className={styles['url-info']}>
+                    URL:
+                    <span className={classNames(styles['url'], 'content-ellipsis')}>{info?.Url || '-'}</span>
+                    <CopyComponents copyText={info?.Url || '-'} />
+                  </span>
+                  {isShowTime && (
+                    <>
+                      <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
+                      <span className={styles['content-heard-body-time']}>
+                        {t('YakitRiskDetails.discovery_time_colon')}
+                        {!!info.CreatedAt ? formatTimestamp(info.CreatedAt) : '-'}
+                      </span>
+                    </>
+                  )}
+                  {!isShowCode && (
+                    <>
+                      <Divider type="vertical" style={{ height: 16, margin: '0 8px' }} />
+                      <YakitTag color="warning">{t('YakitRiskDetails.no_data_packet')}</YakitTag>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           {isShowExtra && (

@@ -110,6 +110,12 @@ export interface HistoryTableTitleShow {
   showDelAll?: boolean
   showSetting?: boolean
   showRefresh?: boolean
+  /** 刷新时是否直接重置查询条件，不展示刷新菜单 */
+  resetQueryOnRefresh?: boolean
+  /** 是否显示搜索框内的帮助图标 */
+  showHistorySearchHint?: boolean
+  /** 是否显示表头右侧的收藏筛选按钮 */
+  showFavorites?: boolean
   showHistoryAnalysisBtn?: boolean
   onHistoryAnalysisClick?: () => void
 }
@@ -145,6 +151,7 @@ export interface HTTPFlowTableProp extends HistoryTableTitleShow {
   defaultExcludeColumnsKey?: string[]
   builtinTagList?: FiltersItemProps[]
   showActionIcons?: boolean
+  hostColumnWidth?: number
 }
 
 export interface YakQueryHTTPFlowResponse {

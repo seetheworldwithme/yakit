@@ -56,6 +56,7 @@ export interface BuildHTTPFlowTableColumnsContext {
   comBuiltinTagList: FiltersItemProps[]
   pageType?: string
   showActionIcons: boolean
+  hostColumnWidth?: number
 }
 
 export interface ResolveHTTPFlowTableColumnsOptions {
@@ -89,6 +90,7 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
     actionHandlers,
     comBuiltinTagList,
     pageType,
+    hostColumnWidth,
   } = ctx
 
   const allColumns: ColumnsTypeProps[] = [
@@ -158,7 +160,7 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
     {
       title: 'Host',
       dataKey: 'Host',
-      width: 200,
+      width: hostColumnWidth ?? 200,
     },
     {
       title: 'Path',

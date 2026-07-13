@@ -7,14 +7,21 @@ describe('getTaskDetailHTTPFlowOptions', () => {
       hideDataCard: false,
       hideConsoleTab: false,
       httpTabName: undefined,
+      riskTabName: undefined,
       defaultExcludeColumnsKey: undefined,
       showActionIcons: true,
+      showHistorySearchHint: true,
+      showFavorites: true,
+      resetQueryOnRefresh: false,
+      hostColumnWidth: undefined,
+      compactRiskDetail: false,
     })
 
     expect(getTaskDetailHTTPFlowOptions(true)).toEqual({
       hideDataCard: true,
       hideConsoleTab: true,
       httpTabName: '流量信息',
+      riskTabName: '漏洞',
       defaultExcludeColumnsKey: [
         'Tags',
         'BodyLength',
@@ -26,6 +33,11 @@ describe('getTaskDetailHTTPFlowOptions', () => {
         'RequestSizeVerbose',
       ],
       showActionIcons: false,
+      showHistorySearchHint: false,
+      showFavorites: false,
+      resetQueryOnRefresh: true,
+      hostColumnWidth: 134,
+      compactRiskDetail: true,
     })
   })
 })

@@ -174,6 +174,10 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     defaultExcludeColumnsKey,
     builtinTagList = [],
     showActionIcons = true,
+    hostColumnWidth,
+    resetQueryOnRefresh = false,
+    showHistorySearchHint = true,
+    showFavorites = true,
   } = props
   const { t, i18n } = useI18nNamespaces(['yakitUi', 'yakitRoute', 'history'])
   const comBuiltinTagList = useCampare(builtinTagList)
@@ -1151,6 +1155,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
       comBuiltinTagList,
       pageType,
       showActionIcons,
+      hostColumnWidth,
     })
     const { columns: realColumns, configColumns } = resolveHTTPFlowTableColumns({
       columnArr,
@@ -1173,6 +1178,8 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     comSuffixList,
     comBuiltinTagList,
     columnActionHandlers,
+    showActionIcons,
+    hostColumnWidth,
   ])
   // #endregion
 
@@ -2402,7 +2409,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 setSearchVal={setSearchVal}
                 showPopoverSearch={size?.width ? size?.width <= 1200 : true}
                 handleSearch={handleSearch}
-                hint={pageType !== 'History'}
+                hint={showHistorySearchHint && pageType !== 'History'}
                 addonBeforeOption={[
                   {
                     label: t('HistorySearch.keyword'),
@@ -2419,7 +2426,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 ]}
               />
             )}
-            {pageType !== 'History' && (
+            {showFavorites && pageType !== 'History' && (
               <Tooltip title={t('HTTPFlowTable.favorites')} placement="top">
                 <YakitButton
                   type={onlyFavorite ? 'outline1' : 'outline2'}
@@ -2563,43 +2570,48 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 {isAdvancedSet && t('HTTPFlowTable.configured')}
               </YakitButton>
             )}
-            {showRefresh && (
-              <YakitDropdownMenu
-                menu={{
-                  data: [
-                    {
-                      key: 'noResetRefresh',
-                      label: t('YakitButton.refreshOnly'),
-                    },
-                    {
-                      key: 'resetRefresh',
-                      label: t('YakitButton.resetQueryAndRefresh'),
-                    },
-                  ],
-                  onClick: ({ key }) => {
-                    switch (key) {
-                      case 'noResetRefresh':
-                        setWatchRefresh((prev) => !prev)
-                        updateData()
-                        break
-                      case 'resetRefresh':
-                        onResetRefresh()
-                        break
-                      default:
-                        break
-                    }
-                  },
-                }}
-                dropdown={{
-                  trigger: ['hover'],
-                  placement: 'bottom',
-                }}
-              >
+            {showRefresh &&
+              (resetQueryOnRefresh ? (
                 <Badge dot={offsetData.length > 0} offset={[-5, 4]} className={style['http-history-table-badge']}>
-                  <YakitButton type="text2" icon={<OutlineRefreshIcon />} onClick={(e) => e.stopPropagation()} />
+                  <YakitButton type="text2" icon={<OutlineRefreshIcon />} onClick={onResetRefresh} />
                 </Badge>
-              </YakitDropdownMenu>
-            )}
+              ) : (
+                <YakitDropdownMenu
+                  menu={{
+                    data: [
+                      {
+                        key: 'noResetRefresh',
+                        label: t('YakitButton.refreshOnly'),
+                      },
+                      {
+                        key: 'resetRefresh',
+                        label: t('YakitButton.resetQueryAndRefresh'),
+                      },
+                    ],
+                    onClick: ({ key }) => {
+                      switch (key) {
+                        case 'noResetRefresh':
+                          setWatchRefresh((prev) => !prev)
+                          updateData()
+                          break
+                        case 'resetRefresh':
+                          onResetRefresh()
+                          break
+                        default:
+                          break
+                      }
+                    },
+                  }}
+                  dropdown={{
+                    trigger: ['hover'],
+                    placement: 'bottom',
+                  }}
+                >
+                  <Badge dot={offsetData.length > 0} offset={[-5, 4]} className={style['http-history-table-badge']}>
+                    <YakitButton type="text2" icon={<OutlineRefreshIcon />} onClick={(e) => e.stopPropagation()} />
+                  </Badge>
+                </YakitDropdownMenu>
+              ))}
           </div>
         </div>
       </div>
@@ -2643,6 +2655,9 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     showHistorySearch,
     showProtocolType,
     showRefresh,
+    resetQueryOnRefresh,
+    showHistorySearchHint,
+    showFavorites,
     showSetting,
     showSourceType,
     size?.width,

@@ -26,10 +26,13 @@ export interface VulnerabilitiesRisksTableProps {
   filterTagDom?: ReactNode
   allTotal?: number
   setAllTotal?: (n: number) => void
+  title?: string
+  compactRiskDetail?: boolean
 }
 
 export interface AuditHoleTableOnTabProps {
   runtimeId: string
+  title?: string
 }
 
 export interface PluginExecuteLogProps {
@@ -52,6 +55,11 @@ export interface PluginExecuteWebsiteTreeProps {
   isCrawler?: boolean
   defaultExcludeColumnsKey?: string[]
   showActionIcons?: boolean
+  showHistorySearchHint?: boolean
+  showFavorites?: boolean
+  resetQueryOnRefresh?: boolean
+  hostColumnWidth?: number
+  compactRiskDetail?: boolean
 }
 export interface PluginExecutePortTableProps {
   runtimeId: string

@@ -121,7 +121,13 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     switch (ele.type) {
       case 'risk':
         return !!runtimeId ? (
-          <VulnerabilitiesRisksTable runtimeId={runtimeId} allTotal={allTotal} setAllTotal={onSetRiskTotal} />
+          <VulnerabilitiesRisksTable
+            runtimeId={runtimeId}
+            allTotal={allTotal}
+            setAllTotal={onSetRiskTotal}
+            title={taskDetailHTTPFlowOptions.riskTabName}
+            compactRiskDetail={taskDetailHTTPFlowOptions.compactRiskDetail}
+          />
         ) : (
           <></>
         )
@@ -135,6 +141,10 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
             isCrawler={isCrawler}
             defaultExcludeColumnsKey={taskDetailHTTPFlowOptions.defaultExcludeColumnsKey}
             showActionIcons={taskDetailHTTPFlowOptions.showActionIcons}
+            showHistorySearchHint={taskDetailHTTPFlowOptions.showHistorySearchHint}
+            showFavorites={taskDetailHTTPFlowOptions.showFavorites}
+            resetQueryOnRefresh={taskDetailHTTPFlowOptions.resetQueryOnRefresh}
+            hostColumnWidth={taskDetailHTTPFlowOptions.hostColumnWidth}
           />
         ) : (
           <></>
@@ -163,7 +173,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
         const { customProps } = ele
         return <CodeScanResult {...(customProps || {})} isExecuting={loading} runtimeId={runtimeId} />
       case 'ssa-risk':
-        return <AuditHoleTableOnTab runtimeId={runtimeId} />
+        return <AuditHoleTableOnTab runtimeId={runtimeId} title={taskDetailHTTPFlowOptions.riskTabName} />
       default:
         return <></>
     }
@@ -181,7 +191,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     if (tab.type === 'risk') {
       return (
         <>
-          {tab.tabName}
+          {taskDetailHTTPFlowOptions.riskTabName || tab.tabName}
           <span className={styles['plugin-execute-result-tabBar']}>{length}</span>
         </>
       )
@@ -266,6 +276,10 @@ export const PluginExecuteHttpFlow: React.FC<PluginExecuteWebsiteTreeProps> = Re
     isCrawler = false,
     defaultExcludeColumnsKey,
     showActionIcons = true,
+    showHistorySearchHint = true,
+    showFavorites = true,
+    resetQueryOnRefresh = false,
+    hostColumnWidth,
   } = props
   const { t } = useI18nNamespaces(['plugin'])
 
@@ -322,7 +336,9 @@ export const PluginExecuteHttpFlow: React.FC<PluginExecuteWebsiteTreeProps> = Re
         secondNode={
           <HTTPFlowRealTimeTableAndEditor
             wrapperStyle={{ padding: 0 }}
-            containerClassName={styles['current-http-table-container']}
+            containerClassName={classNames(styles['current-http-table-container'], {
+              [styles['current-http-table-container-task-detail']]: !!defaultExcludeColumnsKey?.length,
+            })}
             includeInUrl={includeInUrl}
             onQueryParams={onQueryParams}
             pageType="Plugin"
@@ -345,6 +361,10 @@ export const PluginExecuteHttpFlow: React.FC<PluginExecuteWebsiteTreeProps> = Re
             titleHeight={47}
             defaultExcludeColumnsKey={defaultExcludeColumnsKey}
             showActionIcons={showActionIcons}
+            showHistorySearchHint={showHistorySearchHint}
+            showFavorites={showFavorites}
+            resetQueryOnRefresh={resetQueryOnRefresh}
+            hostColumnWidth={hostColumnWidth}
           />
         }
       ></YakitResizeBox>
@@ -463,7 +483,7 @@ export const PluginExecuteLog: React.FC<PluginExecuteLogProps> = React.memo((pro
 
 /**漏洞与风险tab表 */
 export const VulnerabilitiesRisksTable: React.FC<VulnerabilitiesRisksTableProps> = React.memo((props) => {
-  const { runtimeId, runTimeIDs, filterTagDom } = props
+  const { runtimeId, runTimeIDs, filterTagDom, title, compactRiskDetail = false } = props
   const { t, i18n } = useI18nNamespaces(['plugin', 'yakitUi', 'yakitRoute'])
   const [riskLoading, setRiskLoading] = useState<boolean>(false)
   const [allTotal, setAllTotal] = useControllableValue<number>(props, {
@@ -502,7 +522,7 @@ export const VulnerabilitiesRisksTable: React.FC<VulnerabilitiesRisksTableProps>
           renderTitle={
             <div className={styles['table-renderTitle']}>
               <div className={styles['table-renderTitle-left']}>
-                <span>{t('YakitRoute.vulnerabilityAndrisk')}</span>
+                <span>{title || t('YakitRoute.vulnerabilityAndrisk')}</span>
                 <TableTotalAndSelectNumber total={allTotal} />
                 {filterTagDom}
               </div>
@@ -519,6 +539,7 @@ export const VulnerabilitiesRisksTable: React.FC<VulnerabilitiesRisksTableProps>
           }}
           yakitRiskDetailsBorder={false}
           excludeColumnsKey={['action']}
+          compactRiskDetail={compactRiskDetail}
           allTotal={allTotal}
           setAllTotal={setAllTotal}
         />
@@ -529,7 +550,7 @@ export const VulnerabilitiesRisksTable: React.FC<VulnerabilitiesRisksTableProps>
 
 /**审计漏洞tab表 */
 export const AuditHoleTableOnTab: React.FC<AuditHoleTableOnTabProps> = React.memo((props) => {
-  const { runtimeId } = props
+  const { runtimeId, title } = props
   const { t } = useI18nNamespaces(['plugin', 'yakitUi', 'yakitRoute'])
   const [allTotal, setAllTotal] = useState<number>(0)
 
@@ -558,7 +579,7 @@ export const AuditHoleTableOnTab: React.FC<AuditHoleTableOnTabProps> = React.mem
         renderTitle={
           <div className={styles['table-renderTitle']}>
             <div className={styles['table-renderTitle-left']}>
-              <span>{t('YakitRoute.vulnerabilityAndrisk')}</span>
+              <span>{title || t('YakitRoute.vulnerabilityAndrisk')}</span>
               <TableTotalAndSelectNumber total={allTotal} />
             </div>
             <YakitButton type="outline2" size="small" onClick={onJumpAuditHole}>

@@ -20,6 +20,8 @@ export interface YakitRiskTableProps {
   /**该字段会影响初次请求数据，建议外界只使用，不设值 */
   allTotal?: number
   setAllTotal?: (b: number) => void
+  /** 任务详情使用紧凑的漏洞详情头部与数据包工具栏 */
+  compactRiskDetail?: boolean
 }
 
 export interface QueryRisksRequest {
@@ -78,6 +80,7 @@ export interface YakitRiskDetailsProps {
   onRetest?: (info: Risk) => void
   boxStyle?: React.CSSProperties
   detailClassName?: string
+  compactRiskDetail?: boolean
 }
 
 export interface YakitRiskSelectTagProps {
