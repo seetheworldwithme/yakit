@@ -2864,12 +2864,6 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
                           <div className={classNames(styles['forge-config-row'], styles['forge-proxy-row'])}>
                             <span className={styles['forge-config-label']}>
                               {t('HttpQueryAdvancedConfig.set_proxy')}
-                              <Tooltip
-                                title={t('HttpQueryAdvancedConfig.multi_proxy_tip')}
-                                overlayStyle={{ width: 150 }}
-                              >
-                                <InformationCircleIcon className={styles['forge-info-icon']} />
-                              </Tooltip>
                             </span>
                             <YakitSelect
                               ref={proxyListRef as any}

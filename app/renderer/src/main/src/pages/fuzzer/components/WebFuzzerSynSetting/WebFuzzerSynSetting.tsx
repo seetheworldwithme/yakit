@@ -33,10 +33,11 @@ const types = (t: TFunction) => {
       value: 'config',
       label: t('WebFuzzerSynSetting.config'),
     },
-    {
-      value: 'rule',
-      label: t('WebFuzzerSynSetting.rule'),
-    },
+    // 按功能裁剪方案：「规则」tab 已隐藏，其同步选项一并隐藏；保留 getRuleValue 逻辑，恢复请取消本注释
+    // {
+    //   value: 'rule',
+    //   label: t('WebFuzzerSynSetting.rule'),
+    // },
   ]
 }
 const getConfigValue = (value: AdvancedConfigValueProps) => {
@@ -165,7 +166,8 @@ const WebFuzzerSynSetting: React.FC<WebFuzzerSynSettingProps> = React.memo((prop
           labelCol={{ span: 6 }}
           wrapperCol={{ span: 18 }}
           initialValues={{
-            type: ['config', 'rule'],
+            // 按功能裁剪方案：「规则」tab 已隐藏，同步默认仅含 config
+            type: ['config'],
             range: 'all',
             ids: [],
           }}

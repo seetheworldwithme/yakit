@@ -27,14 +27,14 @@ import {
   grpcMITMFilterWebsocket,
   grpcMITMHotPort,
   grpcMITMSetDownstreamProxy,
-  grpcMITMGetFilter,
+  // grpcMITMGetFilter, // 过滤器已隐藏（条件劫持已覆盖 csv 第5行），保留代码以备恢复
   grpcMITMSetDisableSystemProxy,
   grpcMITMStopCall,
   grpcMITMRemoveHook,
   MITMRemoveHookRequest,
 } from '../MITMHacker/utils'
-import { convertMITMFilterUI } from '../MITMServerStartForm/utils'
-import { getMitmHijackFilter } from '../MITMServerStartForm/MITMFiltersModal'
+// import { convertMITMFilterUI } from '../MITMServerStartForm/utils' // 过滤器已隐藏，保留代码以备恢复
+// import { getMitmHijackFilter } from '../MITMServerStartForm/MITMFiltersModal' // 过滤器已隐藏，保留代码以备恢复
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
 import { YakitBaseSelectRef } from '@/components/yakitUI/YakitSelect/YakitSelectType'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
@@ -92,8 +92,9 @@ export interface CaCertData {
   LocalFile: string
 }
 
-const MITMFiltersModal = React.lazy(() => import('../MITMServerStartForm/MITMFiltersModal'))
-const MITMCertificateDownloadModal = React.lazy(() => import('../MITMServerStartForm/MITMCertificateDownloadModal'))
+// 过滤器 / 证书下载弹窗已隐藏（条件劫持已覆盖 csv 第5行；证书下载与启动前「02 协议策略」重复），保留代码以备恢复
+// const MITMFiltersModal = React.lazy(() => import('../MITMServerStartForm/MITMFiltersModal'))
+// const MITMCertificateDownloadModal = React.lazy(() => import('../MITMServerStartForm/MITMCertificateDownloadModal'))
 
 export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) => {
   const {
@@ -144,9 +145,10 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
     }
   })
 
-  const [downloadVisible, setDownloadVisible] = useState<boolean>(false)
-  const [filtersVisible, setFiltersVisible] = useState<boolean>(false)
-  const [isFilter, setIsFilter] = useState(false)
+  // 以下 state 随「证书下载 / 过滤器」隐藏一并注释，保留代码以备恢复
+  // const [downloadVisible, setDownloadVisible] = useState<boolean>(false)
+  // const [filtersVisible, setFiltersVisible] = useState<boolean>(false)
+  // const [isFilter, setIsFilter] = useState(false)
   const [filterWebsocket, setFilterWebsocket] = useState<boolean>(false)
   const [disableSystemProxy, setDisableSystemProxy] = useState<boolean>(false)
   const { t, i18n } = useI18nNamespaces(['webFuzzer', 'mitm'])
@@ -279,23 +281,24 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
     })
   })
 
-  useEffect(() => {
-    grpcMITMGetFilter(true)
-      .then((res) => {
-        const fd = res?.FilterData
-        if (!fd) {
-          setIsFilter(false)
-          return
-        }
-        const { baseFilter, advancedFilters } = convertMITMFilterUI(fd)
-        setIsFilter(getMitmHijackFilter(baseFilter, advancedFilters))
-      })
-      .catch(() => setIsFilter(false))
-  }, [])
+  // 过滤器已隐藏：拉取已配置过滤器标记的逻辑一并注释，保留代码以备恢复
+  // useEffect(() => {
+  //   grpcMITMGetFilter(true)
+  //     .then((res) => {
+  //       const fd = res?.FilterData
+  //       if (!fd) {
+  //         setIsFilter(false)
+  //         return
+  //       }
+  //       const { baseFilter, advancedFilters } = convertMITMFilterUI(fd)
+  //       setIsFilter(getMitmHijackFilter(baseFilter, advancedFilters))
+  //     })
+  //     .catch(() => setIsFilter(false))
+  // }, [])
 
-  const onSetFilterFlag = useMemoizedFn((flag: boolean) => {
-    setIsFilter(flag)
-  })
+  // const onSetFilterFlag = useMemoizedFn((flag: boolean) => {
+  //   setIsFilter(flag)
+  // })
 
   const [downStreamAgentModalVisible, setDownStreamAgentModalVisible] = useState<boolean>(false)
   const { globalEnabledTemplateName, onDisableGlobalHotPatch } = useGlobalHotPatchTag()
@@ -499,13 +502,13 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
           停止监听
         </YakitButton>
         <span className={style['mitm-topbar-spacer']} />
-        {/* 代理配置 / 规则配置 入口已在启动前表单页提供，劫持后顶栏不再重复展示 */}
-        <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setFiltersVisible(true)}>
+        {/* 过滤器 / 证书下载 已隐藏（条件劫持已覆盖 csv 第5行；证书下载与启动前「02 协议策略」重复），保留代码以备恢复 */}
+        {/* <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setFiltersVisible(true)}>
           过滤器
         </YakitButton>
         <YakitButton type="outline2" className={style['mitm-config-action']} onClick={() => setDownloadVisible(true)}>
           证书下载
-        </YakitButton>
+        </YakitButton> */}
       </header>
       <main className={style['mitm-traffic-workbench']}>
         <div className={style['mitm-server-body']}>
@@ -522,7 +525,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
             tempShowPluginHistory={tempShowPluginHistory}
             setTempShowPluginHistory={setTempShowPluginHistory}
             setVisible={setVisible}
-            setFiltersVisible={setFiltersVisible}
+            // setFiltersVisible={setFiltersVisible} // 过滤器已隐藏，切断 MITMServer 侧入口，保留代码以备恢复
             pluginStreamInfo={pluginStreamInfo}
             showPluginStream={showPluginStream}
             setShowPluginStream={setShowPluginStream}
@@ -540,6 +543,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
         tipParts={tipParts}
         setTipParts={setTipParts}
       ></DownStreamAgentModal>
+      {/* 过滤器 / 证书下载弹窗已隐藏，保留代码以备恢复
       <React.Suspense fallback={<div>loading...</div>}>
         <MITMFiltersModal
           filterType="filter"
@@ -550,6 +554,7 @@ export const MITMServerHijacking: React.FC<MITMServerHijackingProp> = (props) =>
         />
         <MITMCertificateDownloadModal visible={downloadVisible} setVisible={setDownloadVisible} />
       </React.Suspense>
+      */}
     </div>
   )
 }

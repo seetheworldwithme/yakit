@@ -157,7 +157,6 @@ const HybridScanTaskList: React.FC<HybridScanTaskListProps> = React.memo(
         case 'done':
           return (
             <div className={styles['table-status-item']}>
-              <SolidCheckCircleIcon className={styles['icon-success']} />
               <span className={styles['status-text']}>已完成</span>
             </div>
           )
@@ -235,51 +234,18 @@ const HybridScanTaskList: React.FC<HybridScanTaskListProps> = React.memo(
           dataKey: 'FirstTarget',
           width: 160,
           fixed: 'left',
-          filterProps: {
-            filtersType: 'input',
-            filterKey: 'Target',
-          },
         },
         {
           title: '状态',
           dataKey: 'Status',
           width: 90,
           render: (_, record: HybridScanTask) => getStatusNode(record),
-          filterProps: {
-            filtersType: 'select',
-            filtersSelectAll: {
-              isAll: true,
-            },
-            filterKey: 'StatusType',
-            filters: [
-              {
-                label: '已完成',
-                value: 'done',
-              },
-              {
-                label: '执行中',
-                value: 'executing',
-              },
-              {
-                label: '暂停',
-                value: 'paused',
-              },
-              {
-                label: '失败',
-                value: 'error',
-              },
-            ],
-          },
         },
 
         {
           title: '创建时间',
           dataKey: 'CreatedAt',
           render: (v) => (v ? formatTimestamp(v) : '-'),
-          sorterProps: {
-            sorterKey: 'created_at',
-            sorter: true,
-          },
         },
         {
           title: '更新时间',

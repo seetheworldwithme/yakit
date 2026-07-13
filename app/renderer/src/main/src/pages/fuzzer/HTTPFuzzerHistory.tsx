@@ -128,7 +128,7 @@ export const HTTPFuzzerHistorySelector: React.FC<HTTPFuzzerHistorySelectorProp> 
       className={styles['history-panel']}
       title={
         <header className={styles['history-head']}>
-          <span className={styles['history-head-title']}>Web Fuzzer History</span>
+          <span className={styles['history-head-title']}>Web Fuzzer 历史</span>
           <div className={styles['history-head-tools']}>
             <YakitButton
               type="text"

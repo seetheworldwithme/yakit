@@ -17,6 +17,8 @@ const FuzzerSequenceWrapper: React.FC<FuzzerSequenceWrapperProps> = React.memo((
   })
   return (
     <div className={styles['web-fuzzer']}>
+      {/* 按功能裁剪方案：隐藏整个子 tab 栏（配置/规则/序列/热加载/AI）
+          规则/序列/热加载/组并发均已无需求对应，仅保留「配置」内容区；恢复请取消本注释
       <div className={styles['web-fuzzer-tab']}>
         {webFuzzerTabs(t).map((item) => (
           <div
@@ -33,6 +35,7 @@ const FuzzerSequenceWrapper: React.FC<FuzzerSequenceWrapperProps> = React.memo((
           </div>
         ))}
       </div>
+      */}
       <div className={classNames(styles['web-fuzzer-tab-content'])}>{children}</div>
     </div>
   )

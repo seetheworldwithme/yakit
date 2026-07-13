@@ -26,8 +26,12 @@ export const webFuzzerTabs = (t: TFunction) => {
   // 保留 hot-patch 字面量、组件与事件链路，仅不展示入口（避免 MITM 被动插件等内部能力受影响）
   return [
     { key: 'config', label: t('WebFuzzerPage.config') },
-    { key: 'rule', label: t('WebFuzzerPage.rule') },
-    { key: 'sequence', label: t('WebFuzzerPage.sequence') },
+    // 按功能裁剪方案：隐藏「规则」tab（其下匹配器/设置变量/GET/POST/Cookie/Header 变异面板均无需求对应）
+    // 保留 case 'rule' 渲染分支、MatchersPanel/VariablePanel 等组件与 matchers/params 表单字段，仅不展示入口；恢复请取消本注释
+    // { key: 'rule', label: t('WebFuzzerPage.rule') },
+    // 按功能裁剪方案：隐藏「序列」tab（多请求链式编排执行，任务管理表无对应需求）
+    // 保留 FuzzerSequence 组件、case 'sequence' 分支与 sequenceList/响应 map 逻辑，仅不展示入口；恢复请取消本注释
+    // { key: 'sequence', label: t('WebFuzzerPage.sequence') },
     // 按功能裁剪方案：隐藏「组并发」tab（批量并行执行，需求文档无对应）
     // 保留 WebFuzzerType 中 'concurrency' 字面量、FuzzerSequence 组件、store/IPC 链路，仅不展示入口
     // { key: 'concurrency', label: t('WebFuzzerPage.concurrency') },
@@ -194,6 +198,7 @@ const WebFuzzerPage: React.FC<WebFuzzerPageProps> = React.memo((props) => {
       focusId={props.id ? [props.id] : undefined}
       isUpdateFocus={false}
     >
+      {/* 按功能裁剪方案：隐藏报文构造台的子标签栏（配置/规则/序列等）；仅保留内容区，恢复请取消本注释
       <div className={styles['web-fuzzer-tab']}>
         {webFuzzerTabs(t).map((item) => (
           <div
@@ -211,6 +216,7 @@ const WebFuzzerPage: React.FC<WebFuzzerPageProps> = React.memo((props) => {
           </div>
         ))}
       </div>
+      */}
       <div className={classNames(styles['web-fuzzer-tab-content'])}>{props.children}</div>
     </ShortcutKeyFocusHook>
   )

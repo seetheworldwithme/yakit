@@ -20,7 +20,6 @@ import {
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import emiter from '@/utils/eventBus/eventBus'
-import { YakitRadioButtons } from '@/components/yakitUI/YakitRadioButtons/YakitRadioButtons'
 import { defaultMITMAdvancedFilter, defaultMITMFilterData } from '@/defaultConstants/mitm'
 import cloneDeep from 'lodash/cloneDeep'
 import isEqual from 'lodash/isEqual'
@@ -43,7 +42,6 @@ import MITMContext from '../Context/MITMContext'
 import { JSONParseLog } from '@/utils/tool'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 
-const MITMAdvancedFilters = React.lazy(() => import('./MITMFilters'))
 const { ipcRenderer } = window.require('electron')
 
 export type FilterType = 'filter' | 'hijackFilter'
@@ -60,8 +58,6 @@ interface SaveObjProps {
   filter: any
   advancedFilters: MITMAdvancedFilter[]
 }
-
-type FilterSettingType = 'base-setting' | 'advanced-setting'
 
 /**判断mitm 过滤器高级配置中是否选择了 IncludeHostname/IncludeUri */
 export const getAdvancedFlag = (advancedFilters: MITMAdvancedFilter[]): boolean => {
@@ -86,7 +82,6 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
   const { filterType, visible, setVisible, isStartMITM, onSetHijackFilterFlag, onSetFilterFlag } = props
   const { t } = useI18nNamespaces(['mitm', 'yakitUi'])
   const filtersRef = useRef<any>()
-  const [type, setType] = useState<FilterSettingType>('base-setting')
   // filter 过滤器
   const [_mitmFilter, setMITMFilter] = useState<MITMFilterSchema>()
   const [_, setFilterName, getFilterName] = useGetState<string>('')
@@ -337,11 +332,6 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
     setFilterData(v.advancedFilters || [])
   })
 
-  const onSetType = useMemoizedFn((e) => {
-    const { value } = e.target
-    setType(value)
-  })
-
   /**获取基础配置、高级配置去除空数据 */
   const getMITMFilterData = useMemoizedFn(() => {
     const filter: MITMFilterSchema = filtersRef.current.getFormValue()
@@ -380,23 +370,6 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
               ? (editFilterName ? `${t('YakitButton.edit')}` : '') + t('MITMFiltersModal.hijack_condition')
               : (editFilterName ? `${t('YakitButton.edit')}` : '') + t('MITMFiltersModal.filter_configuration')}
           </span>
-          {filterType !== 'hijackFilter' && (
-            <YakitRadioButtons
-              value={type}
-              onChange={onSetType}
-              buttonStyle="solid"
-              options={[
-                {
-                  value: 'base-setting',
-                  label: t('MITMFiltersModal.base_configuration'),
-                },
-                {
-                  value: 'advanced-setting',
-                  label: t('MITMFiltersModal.advanced_configuration'),
-                },
-              ]}
-            />
-          )}
         </div>
       }
       width={730}
@@ -493,26 +466,13 @@ const MITMFiltersModal: React.FC<MITMFiltersModalProps> = React.memo((props) => 
       okText={editFilterName ? t('MITMFiltersModal.save_and_apply') : t('YakitButton.confirm')}
       bodyStyle={{ padding: 0 }}
     >
-      {filterType !== 'hijackFilter' && (
-        <div className={styles.infoBox}>
-          <div>{t('MITMFiltersModal.tip')}</div>
-          <div>{t('MITMFiltersModal.hijack_tip_2')}</div>
-        </div>
-      )}
       <MITMFilters
         filterType={filterType}
-        visible={type === 'base-setting'}
+        visible={true}
         filter={_mitmFilter}
         onFinished={() => onSetFilter()}
         ref={filtersRef}
       />
-      <React.Suspense>
-        <MITMAdvancedFilters
-          filterData={filterData}
-          setFilterData={setFilterData}
-          visible={type === 'advanced-setting'}
-        />
-      </React.Suspense>
     </YakitModal>
   )
 })
