@@ -32,6 +32,8 @@ export interface YakPoCExecuteContentProps {
   pageInfo: PocPageInfoProps
   onInitInputValueAfter?: (value: HybridScanControlAfterRequest) => void
   setPluginExecuteLog: (s: StreamResult.PluginExecuteLog[]) => void
+  /**任务列表打开的只读漏洞详情*/
+  isTaskDetail?: boolean
   /**内联到「插件执行」表单中的节点（渲染在扫描目标下方、开始执行上方）*/
   groupListNode?: ReactNode
 }

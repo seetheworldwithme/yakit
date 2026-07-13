@@ -12,6 +12,17 @@
   }
 }
 
+.yak-poc-task-list-entry {
+  padding: 12px;
+}
+
+.yak-poc-detail-wrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .divider-style {
   @extend %divider-style;
 }

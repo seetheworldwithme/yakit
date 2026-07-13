@@ -445,6 +445,8 @@ interface HybridScanExecuteContentProps {
   showScanTargetHelp?: boolean
   /**内联到表单中的额外节点（渲染在扫描目标下方、开始执行上方）*/
   extraFormNode?: React.ReactNode
+  /**任务详情仅展示执行结果，不渲染执行参数表单*/
+  hideExecuteForm?: boolean
 }
 export interface HybridScanExecuteContentRefProps {
   onActionHybridScanByRuntimeId: (runtimeId: string, hybridScanMode: HybridScanModeType) => Promise<null>
@@ -471,6 +473,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
       hybridScanTaskSource,
       showScanTargetHelp = true,
       extraFormNode,
+      hideExecuteForm = false,
     } = props
     const { queryPagesDataById, updatePagesDataCacheById } = usePageInfo(
       (s) => ({
@@ -860,66 +863,73 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
     }, [isExecuting, runtimeId])
     return (
       <>
-        <div
-          className={classNames(styles['plugin-batch-execute-form-wrapper'], {
-            [styles['plugin-batch-execute-form-wrapper-hidden']]: !isExpand,
-          })}
-          ref={batchExecuteFormRef}
-        >
-          <Form
-            form={form}
-            onFinish={onStartExecute}
-            labelCol={{ span: 6 }}
-            wrapperCol={{ span: 12 }} //这样设置是为了让输入框居中
-            validateMessages={{
-              /* eslint-disable no-template-curly-in-string */
-              required: '${label} 是必填字段',
-            }}
-            labelWrap={true}
+        {!hideExecuteForm && (
+          <div
+            className={classNames(styles['plugin-batch-execute-form-wrapper'], {
+              [styles['plugin-batch-execute-form-wrapper-hidden']]: !isExpand,
+            })}
+            ref={batchExecuteFormRef}
           >
-            <PluginFixFormParams
+            <Form
               form={form}
-              disabled={isExecuting}
-              type="batch"
-              rawHTTPRequest={initRawHTTPRequest}
-              inputType={inputType}
-              setInputType={setInputType}
-              showScanTargetHelp={showScanTargetHelp}
-            />
-            {extraFormNode && (
-              <Form.Item colon={false} label={' '} wrapperCol={{ span: 18 }} style={{ marginBottom: 16 }}>
-                {extraFormNode}
+              onFinish={onStartExecute}
+              labelCol={{ span: 6 }}
+              wrapperCol={{ span: 12 }} //这样设置是为了让输入框居中
+              validateMessages={{
+                /* eslint-disable no-template-curly-in-string */
+                required: '${label} 是必填字段',
+              }}
+              labelWrap={true}
+            >
+              <PluginFixFormParams
+                form={form}
+                disabled={isExecuting}
+                type="batch"
+                rawHTTPRequest={initRawHTTPRequest}
+                inputType={inputType}
+                setInputType={setInputType}
+                showScanTargetHelp={showScanTargetHelp}
+              />
+              {extraFormNode && (
+                <Form.Item colon={false} label={' '} wrapperCol={{ span: 18 }} style={{ marginBottom: 16 }}>
+                  {extraFormNode}
+                </Form.Item>
+              )}
+              <Form.Item colon={false} label={' '} style={{ marginBottom: 0 }}>
+                <div className={styles['plugin-execute-form-operate']}>
+                  {isExecuting ? (
+                    <>
+                      {executeStatus === 'paused' && !pauseLoading && (
+                        <YakitButton size="large" onClick={onContinue} loading={continueLoading}>
+                          继续
+                        </YakitButton>
+                      )}
+                      {(executeStatus === 'process' || pauseLoading) && (
+                        <YakitButton size="large" onClick={onPause} loading={pauseLoading}>
+                          暂停
+                        </YakitButton>
+                      )}
+                      <YakitButton
+                        danger
+                        onClick={onStopExecute}
+                        size="large"
+                        disabled={pauseLoading || continueLoading}
+                      >
+                        停止
+                      </YakitButton>
+                    </>
+                  ) : (
+                    <>
+                      <YakitButton htmlType="submit" size="large">
+                        开始执行
+                      </YakitButton>
+                    </>
+                  )}
+                </div>
               </Form.Item>
-            )}
-            <Form.Item colon={false} label={' '} style={{ marginBottom: 0 }}>
-              <div className={styles['plugin-execute-form-operate']}>
-                {isExecuting ? (
-                  <>
-                    {executeStatus === 'paused' && !pauseLoading && (
-                      <YakitButton size="large" onClick={onContinue} loading={continueLoading}>
-                        继续
-                      </YakitButton>
-                    )}
-                    {(executeStatus === 'process' || pauseLoading) && (
-                      <YakitButton size="large" onClick={onPause} loading={pauseLoading}>
-                        暂停
-                      </YakitButton>
-                    )}
-                    <YakitButton danger onClick={onStopExecute} size="large" disabled={pauseLoading || continueLoading}>
-                      停止
-                    </YakitButton>
-                  </>
-                ) : (
-                  <>
-                    <YakitButton htmlType="submit" size="large">
-                      开始执行
-                    </YakitButton>
-                  </>
-                )}
-              </div>
-            </Form.Item>
-          </Form>
-        </div>
+            </Form>
+          </div>
+        )}
         {isShowResult && (
           <PluginExecuteResult
             streamInfo={streamInfo}

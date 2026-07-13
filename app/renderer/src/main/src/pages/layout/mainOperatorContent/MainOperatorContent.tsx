@@ -126,6 +126,7 @@ import {
 } from '@/store/pageInfo'
 import cloneDeep from 'lodash/cloneDeep'
 import { onToManageGroup } from '@/pages/securityTool/yakPoC/YakPoC'
+import { getYakPoCPageTitle } from '@/pages/securityTool/yakPoC/YakPoCTitle'
 import { apiFetchQueryYakScriptGroupLocal } from '@/pages/plugins/utils'
 import { ExpandAndRetractExcessiveState } from '@/pages/plugins/operator/expandAndRetract/ExpandAndRetract'
 import {
@@ -1309,7 +1310,13 @@ export const MainOperatorContent: React.FC<MainOperatorContentProps> = React.mem
   })
   /**专项漏洞 */
   const addPoC = useMemoizedFn((data) => {
-    openMenuPage({ route: YakitRoute.PoC }, { pageParams: { pocPageInfo: data } })
+    openMenuPage(
+      { route: YakitRoute.PoC },
+      {
+        verbose: getYakPoCPageTitle(data),
+        pageParams: { pocPageInfo: data },
+      },
+    )
   })
   /**
    * @name 新建插件

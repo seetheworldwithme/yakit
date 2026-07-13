@@ -110,6 +110,8 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
 
   const [executeStatus, setExecuteStatus] = useState<ExpandAndRetractExcessiveState>('default')
   const [pluginExecuteLog, setPluginExecuteLog] = useState<StreamResult.PluginExecuteLog[]>([])
+  const [visibleTaskList, setVisibleTaskList] = useState<boolean>(false)
+  const isTaskDetail = !!pageInfo.runtimeId
 
   // LINK #deleted-init-group-all
   // LINK #set-init-group-all
@@ -188,47 +190,36 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
 
   return (
     <div className={styles['yak-poc-wrapper']} ref={pluginGroupRef}>
-      {isExecuting && (
-        <div className={styles['yak-poc-left-section']}>
-          <div className={styles['left-wrapper']}>
-            <div className={styles['left-plugin-detail-section']}>
-              <div className={styles['midden-heard']}>
-                <span className={styles['heard-title']}>{t('YakPoCExecuteContent.pluginLog')}</span>
-              </div>
-              <PluginExecuteLog
-                hidden={false}
-                pluginExecuteLog={pluginExecuteLog}
-                isExecuting={executeStatus === 'process'}
+      {isTaskDetail ? (
+        <YakPoCExecuteContent
+          hidden={hidden}
+          setHidden={setHidden}
+          selectGroupList={selectGroupListAll}
+          executeStatus={executeStatus}
+          setExecuteStatus={setExecuteStatus}
+          onClearAll={onClearAll}
+          pageId={pageId}
+          pageInfo={pageInfo}
+          onInitInputValueAfter={onInitInputValueAfter}
+          setPluginExecuteLog={setPluginExecuteLog}
+          isTaskDetail
+        />
+      ) : (
+        <>
+          <div className={styles['yak-poc-task-list-entry']}>
+            <YakitButton onClick={() => setVisibleTaskList(true)}>{t('YakPoCExecuteContent.taskList')}</YakitButton>
+          </div>
+          <React.Suspense fallback={<>loading...</>}>
+            {visibleTaskList && (
+              <HybridScanTaskListDrawer
+                visible={visibleTaskList}
+                setVisible={setVisibleTaskList}
+                hybridScanTaskSource="yakPoc"
               />
-            </div>
-          </div>
-        </div>
+            )}
+          </React.Suspense>
+        </>
       )}
-      <YakPoCExecuteContent
-        hidden={hidden}
-        setHidden={setHidden}
-        selectGroupList={selectGroupListAll}
-        executeStatus={executeStatus}
-        setExecuteStatus={setExecuteStatus}
-        onClearAll={onClearAll}
-        pageId={pageId}
-        pageInfo={pageInfo}
-        onInitInputValueAfter={onInitInputValueAfter}
-        setPluginExecuteLog={setPluginExecuteLog}
-        groupListNode={
-          <div className={styles['inline-plugin-group']}>
-            <PluginGroupByKeyWord
-              pageId={pageId}
-              inViewport={inViewport}
-              hidden={false}
-              defGroupKeywords={pageInfo.defGroupKeywords || ''}
-              selectGroupListByKeyWord={pageInfo.selectGroupListByKeyWord || []}
-              setSelectGroupListByKeyWord={onSetSelectGroupListByKeyWord}
-              setResponseToSelect={setKeyWordResponseToSelect}
-            />
-          </div>
-        }
-      />
     </div>
   )
 })
@@ -581,7 +572,8 @@ const PluginGroupByKeyWordItem: React.FC<PluginGroupByKeyWordItemProps> = React.
 })
 const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((props) => {
   const { t } = useI18nNamespaces(['yakPoC', 'yakitUi'])
-  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setPluginExecuteLog, groupListNode } = props
+  const { selectGroupList, pageId, pageInfo, onInitInputValueAfter, setPluginExecuteLog, groupListNode, isTaskDetail } =
+    props
   const pluginBatchExecuteContentRef = useRef<HybridScanExecuteContentRefProps>(null)
 
   const [hidden, setHidden] = useControllableValue<boolean>(props, {
@@ -672,82 +664,109 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
   }, [pageInfo.https, pageInfo.httpFlowIds, pageInfo.request])
   return (
     <>
-      <div className={styles['yak-poc-execute-wrapper']}>
-        <ExpandAndRetract isExpand={isExpand} onExpand={onExpand} status={executeStatus}>
-          <div className={styles['yak-poc-executor-title']}>
-            <span className={styles['yak-poc-executor-title-text']}>{t('YakPoCExecuteContent.pluginExecute')}</span>
-          </div>
-          <div className={styles['yak-poc-executor-btn']}>
-            {progressList.length === 1 && (
-              <PluginExecuteProgress percent={progressList[0].progress} name={progressList[0].id} />
-            )}
-            <YakitButton
-              type="text"
-              onClick={(e) => {
-                e.stopPropagation()
-                setVisibleRaskList(true)
-              }}
-              style={{ padding: 0 }}
-            >
-              {t('YakPoCExecuteContent.taskList')}
-            </YakitButton>
-            {isExecuting
-              ? !isExpand && (
-                  <>
-                    {executeStatus === 'paused' && !pauseLoading && (
-                      <YakitButton onClick={onContinue} loading={continueLoading}>
-                        {t('YakitButton.continue')}
+      {isTaskDetail ? (
+        <div className={styles['yak-poc-detail-wrapper']}>
+          <HybridScanExecuteContent
+            ref={pluginBatchExecuteContentRef}
+            isExpand={false}
+            setIsExpand={setIsExpand}
+            onInitInputValueAfter={onInitInputValueAfter}
+            selectNum={selectGroupNum}
+            setProgressList={setProgressList}
+            pauseLoading={pauseLoading}
+            setPauseLoading={setPauseLoading}
+            continueLoading={continueLoading}
+            setContinueLoading={setContinueLoading}
+            pluginInfo={pluginInfo}
+            executeStatus={executeStatus}
+            setExecuteStatus={onSetExecuteStatus}
+            setPluginExecuteLog={setPluginExecuteLog}
+            setHidden={setHidden}
+            dataScanParams={dataScanParams}
+            pageId={pageId}
+            initRuntimeId={pageInfo.runtimeId}
+            hybridScanTaskSource="yakPoc"
+            hideExecuteForm
+          />
+        </div>
+      ) : (
+        <div className={styles['yak-poc-execute-wrapper']}>
+          <ExpandAndRetract isExpand={isExpand} onExpand={onExpand} status={executeStatus}>
+            <div className={styles['yak-poc-executor-title']}>
+              <span className={styles['yak-poc-executor-title-text']}>{t('YakPoCExecuteContent.pluginExecute')}</span>
+            </div>
+            <div className={styles['yak-poc-executor-btn']}>
+              {progressList.length === 1 && (
+                <PluginExecuteProgress percent={progressList[0].progress} name={progressList[0].id} />
+              )}
+              <YakitButton
+                type="text"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setVisibleRaskList(true)
+                }}
+                style={{ padding: 0 }}
+              >
+                {t('YakPoCExecuteContent.taskList')}
+              </YakitButton>
+              {isExecuting
+                ? !isExpand && (
+                    <>
+                      {executeStatus === 'paused' && !pauseLoading && (
+                        <YakitButton onClick={onContinue} loading={continueLoading}>
+                          {t('YakitButton.continue')}
+                        </YakitButton>
+                      )}
+                      {(executeStatus === 'process' || pauseLoading) && (
+                        <YakitButton onClick={onPause} loading={pauseLoading}>
+                          {t('YakitButton.pause')}
+                        </YakitButton>
+                      )}
+                      <YakitButton danger onClick={onStopExecute} disabled={pauseLoading || continueLoading}>
+                        {t('YakitButton.stop')}
                       </YakitButton>
-                    )}
-                    {(executeStatus === 'process' || pauseLoading) && (
-                      <YakitButton onClick={onPause} loading={pauseLoading}>
-                        {t('YakitButton.pause')}
+                      <div className={styles['divider-style']}></div>
+                    </>
+                  )
+                : !isExpand && (
+                    <>
+                      <YakitButton onClick={onStartExecute} disabled={selectGroupNum === 0}>
+                        {t('YakitButton.execute')}
                       </YakitButton>
-                    )}
-                    <YakitButton danger onClick={onStopExecute} disabled={pauseLoading || continueLoading}>
-                      {t('YakitButton.stop')}
-                    </YakitButton>
-                    <div className={styles['divider-style']}></div>
-                  </>
-                )
-              : !isExpand && (
-                  <>
-                    <YakitButton onClick={onStartExecute} disabled={selectGroupNum === 0}>
-                      {t('YakitButton.execute')}
-                    </YakitButton>
-                    <div className={styles['divider-style']}></div>
-                  </>
-                )}
-          </div>
-        </ExpandAndRetract>
-        <div className={styles['yak-poc-executor-body']}>
-          <div className={styles['yak-poc-executor-body-cont']}>
-            <HybridScanExecuteContent
-              ref={pluginBatchExecuteContentRef}
-              isExpand={isExpand}
-              setIsExpand={setIsExpand}
-              onInitInputValueAfter={onInitInputValueAfter}
-              selectNum={selectGroupNum}
-              setProgressList={setProgressList}
-              pauseLoading={pauseLoading}
-              setPauseLoading={setPauseLoading}
-              continueLoading={continueLoading}
-              setContinueLoading={setContinueLoading}
-              pluginInfo={pluginInfo}
-              executeStatus={executeStatus}
-              setExecuteStatus={onSetExecuteStatus}
-              setPluginExecuteLog={setPluginExecuteLog}
-              setHidden={setHidden}
-              dataScanParams={dataScanParams}
-              pageId={pageId}
-              initRuntimeId={pageInfo.runtimeId}
-              hybridScanTaskSource="yakPoc"
-              showScanTargetHelp={false}
-              extraFormNode={groupListNode}
-            />
+                      <div className={styles['divider-style']}></div>
+                    </>
+                  )}
+            </div>
+          </ExpandAndRetract>
+          <div className={styles['yak-poc-executor-body']}>
+            <div className={styles['yak-poc-executor-body-cont']}>
+              <HybridScanExecuteContent
+                ref={pluginBatchExecuteContentRef}
+                isExpand={isExpand}
+                setIsExpand={setIsExpand}
+                onInitInputValueAfter={onInitInputValueAfter}
+                selectNum={selectGroupNum}
+                setProgressList={setProgressList}
+                pauseLoading={pauseLoading}
+                setPauseLoading={setPauseLoading}
+                continueLoading={continueLoading}
+                setContinueLoading={setContinueLoading}
+                pluginInfo={pluginInfo}
+                executeStatus={executeStatus}
+                setExecuteStatus={onSetExecuteStatus}
+                setPluginExecuteLog={setPluginExecuteLog}
+                setHidden={setHidden}
+                dataScanParams={dataScanParams}
+                pageId={pageId}
+                initRuntimeId={pageInfo.runtimeId}
+                hybridScanTaskSource="yakPoc"
+                showScanTargetHelp={false}
+                extraFormNode={groupListNode}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <React.Suspense fallback={<>loading...</>}>
         {visibleRaskList && (
           <HybridScanTaskListDrawer

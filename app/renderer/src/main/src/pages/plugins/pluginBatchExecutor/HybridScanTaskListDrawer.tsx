@@ -57,6 +57,7 @@ const HybridScanTaskListDrawer: React.FC<HybridScanTaskListDrawerProps> = React.
       visible={visible}
       onClose={onClose}
       width="45%"
+      placement={hybridScanTaskSource === 'yakPoc' ? 'left' : 'right'}
       title="任务列表"
       extra={
         <>
