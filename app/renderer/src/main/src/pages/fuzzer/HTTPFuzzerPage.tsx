@@ -3542,6 +3542,8 @@ export const SecondNodeExtra: React.FC<SecondNodeExtraProps> = React.memo((props
             </YakitButton>
           </YakitDropdownMenu>
         )}
+        {/* 按功能裁剪方案：隐藏「详情」按钮（打开响应详情抽屉，任务管理表无对应；编辑器已展示完整报文）
+            保留 analyzeFuzzerResponse 函数与 FuzzerResponseToHTTPFlowDetail 组件，仅不展示入口；恢复请取消本注释
         <YakitButton
           type="primary"
           onClick={() => {
@@ -3551,6 +3553,7 @@ export const SecondNodeExtra: React.FC<SecondNodeExtraProps> = React.memo((props
         >
           {t('YakitButton.detail')}
         </YakitButton>
+        */}
       </div>
     )
   }

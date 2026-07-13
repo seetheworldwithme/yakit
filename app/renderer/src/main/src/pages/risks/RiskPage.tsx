@@ -49,7 +49,7 @@ export const RiskPage: React.FC<RiskPageProp> = (props) => {
   return (
     <YakitSpin spinning={riskLoading}>
       <div className={styles['risk-page']}>
-        <YakitRiskTable query={query} setQuery={setQuery} setRiskLoading={setRiskLoading} />
+        <YakitRiskTable query={query} setQuery={setQuery} setRiskLoading={setRiskLoading} compactRiskDetail={true} />
       </div>
     </YakitSpin>
   )

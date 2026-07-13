@@ -1377,7 +1377,7 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
               className={styles['yakit-risk-details']}
               onClickIP={onClickIP}
               border={yakitRiskDetailsBorder}
-              isShowExtra={!excludeColumnsKey.includes('action')}
+              isShowExtra={!compactRiskDetail && !excludeColumnsKey.includes('action')}
               onRetest={onRetest}
               compactRiskDetail={compactRiskDetail}
             />
