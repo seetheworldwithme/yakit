@@ -28,11 +28,7 @@ import {
   useUpdateEffect,
 } from 'ahooks'
 import { StreamResult } from '@/hook/useHoldGRPCStream/useHoldGRPCStreamType'
-import {
-  ExpandAndRetract,
-  ExpandAndRetractExcessiveState,
-} from '@/pages/plugins/operator/expandAndRetract/ExpandAndRetract'
-import { PluginExecuteProgress } from '@/pages/plugins/operator/localPluginExecuteDetailHeard/LocalPluginExecuteDetailHeard'
+import { ExpandAndRetractExcessiveState } from '@/pages/plugins/operator/expandAndRetract/ExpandAndRetract'
 import {
   OutlineArrowscollapseIcon,
   OutlineArrowsexpandIcon,
@@ -182,12 +178,6 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
     } catch (error) {}
   })
 
-  const isExecuting = useCreation(() => {
-    if (executeStatus === 'process') return true
-    if (executeStatus === 'paused') return true
-    return false
-  }, [executeStatus])
-
   return (
     <div className={styles['yak-poc-wrapper']} ref={pluginGroupRef}>
       {isTaskDetail ? (
@@ -209,6 +199,31 @@ export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
           <div className={styles['yak-poc-task-list-entry']}>
             <YakitButton onClick={() => setVisibleTaskList(true)}>{t('YakPoCExecuteContent.taskList')}</YakitButton>
           </div>
+          <YakPoCExecuteContent
+            hidden={hidden}
+            setHidden={setHidden}
+            selectGroupList={selectGroupListAll}
+            executeStatus={executeStatus}
+            setExecuteStatus={setExecuteStatus}
+            onClearAll={onClearAll}
+            pageId={pageId}
+            pageInfo={pageInfo}
+            onInitInputValueAfter={onInitInputValueAfter}
+            setPluginExecuteLog={setPluginExecuteLog}
+            groupListNode={
+              <div className={styles['inline-plugin-group']}>
+                <PluginGroupByKeyWord
+                  pageId={pageId}
+                  inViewport={inViewport}
+                  hidden={false}
+                  defGroupKeywords={pageInfo.defGroupKeywords || ''}
+                  selectGroupListByKeyWord={pageInfo.selectGroupListByKeyWord || []}
+                  setSelectGroupListByKeyWord={onSetSelectGroupListByKeyWord}
+                  setResponseToSelect={setKeyWordResponseToSelect}
+                />
+              </div>
+            }
+          />
           <React.Suspense fallback={<>loading...</>}>
             {visibleTaskList && (
               <HybridScanTaskListDrawer
@@ -584,7 +599,7 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
 
   /**是否展开/收起 */
   const [isExpand, setIsExpand] = useState<boolean>(true)
-  const [progressList, setProgressList] = useState<StreamResult.Progress[]>([])
+  const [, setProgressList] = useState<StreamResult.Progress[]>([])
   const [executeStatus, setExecuteStatus] = useControllableValue<ExpandAndRetractExcessiveState>(props, {
     defaultValue: 'default',
     valuePropName: 'executeStatus',
@@ -594,15 +609,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
   const [pauseLoading, setPauseLoading] = useState<boolean>(false)
   /**继续 */
   const [continueLoading, setContinueLoading] = useState<boolean>(false)
-  // 任务列表抽屉
-  const [visibleRaskList, setVisibleRaskList] = useState<boolean>(false)
-
-  const isExecuting = useCreation(() => {
-    if (executeStatus === 'process') return true
-    if (executeStatus === 'paused') return true
-    return false
-  }, [executeStatus])
-
   useEffect(() => {
     if (pageInfo.runtimeId) {
       onActionHybridScanByRuntimeId(pageInfo.runtimeId)
@@ -622,16 +628,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
       setIsExpand(false)
     })
   })
-  const onExpand = useMemoizedFn((e) => {
-    e.stopPropagation()
-    setIsExpand(!isExpand)
-  })
-  const onStopExecute = useMemoizedFn(() => {
-    pluginBatchExecuteContentRef.current?.onStopExecute()
-  })
-  const onStartExecute = useMemoizedFn(() => {
-    pluginBatchExecuteContentRef.current?.onStartExecute()
-  })
   const selectGroupNum = useCreation(() => {
     return selectGroupList.length
   }, [selectGroupList])
@@ -647,13 +643,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
 
   const onSetExecuteStatus = useMemoizedFn((val) => {
     setExecuteStatus(val)
-  })
-  const onPause = useMemoizedFn((e) => {
-    pluginBatchExecuteContentRef.current?.onPause()
-  })
-
-  const onContinue = useMemoizedFn((e) => {
-    pluginBatchExecuteContentRef.current?.onContinue()
   })
   const dataScanParams = useCreation(() => {
     return {
@@ -691,53 +680,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
         </div>
       ) : (
         <div className={styles['yak-poc-execute-wrapper']}>
-          <ExpandAndRetract isExpand={isExpand} onExpand={onExpand} status={executeStatus}>
-            <div className={styles['yak-poc-executor-title']}>
-              <span className={styles['yak-poc-executor-title-text']}>{t('YakPoCExecuteContent.pluginExecute')}</span>
-            </div>
-            <div className={styles['yak-poc-executor-btn']}>
-              {progressList.length === 1 && (
-                <PluginExecuteProgress percent={progressList[0].progress} name={progressList[0].id} />
-              )}
-              <YakitButton
-                type="text"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setVisibleRaskList(true)
-                }}
-                style={{ padding: 0 }}
-              >
-                {t('YakPoCExecuteContent.taskList')}
-              </YakitButton>
-              {isExecuting
-                ? !isExpand && (
-                    <>
-                      {executeStatus === 'paused' && !pauseLoading && (
-                        <YakitButton onClick={onContinue} loading={continueLoading}>
-                          {t('YakitButton.continue')}
-                        </YakitButton>
-                      )}
-                      {(executeStatus === 'process' || pauseLoading) && (
-                        <YakitButton onClick={onPause} loading={pauseLoading}>
-                          {t('YakitButton.pause')}
-                        </YakitButton>
-                      )}
-                      <YakitButton danger onClick={onStopExecute} disabled={pauseLoading || continueLoading}>
-                        {t('YakitButton.stop')}
-                      </YakitButton>
-                      <div className={styles['divider-style']}></div>
-                    </>
-                  )
-                : !isExpand && (
-                    <>
-                      <YakitButton onClick={onStartExecute} disabled={selectGroupNum === 0}>
-                        {t('YakitButton.execute')}
-                      </YakitButton>
-                      <div className={styles['divider-style']}></div>
-                    </>
-                  )}
-            </div>
-          </ExpandAndRetract>
           <div className={styles['yak-poc-executor-body']}>
             <div className={styles['yak-poc-executor-body-cont']}>
               <HybridScanExecuteContent
@@ -767,15 +709,6 @@ const YakPoCExecuteContent: React.FC<YakPoCExecuteContentProps> = React.memo((pr
           </div>
         </div>
       )}
-      <React.Suspense fallback={<>loading...</>}>
-        {visibleRaskList && (
-          <HybridScanTaskListDrawer
-            visible={visibleRaskList}
-            setVisible={setVisibleRaskList}
-            hybridScanTaskSource="yakPoc"
-          />
-        )}
-      </React.Suspense>
     </>
   )
 })

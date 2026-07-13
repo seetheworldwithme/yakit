@@ -43,6 +43,9 @@
 }
 .yak-poc-wrapper {
   @extend %display-flex-center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   flex: 1;
   height: 100%;
   overflow: hidden;
