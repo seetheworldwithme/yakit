@@ -11,8 +11,7 @@ import {
 } from './YakPoCType'
 import classNames from 'classnames'
 import styles from './YakPoC.module.scss'
-import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
-import { Divider, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import {
@@ -61,12 +60,9 @@ import { apiFetchQueryYakScriptGroupLocalByPoc } from './utils'
 import { PluginListPageMeta } from '@/pages/plugins/baseTemplateType'
 import { initialLocalState, pluginLocalReducer } from '@/pages/plugins/pluginReducer'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
-import { RemoteGV } from '@/yakitGV'
 import { PluginDetailsListItem } from '@/pages/plugins/baseTemplate'
 import moment from 'moment'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
-import { YakitAutoComplete, defYakitAutoCompleteRef } from '@/components/yakitUI/YakitAutoComplete/YakitAutoComplete'
-import { YakitAutoCompleteRefProps } from '@/components/yakitUI/YakitAutoComplete/YakitAutoCompleteType'
 import { compareAsc } from '@/pages/yakitStore/viewers/base'
 import { batchPluginType } from '@/defaultConstants/PluginBatchExecutor'
 import { defaultPocPageInfo } from '@/defaultConstants/YakPoC'
@@ -90,7 +86,7 @@ export const onToManageGroup = () => {
 
 /**专项漏洞检测 */
 export const YakPoC: React.FC<YakPoCProps> = React.memo((props) => {
-  const { t } = useI18nNamespaces(['yakPoC', 'yakitUi'])
+  const { t } = useI18nNamespaces(['yakPoC'])
   const { pageId } = props
 
   const { queryPagesDataById } = usePageInfo(
@@ -392,23 +388,15 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
     trigger: 'setSelectGroupListByKeyWord',
   })
 
-  const [keywords, setKeywords] = useState<string>(defGroupKeywords || '')
-  const [allCheck, setAllCheck] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [response, setResponse] = useState<GroupCount[]>([])
-  const [isRef, setIsRef] = useState<boolean>(false)
   const [visibleOnline, setVisibleOnline] = useState<boolean>(false)
   /**已展开内联插件列表的分组（可多个同时展开）*/
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
 
   const initialResponseRef = useRef<GroupCount[]>([])
-  const pocPluginKeywordsRef = useRef<YakitAutoCompleteRefProps>({
-    ...defYakitAutoCompleteRef,
-  })
-
   useEffect(() => {
     if (!defGroupKeywords) return
-    setKeywords(defGroupKeywords)
     onSearch(defGroupKeywords)
   }, [defGroupKeywords])
 
@@ -442,49 +430,19 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
     if (isExist) {
       const newList = selectGroupList.filter((ele) => ele !== val.Value)
       setSelectGroupList(newList)
-      setAllCheck(newList.length === response.length)
     } else {
       const newList = [...selectGroupList, val.Value]
       setSelectGroupList(newList)
-      setAllCheck(newList.length === response.length)
     }
-    setKeywords('')
     onSearch('')
   })
   const onToggleExpand = useMemoizedFn((value: string) => {
     setExpandedGroups((list) => (list.includes(value) ? list.filter((ele) => ele !== value) : [...list, value]))
   })
-  const total = useCreation(() => {
-    return response.length
-  }, [response])
-  const indeterminate: boolean = useCreation(() => {
-    if (selectGroupList.length > 0 && selectGroupList.length !== response.length) return true
-    return false
-  }, [selectGroupList, response])
-  const checked: boolean = useCreation(() => {
-    return allCheck || (selectGroupList.length > 0 && selectGroupList.length === response.length)
-  }, [selectGroupList, allCheck])
-  const onClearSelect = useMemoizedFn(() => {
-    setSelectGroupList([])
-    setAllCheck(false)
-  })
-  const onSelectAll = useMemoizedFn((e) => {
-    const { checked } = e.target
-    if (checked) {
-      setSelectGroupList(response.map((ele) => ele.Value))
-    } else {
-      setSelectGroupList([])
-    }
-    setAllCheck(checked)
-  })
   const onSearch = useMemoizedFn((val) => {
     if (!val) {
       setResponse(initialResponseRef.current)
-      setIsRef(!isRef)
       return
-    }
-    if (pocPluginKeywordsRef.current) {
-      pocPluginKeywordsRef.current?.onSetRemoteValues(val)
     }
 
     const isHaveData = initialResponseRef.current.filter((ele) => {
@@ -492,7 +450,6 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
     })
     if (isHaveData.length > 0) {
       setResponse([...isHaveData])
-      setIsRef(!isRef)
     } else {
       // 先创建临时分组再搜索
       const addParams: SaveYakScriptGroupRequest = {
@@ -520,7 +477,6 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
           })
           initialResponseRef.current = res
           setResponse([...searchData])
-          setIsRef(!isRef)
         })
         .finally(() =>
           setTimeout(() => {
@@ -529,61 +485,12 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
         )
     }
   })
-  const onPressEnter = useMemoizedFn((e) => {
-    onSearch(e.target.value)
-  })
-  const onSelectKeywords = useMemoizedFn((value) => {
-    onSearch(value)
-    setKeywords(value)
-  })
   return (
     <div
       className={classNames(styles['plugin-group-wrapper'], {
         [styles['plugin-group-wrapper-hidden']]: hidden,
       })}
     >
-      <div className={styles['filter-wrapper']}>
-        <div className={styles['header-search']}>
-          <YakitAutoComplete
-            ref={pocPluginKeywordsRef}
-            isCacheDefaultValue={false}
-            cacheHistoryDataKey={RemoteGV.PocPluginKeywords}
-            onSelect={onSelectKeywords}
-            value={keywords}
-            style={{ flex: 1 }}
-          >
-            <YakitInput.Search
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder={t('YakitInput.searchKeyWordPlaceholder')}
-              onSearch={onSearch}
-              onPressEnter={onPressEnter}
-              size="large"
-            />
-          </YakitAutoComplete>
-        </div>
-        <div className={styles['filter-body']}>
-          <div className={styles['filter-body-left']}>
-            <YakitCheckbox indeterminate={indeterminate} checked={checked} onChange={onSelectAll}>
-              {t('YakitCheckbox.selectAll')}
-            </YakitCheckbox>
-            <span className={styles['count-num']}>
-              Total
-              <span className={styles['num-style']}>{total}</span>
-            </span>
-            <Divider type="vertical" style={{ margin: '0 4px' }} />
-            <span className={styles['count-num']}>
-              Selected
-              <span className={styles['num-style']}>{selectGroupList.length}</span>
-            </span>
-          </div>
-          <div className={styles['filter-body-right']}>
-            <YakitButton type="text" danger onClick={onClearSelect}>
-              {t('YakitButton.clear')}
-            </YakitButton>
-          </div>
-        </div>
-      </div>
       {initialResponseRef.current.length === 0 ? (
         <div className={styles['yak-poc-empty']}>
           <YakitEmpty

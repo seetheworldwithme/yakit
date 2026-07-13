@@ -533,6 +533,14 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
       emiter.off('openEngineLinkWin', openEngineLinkWin)
     }
   }, [])
+  // 左侧侧边栏「项目管理」入口：复用设置菜单的进入逻辑
+  useEffect(() => {
+    const onOpenProjectManage = () => changeYakitMode('soft')
+    emiter.on('onOpenProjectManage', onOpenProjectManage)
+    return () => {
+      emiter.off('onOpenProjectManage', onOpenProjectManage)
+    }
+  }, [])
   const killCurrentProcess = useMemoizedFn(async (callback: () => void, extraPorts?: number[]) => {
     let finalPorts: number[] = []
 
@@ -1464,7 +1472,10 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                         {t('YakitButton.exit')}
                       </div>
                       <div
-                        className={classNames(styles['sentinel-shell-footer'], styles['sentinel-shell-sampling-refresh'])}
+                        className={classNames(
+                          styles['sentinel-shell-footer'],
+                          styles['sentinel-shell-sampling-refresh'],
+                        )}
                         onClick={() => {
                           resetPerformanceSampling()
                           emiter.emit('performanceSampling')
@@ -1690,7 +1701,10 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                     />
                   </div>
                 </div>
-                <div className={classNames(styles['sentinel-shell-bar-title'], dropClassName)} onDoubleClick={maxScreen} />
+                <div
+                  className={classNames(styles['sentinel-shell-bar-title'], dropClassName)}
+                  onDoubleClick={maxScreen}
+                />
                 <div className={styles['sentinel-shell-bar-right']}>
                   {performanceSampling}
 
@@ -1771,7 +1785,10 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                   {performanceSampling}
                 </div>
 
-                <div className={classNames(styles['sentinel-shell-bar-title'], dropClassName)} onDoubleClick={maxScreen} />
+                <div
+                  className={classNames(styles['sentinel-shell-bar-title'], dropClassName)}
+                  onDoubleClick={maxScreen}
+                />
 
                 <div className={styles['sentinel-shell-bar-right']}>
                   <WinUIOp

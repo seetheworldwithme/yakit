@@ -11,7 +11,7 @@
     "History": "History",
     "viewAndManageAllHistoricalTrafficFromMITMPluginsAndFuzzing": "查看并操作所有劫持、插件、Fuzz发出的所有历史流量",
     "MITM": "MITM",
-    "MITM Interactive Hijacking": "MITM 交互式劫持",
+    "MITM Interactive Hijacking": "流量劫持",
     "openMITM": "开启 MITM",
     "mitmSslHijack": "安装 SSL/TLS 证书，劫持浏览器所有流量请求、响应数据包，提供手动劫持与被动扫描两种模式",
     "WebFuzzer": "WebFuzzer",

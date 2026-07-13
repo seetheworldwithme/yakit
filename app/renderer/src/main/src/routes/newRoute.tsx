@@ -239,17 +239,17 @@ export const YakitRouteToPageInfo: Record<
 > = {
   'new-home': { label: '首页', labelUi: 'YakitRoute.home' },
   httpHacker: {
-    label: 'MITM 交互式劫持 v1',
+    label: '流量劫持 v1',
     labelUi: 'YakitRoute.MITM',
     describeUi: 'YakitRoute.mitmSslHijack',
   },
   'mitm-hijack': {
-    label: 'MITM 交互式劫持',
+    label: '流量劫持',
     labelUi: 'YakitRoute.MITM',
     describeUi: 'YakitRoute.mitmSslHijack',
   },
   httpFuzzer: {
-    label: 'Web Fuzzer',
+    label: '报文构造台',
     labelUi: 'YakitRoute.WebFuzzer',
     describeUi: 'YakitRoute.fuzzBurpIntegration',
   },

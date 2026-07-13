@@ -33,7 +33,7 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
     label: '侦收',
     icon: <RadarChartOutlined />,
     modules: [
-      { route: YakitRoute.DB_HTTPHistory, label: '流量档案' },
+      { route: YakitRoute.DB_HTTPHistory, label: '历史流量' },
       { route: YakitRoute.Codec, label: '编解码工作台' },
       { route: YakitRoute.DataCompare, label: '报文差异对比' },
     ],
@@ -43,7 +43,7 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
     label: '进攻',
     icon: <ThunderboltOutlined />,
     modules: [
-      { route: YakitRoute.MITMHacker, label: '实时劫持' },
+      { route: YakitRoute.MITMHacker, label: '流量劫持' },
       { route: YakitRoute.HTTPFuzzer, label: '报文构造台' },
       { route: YakitRoute.Mod_Brute, label: '凭证爆破' },
       { route: YakitRoute.BatchExecutorPage, label: '批量投递' },

@@ -533,7 +533,7 @@ const getInitPageCache: (softMode: SoftMode) => PageCache[] = (softMode) => {
         return [
           {
             routeKey: routeConvertKey(YakitRoute.MITMHacker, ''),
-            verbose: 'MITM 交互式劫持',
+            verbose: '流量劫持',
             verboseKey: 'YakitRoute.MITM Interactive Hijacking',
             menuName: YakitRouteToPageInfo[YakitRoute.MITMHacker].label,
             route: YakitRoute.MITMHacker,
@@ -542,7 +542,7 @@ const getInitPageCache: (softMode: SoftMode) => PageCache[] = (softMode) => {
           },
           {
             routeKey: routeConvertKey(YakitRoute.HTTPFuzzer, ''),
-            verbose: 'Web Fuzzer',
+            verbose: '报文构造台',
             verboseKey: 'YakitRoute.WebFuzzer',
             menuName: YakitRouteToPageInfo[YakitRoute.HTTPFuzzer].label,
             route: YakitRoute.HTTPFuzzer,

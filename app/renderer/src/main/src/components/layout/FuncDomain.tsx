@@ -1052,15 +1052,6 @@ const GetUIOpSettingMenu = () => {
       label: '网卡权限修复',
     },
     {
-      key: 'project',
-      label: '项目管理',
-      children: [
-        { label: '切换项目', key: 'changeProject' },
-        { label: '加密导出', key: 'encryptionProject' },
-        { label: '明文导出', key: 'plaintextProject' },
-      ],
-    },
-    {
       key: 'explab',
       label: '试验性功能',
       children: [

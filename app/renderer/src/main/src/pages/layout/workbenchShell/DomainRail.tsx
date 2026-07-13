@@ -1,6 +1,8 @@
 import React from 'react'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { WorkbenchDomain, moduleIcon } from './domainMap'
+import { DesktopComputerSvgIcon } from '@/assets/newIcon'
+import emiter from '@/utils/eventBus/eventBus'
 import './DomainRail.scss'
 
 export interface DomainRailProps {
@@ -24,6 +26,14 @@ export const DomainRail: React.FC<DomainRailProps> = React.memo((props) => {
           </li>
         ))}
       </ul>
+      <div className="wb-rail-footer">
+        <div className="wb-rail-item" onClick={() => emiter.emit('onOpenProjectManage')}>
+          <span className="wb-rail-item-icon">
+            <DesktopComputerSvgIcon />
+          </span>
+          <span className="wb-rail-item-label">项目管理</span>
+        </div>
+      </div>
     </nav>
   )
 })

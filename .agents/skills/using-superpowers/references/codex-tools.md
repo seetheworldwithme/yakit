@@ -1,25 +1,39 @@
-# Codex 工具映射
+## Subagent dispatch requires multi-agent support
 
-Skills 使用 Claude Code 的工具名称。在 Codex 中遇到这些名称时，请使用对应的平台等价工具：
-
-| Skill 中的引用 | Codex 等价工具 |
-|---------------|---------------|
-| `Task` 工具（派遣子 agent） | `spawn_agent` |
-| 多个 `Task` 调用（并行） | 多个 `spawn_agent` 调用 |
-| Task 返回结果 | `wait` |
-| Task 自动完成 | `close_agent` 释放槽位 |
-| `TodoWrite`（任务跟踪） | `update_plan` |
-| `Skill` 工具（调用 skill） | Skills 原生加载——直接按说明操作 |
-| `Read`、`Write`、`Edit`（文件） | 使用原生文件工具 |
-| `Bash`（执行命令） | 使用原生 shell 工具 |
-
-## 子 Agent 派遣需要多 Agent 支持
-
-在 Codex 配置文件（`~/.codex/config.toml`）中添加：
+Add to your Codex config (`~/.codex/config.toml`):
 
 ```toml
 [features]
 multi_agent = true
 ```
 
-启用后可使用 `spawn_agent`、`wait` 和 `close_agent`，支持 `dispatching-parallel-agents` 和 `subagent-driven-development` 等 skills。
+This enables `spawn_agent`, `wait_agent`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`. When using subagent-driven-development, you should always close implementer and reviewer subagents when they have finished all their work.
+
+## Environment Detection
+
+Skills that create worktrees or finish branches should detect their
+environment with read-only git commands before proceeding:
+
+```bash
+GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+BRANCH=$(git branch --show-current)
+```
+
+- `GIT_DIR != GIT_COMMON` → already in a linked worktree (skip creation)
+- `BRANCH` empty → detached HEAD (cannot branch/push/PR from sandbox)
+
+See `using-git-worktrees` Step 0 and `finishing-a-development-branch`
+Step 1 for how each skill uses these signals.
+
+## Codex App Finishing
+
+When the sandbox blocks branch/push operations (detached HEAD in an
+externally managed worktree), the agent commits all work and informs
+the user to use the App's native controls:
+
+- **"Create branch"** — names the branch, then commit/push/PR via App UI
+- **"Hand off to local"** — transfers work to the user's local checkout
+
+The agent can still run tests, stage files, and output suggested branch
+names, commit messages, and PR descriptions for the user to copy.

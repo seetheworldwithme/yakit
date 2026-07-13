@@ -37,4 +37,3 @@ description: 在 yakit 前端（React + antd4 + yakitUI + Sass）里，根据自
 - 列出改动文件清单（`新增` / `修改`），逐处说明改了什么、为什么。
 - 给出预览方式：根目录 `yarn start-render`（保存即热更新），建议用户截图回看效果再迭代。
 - 启动企业版的方式`yarn dev:full-enterprise`
-- 启动企业版无 license 的方式`arn dev:full-enterprise-no-license`

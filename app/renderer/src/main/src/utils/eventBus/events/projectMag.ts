@@ -3,6 +3,7 @@ export type ProjectMagEventProps = {
   onGetProjectInfo?: string
   onRefreshProjectList?: string
   onServerPushProjectChanged?: string
+  onOpenProjectManage?: string
 }
 
 /** Server push payload for project (aligned with backend ProjectPush). */

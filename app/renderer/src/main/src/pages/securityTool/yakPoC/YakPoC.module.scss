@@ -174,38 +174,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  .filter-wrapper {
-    @extend %display-column-center;
-    gap: 8px;
-    .header-search {
-      @extend %display-flex-center;
-      justify-content: space-between;
-      padding: 0 4px;
-    }
-    .filter-body {
-      @extend %display-flex-center;
-      justify-content: space-between;
-      padding: 0 4px;
-      .filter-body-left {
-        @extend %display-flex-center;
-        .count-num {
-          color: var(--Colors-Use-Neutral-Text-3-Secondary);
-          font-size: 12px;
-          line-height: 16px;
-          .num-style {
-            color: var(--Colors-Use-Main-Primary);
-            margin-left: 4px;
-          }
-        }
-        .count-num:first-child {
-          margin-left: 4px;
-        }
-      }
-      .filter-body-right {
-        @extend %display-flex-center;
-      }
-    }
-  }
   .group-list-flex {
     flex: 1;
     min-height: 0;
@@ -327,13 +295,16 @@
 
 /* 内联到「插件执行」表单中的分组列表：两列网格，展开项占整行 */
 .inline-plugin-group {
+  width: 66.6667%;
   .plugin-group-wrapper {
     height: auto;
     max-height: 320px;
+    width: 100%;
   }
   .group-list-flex {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
   .group-item-wrapper {
     flex: initial;
