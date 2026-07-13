@@ -1,5 +1,5 @@
 import React, { memo, ReactNode, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { useDebounceEffect, useGetState, useMemoizedFn, useScroll, useVirtualList } from 'ahooks'
+import { useDebounceEffect, useGetState, useMemoizedFn, useScroll } from 'ahooks'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { QueryGeneralRequest } from '../invoker/schema'
 import { failed, info, yakitFailed, warn, success } from '@/utils/notification'
@@ -8,17 +8,13 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
   DotsVerticalSvgIcon,
-  ImportSvgIcon,
   OutlinePlusIcon,
-  PlusBoldSvgIcon,
   PlusIcon,
   QuestionMarkCircleIcon,
   ResizerIcon,
   TrashIcon,
 } from '@/assets/newIcon'
 import {
-  DocumentAddSvgIcon,
-  DocumentDownloadSvgIcon,
   DocumentTextSvgIcon,
   FolderOpenSvgIcon,
   ProjectDocumentTextSvgIcon,
@@ -42,12 +38,7 @@ import { YaklangEngineMode } from '@/yakitGVDefine'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
-import {
-  OutlineDocumentduplicateIcon,
-  OutlineExportIcon,
-  OutlinePencilaltIcon,
-  OutlineTrashIcon,
-} from '@/assets/icon/outline'
+import { OutlineDocumentduplicateIcon, OutlinePencilaltIcon, OutlineTrashIcon } from '@/assets/icon/outline'
 
 import classNames from 'classnames'
 import styles from './ProjectManage.module.scss'
@@ -68,6 +59,26 @@ const { YakitPanel } = YakitCollapse
 
 export const getEnvTypeByProjects = () => {
   return isIRify() ? 'ssa_project' : 'project'
+}
+
+/**
+ * 存储路径展示口径转换（仅改展示，不动真实路径）：
+ * 1. 屏蔽用户主目录前缀，避免暴露用户名（/Users/<name>、/home/<name>、C:\Users\<name> → ~）
+ * 2. yakit-projects → web-projects
+ * 3. default-yakit.db → web.db
+ */
+const formatDatabasePath = (rawPath: string): string => {
+  if (!rawPath) return ''
+  let display = rawPath
+  // 屏蔽用户名：把主目录前缀替换为 ~
+  display = display.replace(/^\/Users\/[^/]+/, '~')
+  display = display.replace(/^\/home\/[^/]+/, '~')
+  display = display.replace(/^[A-Z]:\\Users\\[^\\]+/, '~')
+  // 展示口径调整
+  display = display.replace(/yakit-projects/g, 'web-projects')
+  display = display.replace(/default-yakit\.db/g, 'web.db')
+  display = display.replace(/yakit-project/g, 'web-project')
+  return display
 }
 
 export interface ProjectManageProp {
@@ -162,7 +173,7 @@ for (let item of typeFilter) typeToName[item.key] = item.label
 /** 时间过滤项 */
 const timeFilter: FilterInfoProps[] = [
   { key: 'created_at', label: '创建时间' },
-  { key: 'updated_at', label: '最近操作时间' },
+  { key: 'updated_at', label: '最近修改时间' },
 ]
 /** 时间过滤项对应展示内容 */
 export const timeToName: { [key: string]: string } = {}
@@ -230,12 +241,6 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
   const [vlistHeigth, setVListHeight] = useState(600)
   const containerRef = useRef<any>(null)
   const wrapperRef = useRef<any>(null)
-  const [list] = useVirtualList(getData().Projects, {
-    containerTarget: containerRef,
-    wrapperTarget: wrapperRef,
-    itemHeight: 48 + 1,
-    overscan: 5,
-  })
 
   const [loadMore, setLoadMore] = useState<boolean>(false)
   const position = useScroll(containerRef, ({ top }) => {
@@ -291,7 +296,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
       {
         key: 'ProjectName',
         name: typeToName['all'],
-        style: { width: '15%' },
+        style: { flex: 1, minWidth: 200 },
         headerRender: (index) => {
           return (
             <DropdownMenu
@@ -371,7 +376,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
       {
         key: 'Description',
         name: t('ProjectManage.description'),
-        style: { flex: 1 },
+        style: { flex: 1, display: 'none' },
         render: (data) => {
           try {
             const arr: { Key: string; Value: string }[] = JSON.parse(data.Description)
@@ -400,8 +405,9 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
       {
         key: 'DatabasePath',
         name: t('ProjectManage.storagePath'),
-        style: { flex: 1 },
+        style: { width: 280 },
         render: (data, index) => {
+          const displayPath = formatDatabasePath(data.DatabasePath)
           return (
             <div
               className={classNames(styles['project-table-body-wrapper'], styles['database-path-wrapper'])}
@@ -409,7 +415,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
             >
               <div
                 className={styles['project-style']}
-                title={data.DatabasePath}
+                title={displayPath}
                 onClick={() => {
                   if (data.DatabasePath) {
                     ipcRenderer
@@ -425,9 +431,9 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                   }
                 }}
               >
-                {data.DatabasePath || '-'}
+                {displayPath || '-'}
               </div>
-              {data.DatabasePath && <CopyComponents copyText={data.DatabasePath} onAfterCopy={() => {}} />}
+              {data.DatabasePath && <CopyComponents copyText={displayPath} onAfterCopy={() => {}} />}
             </div>
           )
         },
@@ -565,13 +571,16 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
               },
             }}
           >
-            <div
-              className={classNames(styles['btn-wrapper'], {
+            <YakitButton
+              size="small"
+              type="outline2"
+              className={classNames({
                 [styles['btn-focus-style']]: operateShow >= 0 && operateShow === +Id,
               })}
+              onClick={(e) => e.stopPropagation()}
             >
-              <OutlineExportIcon className={styles['btn-style']} />
-            </div>
+              分享
+            </YakitButton>
           </DropdownMenu>
         )}
 
@@ -1151,31 +1160,6 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
               Total <span className={styles['total-number']}>{__data.ProjectToTal}</span>
             </div>
           </div>
-          <YakitInput.Search
-            size="large"
-            placeholder={t('ProjectManage.inputProjectName')}
-            value={params.ProjectName}
-            onChange={(e) =>
-              setParams({
-                Type: 'all',
-                Pagination: { ...params.Pagination, Page: 1 },
-                ProjectName: e.target.value,
-              })
-            }
-            style={{ width: 288 }}
-            onSearch={() => {
-              if (getParams().ProjectName) {
-                setFiles([])
-                setParams({
-                  Type: 'all',
-                  Pagination: { ...getParams().Pagination, Page: 1 },
-                  ProjectName: getParams().ProjectName,
-                })
-              }
-
-              setTimeout(() => update(1), 300)
-            }}
-          />
         </div>
 
         <div className={styles['project-operate']}>
@@ -1283,20 +1267,9 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
             </div>
           </div> */}
 
-          <div
-            className={classNames(styles['btn-wrapper'], styles['new-project-wrapper'])}
-            onClick={() => operateFunc('newProject')}
-          >
-            <div className={styles['btn-body']}>
-              <div className={styles['body-title']}>
-                <DocumentAddSvgIcon />
-                {t('ProjectManage.newProject')}
-              </div>
-              <div className={styles['icon-style']}>
-                <PlusBoldSvgIcon />
-              </div>
-            </div>
-          </div>
+          <YakitButton size="large" type="outline2" onClick={() => operateFunc('newProject')}>
+            {t('ProjectManage.newProject')}
+          </YakitButton>
 
           {/* 隐藏新建文件夹卡片 */}
           {/* <div
@@ -1314,22 +1287,9 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
             </div>
           </div> */}
 
-          {/* { engineMode !== "remote" && ( */}
-          <div
-            className={classNames(styles['btn-wrapper'], styles['import-wrapper'])}
-            onClick={() => operateFunc('import')}
-          >
-            <div className={styles['btn-body']}>
-              <div className={styles['body-title']}>
-                <DocumentDownloadSvgIcon />
-                {t('YakitButton.import')}
-              </div>
-              <div className={styles['icon-style']}>
-                <ImportSvgIcon />
-              </div>
-            </div>
-          </div>
-          {/* )} */}
+          <YakitButton size="large" type="outline2" onClick={() => operateFunc('import')}>
+            {t('YakitButton.import')}
+          </YakitButton>
         </div>
 
         {search.name && (
@@ -1395,23 +1355,6 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
         <div className={styles['project-table-wrapper']}>
           <YakitSpin tip="Loading..." spinning={loading}>
             <div className={styles['project-table-body']}>
-              <div className={styles['table-header-wrapper']}>
-                <div className={styles['header-titles']}>
-                  <div className={styles['titls-body']}>
-                    {projectHeader.map((item, index) => {
-                      return (
-                        <div key={item.key} style={{ ...item.style }} className={styles['title-opt']}>
-                          <div>{item.headerRender ? item.headerRender(index) : item.name}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                {/* { engineMode !== "remote" &&  */}
-                <div style={{ width: 120 }}>{t('YakitTable.action')}</div>
-                {/* } */}
-              </div>
-
               <div className={styles['table-content-wrapper']}>
                 <ReactResizeDetector
                   onResize={(width, height) => {
@@ -1429,7 +1372,7 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                   ref={containerRef as any}
                   style={{ height: vlistHeigth, overflow: 'auto overlay', overflowAnchor: 'none' }}
                 >
-                  <div ref={wrapperRef as any}>
+                  <div ref={wrapperRef as any} className={styles['project-card-list']}>
                     {__data.Projects.length === 0 ? (
                       <>
                         {files.length > 0 && (
@@ -1470,56 +1413,77 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                             />
                           </div>
                         )}
+                        {!files.length && !params.ProjectName && (
+                          <div className={styles['table-empty-wrapper']}>
+                            <YakitEmpty
+                              descriptionReactNode={
+                                <div className={styles['title-style']}>{t('ProjectManage.noProjectContent')}</div>
+                              }
+                            />
+                          </div>
+                        )}
                       </>
                     ) : (
-                      list.map((i) => {
+                      __data.Projects.map((data) => {
+                        const displayPath = formatDatabasePath(data.DatabasePath)
+                        const isFolder = data.Type === 'file'
                         return (
                           <div
-                            key={i.index}
-                            style={{ height: 48 + 1 }}
-                            className={classNames(styles['table-opt'], {
-                              [styles['table-opt-selected']]: operateShow >= 0 && operateShow === +i.data.Id,
+                            key={data.Id}
+                            className={classNames(styles['project-card'], {
+                              [styles['project-card-selected']]: operateShow >= 0 && operateShow === +data.Id,
                             })}
-                            onClick={(e) => {
-                              if (!i.data.Type || i.data.Type === getEnvTypeByProjects()) {
-                                operateFunc('setCurrent', i.data)
+                            onClick={() => {
+                              if (!data.Type || data.Type === getEnvTypeByProjects()) {
+                                operateFunc('setCurrent', data)
                               }
-                              if (i.data.Type === 'file') {
-                                operateFunc('openFile', i.data)
+                              if (data.Type === 'file') {
+                                operateFunc('openFile', data)
                               }
                             }}
                             onContextMenu={() => {
-                              if (!i.data.Type || i.data.Type === getEnvTypeByProjects()) {
-                                projectContextMenu(i.data)
+                              if (!data.Type || data.Type === getEnvTypeByProjects()) {
+                                projectContextMenu(data)
                               }
                             }}
                           >
-                            <div className={styles['opt-content']}>
-                              <div className={styles['content-body']}>
-                                {projectHeader.map((item) => {
-                                  return (
-                                    <div
-                                      key={`${i.index}-${item.key}`}
-                                      style={{ ...item.style }}
-                                      className={styles['content-opt']}
-                                    >
-                                      {item.render ? (
-                                        item.render(i.data, i.index)
-                                      ) : (
-                                        <div className={styles['content-style']} title={i.data[item.key] || ''}>
-                                          {i.data[item.key] || '-'}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })}
+                            <div className={styles['card-head']}>
+                              <div className={styles['card-title']}>
+                                {isFolder ? (
+                                  <ProjectFolderOpenSvgIcon className={styles['card-icon']} />
+                                ) : (
+                                  <ProjectDocumentTextSvgIcon className={styles['card-icon']} />
+                                )}
+                                <span className={styles['card-name']} title={data.ProjectName}>
+                                  {data.ProjectName}
+                                </span>
+                                {(data?.OnlineSubTaskID || '').length > 0 && (
+                                  <YakitTag color="info">{t('ProjectManage.server')}</YakitTag>
+                                )}
+                              </div>
+                              <div className={styles['card-actions']}>{projectOperate(data)}</div>
+                            </div>
+
+                            <div className={styles['card-path']} title={displayPath}>
+                              <span className={styles['meta-label']}>{t('ProjectManage.storagePath')}</span>
+                              <span className={styles['meta-value']}>{displayPath || '-'}</span>
+                              {data.DatabasePath && <CopyComponents copyText={displayPath} onAfterCopy={() => {}} />}
+                            </div>
+
+                            <div className={styles['card-footer']}>
+                              <div className={styles['meta-item']}>
+                                <span className={styles['meta-label']}>{t('ProjectManage.size')}</span>
+                                <span className={styles['meta-value']}>{isFolder ? '-' : data.FileSize || '-'}</span>
+                              </div>
+                              <div className={styles['meta-item']}>
+                                <span className={styles['meta-label']}>{timeToName['updated_at']}</span>
+                                <span className={styles['meta-value']}>
+                                  {params.Pagination.OrderBy === 'created_at'
+                                    ? formatTimestamp(data.CreatedAt)
+                                    : formatTimestamp(data.UpdateAt)}
+                                </span>
                               </div>
                             </div>
-                            {/* { engineMode !== "remote" && ( */}
-                            <div style={{ width: 120 }} className={styles['opt-operate']}>
-                              {projectOperate(i.data)}
-                            </div>
-                            {/* )} */}
                           </div>
                         )
                       })
@@ -2118,39 +2082,6 @@ export const NewProjectAndFolder: React.FC<NewProjectAndFolderProps> = memo((pro
                 onChange={(e) => setInfo({ ...info, ProjectName: e.target.value })}
               />
             </Form.Item>
-            {!isFolder && !parentNode && (
-              <Form.Item
-                label={
-                  !!project ? (
-                    <div className={styles['form-item-cascader']}>
-                      <div>{`${t('NewProjectAndFolder.belongToFolder')} :`}</div>
-                      {dropShow && <div className={styles['hint-style']}>{cascaderValue.join('/')}</div>}
-                    </div>
-                  ) : (
-                    `${t('NewProjectAndFolder.belongToFolder')} :`
-                  )
-                }
-              >
-                <Cascader
-                  defaultValue={cascaderValue}
-                  options={data}
-                  fieldNames={{ label: 'ProjectName', value: 'Id', children: 'children' }}
-                  changeOnSelect={true}
-                  loadData={(selectedOptions) => fetchChildNode(selectedOptions as any)}
-                  onChange={(value, selectedOptions) => {
-                    if (value) {
-                      setInfo({ ...info, FolderId: +value[0] || 0, ChildFolderId: +value[1] || 0 })
-                    } else {
-                      setInfo({ ...info, FolderId: 0, ChildFolderId: 0 })
-                    }
-                  }}
-                  dropdownClassName={styles['cascader-dropdown-body']}
-                  open={dropShow}
-                  onDropdownVisibleChange={(open: boolean) => setDropShow(open)}
-                  suffixIcon={<ChevronDownIcon style={{ color: 'var(--Colors-Use-Neutral-Text-1-Title)' }} />}
-                />
-              </Form.Item>
-            )}
             {!isFolder && !parentNode && isShowExternalProjectCode && (
               <Form.Item
                 label={
@@ -2217,58 +2148,6 @@ export const NewProjectAndFolder: React.FC<NewProjectAndFolderProps> = memo((pro
                 />
               </Form.Item>
             )}
-            <>
-              {isCommunityEdition() ? (
-                <Form.Item label={`${t('NewProjectAndFolder.remark')} :`}>
-                  <YakitInput.TextArea
-                    autoSize={{ minRows: 3, maxRows: 5 }}
-                    showCount
-                    maxLength={100}
-                    placeholder={t('NewProjectAndFolder.inputDescription')}
-                    value={info.Description}
-                    onChange={(e) => setInfo({ ...info, Description: e.target.value })}
-                  />
-                </Form.Item>
-              ) : (
-                <>
-                  <div className={styles['remark-header']}>
-                    <div className={styles['title']}>{t('NewProjectAndFolder.remark')} :</div>
-                    {/* 添加额外的元素 */}
-                    <span className={styles['']}>
-                      <YakitButton
-                        type="text"
-                        colors="danger"
-                        onClick={(e) => {
-                          handleReset(e, 'Description', describeRef)
-                        }}
-                        size="small"
-                      >
-                        {t('YakitButton.reset')}
-                      </YakitButton>
-                      <Divider type="vertical" style={{ margin: 0 }} />
-                      <YakitButton
-                        type="text"
-                        onClick={(e) => {
-                          handleAdd(e, 'Description', describeRef)
-                        }}
-                        className={styles['btn-padding-right-0']}
-                        size="small"
-                      >
-                        {t('YakitButton.add')}
-                        <PlusIcon />
-                      </YakitButton>
-                    </span>
-                  </div>
-                  <VariableProjectList
-                    ref={describeRef}
-                    field="Description"
-                    onDel={(i) => {
-                      handleRemove(i, 'Description')
-                    }}
-                  />
-                </>
-              )}
-            </>
           </>
         )}
         {isExport && (
@@ -2357,29 +2236,6 @@ export const NewProjectAndFolder: React.FC<NewProjectAndFolderProps> = memo((pro
                 onChange={(e) => setImportInfo({ ...importInfo, Password: e.target.value })}
               />
             </Form.Item>
-            {!parentNode && (
-              <Form.Item label={`${t('NewProjectAndFolder.belongToFolder')} :`}>
-                <Cascader
-                  options={data}
-                  fieldNames={{ label: 'ProjectName', value: 'Id', children: 'children' }}
-                  changeOnSelect={true}
-                  loadData={(selectedOptions) => fetchChildNode(selectedOptions as any)}
-                  onChange={(value, selectedOptions) => {
-                    if (value) {
-                      setImportInfo({
-                        ...importInfo,
-                        FolderId: +value[0] || 0,
-                        ChildFolderId: +value[1] || 0,
-                      })
-                    } else {
-                      setImportInfo({ ...importInfo, FolderId: 0, ChildFolderId: 0 })
-                    }
-                  }}
-                  dropdownClassName={styles['cascader-dropdown-body']}
-                  suffixIcon={<ChevronDownIcon style={{ color: 'var(--Colors-Use-Neutral-Text-1-Title)' }} />}
-                />
-              </Form.Item>
-            )}
           </>
         )}
         <Form.Item label={''}>

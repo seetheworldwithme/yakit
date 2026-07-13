@@ -115,7 +115,9 @@ export const SoftwareSettings: React.FC<SoftwareSettingsProp> = memo((props) => 
   return (
     <div className={styles['software-settings-wrapper']}>
       <div className={styles['software-settings-container']}>
+        {/* 隐藏左侧导航栏，仅保留右侧项目管理内容 */}
         <div
+          style={{ display: 'none' }}
           className={classNames(styles['left-wrapper'], {
             [styles['left-body']]: !showMini,
             [styles['left-mini-body']]: showMini,

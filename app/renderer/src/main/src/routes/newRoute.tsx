@@ -264,7 +264,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.dataProcessingDescription',
   },
   dataCompare: {
-    label: '数据对比',
+    label: '报文差异对比',
     labelUi: 'YakitRoute.dataCompare',
     describeUi: 'YakitRoute.quicklyIdentifyDifferencesInData',
   },

@@ -39,7 +39,7 @@ export const DataCompare: React.FC<DataCompareProps> = (props) => {
   const codeComparisonRef = useRef<any>(null)
   return (
     <AutoCard
-      title={t('DataCompare.comparer')}
+      title={''}
       bodyStyle={{ padding: 0 }}
       bordered={false}
       extra={
