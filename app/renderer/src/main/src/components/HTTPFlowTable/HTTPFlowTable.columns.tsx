@@ -447,6 +447,18 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
       },
     },
   ]
+  // 全局隐藏列（所有使用 HTTPFlowTable 的页面均不展示，含列设置面板也不可重新勾出）
+  const globallyHiddenColumnKeys = [
+    'Tags',
+    'IPAddress',
+    'BodyLength',
+    'GetParamsTotal',
+    'ContentType',
+    'PathSuffix',
+    'DurationMs',
+    'RequestSizeVerbose',
+  ]
+  const visibleColumns = allColumns.filter((c) => !globallyHiddenColumnKeys.includes(c.dataKey))
   // 流量档案页隐藏部分列
   if (pageType === 'History') {
     const hiddenInHistory = [
@@ -459,9 +471,9 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
       'RequestSizeVerbose',
       'DurationMs',
     ]
-    return allColumns.filter((c) => !hiddenInHistory.includes(c.dataKey))
+    return visibleColumns.filter((c) => !hiddenInHistory.includes(c.dataKey))
   }
-  return allColumns
+  return visibleColumns
 }
 
 /** 按用户配置排序、过滤列，并生成高级设置所需的列配置 */

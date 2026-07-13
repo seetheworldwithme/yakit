@@ -228,6 +228,20 @@
     }
   }
 
+  .form-item-inline-help {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .inline-help-text {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--Colors-Use-Neutral-Text-4-Help-text);
+    white-space: nowrap;
+  }
+
   .stateSecretHijacking-btns {
     :global {
       .ant-radio-button-wrapper {

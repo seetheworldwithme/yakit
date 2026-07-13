@@ -555,6 +555,15 @@
   :global(.ant-tabs-nav) {
     display: none !important;
   }
+  // 日志时间线默认贴左展示，改为面板内居中
+  :global(.ant-tabs-tabpane) {
+    text-align: center;
+  }
+  :global(.ant-timeline) {
+    display: inline-block;
+    max-width: 100%;
+    text-align: left;
+  }
 }
 
 .pluginOut-select-item {

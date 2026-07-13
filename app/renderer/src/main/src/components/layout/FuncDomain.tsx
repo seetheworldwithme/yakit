@@ -574,7 +574,8 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
       <div className={classNames(styles['func-domain-body'], { [styles['func-domain-reverse-body']]: isReverse })}>
         {showDevTool() && <UIDevTool onDevToolRefresh={onDevToolRefresh} />}
 
-        {!showProjectManage && (
+        {/* 隐藏引擎日志按钮 */}
+        {/* {!showProjectManage && (
           <div className={styles['ui-op-btn-wrapper']} onClick={openConsoleNewWindow}>
             <div className={styles['op-btn-body']}>
               <Tooltip placement="bottom" title={t('FuncDomain.engineConsole')}>
@@ -582,14 +583,15 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
               </Tooltip>
             </div>
           </div>
-        )}
+        )} */}
 
         <div className={styles['short-divider-wrapper']}>
           <div className={styles['divider-style']}></div>
         </div>
         <div className={styles['state-setting-wrapper']}>
-          {!showProjectManage && !isIRify() && <UIOpRisk isEngineLink={isEngineLink} />}
-          {!showProjectManage && isIRify() && <UIOpIRifyRisk isEngineLink={isEngineLink} />}
+          {/* 隐藏漏洞和风险统计按钮 */}
+          {/* {!showProjectManage && !isIRify() && <UIOpRisk isEngineLink={isEngineLink} />} */}
+          {/* {!showProjectManage && isIRify() && <UIOpIRifyRisk isEngineLink={isEngineLink} />} */}
           {!hideNotice && !isEnpriTraceAgent() && (
             <UIOpNotice isEngineLink={isEngineLink} isRemoteMode={isRemoteMode} onLogin={() => setLoginShow(true)} />
           )}

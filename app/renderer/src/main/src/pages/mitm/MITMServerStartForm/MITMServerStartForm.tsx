@@ -38,6 +38,7 @@ import { useProxy } from '@/hook/useProxy'
 import { debugToPrintLogs } from '@/utils/logCollection'
 import emiter from '@/utils/eventBus/eventBus'
 const MITMFormAdvancedConfiguration = React.lazy(() => import('./MITMFormAdvancedConfiguration'))
+const MITMCertificateDownloadModal = React.lazy(() => import('./MITMCertificateDownloadModal'))
 const ChromeLauncherButton = React.lazy(() => import('../MITMChromeLauncher'))
 
 const { ipcRenderer } = window.require('electron')
@@ -129,6 +130,7 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
   const [openRepRuleFlag, setOpenRepRuleFlag] = useState<boolean>(false)
   const [isUseDefRules, setIsUseDefRules] = useState<boolean>(false)
   const [advancedFormVisible, setAdvancedFormVisible] = useState<boolean>(false)
+  const [downloadVisible, setDownloadVisible] = useState<boolean>(false)
 
   // 高级配置 关闭后存的最新的form值
   const [advancedValue, setAdvancedValue] = useState<AdvancedConfigurationFromValue>()
@@ -493,47 +495,52 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                 <div className={styles['mitm-start-section-subtitle']}>HTTP/2、TLS 指纹与连接保持</div>
               </div>
             </div>
-            <Item
-              label={t('MITMServerForm.http2Support')}
-              name="enableHttp2"
-              help={t('MITMServerForm.http2SupportHelp')}
-              valuePropName="checked"
-            >
-              <YakitSwitch size="large" />
+            <Item label={t('MITMServerForm.http2Support')} name="enableHttp2" valuePropName="checked">
+              <div className={styles['form-item-inline-help']}>
+                <YakitSwitch size="large" />
+                <span className={styles['inline-help-text']}>{t('MITMServerForm.http2SupportHelp')}</span>
+              </div>
             </Item>
             <Item
               label={t('MITMServerForm.httpsConfig')}
               name="stateSecretHijacking"
               initialValue={'stateSecretHijacking'}
-              help={
-                stateSecretHijacking === 'enableGMTLS'
-                  ? t('MITMServerForm.httpsConfigHelp.gmTLS')
-                  : t('MITMServerForm.httpsConfigHelp.default')
-              }
             >
-              <YakitRadioButtons
-                wrapClassName={styles['stateSecretHijacking-btns']}
-                buttonStyle="solid"
-                options={[
-                  {
-                    value: 'enableGMTLS',
-                    label: t('MITMServerForm.gmSecret'),
-                  },
-                  {
-                    value: 'stateSecretHijacking',
-                    label: t('MITMServerForm.default'),
-                  },
-                ]}
-              />
+              <div className={styles['form-item-inline-help']}>
+                <YakitRadioButtons
+                  wrapClassName={styles['stateSecretHijacking-btns']}
+                  buttonStyle="solid"
+                  options={[
+                    {
+                      value: 'enableGMTLS',
+                      label: t('MITMServerForm.gmSecret'),
+                    },
+                    {
+                      value: 'stateSecretHijacking',
+                      label: t('MITMServerForm.default'),
+                    },
+                  ]}
+                />
+                <span className={styles['inline-help-text']}>
+                  {stateSecretHijacking === 'enableGMTLS'
+                    ? t('MITMServerForm.httpsConfigHelp.gmTLS')
+                    : t('MITMServerForm.httpsConfigHelp.default')}
+                </span>
+                <YakitButton type="text" size="small" onClick={() => setDownloadVisible(true)}>
+                  证书下载
+                </YakitButton>
+              </div>
             </Item>
             <Item
               label={t('MITMServerForm.disableKeepAlive')}
               name="ForceDisableKeepAlive"
               initialValue={true}
-              help={t('MITMServerForm.disableKeepAliveHelp')}
               valuePropName="checked"
             >
-              <YakitSwitch size="large" />
+              <div className={styles['form-item-inline-help']}>
+                <YakitSwitch size="large" />
+                <span className={styles['inline-help-text']}>{t('MITMServerForm.disableKeepAliveHelp')}</span>
+              </div>
             </Item>
           </section>
           <section className={styles['mitm-start-section']}>
@@ -623,6 +630,7 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
         {/* 代理劫持弹窗 */}
         <ProxyRulesConfig visible={agentConfigModalVisible} onClose={() => setAgentConfigModalVisible(false)} />
         <React.Suspense fallback={<div>loading...</div>}>
+          <MITMCertificateDownloadModal visible={downloadVisible} setVisible={setDownloadVisible} />
           <MITMFormAdvancedConfiguration
             visible={advancedFormVisible}
             setVisible={setAdvancedFormVisible}
