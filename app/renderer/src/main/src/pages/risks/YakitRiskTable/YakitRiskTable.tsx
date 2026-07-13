@@ -1733,19 +1733,33 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
               [styles['content-heard-left-compact']]: compactRiskDetail,
             })}
           >
-            <div className={styles['content-heard-severity']}>
-              {severityInfo.icon}
-              <span
-                className={classNames(styles['content-heard-severity-name'], styles[`severity-${severityInfo.tag}`])}
-              >
-                {t(severityInfo.nameUi || severityInfo.name)}
-              </span>
-            </div>
-            <Divider type="vertical" style={{ height: 40, margin: '0 16px' }} />
+            {!compactRiskDetail && (
+              <>
+                <div className={styles['content-heard-severity']}>
+                  {severityInfo.icon}
+                  <span
+                    className={classNames(
+                      styles['content-heard-severity-name'],
+                      styles[`severity-${severityInfo.tag}`],
+                    )}
+                  >
+                    {t(severityInfo.nameUi || severityInfo.name)}
+                  </span>
+                </div>
+                <Divider type="vertical" style={{ height: 40, margin: '0 16px' }} />
+              </>
+            )}
             <div className={styles['content-heard-body']}>
               <div className={classNames(styles['content-heard-body-title'], 'content-ellipsis')}>
                 {info.Title || '-'}
               </div>
+              {compactRiskDetail && (
+                <span
+                  className={classNames(styles['content-heard-severity-name'], styles[`severity-${severityInfo.tag}`])}
+                >
+                  {t(severityInfo.nameUi || severityInfo.name)}
+                </span>
+              )}
               {!compactRiskDetail && (
                 <div className={styles['content-heard-body-description']}>
                   <YakitTag color="info" style={{ cursor: 'pointer' }} onClick={onClickIP}>
@@ -1798,16 +1812,18 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
           )}
         </div>
         {isShowCode && (
-          <YakitRadioButtons
-            style={{ margin: 6 }}
-            value={showType}
-            onChange={(e) => {
-              const value = e.target.value
-              setShowType(value)
-            }}
-            buttonStyle="solid"
-            options={getOptions}
-          />
+          <div className={classNames({ [styles['risk-detail-type-switch-compact']]: compactRiskDetail })}>
+            <YakitRadioButtons
+              style={{ margin: 6 }}
+              value={showType}
+              onChange={(e) => {
+                const value = e.target.value
+                setShowType(value)
+              }}
+              buttonStyle="solid"
+              options={getOptions}
+            />
+          </div>
         )}
         {showType === 'detail' && (
           <div className={classNames(styles['content-resize-second'], detailClassName)} ref={descriptionsRef}>

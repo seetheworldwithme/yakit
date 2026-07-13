@@ -259,6 +259,11 @@ $keyColor: map-keys($tagColor);
   }
 }
 
+.risk-detail-type-switch-compact {
+  display: flex;
+  justify-content: center;
+}
+
 .yakit-risk-details-content-no-border {
   border: 0;
 }
