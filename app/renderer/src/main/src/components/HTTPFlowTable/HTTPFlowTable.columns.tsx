@@ -55,6 +55,7 @@ export interface BuildHTTPFlowTableColumnsContext {
   actionHandlers: HTTPFlowTableColumnActionHandlers
   comBuiltinTagList: FiltersItemProps[]
   pageType?: string
+  showActionIcons: boolean
 }
 
 export interface ResolveHTTPFlowTableColumnsOptions {
@@ -405,7 +406,7 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
               [style[`hover-${colorType}-row`]]: !!colorType,
             })}
           >
-            {ctx.pageType !== 'History' && (
+            {ctx.showActionIcons && ctx.pageType !== 'History' && (
               <>
                 {favorite ? (
                   <SolidStarIcon

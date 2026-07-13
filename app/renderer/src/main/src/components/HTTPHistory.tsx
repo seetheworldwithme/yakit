@@ -363,6 +363,8 @@ interface HTTPFlowRealTimeTableAndEditorProps extends HistoryTableTitleShow {
   setSecondNodeVisible?: (show: boolean) => void
   /** 预设排除列，透传至 `HTTPFlowTable.defaultExcludeColumnsKey` */
   defaultExcludeColumnsKey?: string[]
+  /** 是否展示流量表操作列中的收藏与浏览器图标 */
+  showActionIcons?: boolean
 }
 /**
  * 此组件用于实时流量表和编辑器
@@ -403,6 +405,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
     showHistoryAnalysisBtn = false,
     onHistoryAnalysisClick,
     defaultExcludeColumnsKey,
+    showActionIcons = true,
   } = props
 
   const hTTPFlowRealTimeTableAndEditorRef = useRef<HTMLDivElement>(null)
@@ -555,6 +558,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
               showHistoryAnalysisBtn={showHistoryAnalysisBtn}
               onHistoryAnalysisClick={onHistoryAnalysisClick}
               defaultExcludeColumnsKey={defaultExcludeColumnsKey}
+              showActionIcons={showActionIcons}
             />
           </div>
         )}

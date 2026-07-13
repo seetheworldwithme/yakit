@@ -173,6 +173,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     onHistoryAnalysisClick,
     defaultExcludeColumnsKey,
     builtinTagList = [],
+    showActionIcons = true,
   } = props
   const { t, i18n } = useI18nNamespaces(['yakitUi', 'yakitRoute', 'history'])
   const comBuiltinTagList = useCampare(builtinTagList)
@@ -1149,6 +1150,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
       actionHandlers: columnActionHandlers,
       comBuiltinTagList,
       pageType,
+      showActionIcons,
     })
     const { columns: realColumns, configColumns } = resolveHTTPFlowTableColumns({
       columnArr,

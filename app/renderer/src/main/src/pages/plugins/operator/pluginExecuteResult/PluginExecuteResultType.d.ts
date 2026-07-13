@@ -16,6 +16,8 @@ export interface PluginExecuteResultProps {
   tableTabNameMap?: Record<string, string>
   /** 自定义表（type=table）列标题映射：引擎原标题 -> 中文标题 */
   columnTitleMap?: Record<string, string>
+  /** 从任务列表打开的任务详情使用精简结果视图 */
+  isTaskDetail?: boolean
 }
 
 export interface VulnerabilitiesRisksTableProps {
@@ -48,6 +50,8 @@ export interface PluginExecuteWebsiteTreeProps {
   website?: boolean
   filterTagDom?: React.ReactNode
   isCrawler?: boolean
+  defaultExcludeColumnsKey?: string[]
+  showActionIcons?: boolean
 }
 export interface PluginExecutePortTableProps {
   runtimeId: string

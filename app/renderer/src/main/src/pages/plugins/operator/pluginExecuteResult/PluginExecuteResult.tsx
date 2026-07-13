@@ -59,6 +59,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import moment from 'moment'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { JSONParseLog } from '@/utils/tool'
+import { getTaskDetailHTTPFlowOptions } from './PluginExecuteResult.utils'
 
 const { TabPane } = PluginTabs
 
@@ -74,12 +75,14 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     cardAsTable = false,
     tableTabNameMap,
     columnTitleMap,
+    isTaskDetail = false,
   } = props
   const { t, i18n } = useI18nNamespaces(['yakitRoute'])
 
   const [allTotal, setAllTotal] = useState<number>(0)
   const [tempTotal, setTempTotal] = useState<number>(0) // 在risk表没有展示之前得临时显示在tab上得小红点计数
   const [interval, setInterval] = useState<number | undefined>(1000)
+  const taskDetailHTTPFlowOptions = getTaskDetailHTTPFlowOptions(isTaskDetail)
 
   useUpdateEffect(() => {
     setAllTotal(0)
@@ -130,6 +133,8 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
             runtimeId={runtimeId}
             website={!!streamInfo.tabsInfoState['website']?.targets}
             isCrawler={isCrawler}
+            defaultExcludeColumnsKey={taskDetailHTTPFlowOptions.defaultExcludeColumnsKey}
+            showActionIcons={taskDetailHTTPFlowOptions.showActionIcons}
           />
         ) : (
           <></>
@@ -165,11 +170,12 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
   })
 
   const showTabs = useMemo(() => {
-    if (!tempTotal && !streamInfo.tabsState.find((item) => item.type === 'ssa-risk')) {
-      return streamInfo.tabsState.filter((item) => item.tabName !== t('YakitRoute.vulnerabilityAndrisk'))
-    }
-    return streamInfo.tabsState
-  }, [streamInfo.tabsState, tempTotal])
+    const tabs =
+      !tempTotal && !streamInfo.tabsState.find((item) => item.type === 'ssa-risk')
+        ? streamInfo.tabsState.filter((item) => item.tabName !== t('YakitRoute.vulnerabilityAndrisk'))
+        : streamInfo.tabsState
+    return taskDetailHTTPFlowOptions.hideConsoleTab ? tabs.filter((item) => item.type !== 'console') : tabs
+  }, [streamInfo.tabsState, tempTotal, taskDetailHTTPFlowOptions.hideConsoleTab])
 
   const tabBarRender = useMemoizedFn((tab: HoldGRPCStreamProps.InfoTab, length: number) => {
     if (tab.type === 'risk') {
@@ -183,7 +189,9 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
 
     const mappedName =
       tab.type === 'table' && tableTabNameMap?.[tab.tabName] ? tableTabNameMap[tab.tabName] : tab.tabName
-    return mappedName
+    return tab.type === 'http' && taskDetailHTTPFlowOptions.httpTabName
+      ? taskDetailHTTPFlowOptions.httpTabName
+      : mappedName
   })
   const cardState = useCreation(() => {
     return streamInfo.cardState.filter((item) => item.tag !== 'no display')
@@ -194,7 +202,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
   }, [allTotal, tempTotal])
   return (
     <div className={classNames(styles['plugin-execute-result'], pluginExecuteResultWrapper)}>
-      {cardState.length > 0 && (
+      {!taskDetailHTTPFlowOptions.hideDataCard && cardState.length > 0 && (
         <div className={styles['plugin-execute-result-wrapper']}>
           {cardAsTable ? (
             <CardStateTable data={cardState} />
@@ -251,7 +259,14 @@ const PluginExecutePortTable: React.FC<PluginExecutePortTableProps> = React.memo
 })
 /**HTTP 流量 */
 export const PluginExecuteHttpFlow: React.FC<PluginExecuteWebsiteTreeProps> = React.memo((props) => {
-  const { runtimeId, filterTagDom, website = false, isCrawler = false } = props
+  const {
+    runtimeId,
+    filterTagDom,
+    website = false,
+    isCrawler = false,
+    defaultExcludeColumnsKey,
+    showActionIcons = true,
+  } = props
   const { t } = useI18nNamespaces(['plugin'])
 
   const [height, setHeight] = useState<number>(300) //表格所在div高度
@@ -328,6 +343,8 @@ export const PluginExecuteHttpFlow: React.FC<PluginExecuteWebsiteTreeProps> = Re
             showBatchActions={false}
             showFlod={false}
             titleHeight={47}
+            defaultExcludeColumnsKey={defaultExcludeColumnsKey}
+            showActionIcons={showActionIcons}
           />
         }
       ></YakitResizeBox>

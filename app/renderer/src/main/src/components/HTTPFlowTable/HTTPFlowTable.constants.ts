@@ -144,6 +144,7 @@ export interface HTTPFlowTableProp extends HistoryTableTitleShow {
   onRegisterTableSelectApi?: (api: { reset: () => void; deselectId: (id: string) => void }) => void
   defaultExcludeColumnsKey?: string[]
   builtinTagList?: FiltersItemProps[]
+  showActionIcons?: boolean
 }
 
 export interface YakQueryHTTPFlowResponse {
