@@ -208,7 +208,6 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
   const [editorValue, setEditorValue] = useState<string>('')
   // token
   const [token, setToken] = useState(randomString(20))
-  const [fileToken, setFileToken] = useState(randomString(20))
   // show
   const [streamData, setStreamData] = useState<SavePayloadProgress>()
   const logInfoRef = useRef<string[]>([])
@@ -216,19 +215,19 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
   const messageWarnRef = useRef<boolean>(false)
 
   // 上传文件/手动输入
-  const [uploadType, setUploadType] = useState<'dragger' | 'editor' | 'large-dragger'>('dragger')
+  const [uploadType, setUploadType] = useState<'dragger' | 'editor'>('dragger')
 
   // 存储类型
   const [storeType, setStoreType] = useState<'database' | 'file'>()
 
   const isDisabled = useMemo(() => {
-    if (isDictionaries && ['dragger', 'large-dragger'].includes(uploadType)) {
+    if (isDictionaries && uploadType === 'dragger') {
       return uploadList.length === 0 || dictionariesName.length === 0
     }
     if (isDictionaries && uploadType === 'editor') {
       return editorValue.length === 0 || dictionariesName.length === 0
     }
-    return ['dragger', 'large-dragger'].includes(uploadType) ? uploadList.length === 0 : editorValue.length === 0
+    return uploadType === 'dragger' ? uploadList.length === 0 : editorValue.length === 0
   }, [uploadList, dictionariesName, isDictionaries, uploadType, editorValue])
 
   // 数据库存储
@@ -248,52 +247,9 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
     )
   })
 
-  // 文件存储
-  const onSavePayloadToFile = useMemoizedFn(() => {
-    setStoreType('database')
-    if (uploadType === 'large-dragger') {
-      ipcRenderer.invoke(
-        'SavePayloadToLargeFileStream',
-        {
-          IsFile: true,
-          IsNew: true,
-          Content: editorValue,
-          FileName: uploadList.map((item) => item.path),
-          Group: group || dictionariesName,
-          Folder: folder || '',
-        },
-        fileToken,
-      )
-    } else {
-      // 两次stream
-      ipcRenderer.invoke(
-        'SavePayloadToFileStream',
-        {
-          IsFile: uploadType === 'dragger',
-          IsNew: true,
-          Content: editorValue,
-          FileName: uploadList.map((item) => item.path),
-          Group: group || dictionariesName,
-          Folder: folder || '',
-        },
-        fileToken,
-      )
-    }
-  })
-
   // 取消数据库任务
   const cancelSavePayload = useMemoizedFn(() => {
     ipcRenderer.invoke('cancel-SavePayload', token)
-  })
-
-  // 取消文件存储任务
-  const cancelSavePayloadFile = useMemoizedFn(() => {
-    ipcRenderer.invoke('cancel-SavePayloadFile', fileToken)
-  })
-
-  // 取消大文件存储任务
-  const cancelSavePayloadLargeFile = useMemoizedFn(() => {
-    ipcRenderer.invoke('cancel-SavePayloadLargeFile', fileToken)
   })
 
   // 监听数据库任务
@@ -334,47 +290,6 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
     }
   }, [group, dictionariesName])
 
-  // 监听文件存储任务
-  useEffect(() => {
-    ipcRenderer.on(`${fileToken}-data`, async (e: any, data: SavePayloadProgress) => {
-      if (data) {
-        try {
-          if (data.Message.length > 0) {
-            logInfoRef.current = [data.Message, ...logInfoRef.current].slice(0, 8)
-          }
-          if (data.Message === 'step2' && data.Progress === 1) {
-            setStoreType('file')
-          }
-          setStreamData(data)
-        } catch (error) {}
-      }
-    })
-    ipcRenderer.on(`${fileToken}-error`, (e: any, error: any) => {
-      if (error === `group[${group || dictionariesName}] exist`) {
-        messageWarnRef.current = true
-        warn(t('CreateDictionaries.dictionaryNameExists'))
-        return
-      }
-      failed(`[SavePayloadFile] error:  ${error}`)
-    })
-    ipcRenderer.on(`${fileToken}-end`, (e: any, data: any) => {
-      if (messageWarnRef.current) {
-        messageWarnRef.current = false
-        return
-      }
-      info('[SavePayloadFile] finished')
-      logInfoRef.current = []
-      cancelRun()
-    })
-
-    return () => {
-      ipcRenderer.invoke('cancel-SavePayloadFile', fileToken)
-      ipcRenderer.removeAllListeners(`${fileToken}-data`)
-      ipcRenderer.removeAllListeners(`${fileToken}-error`)
-      ipcRenderer.removeAllListeners(`${fileToken}-end`)
-    }
-  }, [group, dictionariesName])
-
   const cancelRun = useMemoizedFn(() => {
     if (isDictionaries) {
       onQueryGroup({
@@ -398,10 +313,6 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
         name: string
       }[] = []
       fileList.forEach((f) => {
-        if (uploadType === 'large-dragger' && !'text/plain'.includes(f.type) && f.size / 1024 / 1024 > 20) {
-          failed(t('CreateDictionaries.largeFileOnlyTxt'))
-          return false
-        }
         if (uploadType === 'dragger' && !FileType.includes(f.type)) {
           failed(t('CreateDictionaries.incorrectFormat', { name: f.name }))
           return false
@@ -436,27 +347,6 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
               <OutlineXIcon />
             </div>
           </div>
-          {isDictionaries && (
-            <div className={styles['explain']}>
-              <div className={styles['explain-bg']}>
-                <div className={styles['title']}>{t('CreateDictionaries.storageMethod')}</div>
-                <div className={styles['content']}>
-                  <div className={styles['item']}>
-                    <div className={styles['dot']}>1</div>
-                    <div className={styles['text']}>{t('CreateDictionaries.fileStorage')}</div>
-                  </div>
-                  <div className={styles['item']}>
-                    <div className={styles['dot']}>2</div>
-                    <div className={styles['text']}>{t('CreateDictionaries.databaseStorage')}</div>
-                  </div>
-                  <div className={styles['item']}>
-                    <div className={styles['dot']}>3</div>
-                    <div className={styles['text']}>{t('CreateDictionaries.largeFileStorageMethod')}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
           <div className={styles['info-box']}>
             {isDictionaries && (
               <div className={styles['input-box']}>
@@ -495,16 +385,12 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
                       value: 'editor',
                       label: t('CreateDictionaries.manualInput'),
                     },
-                    {
-                      value: 'large-dragger',
-                      label: t('CreateDictionaries.largeFileUpload'),
-                    },
                   ]}
                   // size={"small"}
                 />
               </div>
               <>
-                {['dragger', 'large-dragger'].includes(uploadType) && (
+                {uploadType === 'dragger' && (
                   <div className={styles['upload-dragger-box']}>
                     <Dragger
                       className={styles['upload-dragger']}
@@ -522,11 +408,7 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
                         </div>
                         <div className={styles['content']}>
                           <div className={styles['title']}>{t('CreateDictionaries.uploadHint')}</div>
-                          <div className={styles['sub-title']}>
-                            {uploadType === 'dragger'
-                              ? t('CreateDictionaries.uploadHintFolder')
-                              : t('CreateDictionaries.uploadHintLargeFile')}
-                          </div>
+                          <div className={styles['sub-title']}>{t('CreateDictionaries.uploadHintFolder')}</div>
                         </div>
                       </div>
                     </Dragger>
@@ -572,38 +454,15 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
           </div>
           <div className={styles['submit-box']}>
             {isDictionaries ? (
-              <>
-                {uploadType !== 'large-dragger' ? (
-                  <>
-                    <YakitButton
-                      size="large"
-                      disabled={isDisabled}
-                      type="outline1"
-                      icon={<SolidDatabaseIcon />}
-                      onClick={onSavePayload}
-                    >
-                      数据库存储
-                    </YakitButton>
-                    <YakitButton
-                      size="large"
-                      disabled={isDisabled}
-                      icon={<SolidDocumenttextIcon />}
-                      onClick={onSavePayloadToFile}
-                    >
-                      {t('CreateDictionaries.saveToFile')}
-                    </YakitButton>
-                  </>
-                ) : (
-                  <YakitButton
-                    size="large"
-                    disabled={isDisabled}
-                    icon={<SolidDocumenttextIcon />}
-                    onClick={onSavePayloadToFile}
-                  >
-                    {t('CreateDictionaries.largeFileStorage')}
-                  </YakitButton>
-                )}
-              </>
+              <YakitButton
+                size="large"
+                disabled={isDisabled}
+                type="outline1"
+                icon={<SolidDatabaseIcon />}
+                onClick={onSavePayload}
+              >
+                数据库存储
+              </YakitButton>
             ) : (
               <>
                 <YakitButton size="large" disabled={isDisabled} type="outline1" onClick={onClose}>
