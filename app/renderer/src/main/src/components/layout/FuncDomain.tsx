@@ -2566,7 +2566,7 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
         type="white"
         size="large"
         visible={isShowEnpriTraceUpdateVisible}
-        title="检测到 内网版 Sentinel 版本升级"
+        title="检测到 内网版 靖云甲web应用漏洞扫描系统 版本升级"
         children={`检测到有新版本${yakitLastIntranetVersion}，请立即更新`}
         onCancel={() => {
           setShowEnpriTraceUpdateVisible(false)

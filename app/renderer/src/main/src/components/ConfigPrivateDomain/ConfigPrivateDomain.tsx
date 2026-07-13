@@ -280,7 +280,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
             <div className="brand-grid-glow" aria-hidden="true" />
             <header className="brand-head">
               <span className="brand-mark" />
-              <span className="brand-name">Sentinel</span>
+              <span className="brand-name">靖云甲web应用漏洞扫描系统</span>
             </header>
             <div className="brand-tagline">
               <h3 className="brand-tagline-title">企业统一身份认证</h3>
@@ -300,7 +300,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
                 <span className="brand-point-text">登录后自动同步项目与全局配置</span>
               </li>
             </ul>
-            <footer className="brand-foot">© Sentinel Security Platform</footer>
+            <footer className="brand-foot">© 靖云甲web应用漏洞扫描系统</footer>
           </aside>
 
           {/* 右半:企业登录表单区 */}

@@ -121,7 +121,7 @@ const Login: React.FC<LoginProp> = (props) => {
             <div className="brand-grid-glow" aria-hidden="true" />
             <header className="brand-head">
               <span className="brand-mark" />
-              <span className="brand-name">Sentinel</span>
+              <span className="brand-name">靖云甲web应用漏洞扫描系统</span>
             </header>
             <div className="brand-tagline">
               <h3 className="brand-tagline-title">企业级安全测试平台</h3>
@@ -141,7 +141,7 @@ const Login: React.FC<LoginProp> = (props) => {
                 <span className="brand-point-text">插件生态与脚本扩展能力</span>
               </li>
             </ul>
-            <footer className="brand-foot">© Sentinel Security Platform</footer>
+            <footer className="brand-foot">© 靖云甲web应用漏洞扫描系统</footer>
           </aside>
 
           {/* 右半：登录方式表单区 */}
