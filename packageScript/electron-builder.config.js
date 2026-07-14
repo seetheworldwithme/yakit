@@ -23,15 +23,15 @@ switch (platform) {
     appInfoOption = {
       appId: 'io.yaklang.enpritrace',
       extraMetadata: { name: 'enpritrace' },
-      productName: 'EnpriTrace',
+      productName: '靖云甲web应用漏洞扫描',
       copyright: 'Copyright © 2021 v1ll4n',
     }
     files = ['!app/assets/**/*', 'app/assets/yakit-close.png', 'app/assets/yakiteelogo*', ...fixedFile]
-    macIcon = 'app/assets/yakiteelogo.icns'
-    linuxIcon = 'app/assets/yakiteelogo.icns'
-    winIcon = 'app/assets/yakiteelogo.ico'
-    nsisInstallerIcon = 'app/assets/yakiteelogo.ico'
-    nsisUninstallerIcon = 'app/assets/yakiteelogo.ico'
+    macIcon = 'app/assets/jingyunjia.icns'
+    linuxIcon = 'app/assets/jingyunjia.icns'
+    winIcon = 'app/assets/jingyunjia.ico'
+    nsisInstallerIcon = 'app/assets/jingyunjia.ico'
+    nsisUninstallerIcon = 'app/assets/jingyunjia.ico'
     break
   case 'yakitSE':
     appInfoOption = {
@@ -119,7 +119,8 @@ const configOption = {
   extraFiles: [
     { from: 'bins/scripts/auto-install-cert.zip', to: 'bins/scripts/auto-install-cert.zip' },
     { from: 'bins/scripts/start-engine.zip', to: 'bins/scripts/start-engine.zip' },
-    { from: 'bins/scripts/google-chrome-plugin.zip', to: 'bins/scripts/google-chrome-plugin.zip' },
+    // 跳过 Chrome 抓包扩展（按需打包，文件缺失时临时注释）
+    // { from: 'bins/scripts/google-chrome-plugin.zip', to: 'bins/scripts/google-chrome-plugin.zip' },
     { from: 'bins/flag.txt', to: 'bins/flag.txt' },
     { from: 'bins/engine-version.txt', to: 'bins/engine-version.txt' },
     {
@@ -180,7 +181,7 @@ const configOption = {
     gatekeeperAssess: false,
     entitlements: 'packageScript/plist/entitlements.mac.plist',
     entitlementsInherit: 'packageScript/plist/entitlements.mac.plist',
-    target: [{ target: 'dmg', arch: ['x64', 'arm64'] }],
+    target: [{ target: 'dmg', arch: ['arm64'] }],
     icon: macIcon,
   },
   linux: {
