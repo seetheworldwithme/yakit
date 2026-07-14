@@ -32,8 +32,10 @@ module.exports = async function (context) {
         to: 'bins/flag.windows.txt',
       },
       {
-        from: 'bins/yak_windows_amd64.zip',
-        to: 'bins/yak.zip',
+        // 预放引擎到运行时引擎目录（Windows 打包版 YakitProjectPath = 安装目录/yakit-projects）
+        // 首启 fs.existsSync(yak-engine/yak.exe) 即为 true，跳过下载/解压交互，直接连引擎
+        from: 'bins/yak_windows_amd64.exe',
+        to: 'yakit-projects/yak-engine/yak.exe',
       },
       {
         from: 'LICENSE.md',

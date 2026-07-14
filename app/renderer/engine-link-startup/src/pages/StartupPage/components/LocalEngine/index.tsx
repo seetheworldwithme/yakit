@@ -11,7 +11,13 @@ import {
   grpcFetchLocalYakVersionHash,
   grpcFetchSpecifiedYakVersionHash,
 } from '../../grpc'
-import { FetchSoftwareVersion, getReleaseEditionName, isCommunityYakit, isEnpriTraceAgent } from '@/utils/envfile'
+import {
+  FetchSoftwareVersion,
+  getReleaseEditionName,
+  isCommunityYakit,
+  isEnpriTrace,
+  isEnpriTraceAgent,
+} from '@/utils/envfile'
 import { yakitNotify } from '@/utils/notification'
 import { SystemInfo } from '../../utils'
 import { getLocalValue } from '@/utils/kv'
@@ -145,8 +151,9 @@ export const LocalEngine: React.FC<LocalEngineProps> = memo(
         setLog(['开发环境，直接连接引擎'])
         startYakEngine()
       } else if (checkVersion) {
-        // SE 版本不进行 yakit 更新检查，直接检查引擎和内置的版本
-        if (isEnpriTraceAgent()) {
+        // 企业版 / SE 版本不进行 yakit 更新检查，直接检查引擎和内置的版本
+        // （企业版包版本为审计需要升到 2.x，与线上 1.x 不一致会触发强制更新阻塞启动）
+        if (isEnpriTrace() || isEnpriTraceAgent()) {
           handleCheckEngineVersion()
         } else {
           setLog(['检查软件是否有更新...'])
