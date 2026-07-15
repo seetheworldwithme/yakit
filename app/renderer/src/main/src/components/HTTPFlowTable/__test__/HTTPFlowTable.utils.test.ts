@@ -3,12 +3,14 @@ import {
   buildHTTPFlowTableAdvancedQuery,
   buildLegacyHTTPFlowTableFilterConfig,
   buildRuleSummaryList,
+  getClassNameData,
   hasActiveHTTPFlowTableFilterConfig,
   mergeRuleSummaryItems,
   safeParseHTTPFlowTableCache,
   splitHTTPFlowTableShieldData,
   uniqStrings,
 } from '@/components/HTTPFlowTable/HTTPFlowTable.utils'
+import type { HTTPFlow } from '@/components/HTTPFlowTable/HTTPFlowTable.constants'
 
 const defaultFilterConfig: Parameters<typeof hasActiveHTTPFlowTableFilterConfig>[0] = {
   filterMode: 'shield',
@@ -35,6 +37,28 @@ describe('safeParseHTTPFlowTableCache', () => {
 
   it('returns undefined for invalid json values', () => {
     expect(safeParseHTTPFlowTableCache('{bad json')).toBeUndefined()
+  })
+})
+
+describe('getClassNameData', () => {
+  it('does not apply the yellow row style when yellow is excluded', () => {
+    expect(
+      getClassNameData(
+        [
+          {
+            Id: 1,
+            Tags: 'YAKIT_COLOR_YELLOW',
+          } as HTTPFlow,
+        ],
+        ['YELLOW'],
+      ),
+    ).toEqual([
+      {
+        Id: 1,
+        Tags: 'YAKIT_COLOR_YELLOW',
+        cellClassName: undefined,
+      },
+    ])
   })
 })
 

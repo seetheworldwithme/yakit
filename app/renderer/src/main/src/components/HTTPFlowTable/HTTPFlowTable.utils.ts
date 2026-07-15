@@ -377,12 +377,16 @@ export const filterHTTPFlowsByFavoriteAndTags = (list: HTTPFlow[], tagsFilter: s
   })
 }
 
-export const getClassNameData = (resData: HTTPFlow[]) => {
+export const getClassNameData = (resData: HTTPFlow[], excludedColors: string[] = []) => {
   const newData: HTTPFlow[] = []
   const length = resData.length
   for (let index = 0; index < length; index++) {
     const item: HTTPFlow = resData[index]
-    const className: string | undefined = filterColorTag(item.Tags) || undefined
+    const className: string | undefined =
+      filterColorTag(item.Tags)
+        .split(' ')
+        .filter((className) => !excludedColors.some((color) => className === `table-cell-bg-${color.toLowerCase()}`))
+        .join(' ') || undefined
     newData.push({
       ...item,
       cellClassName: className,

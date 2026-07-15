@@ -325,7 +325,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.reverseShellTool',
   },
   'db-http-request': {
-    label: 'History',
+    label: '历史流量',
     labelUi: 'YakitRoute.History',
     describeUi: 'YakitRoute.viewAndManageAllHistoricalTrafficFromMITMPluginsAndFuzzing',
   },

@@ -273,7 +273,10 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
 
   // 接口返回后：去掉前端收藏/标签过滤 + 行颜色
   const initResDataFun = useMemoizedFn((arr: HTTPFlow[]) =>
-    getClassNameData(filterHTTPFlowsByFavoriteAndTags(arr, tagsFilter, onlyFavorite)),
+    getClassNameData(
+      filterHTTPFlowsByFavoriteAndTags(arr, tagsFilter, onlyFavorite),
+      pageType === 'History' ? ['YELLOW'] : [],
+    ),
   )
 
   const [total, setTotal] = useState(0)
@@ -2235,7 +2238,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
         }
       })
       if (findFlag) {
-        const newData = getClassNameData(data)
+        const newData = getClassNameData(data, pageType === 'History' ? ['YELLOW'] : [])
         setData(newData)
         return newData
       }
