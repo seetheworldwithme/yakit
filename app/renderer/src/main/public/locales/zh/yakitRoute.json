@@ -32,7 +32,7 @@
     "vulnTargetedScan": "漏洞检测",
     "vulnerabilityDetectionDescription": "通过预制漏洞源码，对特定目标进行漏洞检测，可以自定义新增 POC 种类",
     "portScan": "端口扫描",
-    "weakPasswordCheck": "弱口令检测",
+    "weakPasswordCheck": "凭证爆破",
     "bruteForceDescription": "对目标的登录账号、密码等进行爆破，在爆破前会进行未授权检测",
     "dirBruteForce": "目录爆破",
     "dataCompare": "数据对比",
