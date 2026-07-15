@@ -115,7 +115,7 @@ export const aduitStatusToName: Record<string, { name: string; icon: ReactNode }
   '0': { name: '待审核', icon: <SolidCircleIcon className="aduit-status-solid-circle-color" /> },
   '1': { name: '已通过', icon: <SolidBadgecheckIcon className="aduit-status-badge-check-color" /> },
   '2': { name: '未通过', icon: <SolidBanIcon className="aduit-status-ban-color" /> },
-  '3': { name: '审核中', icon: <SolidFlagIcon className="aduit-status-solid-circle-color" /> },
+  '3': { name: '审核中', icon: <SolidFlagIcon className="aduit-status-flag-color" /> },
 }
 /** @name 审核状态选择列表 */
 export const DefaultStatusList: TypeSelectOpt[] = [
