@@ -1,14 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
-import YakitSteps from './YakitSteps/YakitSteps'
+import React, { useState, useRef, useEffect } from 'react'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { useMemoizedFn } from 'ahooks'
 import { Radio, Progress } from 'antd'
 import { randomString } from '@/utils/randomUtil'
 import { failed, yakitNotify } from '@/utils/notification'
 import { YakScript } from '@/pages/invoker/schema'
-import { CodeScoreModule } from '../funcTemplate'
 import usePluginUploadHooks, { SaveYakScriptToOnlineRequest, SaveYakScriptToOnlineResponse } from '../pluginUploadHooks'
-import { PluginUploadSupplement } from '@/pages/pluginHub/pluginUploadModal/PluginUploadModal'
 
 import classNames from 'classnames'
 import '../plugins.scss'
@@ -24,84 +21,30 @@ const { ipcRenderer } = window.require('electron')
 
 export const PluginLocalUpload: React.FC<PluginLocalUploadProps> = React.memo((props) => {
   const { pluginNames, onClose } = props
-  const [current, setCurrent] = useState<number>(0)
-  const [isPrivate, setIsPrivate] = useState<boolean>(true)
+  const [uploading, setUploading] = useState(false)
 
-  const [successPluginNames, setSuccessPluginNames] = useState<string[]>([])
-  const [supplementJson, setSupplementJson] = useState<string>('')
-  // 选择展示类型
-  const onPrivateSelectionPrev = useMemoizedFn((v) => {
-    if (v) {
-      // true 选择的私密，私密会跳过检测，直接上传
-      setCurrent(current + 3)
-      setSuccessPluginNames(pluginNames)
-    } else {
-      setCurrent(current + 1)
-    }
-    setIsPrivate(v)
-  })
-  // 返回符合的插件名集合
-  const onAutoTestNext = useMemoizedFn((pluginNames) => {
-    setCurrent(current + 1)
-    setSuccessPluginNames(pluginNames)
-  })
-
-  // 返回补充资料
-  const handleUploadSupplement = useMemoizedFn((data: string) => {
-    setCurrent(current + 1)
-    setSupplementJson(data)
-  })
-
-  const steps = useMemo(() => {
-    return [
-      {
-        title: '选私密/公开',
-        content: <PluginIsPrivateSelection onNext={onPrivateSelectionPrev} />,
-      },
-      {
-        title: '自动检测',
-        content: (
-          <PluginAutoTest show={current === 1} pluginNames={pluginNames} onNext={onAutoTestNext} onCancel={onClose} />
-        ),
-      },
-      {
-        title: '下一步', //补充资料",
-        content: <PluginUploadSupplement nextName="下一步" loading={false} callback={handleUploadSupplement} />,
-      },
-      {
-        title: '上传中',
-        content: (
-          <PluginUpload
-            show={current === 3 && successPluginNames.length > 0}
-            pluginNames={successPluginNames}
-            onSave={onClose}
-            onCancel={onClose}
-            isPrivate={isPrivate}
-            supplementJson={supplementJson}
-          />
-        ),
-      },
-    ]
-  }, [current, successPluginNames, pluginNames, isPrivate, supplementJson])
   return (
     <div className={styles['plugin-local-upload']}>
-      <YakitSteps current={current}>
-        {steps.map((item) => (
-          <YakitSteps.YakitStep key={item.title} title={item.title} />
-        ))}
-      </YakitSteps>
-      {current !== 2 && (
-        <div className={styles['header-wrapper']}>
-          <div className={styles['title-style']}>提示：</div>
-          <div className={styles['header-body']}>
-            <div className={styles['opt-content']}>
-              <div className={styles['content-order']}>1</div>
-              批量上传只支持新增，更新插件请点击编辑逐个进行更新
+      {!uploading ? (
+        <>
+          <div className={styles['header-wrapper']}>
+            <div className={styles['title-style']}>上传至企业插件仓库</div>
+            <div className={styles['header-body']}>
+              已选择 {pluginNames.length} 个插件。上传后可在“插件管理”中编辑、删除和分组，并供团队一键下载。
             </div>
           </div>
+          <div className={styles['plugin-local-upload-steps-action']}>
+            <YakitButton type="outline2" onClick={onClose}>
+              取消
+            </YakitButton>
+            <YakitButton onClick={() => setUploading(true)}>上传插件</YakitButton>
+          </div>
+        </>
+      ) : (
+        <div className={styles['plugin-local-upload-steps-content']}>
+          <PluginUpload show={true} pluginNames={pluginNames} onSave={onClose} onCancel={onClose} isPrivate={false} />
         </div>
       )}
-      <div className={styles['plugin-local-upload-steps-content']}>{steps[current]?.content}</div>
     </div>
   )
 })

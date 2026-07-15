@@ -9,18 +9,12 @@ import {
   ListLayoutOpt,
   ListShowContainer,
   PluginsList,
-  TypeSelect,
 } from '../funcTemplate'
-import { TypeSelectOpt } from '../funcTemplateType'
 import {
   OutlineClouddownloadIcon,
-  OutlineClouduploadIcon,
   OutlineDotshorizontalIcon,
-  OutlinePaperairplaneIcon,
-  OutlinePencilaltIcon,
   OutlinePluscircleIcon,
   OutlineRefreshIcon,
-  OutlineSaveIcon,
   OutlineTrashIcon,
   OutlineXIcon,
 } from '@/assets/icon/outline'
@@ -51,9 +45,9 @@ import {
   PluginsQueryProps,
   apiDeletePluginCheck,
   apiDownloadPluginCheck,
-  apiFetchCheckList,
+  apiFetchOnlineList,
   apiFetchGetYakScriptGroupOnline,
-  apiFetchGroupStatisticsCheck,
+  apiFetchGroupStatisticsOnline,
   apiFetchResetPlugins,
   apiFetchSaveYakScriptGroupOnline,
   convertDownloadOnlinePluginBatchRequestParams,
@@ -64,7 +58,7 @@ import { isEnpriTraceAgent } from '@/utils/envfile'
 import { NetWorkApi } from '@/services/fetch'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
-import { DefaultStatusList, defaultSearch } from '../builtInData'
+import { defaultSearch } from '../builtInData'
 import { useStore } from '@/store'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { PluginGroupList } from '../local/PluginsLocalType'
@@ -87,7 +81,6 @@ import useAdmin from '@/hook/useAdmin'
 
 import '../plugins.scss'
 import styles from './pluginManage.module.scss'
-import { YakitDropdownMenu } from '@/components/yakitUI/YakitDropdownMenu/YakitDropdownMenu'
 import { randomString } from '@/utils/randomUtil'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
 import { SolidClouduploadIcon } from '@/assets/icon/solid'
@@ -108,7 +101,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   // 初始时，数据是否为空，为空展示空数据时的UI
   const [initTotal, setInitTotal] = useState<number>(0)
   const getInitTotal = useMemoizedFn(() => {
-    apiFetchCheckList({ page: 1, limit: 50 }).then((res) => {
+    apiFetchOnlineList({ page: 1, limit: 50 }).then((res) => {
       setInitTotal(+res.pagemeta.total)
     })
   })
@@ -148,15 +141,6 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
     tags: [],
     plugin_group: [],
   })
-  /** 首页顶部的审核状态组件选中情况 */
-  const pluginStatusSelect: TypeSelectOpt[] = useMemo(() => {
-    return (
-      filters.status?.map((ele) => ({
-        key: ele.value,
-        name: ele.label,
-      })) || []
-    )
-  }, [filters.status])
   const [searchs, setSearchs] = useState<PluginSearchParams>(cloneDeep(defaultSearch))
   const [response, dispatch] = useReducer(pluginOnlineReducer, initialOnlineState)
   const [hasMore, setHasMore] = useState<boolean>(true)
@@ -187,7 +171,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
       // api接口请求参数
       const query: PluginsQueryProps = { ...convertPluginsRequestParams({ ...filters }, searchs, params) }
 
-      apiFetchCheckList(query)
+      apiFetchOnlineList(query)
         .then((res) => {
           if (!res.data) res.data = []
           dispatch({
@@ -215,7 +199,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   const [pluginFilters, setPluginFilters] = useState<PluginGroupList[]>([])
   // 获取所有过滤条件统计数据
   const fetchPluginFilters = useMemoizedFn(() => {
-    apiFetchGroupStatisticsCheck({}, false).then((res: any) => {
+    apiFetchGroupStatisticsOnline({}, false).then((res: any) => {
       res.data.forEach((item) => {
         item.data = item.data || []
         if (item.groupKey === 'plugin_group') {
@@ -266,14 +250,6 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   }, [filters])
   const onFilter = useMemoizedFn((value: Record<string, API.PluginsSearchData[]>) => {
     setFilters({ ...value })
-  })
-  const onSetActive = useMemoizedFn((status: TypeSelectOpt[]) => {
-    const newStatus: API.PluginsSearchData[] = status.map((ele) => ({
-      value: ele.key,
-      label: ele.name,
-      count: 0,
-    }))
-    setFilters({ ...filters, status: newStatus })
   })
 
   // ----- 选中插件 -----
@@ -1077,25 +1053,6 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
           </div>
           <span className={styles['rail-divider']} />
           <nav className={styles['rail-actions']}>
-            {admin.ee && (
-              <FuncBtnIcon
-                icon={<OutlinePaperairplaneIcon />}
-                type="outline2"
-                size="large"
-                name={t('PluginManage.syncToEE')}
-                onClick={onSyncPluginToEE}
-              />
-            )}
-            {admin.isAdmin && (
-              <FuncBtnIcon
-                icon={<OutlinePencilaltIcon />}
-                disabled={selectNum === 0 && !allCheck}
-                type="outline2"
-                size="large"
-                name={t('PluginManage.modifyAuthor')}
-                onClick={onShowModifyAuthor}
-              />
-            )}
             <FuncBtnIcon
               icon={<OutlineClouddownloadIcon />}
               type="outline2"
@@ -1105,86 +1062,6 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
               onClick={() => headerExtraDownload()}
               disabled={initTotal === 0}
             />
-            {admin.isAdmin && (
-              <FuncBtnIcon
-                icon={<OutlineSaveIcon />}
-                type="outline2"
-                size="large"
-                name={t('PluginManage.importGroup')}
-                onClick={() => setImportGroupVisible(true)}
-              />
-            )}
-            {admin.ee && admin.isAdmin && (
-              <YakitDropdownMenu
-                menu={{
-                  data: [
-                    { key: 'resetAll', label: t('YakitButton.resetAll') },
-                    { key: 'uploadPluginLibrary', label: t('PluginManage.uploadPluginLibrary') },
-                  ],
-                  onClick: ({ key }) => {
-                    switch (key) {
-                      case 'resetAll':
-                        let m = showYakitModal({
-                          title: (modalT) => modalT('YakitButton.resetAll'),
-                          centered: true,
-                          width: 400,
-                          closable: true,
-                          maskClosable: false,
-                          footer: (
-                            <div
-                              style={{
-                                textAlign: 'right',
-                                width: '100%',
-                                margin: '0 15px 15px',
-                              }}
-                            >
-                              <YakitButton
-                                type="outline1"
-                                style={{ marginRight: 15 }}
-                                onClick={() => {
-                                  m.destroy()
-                                }}
-                              >
-                                {t('YakitButton.cancel')}
-                              </YakitButton>
-                              <YakitButton
-                                onClick={() => {
-                                  onResetAll()
-                                  m.destroy()
-                                }}
-                              >
-                                {t('YakitButton.confirm')}
-                              </YakitButton>
-                            </div>
-                          ),
-                          content: (modalT) => <div style={{ padding: 15 }}>{modalT('PluginManage.resetConfirm')}</div>,
-                          onCancel: () => {
-                            m.destroy()
-                          },
-                        })
-                        break
-                      case 'uploadPluginLibrary':
-                        setUploadPluginLibraryVisible(true)
-                        break
-                      default:
-                        break
-                    }
-                  },
-                }}
-                dropdown={{
-                  trigger: ['click'],
-                  placement: 'bottom',
-                }}
-              >
-                <FuncBtnIcon
-                  icon={<OutlineClouduploadIcon />}
-                  type="outline2"
-                  size="large"
-                  loading={resetLoading}
-                  name={t('YakitButton.resetAll')}
-                />
-              </YakitDropdownMenu>
-            )}
             {admin.isAdmin && (
               <FuncBtnIcon
                 icon={<OutlineTrashIcon />}
@@ -1224,7 +1101,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
         <PluginsLayout
           title={t('PluginManage.title')}
           hidden={!!plugin}
-          subTitle={<TypeSelect active={pluginStatusSelect} list={DefaultStatusList} setActive={onSetActive} />}
+          subTitle={null}
           extraHeader={
             <div className={styles['audit-search-bar']}>
               <FuncSearch maxWidth={1000} value={searchs} onSearch={onKeywordAndUser} onChange={setSearchs} />
