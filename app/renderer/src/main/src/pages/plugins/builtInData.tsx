@@ -140,7 +140,8 @@ export const defaultSearch: PluginSearchParams = {
 
 export const funcSearchType: { value: string; label: string }[] = [
   { value: 'fieldKeywords', label: '关键字' },
-  { value: 'userName', label: '按作者' },
+  // 按产品要求隐藏“按作者”搜索选项，保留配置位置与作者查询能力，便于后续恢复
+  // { value: 'userName', label: '按作者' },
   // 按产品要求隐藏“按标签”搜索选项，保留配置位置与标签查询能力，便于后续恢复
   // { value: 'tag', label: '按标签' },
   { value: 'keyword', label: '全文搜索' },
