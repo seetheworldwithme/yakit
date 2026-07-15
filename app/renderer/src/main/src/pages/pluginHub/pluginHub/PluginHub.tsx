@@ -13,6 +13,7 @@ import { YakitRoute } from '@/enums/yakitRoute'
 
 import classNames from 'classnames'
 import '../../plugins/plugins.scss'
+import './pluginHubOverrides.scss'
 import styles from './PluginHub.module.scss'
 
 // const {ipcRenderer} = window.require("electron")
