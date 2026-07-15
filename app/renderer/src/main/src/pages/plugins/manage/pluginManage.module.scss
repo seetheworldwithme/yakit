@@ -84,6 +84,78 @@
   gap: 8px;
 }
 
+.plugin-stage {
+  :global(.is-list-btn) {
+    display: none;
+  }
+}
+
+.plugin-manage-table-wrap {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+
+  :global {
+    .ant-table-wrapper,
+    .ant-spin-nested-loading,
+    .ant-spin-container,
+    .ant-table,
+    .ant-table-container {
+      height: 100%;
+    }
+
+    .ant-table-body {
+      overflow-y: auto !important;
+    }
+
+    .ant-table-thead > tr > th {
+      background: var(--Colors-Use-Neutral-Bg) !important;
+      color: var(--Colors-Use-Neutral-Text-3-Secondary);
+      font-size: 12px;
+    }
+
+    .ant-table-tbody > tr.ant-table-row:hover > td {
+      background: var(--Colors-Use-Neutral-Bg-Hover) !important;
+    }
+  }
+}
+
+.plugin-manage-table-row {
+  cursor: pointer;
+}
+
+.col-name-text,
+.col-desc {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-name-text {
+  color: var(--Colors-Use-Neutral-Text-1-Title);
+}
+
+.col-desc,
+.col-placeholder,
+.col-tags-more {
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  font-size: 12px;
+}
+
+.col-tags,
+.col-ops {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.col-tags {
+  flex-wrap: wrap;
+}
+
 // 列表单项-额外操作-下拉表
 .func-filter-dropdown-menu {
   :global {

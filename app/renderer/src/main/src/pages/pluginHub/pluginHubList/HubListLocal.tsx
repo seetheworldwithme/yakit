@@ -1187,6 +1187,32 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         ),
       },
       {
+        title: '上传者',
+        dataIndex: 'Author',
+        width: 140,
+        ellipsis: true,
+        render: (author: string) => author || '-',
+      },
+      {
+        title: '标签',
+        dataIndex: 'Tags',
+        width: 220,
+        render: (tags: string) => {
+          const values = (tags || '').split(',').filter(Boolean)
+          if (!values.length) return <span className={styles['col-placeholder']}>-</span>
+          return (
+            <div className={styles['col-tags']}>
+              {values.slice(0, 3).map((tag) => (
+                <YakitTag key={tag} color="info">
+                  {tag}
+                </YakitTag>
+              ))}
+              {values.length > 3 && <span className={styles['col-tags-more']}>+{values.length - 3}</span>}
+            </div>
+          )
+        },
+      },
+      {
         title: t('HubListLocal.createdAt'),
         dataIndex: 'UpdatedAt',
         width: 160,

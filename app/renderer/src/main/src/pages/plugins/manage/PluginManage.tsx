@@ -1,18 +1,8 @@
 import React, { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { PluginsContainer, PluginsLayout, statusTag } from '../baseTemplate'
-import {
-  AuthorImg,
-  FuncBtnIcon,
-  FuncFilterPopover,
-  FuncSearch,
-  GridLayoutOpt,
-  ListLayoutOpt,
-  ListShowContainer,
-  PluginsList,
-} from '../funcTemplate'
+import { PluginsContainer, PluginsLayout } from '../baseTemplate'
+import { AuthorImg, FuncBtnIcon, FuncSearch, PluginsList } from '../funcTemplate'
 import {
   OutlineClouddownloadIcon,
-  OutlineDotshorizontalIcon,
   OutlinePluscircleIcon,
   OutlineRefreshIcon,
   OutlineTrashIcon,
@@ -30,7 +20,8 @@ import {
 import { API } from '@/services/swagger/resposeType'
 import cloneDeep from 'lodash/cloneDeep'
 import { YakitModal } from '@/components/yakitUI/YakitModal/YakitModal'
-import { Form, Progress, Tooltip } from 'antd'
+import { Form, Progress, Table, Tooltip } from 'antd'
+import type { ColumnsType } from 'antd/lib/table'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
@@ -68,6 +59,7 @@ import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { UpdateGroupList, UpdateGroupListItem } from '@/pages/pluginHub/group/UpdateGroupList'
 import classNames from 'classnames'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
+import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import Dragger from 'antd/lib/upload/Dragger'
 import { PropertyIcon } from '@/pages/payloadManager/icon'
 import { RcFile } from 'antd/lib/upload'
@@ -87,6 +79,7 @@ import { SolidClouduploadIcon } from '@/assets/icon/solid'
 import { httpUploadPluginToEE } from '@/pages/pluginHub/utils/http'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
+import { formatDate } from '@/utils/timeUtil'
 
 const { ipcRenderer } = window.require('electron')
 interface PluginManageProps {}
@@ -143,11 +136,10 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   })
   const [searchs, setSearchs] = useState<PluginSearchParams>(cloneDeep(defaultSearch))
   const [response, dispatch] = useReducer(pluginOnlineReducer, initialOnlineState)
-  const [hasMore, setHasMore] = useState<boolean>(true)
 
   // 获取插件列表数据
   const fetchList = useDebounceFn(
-    useMemoizedFn((reset?: boolean) => {
+    useMemoizedFn((reset?: boolean, targetPage?: number, targetLimit?: number) => {
       // 从详情页返回不进行搜索
       if (isDetailBack.current) {
         isDetailBack.current = false
@@ -162,12 +154,14 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
       }
 
       setLoading(true)
-      const params: PluginListPageMeta = !!reset
-        ? { page: 1, limit: 20 }
-        : {
-            page: response.pagemeta.page + 1,
-            limit: response.pagemeta.limit || 20,
-          }
+      const params: PluginListPageMeta = targetPage
+        ? { page: targetPage, limit: targetLimit || response.pagemeta.limit || 20 }
+        : !!reset
+          ? { page: 1, limit: 20 }
+          : {
+              page: response.pagemeta.page + 1,
+              limit: response.pagemeta.limit || 20,
+            }
       // api接口请求参数
       const query: PluginsQueryProps = { ...convertPluginsRequestParams({ ...filters }, searchs, params) }
 
@@ -175,16 +169,11 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
         .then((res) => {
           if (!res.data) res.data = []
           dispatch({
-            type: 'add',
+            type: targetPage ? 'page' : 'add',
             payload: {
               response: { ...res },
             },
           })
-
-          const dataLength = +res.pagemeta.page === 1 ? res.data : response.data.concat(res.data)
-          const isMore = res.data.length < res.pagemeta.limit || dataLength.length >= res.pagemeta.total
-          setHasMore(!isMore)
-
           isLoadingRef.current = false
         })
         .finally(() => {
@@ -236,7 +225,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   }, [])
   // 滚动更多加载
   const onUpdateList = useMemoizedFn((reset?: boolean) => {
-    fetchList()
+    fetchList(reset)
   })
 
   // 关键词|作者搜索
@@ -434,65 +423,111 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
     if (value) setSelectList([...getSelectList(), data])
     else setSelectList(getSelectList().filter((item) => item.uuid !== data.uuid))
   })
-  /** 单项副标题组件 */
-  const optSubTitle = useMemoizedFn((data: YakitPluginOnlineDetail) => {
-    return statusTag[`${data.status}`]
-  })
-  /** 单项额外操作组件 */
-  const optExtraNode = useMemoizedFn((data: YakitPluginOnlineDetail) => {
-    return (
-      <FuncFilterPopover
-        icon={<OutlineDotshorizontalIcon />}
-        menu={{
-          data: admin.isAdmin
-            ? [
-                {
-                  key: 'download',
-                  label: t('YakitButton.download'),
-                  itemIcon: <OutlineClouddownloadIcon />,
-                },
-                { type: 'divider' },
-                {
-                  key: 'del',
-                  label: t('YakitButton.delete'),
-                  type: 'danger',
-                  itemIcon: <OutlineTrashIcon />,
-                },
-              ]
-            : [
-                {
-                  key: 'download',
-                  label: t('YakitButton.download'),
-                  itemIcon: <OutlineClouddownloadIcon />,
-                },
-              ],
-          className: styles['func-filter-dropdown-menu'],
-          onClick: ({ key }) => {
-            switch (key) {
-              case 'del':
-                activeDelPlugin.current = data
-                setShowReason({ visible: true, type: 'del' })
-                return
-              case 'download':
-                onFooterExtraDownload(data)
-                return
-              default:
-                return
-            }
-          },
-        }}
-        button={{
-          type: 'text2',
-        }}
-        placement="bottomRight"
-      />
-    )
-  })
   /** 单项点击回调 */
   const optClick = useMemoizedFn((data: YakitPluginOnlineDetail, index: number) => {
     setPlugin({ ...data })
     setShowPluginIndex(index)
   })
+
+  const onTableDownload = useMemoizedFn((data: YakitPluginOnlineDetail) => {
+    onFooterExtraDownload(data)
+  })
+
+  const tableColumns = useMemo<ColumnsType<YakitPluginOnlineDetail>>(() => {
+    const selectedSet = new Set(selectUUIDs)
+    return [
+      {
+        title: () => (
+          <YakitCheckbox
+            indeterminate={!allCheck && selectList.length > 0}
+            checked={allCheck}
+            onChange={(event) => onCheck(event.target.checked)}
+          />
+        ),
+        dataIndex: 'uuid',
+        width: 44,
+        render: (_: string, record) => (
+          <YakitCheckbox
+            checked={allCheck || selectedSet.has(record.uuid)}
+            onChange={(event) => optCheck(record, event.target.checked)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        ),
+      },
+      {
+        title: '插件名称',
+        dataIndex: 'script_name',
+        ellipsis: true,
+        render: (name: string) => <span className={styles['col-name-text']}>{name || '-'}</span>,
+      },
+      {
+        title: '插件描述',
+        dataIndex: 'help',
+        ellipsis: true,
+        render: (help: string) => (
+          <Tooltip title={help || ''} overlayClassName="plugins-tooltip">
+            <span className={styles['col-desc']}>{help || '-'}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: '上传者',
+        dataIndex: 'authors',
+        width: 140,
+        ellipsis: true,
+        render: (authors: string) => authors || '-',
+      },
+      {
+        title: '标签',
+        dataIndex: 'tags',
+        width: 220,
+        render: (tags: string) => {
+          const values = (tags || '').split(',').filter(Boolean)
+          if (!values.length) return <span className={styles['col-placeholder']}>-</span>
+          return (
+            <div className={styles['col-tags']}>
+              {values.slice(0, 3).map((tag) => (
+                <YakitTag key={tag} color="info">
+                  {tag}
+                </YakitTag>
+              ))}
+              {values.length > 3 && <span className={styles['col-tags-more']}>+{values.length - 3}</span>}
+            </div>
+          )
+        },
+      },
+      {
+        title: '更新时间',
+        dataIndex: 'updated_at',
+        width: 160,
+        render: (time: number) => (time ? formatDate(time) : '-'),
+      },
+      {
+        title: '操作',
+        width: 120,
+        render: (_: unknown, record) => (
+          <div className={styles['col-ops']} onClick={(event) => event.stopPropagation()}>
+            <YakitButton type="text" size="small" onClick={() => onTableDownload(record)}>
+              下载
+            </YakitButton>
+            {admin.isAdmin && (
+              <YakitButton
+                type="text"
+                danger
+                size="small"
+                onClick={() => {
+                  activeDelPlugin.current = record
+                  onShowDelPlugin()
+                }}
+              >
+                删除
+              </YakitButton>
+            )}
+          </div>
+        ),
+      },
+    ]
+  }, [admin.isAdmin, allCheck, onCheck, onShowDelPlugin, onTableDownload, optCheck, selectList, selectUUIDs])
 
   // 详情页-相关回调逻辑
   const detailRef = useRef<DetailRefProps>(null)
@@ -1250,66 +1285,31 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
               }
             >
               {initTotal > 0 ? (
-                <ListShowContainer<YakitPluginOnlineDetail>
-                  id="pluginManage"
-                  isList={isList}
-                  data={response.data}
-                  gridNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
-                    const { index, data } = info
-                    const check = allCheck || selectUUIDs.includes(data.uuid)
-                    return (
-                      <GridLayoutOpt
-                        order={index}
-                        data={data}
-                        checked={check}
-                        onCheck={optCheck}
-                        title={data.script_name}
-                        type={data.type}
-                        tags={data.tags}
-                        help={data.help || ''}
-                        img={data.head_img || ''}
-                        user={data.authors || ''}
-                        prImgs={(data.collaborator || []).map((ele) => ele.head_img)}
-                        time={data.updated_at}
-                        isCorePlugin={!!data.isCorePlugin}
-                        official={data.official}
-                        subTitle={optSubTitle}
-                        extraFooter={optExtraNode}
-                        onClick={optClick}
-                      />
-                    )
-                  }}
-                  gridHeight={226}
-                  listNode={(info: { index: number; data: YakitPluginOnlineDetail }) => {
-                    const { index, data } = info
-                    const check = allCheck || selectUUIDs.includes(data.uuid)
-                    return (
-                      <ListLayoutOpt
-                        order={index}
-                        data={data}
-                        checked={check}
-                        onCheck={optCheck}
-                        img={data.head_img}
-                        title={info.index + data.script_name}
-                        help={data.help || ''}
-                        time={data.updated_at}
-                        type={data.type}
-                        isCorePlugin={!!data.isCorePlugin}
-                        official={data.official}
-                        subTitle={optSubTitle}
-                        extraNode={optExtraNode}
-                        onClick={optClick}
-                      />
-                    )
-                  }}
-                  listHeight={73}
-                  loading={loading}
-                  hasMore={hasMore}
-                  updateList={onUpdateList}
-                  showIndex={showPluginIndex.current}
-                  setShowIndex={setShowPluginIndex}
-                  isShowSearchResultEmpty={+response.pagemeta.total === 0}
-                />
+                <div className={styles['plugin-manage-table-wrap']}>
+                  <Table<YakitPluginOnlineDetail>
+                    rowKey="uuid"
+                    size="small"
+                    columns={tableColumns}
+                    dataSource={response.data}
+                    pagination={{
+                      current: response.pagemeta.page,
+                      pageSize: response.pagemeta.limit,
+                      total: response.pagemeta.total,
+                      showSizeChanger: true,
+                      pageSizeOptions: ['10', '20', '50', '100'],
+                      onChange: (nextPage, nextPageSize) => fetchList(false, nextPage, nextPageSize),
+                    }}
+                    loading={loading}
+                    scroll={{ y: 'calc(100vh - 320px)', x: 'max-content' }}
+                    onRow={(record) => {
+                      const index = response.data.findIndex((item) => item.uuid === record.uuid)
+                      return {
+                        className: styles['plugin-manage-table-row'],
+                        onClick: () => optClick(record, index),
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className={styles['plugin-manage-empty']}>
                   <YakitEmpty title={t('YakitEmpty.noData')} />
