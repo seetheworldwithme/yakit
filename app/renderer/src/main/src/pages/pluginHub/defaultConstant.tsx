@@ -1,11 +1,11 @@
 import { ReactNode } from 'react'
 import { PluginSourceType } from './type'
 import {
-  OutlineAdjustmentsIcon,
-  OutlineLocalPluginIcon,
+  // OutlineAdjustmentsIcon,
+  // OutlineLocalPluginIcon,
   OutlineOnlinePluginIcon,
-  OutlineOwnPluginIcon,
-  OutlineTrashSecondIcon,
+  // OutlineOwnPluginIcon,
+  // OutlineTrashSecondIcon,
 } from '@/assets/icon/outline'
 import { YakScript } from '../invoker/schema'
 import { YakitPluginOnlineDetail } from '../plugins/online/PluginsOnlineType'
@@ -21,23 +21,32 @@ export const HubSideBarList: YakitTabsProps[] = [
     icon: <OutlineOnlinePluginIcon />,
     hint: () => '插件商店',
   },
-  { value: 'own', label: 'PluginHubList.own', icon: <OutlineOwnPluginIcon />, hint: () => '我的插件' },
+  {
+    value: 'own',
+    label: 'PluginHubList.own',
+    // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
+    // icon: <OutlineOwnPluginIcon />,
+    hint: () => '我的插件',
+  },
   {
     value: 'local',
     label: 'PluginHubList.local',
-    icon: <OutlineLocalPluginIcon />,
+    // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
+    // icon: <OutlineLocalPluginIcon />,
     hint: () => '本地插件',
   },
   {
     value: 'setting',
     label: 'PluginHubList.setting',
-    icon: <OutlineAdjustmentsIcon />,
+    // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
+    // icon: <OutlineAdjustmentsIcon />,
     hint: () => '配置',
   },
   {
     value: 'recycle',
     label: 'PluginHubList.recycle',
-    icon: <OutlineTrashSecondIcon />,
+    // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
+    // icon: <OutlineTrashSecondIcon />,
     hint: () => '回收站',
   },
 ]
