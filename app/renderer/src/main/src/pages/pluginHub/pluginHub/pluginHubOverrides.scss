@@ -2,3 +2,13 @@
 #yakit-plugin-hub [class*='hub-filter-row'] {
   display: none !important;
 }
+
+/* 按产品要求隐藏“我的 / 本地 / 回收站”表格中的标签列；保留列定义与标签数据，便于后续恢复 */
+#yakit-plugin-hub [class*='plugin-hub-local-shell'] {
+  :global {
+    .ant-table-thead > tr > th:nth-child(3),
+    .ant-table-tbody > tr > td:nth-child(3) {
+      display: none !important;
+    }
+  }
+}
