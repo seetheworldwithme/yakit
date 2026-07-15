@@ -3,7 +3,7 @@
     "availableBruteTypes": "可用爆破类型"
   },
   "BruteExecute": {
-    "bruteForceDetection": "弱口令检测",
+    "bruteForceDetection": "凭证爆破",
     "types": "个类型"
   },
   "BruteExecuteContent": {

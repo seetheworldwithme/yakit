@@ -121,6 +121,11 @@
 
 .brute-execute-wrapper {
   @include securityTool.execute-title('brute');
+
+  // 按产品要求隐藏凭证爆破页顶部标题/收起参数区域；保留执行表单与业务逻辑
+  > :first-child {
+    display: none;
+  }
 }
 
 .brute-form-wrapper {
