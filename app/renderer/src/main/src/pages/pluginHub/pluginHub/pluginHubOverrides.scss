@@ -8,3 +8,8 @@
 #yakit-plugin-hub [class*='plugin-hub-local-shell'] .ant-table-tbody > tr > td:nth-child(3) {
   display: none !important;
 }
+
+/* 按产品要求隐藏本地插件页“新建插件 / 导出 / 上传 / 删除”按钮前的图标；保留按钮行为与状态 */
+#yakit-plugin-hub [class*='hub-list-header-extra'] button svg {
+  display: none !important;
+}
