@@ -115,7 +115,7 @@ export const aduitStatusToName: Record<string, { name: string; icon: ReactNode }
   '0': { name: '待审核', icon: <SolidCircleIcon className="aduit-status-solid-circle-color" /> },
   '1': { name: '已通过', icon: <SolidBadgecheckIcon className="aduit-status-badge-check-color" /> },
   '2': { name: '未通过', icon: <SolidBanIcon className="aduit-status-ban-color" /> },
-  '3': { name: '审核中', icon: <SolidFlagIcon className="aduit-status-flag-color" /> },
+  '3': { name: '审核中', icon: <SolidFlagIcon className="aduit-status-solid-circle-color" /> },
 }
 /** @name 审核状态选择列表 */
 export const DefaultStatusList: TypeSelectOpt[] = [
@@ -141,6 +141,7 @@ export const defaultSearch: PluginSearchParams = {
 export const funcSearchType: { value: string; label: string }[] = [
   { value: 'fieldKeywords', label: '关键字' },
   { value: 'userName', label: '按作者' },
-  { value: 'tag', label: '按标签' },
+  // 按产品要求隐藏“按标签”搜索选项，保留配置位置与标签查询能力，便于后续恢复
+  // { value: 'tag', label: '按标签' },
   { value: 'keyword', label: '全文搜索' },
 ]
