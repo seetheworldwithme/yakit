@@ -1,0 +1,4 @@
+/* 按产品要求隐藏“本地”子标签页中的高级筛选区域；保留原 JSX 和筛选逻辑，便于后续恢复 */
+#yakit-plugin-hub [class*='hub-filter-row'] {
+  display: none !important;
+}
