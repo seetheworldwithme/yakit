@@ -1177,28 +1177,6 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         render: (text: string) => <span className={styles['col-name-text']}>{text || '-'}</span>,
       },
       {
-        title: t('HubListLocal.tag'),
-        dataIndex: 'Tags',
-        width: 220,
-        render: (tags: string) => {
-          const arr = (tags || '')
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-          if (!arr.length) return <span className={styles['col-placeholder']}>-</span>
-          return (
-            <div className={styles['col-tags']}>
-              {arr.slice(0, 4).map((tg) => (
-                <YakitTag key={tg} color="info">
-                  {tg}
-                </YakitTag>
-              ))}
-              {arr.length > 4 && <span className={styles['col-tags-more']}>+{arr.length - 4}</span>}
-            </div>
-          )
-        },
-      },
-      {
         title: t('HubListLocal.pluginDesc'),
         dataIndex: 'Help',
         ellipsis: true,
