@@ -58,7 +58,8 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
       // { route: YakitRoute.Mod_ScanPort, label: '资产测绘' },
       { route: YakitRoute.PoC, label: '漏洞检测' },
       { route: YakitRoute.DB_Risk, label: '风险台账' },
-      { route: YakitRoute.DB_Report, label: '报告中心' },
+      // 按产品要求隐藏「报告中心」入口，保留路由与页面实现，便于后续恢复
+      // { route: YakitRoute.DB_Report, label: '报告中心' },
     ],
   },
   {
