@@ -565,7 +565,7 @@ export const PluginsList: React.FC<PluginsListProps> = memo((props) => {
             </div>
           </div>
           {tagLength > 0 && (
-            <div className={styles['body-filter-tag']}>
+            <div className={classNames(styles['body-filter-tag'], 'plugin-filter-tag-summary')}>
               {tagLength <= 2 ? (
                 showTagList.map((item) => {
                   return (

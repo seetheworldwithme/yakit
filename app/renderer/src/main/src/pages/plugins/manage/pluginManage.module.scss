@@ -130,6 +130,10 @@
   :global(.is-list-btn) {
     display: none;
   }
+
+  :global(.plugin-filter-tag-summary) {
+    display: none;
+  }
 }
 
 .plugin-manage-table-wrap {
