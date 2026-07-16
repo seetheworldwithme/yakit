@@ -19,6 +19,7 @@ import { showConfigSystemProxyForm } from '@/utils/ConfigSystemProxy'
 import { showConfigYaklangEnvironment } from '@/utils/ConfigYaklangEnvironment'
 import Login from '@/pages/Login'
 import { useEeSystemConfig, useStore, yakitDynamicStatus } from '@/store'
+import { useLayoutRailStore } from '@/store/layoutRail'
 import { defaultUserInfo, SetUserInfo } from '@/pages/MainOperator'
 import { loginOut } from '@/utils/login'
 import { UserPlatformType } from '@/pages/globalVariable'
@@ -259,6 +260,12 @@ export interface FuncDomainProp {
   hideNotice?: boolean
 }
 
+/**
+ * 设置/用户入口已迁至侧边栏 DomainRail 底部（文字项），头部不再渲染这两个 icon。
+ * 置为 true 可在右上角头部恢复显示，便于回滚。告警(GlobalState) 不受影响，仍在头部。
+ */
+const SHOW_HEADER_SETTING_USER = false
+
 export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
   const { t, i18n } = useI18nNamespaces(['layout', 'yakitUi'])
   const {
@@ -391,14 +398,14 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
           let cacheMenus: YakitMenuItemType[] = [
             ...userAvatar,
             UserMenusMap['uploadData'],
-            UserMenusMap['dynamicControl'],
-            UserMenusMap['controlAdmin'],
-            UserMenusMap['closeDynamicControl'],
+            UserMenusMap['pluginAudit'], // 顺序调整：插件管理置于「上传数据」下方
+            // UserMenusMap['dynamicControl'], // 隐藏：发起远程
+            // UserMenusMap['controlAdmin'], // 隐藏：远程管理
+            // UserMenusMap['closeDynamicControl'], // 隐藏：退出远程
             UserMenusMap['roleAdmin'],
             UserMenusMap['accountAdmin'],
             UserMenusMap['setPassword'],
-            UserMenusMap['pluginAudit'],
-            UserMenusMap['misstatement'],
+            // UserMenusMap['misstatement'], // 隐藏：误报记录
             UserMenusMap['systemConfig'],
             ...signOutMenu,
           ]
@@ -406,13 +413,12 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
           if (!isEnpriTraceIRify()) {
             cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'system-config')
           }
-          if (dynamicConnect) {
-            // 远程中时不显示发起远程 显示退出远程
-            cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'dynamic-control')
-          } else {
-            // 非远程控制时显示发起远程 不显示退出远程
-            cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'close-dynamic-control')
-          }
+          // 远程控制相关项（发起远程/退出远程）已随上方数组隐藏，保留原逻辑注释以便回滚
+          // if (dynamicConnect) {
+          //   cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'dynamic-control')
+          // } else {
+          //   cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'close-dynamic-control')
+          // }
           // IRify 版本时管理员不显示插件管理
           if (isIRify()) {
             cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'plugin-audit')
@@ -424,11 +430,11 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
         let cacheMenus: YakitMenuItemType[] = [
           ...userAvatar,
           UserMenusMap['uploadData'],
-          UserMenusMap['dynamicControl'],
-          UserMenusMap['closeDynamicControl'],
+          UserMenusMap['pluginAudit'], // 顺序调整：插件管理置于「上传数据」下方
+          // UserMenusMap['dynamicControl'], // 隐藏：发起远程
+          // UserMenusMap['closeDynamicControl'], // 隐藏：退出远程
           UserMenusMap['setPassword'],
-          UserMenusMap['pluginAudit'],
-          UserMenusMap['misstatement'],
+          // UserMenusMap['misstatement'], // 隐藏：误报记录
           ...signOutMenu,
         ]
         if (userInfo.role !== 'auditor') {
@@ -449,16 +455,15 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
             (item) => !['upload-data', 'misstatement'].includes((item as YakitMenuItemProps).key),
           )
         }
-        // 远程中时不显示发起远程 显示退出远程
-        if (dynamicConnect) {
-          isNew = true
-          cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'dynamic-control')
-        }
-        // 非远程控制时显示发起远程 不显示退出远程
-        if (!dynamicConnect) {
-          isNew = true
-          cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'close-dynamic-control')
-        }
+        // 远程控制相关项（发起远程/退出远程）已随上方数组隐藏，保留原逻辑注释以便回滚
+        // if (dynamicConnect) {
+        //   isNew = true
+        //   cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'dynamic-control')
+        // }
+        // if (!dynamicConnect) {
+        //   isNew = true
+        //   cacheMenus = cacheMenus.filter((item) => (item as YakitMenuItemProps).key !== 'close-dynamic-control')
+        // }
 
         if (isNew) {
           setUserMenu([...cacheMenus])
@@ -474,6 +479,106 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
   const onOpenPage = useMemoizedFn((info: RouteToPageProps) => {
     emiter.emit('menuOpenPage', JSON.stringify(info))
   })
+
+  /**
+   * 用户下拉菜单点击处理（原内联于头部 YakitDropdownMenu，现抽出供侧边栏入口复用）。
+   * 动作与状态/弹窗全部留在 FuncDomain，侧边栏经 layoutRail store 调用本函数。
+   */
+  const handleUserMenuClick = useMemoizedFn((key: string) => {
+    setDynamicMenuOpen(false)
+    if (key === 'sign-out') {
+      if (dynamicStatus.isDynamicStatus || dynamicStatus.isDynamicSelfStatus) {
+        Modal.confirm({
+          title: t('YakitModal.friendlyReminder'),
+          icon: <ExclamationCircleOutlined />,
+          content: t('FuncDomain.signOutRemoteConfirm'),
+          cancelText: t('YakitButton.cancel'),
+          okText: t('YakitButton.exit'),
+          onOk() {
+            if (dynamicStatus.isDynamicStatus) {
+              yakitNetwork.logoutDynamicControl({
+                loginOut: true,
+              })
+            }
+            if (dynamicStatus.isDynamicSelfStatus) {
+              yakitNetwork.killDynamicControl().finally(() => {
+                setStoreUserInfo(defaultUserInfo)
+                loginOut(userInfo)
+                setTimeout(() => success(t('FuncDomain.signOutSuccess')), 500)
+              })
+              // 立即退出界面
+              yakitNetwork.exitDynamicControlPage()
+            }
+          },
+          onCancel() {},
+          cancelButtonProps: {
+            size: 'small',
+            className: 'modal-cancel-button',
+          },
+          okButtonProps: { size: 'small', className: 'modal-ok-button' },
+        })
+      } else {
+        setStoreUserInfo(defaultUserInfo)
+        loginOut(userInfo)
+        setTimeout(() => success(t('FuncDomain.signOutSuccess')), 500)
+      }
+    }
+    if (key === 'trust-list') {
+      onOpenPage({ route: YakitRoute.TrustListPage })
+    }
+    if (key === 'set-password') {
+      setPasswordClose(true)
+      setPasswordShow(true)
+    }
+    if (key === 'upload-data') setUploadModalShow(true)
+    if (key === 'role-admin') {
+      onOpenPage({ route: YakitRoute.RoleAdminPage })
+    }
+    if (key === 'account-admin') {
+      onOpenPage({ route: YakitRoute.AccountAdminPage })
+    }
+    if (key === 'license-admin') {
+      onOpenPage({ route: YakitRoute.LicenseAdminPage })
+    }
+    if (key === 'plugin-audit') {
+      onOpenPage({ route: YakitRoute.Plugin_Audit })
+    }
+    if (key === 'hole-collect') {
+      onOpenPage({ route: YakitRoute.HoleCollectPage })
+    }
+    if (key === 'control-admin') {
+      onOpenPage({ route: YakitRoute.ControlAdminPage })
+    }
+    if (key === 'data-statistics') {
+      onOpenPage({ route: YakitRoute.Data_Statistics })
+    }
+    if (key === 'system-config') {
+      onOpenPage({ route: YakitRoute.System_Config })
+    }
+    if (key === 'dynamic-control') {
+      setDynamicControlModal(true)
+    }
+    if (key === 'close-dynamic-control') {
+      yakitNetwork.logoutDynamicControl({ loginOut: false })
+    }
+    if (key === 'misstatement') {
+      onOpenPage({ route: YakitRoute.Misstatement })
+    }
+  })
+
+  /** 把用户菜单数据/动作、设置浮层菜单注册到侧边栏桥接 store（供 DomainRail 渲染入口） */
+  const setUserMenuBridge = useLayoutRailStore((s) => s.setUserMenuBridge)
+  const setSettingMenu = useLayoutRailStore((s) => s.setSettingMenu)
+  useEffect(() => {
+    setUserMenuBridge({
+      userMenuItems: userMenu,
+      onUserMenuClick: handleUserMenuClick,
+      openLogin: () => setLoginShow(true),
+    })
+  }, [userMenu])
+  useEffect(() => {
+    setSettingMenu(GetUIOpSettingMenu() as YakitMenuItemType[])
+  }, [i18n.language])
 
   const { screenRecorderInfo, setRecording } = useScreenRecorder()
   useEffect(() => {
@@ -595,7 +700,7 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
           {!hideNotice && !isEnpriTraceAgent() && (
             <UIOpNotice isEngineLink={isEngineLink} isRemoteMode={isRemoteMode} onLogin={() => setLoginShow(true)} />
           )}
-          {!showProjectManage && (
+          {!showProjectManage && SHOW_HEADER_SETTING_USER && (
             <UIOpSetting
               engineMode={engineMode}
               onEngineModeChange={onEngineModeChange}
@@ -604,7 +709,7 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
             />
           )}
         </div>
-        {!showProjectManage && !isJudgeLicense && (
+        {!showProjectManage && !isJudgeLicense && SHOW_HEADER_SETTING_USER && (
           <>
             <div className={styles['divider-wrapper']}></div>
             <div
@@ -631,88 +736,7 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
                         }
                         return obj
                       }),
-                      onClick: (e) => {
-                        const { key } = e
-                        setDynamicMenuOpen(false)
-                        if (key === 'sign-out') {
-                          if (dynamicStatus.isDynamicStatus || dynamicStatus.isDynamicSelfStatus) {
-                            Modal.confirm({
-                              title: t('YakitModal.friendlyReminder'),
-                              icon: <ExclamationCircleOutlined />,
-                              content: t('FuncDomain.signOutRemoteConfirm'),
-                              cancelText: t('YakitButton.cancel'),
-                              okText: t('YakitButton.exit'),
-                              onOk() {
-                                if (dynamicStatus.isDynamicStatus) {
-                                  yakitNetwork.logoutDynamicControl({
-                                    loginOut: true,
-                                  })
-                                }
-                                if (dynamicStatus.isDynamicSelfStatus) {
-                                  yakitNetwork.killDynamicControl().finally(() => {
-                                    setStoreUserInfo(defaultUserInfo)
-                                    loginOut(userInfo)
-                                    setTimeout(() => success(t('FuncDomain.signOutSuccess')), 500)
-                                  })
-                                  // 立即退出界面
-                                  yakitNetwork.exitDynamicControlPage()
-                                }
-                              },
-                              onCancel() {},
-                              cancelButtonProps: {
-                                size: 'small',
-                                className: 'modal-cancel-button',
-                              },
-                              okButtonProps: { size: 'small', className: 'modal-ok-button' },
-                            })
-                          } else {
-                            setStoreUserInfo(defaultUserInfo)
-                            loginOut(userInfo)
-                            setTimeout(() => success(t('FuncDomain.signOutSuccess')), 500)
-                          }
-                        }
-                        if (key === 'trust-list') {
-                          onOpenPage({ route: YakitRoute.TrustListPage })
-                        }
-                        if (key === 'set-password') {
-                          setPasswordClose(true)
-                          setPasswordShow(true)
-                        }
-                        if (key === 'upload-data') setUploadModalShow(true)
-                        if (key === 'role-admin') {
-                          onOpenPage({ route: YakitRoute.RoleAdminPage })
-                        }
-                        if (key === 'account-admin') {
-                          onOpenPage({ route: YakitRoute.AccountAdminPage })
-                        }
-                        if (key === 'license-admin') {
-                          onOpenPage({ route: YakitRoute.LicenseAdminPage })
-                        }
-                        if (key === 'plugin-audit') {
-                          onOpenPage({ route: YakitRoute.Plugin_Audit })
-                        }
-                        if (key === 'hole-collect') {
-                          onOpenPage({ route: YakitRoute.HoleCollectPage })
-                        }
-                        if (key === 'control-admin') {
-                          onOpenPage({ route: YakitRoute.ControlAdminPage })
-                        }
-                        if (key === 'data-statistics') {
-                          onOpenPage({ route: YakitRoute.Data_Statistics })
-                        }
-                        if (key === 'system-config') {
-                          onOpenPage({ route: YakitRoute.System_Config })
-                        }
-                        if (key === 'dynamic-control') {
-                          setDynamicControlModal(true)
-                        }
-                        if (key === 'close-dynamic-control') {
-                          yakitNetwork.logoutDynamicControl({ loginOut: false })
-                        }
-                        if (key === 'misstatement') {
-                          onOpenPage({ route: YakitRoute.Misstatement })
-                        }
-                      },
+                      onClick: (e) => handleUserMenuClick(e.key),
                     }}
                     dropdown={{
                       placement: 'bottom',
