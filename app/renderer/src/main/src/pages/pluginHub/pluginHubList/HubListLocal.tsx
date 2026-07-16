@@ -1220,22 +1220,18 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
       },
       {
         title: t('HubListLocal.operation'),
-        width: 150,
+        width: 180,
         render: (_: any, record: YakScript) => (
           <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={t('YakitButton.edit')} overlayClassName="plugins-tooltip">
-              <YakitButton type="text2" icon={<OutlinePencilaltIcon />} onClick={() => handleOpenEditHint(record)} />
-            </Tooltip>
-            <Tooltip title={t('YakitButton.export')} overlayClassName="plugins-tooltip">
-              <YakitButton
-                type="text2"
-                icon={<OutlineClouddownloadIcon />}
-                onClick={() => onFooterExtraExport(record)}
-              />
-            </Tooltip>
-            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
-              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
-            </Tooltip>
+            <YakitButton type="text2" onClick={() => handleOpenEditHint(record)}>
+              {t('YakitButton.edit')}
+            </YakitButton>
+            <YakitButton type="text2" onClick={() => onFooterExtraExport(record)}>
+              {t('YakitButton.export')}
+            </YakitButton>
+            <YakitButton type="text2" danger onClick={() => onFooterExtraDel(record)}>
+              {t('YakitButton.delete')}
+            </YakitButton>
           </div>
         ),
       },

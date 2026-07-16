@@ -12,6 +12,10 @@ export interface LocalPluginExecuteProps {
   infoExtra?: ReactNode
   /** 隐藏更新按钮 */
   hiddenUpdateBtn?: boolean
+  /** 隐藏「额外参数」按钮 */
+  hiddenExtraParamsBtn?: boolean
+  /** 紧凑头部：作者名+更新时间内联到操作栏前，隐藏底部作者行与点赞/下载 */
+  compactHeader?: boolean
 }
 
 export interface ExportYakScriptStreamRequest {

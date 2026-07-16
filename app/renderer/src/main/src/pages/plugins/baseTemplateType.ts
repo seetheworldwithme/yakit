@@ -111,6 +111,8 @@ export interface PluginDetailHeaderProps {
   /** 隐藏插件 ID */
   isHiddenUUID?: boolean
   infoExtra?: ReactNode
+  /** 紧凑模式：隐藏底部作者/更新时间整行，把作者名+更新时间内联到操作栏(extraNode)前 */
+  compactHeader?: boolean
 }
 /**协作者信息 */
 export interface CollaboratorInfoProps {

@@ -86,7 +86,12 @@ const PluginHub: React.FC<PluginHubProps> = memo((props) => {
 
   return (
     <div ref={wrapper} id={wrapperId} className={styles['yakit-plugin-hub']}>
-      <div className={classNames(styles['list'], { [styles['out-list']]: hiddenDetail || !isDetail })}>
+      <div
+        className={classNames(styles['list'], {
+          [styles['out-list']]: hiddenDetail || !isDetail,
+          [styles['list-hidden']]: isDetail,
+        })}
+      >
         <PluginHubList
           rootElementId={wrapperId}
           active={active}

@@ -714,10 +714,10 @@ export const PluginHubDetail: React.FC<PluginHubDetailProps> = memo(
         <div className={styles['detail-header']}>
           <div className={styles['header-title']}>{t('PluginHubDetail.pluginDetail')}</div>
           <div className={styles['header-btn']}>
-            <YakitButton size="large" icon={<SolidPluscircleIcon />} onClick={onNewPlugin}>
+            <YakitButton size="large" onClick={onNewPlugin}>
               {t('PluginHubDetail.newPlugin')}
             </YakitButton>
-            <YakitButton size="large" type="outline2" icon={<OutlineReplyIcon />} onClick={onBack}>
+            <YakitButton size="large" type="outline2" onClick={onBack}>
               {t('YakitButton.back')}
             </YakitButton>
           </div>
@@ -778,6 +778,8 @@ export const PluginHubDetail: React.FC<PluginHubDetailProps> = memo(
                           isHiddenUUID={true}
                           infoExtra={infoExtraNode}
                           hiddenUpdateBtn={true}
+                          hiddenExtraParamsBtn={true}
+                          compactHeader={true}
                         />
                       ) : (
                         <div className={styles['tab-pane-empty']}>

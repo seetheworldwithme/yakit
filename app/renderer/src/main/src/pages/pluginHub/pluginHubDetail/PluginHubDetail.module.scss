@@ -43,9 +43,10 @@
   :global {
     .ant-tabs-right {
       & > .ant-tabs-nav {
-        .ant-tabs-nav-wrap {
-          margin-top: 12px;
-        }
+        display: none;
+      }
+      & > .ant-tabs-content-holder {
+        width: 100%;
       }
     }
   }

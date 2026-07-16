@@ -36,10 +36,10 @@ interface PluginTypeInfoProps {
 /** @name 插件类型对应的详细信息 */
 export const pluginTypeToName: Record<string, PluginTypeInfoProps> = {
   yak: {
-    name: 'Yak 原生插件',
+    name: '原生插件',
     description: '内置了众多网络安全常用库，可快速编写安全小工具，该原生模块只支持手动调用',
     icon: <SolidYakitPluginIcon />,
-    color: 'warning',
+    color: 'blue',
     content: 'yakit.AutoInitYakit()\n\n# Input your code!\n\n',
     language: 'yak',
   },

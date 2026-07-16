@@ -56,18 +56,18 @@
 
   // 表头
   .table-header {
-    background-color: var(--Colors-Use-Neutral-Bg);
+    background-color: var(--Colors-Use-Main-Border);
     display: flex;
-    border: 1px solid var(--Colors-Use-Neutral-Border);
+    border: 1px solid var(--Colors-Use-Main-Border);
     border-radius: 4px 4px 0 0;
     .table-cell {
-      color: var(--Colors-Use-Neutral-Text-1-Title);
+      color: var(--Colors-Use-Main-Primary);
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
       line-height: 16px;
     }
     .table-cell:not(:last-child) {
-      border-right: 1px solid var(--Colors-Use-Neutral-Border);
+      border-right: 1px solid var(--Colors-Use-Main-Border);
     }
   }
   .table-header-active-scroll {
@@ -90,7 +90,7 @@
     border-right: 1px solid var(--Colors-Use-Neutral-Border);
     border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
     .table-cell {
-      color: var(--Colors-Use-Neutral-Text-1-Title);
+      color: var(--Colors-Use-Neutral-Text-3-Secondary);
       font-size: 12px;
       line-height: 16px;
     }

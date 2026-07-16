@@ -266,6 +266,7 @@ export const PluginDetailHeader: React.FC<PluginDetailHeaderProps> = memo((props
     wrapperClassName,
     isHiddenUUID,
     infoExtra,
+    compactHeader,
   } = props
 
   const tagList = useMemo(() => {
@@ -289,7 +290,13 @@ export const PluginDetailHeader: React.FC<PluginDetailHeaderProps> = memo((props
     }
   }, [prImgs])
   return (
-    <div className={classNames(styles['plugin-detail-header-wrapper'], wrapperClassName)}>
+    <div
+      className={classNames(
+        styles['plugin-detail-header-wrapper'],
+        { [styles['compact']]: compactHeader },
+        wrapperClassName,
+      )}
+    >
       <div className={styles['header-wrapper']}>
         <div className={styles['header-info']}>
           <div className={styles['info-title']}>
@@ -310,90 +317,108 @@ export const PluginDetailHeader: React.FC<PluginDetailHeaderProps> = memo((props
             <TagsListShow tags={tagList || []} />
           </div>
         </div>
+        {compactHeader && (
+          <div className={styles['compact-author']}>
+            <div
+              className={classNames(styles['compact-author-name'], 'yakit-content-single-ellipsis')}
+              title={user || 'anonymous'}
+            >
+              {user || 'anonymous'}
+            </div>
+            <div className={styles['divider-style']} />
+            <div className={styles['compact-author-time']}>{`更新时间 : ${formatDate(updated_at)}`}</div>
+          </div>
+        )}
         {extraNode || null}
       </div>
 
-      <div className={styles['author-wrapper']}>
-        <div className={styles['left-wrapper']}>
+      {!compactHeader && (
+        <div className={styles['author-wrapper']}>
           <div className={styles['left-wrapper']}>
-            <div className={styles['author-wrapper']}>
-              <AuthorImg src={img || UnLogin} />
-              <div
-                className={classNames(styles['name-wrapper'], styles['text-style'], 'yakit-content-single-ellipsis')}
-                title={user || 'anonymous'}
-              >
-                {user || 'anonymous'}
-              </div>
-              <AuthorIcon />
-            </div>
-
-            {contributes.length > 0 && (
-              <>
-                <div style={{ marginRight: 8 }} className={styles['divider-style']}></div>
-                <YakitPopover
-                  overlayClassName={styles['contributes-popover']}
-                  placement="bottom"
-                  content={
-                    <div className={styles['contributes-list']}>
-                      {contributes.arr.map((item) => (
-                        <React.Fragment key={item.headImg + item.userName}>
-                          <PluginContributesListItem
-                            contributesHeadImg={item.headImg}
-                            contributesName={item.userName}
-                          />
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  }
-                  onVisibleChange={setPrShow}
+            <div className={styles['left-wrapper']}>
+              <div className={styles['author-wrapper']}>
+                <AuthorImg src={img || UnLogin} />
+                <div
+                  className={classNames(styles['name-wrapper'], styles['text-style'], 'yakit-content-single-ellipsis')}
+                  title={user || 'anonymous'}
                 >
-                  <YakitButton type="text2" isActive={prShow}>
-                    {`${contributes.length}位协作者`}
-                    {prShow ? <SolidChevronupIcon /> : <SolidChevrondownIcon />}
-                  </YakitButton>
-                </YakitPopover>
+                  {user || 'anonymous'}
+                </div>
+                <AuthorIcon />
+              </div>
+
+              {contributes.length > 0 && (
+                <>
+                  <div style={{ marginRight: 8 }} className={styles['divider-style']}></div>
+                  <YakitPopover
+                    overlayClassName={styles['contributes-popover']}
+                    placement="bottom"
+                    content={
+                      <div className={styles['contributes-list']}>
+                        {contributes.arr.map((item) => (
+                          <React.Fragment key={item.headImg + item.userName}>
+                            <PluginContributesListItem
+                              contributesHeadImg={item.headImg}
+                              contributesName={item.userName}
+                            />
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    }
+                    onVisibleChange={setPrShow}
+                  >
+                    <YakitButton type="text2" isActive={prShow}>
+                      {`${contributes.length}位协作者`}
+                      {prShow ? <SolidChevronupIcon /> : <SolidChevrondownIcon />}
+                    </YakitButton>
+                  </YakitPopover>
+                </>
+              )}
+            </div>
+            {!isHiddenUUID && pluginId && (
+              <>
+                <div style={{ marginLeft: contributes.length > 0 ? 8 : 16 }} className={styles['divider-style']} />
+                <div className={styles['id-wrapper']}>
+                  <div
+                    className={classNames(
+                      styles['text-wrapper'],
+                      styles['text-style'],
+                      'yakit-content-single-ellipsis',
+                    )}
+                    title={`插件ID : ${pluginId}`}
+                  >
+                    {`插件ID : ${pluginId}`}
+                  </div>
+                  <CopyComponents className={classNames(styles['copy-icon-style'])} copyText={pluginId} />
+                </div>
+              </>
+            )}
+            {basePluginName && (
+              <>
+                <div className={styles['divider-style']} />
+                <div className={styles['copy-wrapper']}>
+                  <span>来源:</span>
+                  <Tooltip title={`复制插件 “${basePluginName}” 为 “${pluginName}”`} overlayClassName="plugins-tooltip">
+                    <YakitTag style={{ marginRight: 0, cursor: 'pointer' }}>复制</YakitTag>
+                  </Tooltip>
+                </div>
               </>
             )}
           </div>
-          {!isHiddenUUID && pluginId && (
+
+          <div className={styles['divider-style']}></div>
+          <div
+            className={classNames(styles['text-style'], { [styles['constant-wrapper']]: !infoExtra })}
+          >{`更新时间 : ${formatDate(updated_at)}`}</div>
+
+          {!!infoExtra && (
             <>
-              <div style={{ marginLeft: contributes.length > 0 ? 8 : 16 }} className={styles['divider-style']} />
-              <div className={styles['id-wrapper']}>
-                <div
-                  className={classNames(styles['text-wrapper'], styles['text-style'], 'yakit-content-single-ellipsis')}
-                  title={`插件ID : ${pluginId}`}
-                >
-                  {`插件ID : ${pluginId}`}
-                </div>
-                <CopyComponents className={classNames(styles['copy-icon-style'])} copyText={pluginId} />
-              </div>
-            </>
-          )}
-          {basePluginName && (
-            <>
-              <div className={styles['divider-style']} />
-              <div className={styles['copy-wrapper']}>
-                <span>来源:</span>
-                <Tooltip title={`复制插件 “${basePluginName}” 为 “${pluginName}”`} overlayClassName="plugins-tooltip">
-                  <YakitTag style={{ marginRight: 0, cursor: 'pointer' }}>复制</YakitTag>
-                </Tooltip>
-              </div>
+              <div className={styles['divider-style']}></div>
+              {infoExtra}
             </>
           )}
         </div>
-
-        <div className={styles['divider-style']}></div>
-        <div
-          className={classNames(styles['text-style'], { [styles['constant-wrapper']]: !infoExtra })}
-        >{`更新时间 : ${formatDate(updated_at)}`}</div>
-
-        {!!infoExtra && (
-          <>
-            <div className={styles['divider-style']}></div>
-            {infoExtra}
-          </>
-        )}
-      </div>
+      )}
     </div>
   )
 })

@@ -728,19 +728,15 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
       },
       {
         title: t('HubListLocal.operation'),
-        width: 120,
+        width: 150,
         render: (_: any, record: YakitPluginOnlineDetail) => (
           <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={t('YakitButton.download')} overlayClassName="plugins-tooltip">
-              <YakitButton
-                type="text2"
-                icon={<OutlineClouddownloadIcon />}
-                onClick={() => onFooterExtraDownload(record)}
-              />
-            </Tooltip>
-            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
-              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
-            </Tooltip>
+            <YakitButton type="text2" onClick={() => onFooterExtraDownload(record)}>
+              {t('YakitButton.download')}
+            </YakitButton>
+            <YakitButton type="text2" danger onClick={() => onFooterExtraDel(record)}>
+              {t('YakitButton.delete')}
+            </YakitButton>
           </div>
         ),
       },

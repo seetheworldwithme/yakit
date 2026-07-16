@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from 'react'
 import { useDebounceFn, useInViewport, useMemoizedFn, useVirtualList } from 'ahooks'
 import { InputRef } from 'antd'
-import { OutlinePencilaltIcon, OutlinePluscircleIcon, OutlineTrashIcon } from '@/assets/icon/outline'
+import { OutlinePluscircleIcon } from '@/assets/icon/outline'
 import { PluginEnvInfo, PluginEnvVariablesProps } from './PluginEnvVariablesType'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
@@ -321,7 +321,7 @@ export const PluginEnvVariables: React.FC<PluginEnvVariablesProps> = memo((props
         <div className={classNames(styles['table-header'], { [styles['table-header-active-scroll']]: showScroll })}>
           <div className={styles['table-cell']}>{t('PluginEnvVariables.key')}</div>
           <div className={styles['table-cell']}>{t('PluginEnvVariables.value')}</div>
-          <div style={{ maxWidth: 120 }} className={styles['table-cell']}>
+          <div style={{ maxWidth: 150 }} className={styles['table-cell']}>
             {t('PluginEnvVariables.operate')}
           </div>
         </div>
@@ -362,29 +362,31 @@ export const PluginEnvVariables: React.FC<PluginEnvVariablesProps> = memo((props
                               <span className={styles['plugin-env-value-noexist']}>未配置</span>
                             )}
                           </div>
-                          <div style={{ maxWidth: 120 }} className={styles['table-cell']}>
+                          <div style={{ maxWidth: 150 }} className={styles['table-cell']}>
                             <div className={styles['plugin-env-variables-operate']}>
                               {!isPlugin && (
                                 <>
                                   <YakitButton
                                     type="text"
                                     colors="danger"
-                                    icon={<OutlineTrashIcon />}
                                     loading={deleteKeys.includes(infoKey)}
                                     onClick={() => {
                                       handleDelete(data)
                                     }}
-                                  />
+                                  >
+                                    {t('YakitButton.delete')}
+                                  </YakitButton>
                                   <div className={styles['divider-style']}></div>
                                 </>
                               )}
                               <YakitButton
                                 type="text2"
-                                icon={<OutlinePencilaltIcon />}
                                 onClick={() => {
                                   handleOpenEdit(true, data)
                                 }}
-                              />
+                              >
+                                {t('YakitButton.edit')}
+                              </YakitButton>
                             </div>
                           </div>
                         </div>

@@ -602,6 +602,7 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
 
     return (
       <div className={styles['hub-extra-operate']}>
+        {/* 隐藏「不下载」勾选
         {active === 'local' && !!local && (
           <YakitCheckbox
             checked={skipUpdate}
@@ -628,6 +629,7 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
             </Tooltip>
           </YakitCheckbox>
         )}
+        */}
         {!isCorePlugin && (
           <div className={styles['btn-group']}>
             <HubButton
@@ -642,6 +644,7 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
                 handleOperates('edit')
               }}
             />
+            {/* 隐藏「分享」按钮
             <div className={styles['divider-style']}></div>
             <HubButton
               width={wrapperWidth}
@@ -658,13 +661,13 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
                 handleOperates('share')
               }}
             />
+            */}
           </div>
         )}
-        {!!local && !isCorePlugin && (
+        {active === 'local' && !!local && !isCorePlugin && (
           <HubButton
             width={wrapperWidth}
             iconWidth={900}
-            icon={<OutlineClouduploadIcon />}
             type="outline2"
             name={t('YakitButton.upload')}
             onClick={(e) => {
@@ -673,11 +676,10 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
             }}
           />
         )}
-        {!isCorePlugin && (
+        {active !== 'local' && !isCorePlugin && (
           <HubButton
             width={wrapperWidth}
             iconWidth={900}
-            icon={<OutlineClouddownloadIcon />}
             name={isUpdate ? t('YakitButton.update') : t('YakitButton.download')}
             className={classNames({ [styles['download-disabled-btn']]: !online })}
             disabled={!online}
@@ -689,6 +691,7 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
             }}
           />
         )}
+        {/* 隐藏「更多」入口
         <FuncFilterPopover
           icon={<OutlineDotshorizontalIcon />}
           button={{ type: 'text2' }}
@@ -699,6 +702,7 @@ export const HubExtraOperate: React.FC<HubExtraOperateProps> = memo(
           }}
           placement="bottomRight"
         />
+        */}
 
         <HubOperateHint visible={autoDownloadHint} onOk={autoDownloadCallback} />
 

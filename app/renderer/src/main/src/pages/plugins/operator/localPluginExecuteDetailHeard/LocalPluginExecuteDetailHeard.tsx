@@ -66,6 +66,8 @@ export const LocalPluginExecuteDetailHeard: React.FC<PluginExecuteDetailHeardPro
     isHiddenUUID,
     infoExtra,
     hiddenUpdateBtn,
+    hiddenExtraParamsBtn,
+    compactHeader,
   } = props
 
   const [form] = Form.useForm()
@@ -422,6 +424,7 @@ export const LocalPluginExecuteDetailHeard: React.FC<PluginExecuteDetailHeardPro
           type={plugin.Type}
           isHiddenUUID={isHiddenUUID}
           infoExtra={infoExtra}
+          compactHeader={compactHeader}
         />
       </ExpandAndRetract>
       <div
@@ -452,7 +455,7 @@ export const LocalPluginExecuteDetailHeard: React.FC<PluginExecuteDetailHeardPro
                   开始执行
                 </YakitButton>
               )}
-              {isShowExtraParamsButton && (
+              {!hiddenExtraParamsBtn && isShowExtraParamsButton && (
                 <YakitButton type="text" onClick={openExtraPropsDrawer} disabled={isExecuting} size="large">
                   额外参数
                 </YakitButton>
