@@ -778,6 +778,7 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
         >
           <div className={styles['outer-list']}>
             <div className={styles['hub-local-column']}>
+              {/* 暂时隐藏独立高级筛选行，筛选项已移入“我的插件”标题后
               <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
                 <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
                 <div className={styles['hub-filter-row-groups']}>
@@ -810,11 +811,40 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
                       )
                     })}
                 </div>
-              </div>
+              </div> */}
 
               <main className={styles['list-body']}>
                 <HubOuterList
-                  title={t('HubListOwn.myPlugins')}
+                  title={
+                    <div className={styles['hub-inline-title-filters']}>
+                      <span>{t('HubListOwn.myPlugins')}</span>
+                      {filterGroup
+                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                        .map((group) => {
+                          const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                            []) as API.PluginsSearchData[]
+                          return (
+                            <div className={styles['hub-inline-filter-group']} key={group.groupKey}>
+                              <span>{group.groupName}</span>
+                              {(group.data || []).map((opt) => {
+                                const active = selected.some((item) => item.value === opt.value)
+                                return (
+                                  <span
+                                    key={opt.value}
+                                    className={classNames(styles['hub-filter-chip'], {
+                                      [styles['hub-filter-chip-active']]: active,
+                                    })}
+                                    onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                                  >
+                                    {opt.label}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                    </div>
+                  }
                   headerExtra={
                     <div className={styles['hub-list-header-extra']}>
                       <YakitButton type="primary" icon={<SolidPluscircleIcon />} onClick={onNewPlugin}>

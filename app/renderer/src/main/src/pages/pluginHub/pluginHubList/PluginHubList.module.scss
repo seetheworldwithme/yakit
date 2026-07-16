@@ -453,6 +453,21 @@
     gap: 2px;
   }
 }
+
+.hub-inline-title-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-inline-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--Colors-Use-Neutral-Text-3-Secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
 .plugin-hub-tab-detail-list {
   width: 410px;
   border-right: 1px solid var(--Colors-Use-Neutral-Border);

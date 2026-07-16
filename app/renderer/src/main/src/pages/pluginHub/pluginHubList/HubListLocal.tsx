@@ -1250,6 +1250,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
       >
         <div className={styles['outer-list']} ref={divRef}>
           <div className={styles['hub-local-column']}>
+            {/* 暂时隐藏独立高级筛选行，筛选项已移入“本地插件”标题后
             <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
               <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
               <div className={styles['hub-filter-row-groups']}>
@@ -1287,13 +1288,40 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     )
                   })}
               </div>
-            </div>
+            </div> */}
 
             <main className={styles['list-body']}>
               <HubOuterList
                 title={
                   <>
-                    {t('PluginTabName.localPlugin')}
+                    <div className={styles['hub-inline-title-filters']}>
+                      <span>{t('PluginTabName.localPlugin')}</span>
+                      {filterGroup
+                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                        .map((group) => {
+                          const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                            []) as API.PluginsSearchData[]
+                          return (
+                            <div className={styles['hub-inline-filter-group']} key={group.groupKey}>
+                              <span>{group.groupName}</span>
+                              {(group.data || []).map((opt) => {
+                                const active = selected.some((item) => item.value === opt.value)
+                                return (
+                                  <span
+                                    key={opt.value}
+                                    className={classNames(styles['hub-filter-chip'], {
+                                      [styles['hub-filter-chip-active']]: active,
+                                    })}
+                                    onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                                  >
+                                    {opt.label}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                    </div>
                     {!!externalSearchParams && (
                       <YakitButton
                         onClick={() => onChangeOnline?.(getSearch())}
