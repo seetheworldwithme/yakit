@@ -1203,7 +1203,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
           return (
             <div className={styles['col-tags']}>
               {values.slice(0, 3).map((tag) => (
-                <YakitTag key={tag} color="info">
+                <YakitTag key={tag} color="main">
                   {tag}
                 </YakitTag>
               ))}
@@ -1388,7 +1388,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         {showGroupList.length <= 2 ? (
                           showGroupList.map((group) => {
                             return (
-                              <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
+                              <YakitTag key={group} color="main" closable onClose={() => onRemoveGroup(group)}>
                                 {group}
                               </YakitTag>
                             )
@@ -1503,6 +1503,8 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         pageSize: pageSize,
                         total: +response.Total || 0,
                         showSizeChanger: true,
+                        showQuickJumper: true,
+                        showTotal: (total: number) => t('HubListLocal.paginationTotal', { total }),
                         pageSizeOptions: ['10', '20', '50', '100'],
                         onChange: onPaginationChange,
                       }}

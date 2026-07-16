@@ -63,7 +63,7 @@
       left: 0;
       width: 100%;
       z-index: 4;
-      border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+      border-bottom: 1px solid var(--Colors-Use-Main-Border);
       width: fit-content;
 
       .virtual-table-title {
@@ -72,12 +72,12 @@
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
-        background-color: var(--Colors-Use-Neutral-Bg-Hover);
+        background-color: var(--Colors-Use-Main-Border);
         padding: 6px 12px;
         height: 28px;
-        border-right: 1px solid var(--Colors-Use-Neutral-Border);
+        border-right: 1px solid var(--Colors-Use-Main-Border);
         width: 100%;
-        color: var(--Colors-Use-Neutral-Text-1-Title);
+        color: var(--Colors-Use-Main-Primary);
         font-weight: 500;
         font-size: 12px;
         box-sizing: border-box;
@@ -209,7 +209,7 @@
       position: relative;
       padding-bottom: 34px;
       border: 1px solid var(--Colors-Use-Neutral-Border);
-      background-color: var(--Colors-Use-Basic-Background);
+      background-color: var(--Colors-Use-Neutral-Bg-Hover);
       // pointer-events: none;
 
       .virtual-table-list {
@@ -224,7 +224,7 @@
           width: 100%;
           word-break: break-all;
           height: 28px;
-          background: var(--Colors-Use-Basic-Background);
+          background: var(--Colors-Use-Neutral-Bg-Hover);
           border: 1px solid var(--Colors-Use-Neutral-Border);
           color: var(--Colors-Use-Neutral-Text-1-Title);
           font-weight: 400;
@@ -328,7 +328,7 @@
 
         .virtual-table-row-content {
           height: 100%;
-          background-color: var(--Colors-Use-Basic-Background);
+          background-color: var(--Colors-Use-Neutral-Bg-Hover);
           border-right: 1px solid var(--Colors-Use-Neutral-Border);
 
           &:last-child {

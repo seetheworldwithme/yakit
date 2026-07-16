@@ -494,7 +494,7 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
           return values.length ? (
             <div className={styles['col-tags']}>
               {values.map((tag) => (
-                <YakitTag key={tag} color="info">
+                <YakitTag key={tag} color="main">
                   {tag}
                 </YakitTag>
               ))}

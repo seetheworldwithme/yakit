@@ -304,7 +304,7 @@ export const HubOuterList: React.FC<HubOuterListProps> = memo((props) => {
                 {tagLength <= 2 ? (
                   showTagList.map((item) => {
                     return (
-                      <YakitTag key={item.value} color="info" closable onClose={() => onDelTag(item)}>
+                      <YakitTag key={item.value} color="main" closable onClose={() => onDelTag(item)}>
                         {item.label}
                       </YakitTag>
                     )

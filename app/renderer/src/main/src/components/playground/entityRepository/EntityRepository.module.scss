@@ -34,7 +34,9 @@
         flex: 1;
 
         .ant-table-thead > tr > th {
-          background-color: #fafafa;
+          background: var(--Colors-Use-Main-Focus);
+          color: var(--Colors-Use-Main-Primary);
+          border-bottom: 1px solid var(--Colors-Use-Main-Border);
           font-weight: 600;
           position: sticky;
           top: 0;

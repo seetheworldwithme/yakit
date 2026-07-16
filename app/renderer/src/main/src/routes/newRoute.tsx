@@ -336,7 +336,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.viewAndManageReportsGeneratedDuringScanning',
   },
   'db-risks': {
-    label: '漏洞与风险',
+    label: '风险台账',
     labelUi: 'YakitRoute.vulnerabilityAndrisk',
     describeUi: 'YakitRoute.manageAllDetectedVulnerabilitiesAndRisks',
   },

@@ -364,25 +364,39 @@
         flex-direction: column;
         overflow: hidden;
       }
+      // antd4 带 scroll.y 时多出这两层包裹，必须一并纳入 flex 链，
+      // 否则 .ant-table-body 的 flex:1 不生效、分页会被 overflow:hidden 裁掉
+      .ant-table-content,
+      .ant-table-scroll {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
       .ant-table-header {
         flex: 0 0 auto;
       }
       .ant-table-body {
         flex: 1 1 0;
         min-height: 0;
+        // 覆盖 antd 据 scroll.y 写入的 inline max-height，改由 flex 决定高度
+        max-height: none !important;
         overflow-y: auto !important;
       }
       .ant-table-pagination {
         flex: 0 0 auto;
         padding: 8px 0;
         margin: 0 !important;
+        // 右下角：页码 + 跳转 + 每页条数
+        justify-content: flex-end;
       }
       .ant-table-tbody > tr.ant-table-row:hover > td {
         background: var(--Colors-Use-Neutral-Bg-Hover) !important;
       }
       .ant-table-thead > tr > th {
-        background: var(--Colors-Use-Neutral-Bg) !important;
-        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+        background: var(--Colors-Use-Main-Focus) !important;
+        color: var(--Colors-Use-Main-Primary) !important;
         font-size: 12px;
       }
       .ant-table-tbody > tr > td {

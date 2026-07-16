@@ -104,7 +104,8 @@
     "removeGroupConfirmMulti": "Remove {{count}} plugins from groups \"{{groups}}\"?",
     "removeGroupConfirmMultiItem": "Remove plugin \"{{scriptName}}\" from groups \"{{groups}}\"?",
     "removeGroupSuccess": "{{count}} plugins removed from groups \"{{groups}}\"",
-    "addGroupSuccess": "{{count}} plugins added to groups \"{{groups}}\""
+    "addGroupSuccess": "{{count}} plugins added to groups \"{{groups}}\"",
+    "paginationTotal": "Total {{total}} items"
   },
   "HubListRecycle": {
     "title": "Recycle Bin",

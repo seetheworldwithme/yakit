@@ -12,8 +12,9 @@
   }
 
   :global(.ant-table-thead > tr > th) {
-    background: var(--Colors-Use-Neutral-Bg);
-    border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
+    background: var(--Colors-Use-Main-Focus);
+    color: var(--Colors-Use-Main-Primary);
+    border-bottom: 1px solid var(--Colors-Use-Main-Border);
   }
 
   :global(.ant-table-tbody > tr > td) {

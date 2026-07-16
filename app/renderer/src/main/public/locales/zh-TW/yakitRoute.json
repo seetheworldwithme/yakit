@@ -76,7 +76,7 @@
     "batchPOCScan": "自由選擇需要的 POC 進行批次漏洞檢測",
     "historyAnalyzer": "流量分析器",
     "vulnerability": "漏洞",
-    "vulnerabilityAndrisk": "漏洞與風險",
+    "vulnerabilityAndrisk": "風險臺帳",
     "manageAllDetectedVulnerabilitiesAndRisks": "管理掃描出的所有漏洞和風險資訊",
     "falsePositiveRecords": "誤報記錄",
     "port": "埠",

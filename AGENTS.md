@@ -61,7 +61,7 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 ### 改后：清理 + 验证
 1. **顺手清死代码**：删只服务已删 JSX 的 state / handler / ref / import；删前 grep 确认该符号**全文件仅 1 处引用**（= 仅定义处）。若死代码 cascade（hook 还被别处用），只删明显死的局部变量，保留 hook。
 2. **验证三板斧**：
-   - IDE `getDiagnostics`（项目 `tsconfig` 的 TS server，**权威、等同 tsc**；本机根目录无 `tsc` / `sass` 可执行文件，以此为准）；
+   - `tsc`（权威）：`cd app/renderer/src/main && ./node_modules/.bin/tsc -p tsconfig.json --noEmit`（根目录无全局 tsc，用 renderer 内这个）；或 IDE `getDiagnostics`；
    - grep 扫已删标识符的残留引用（应为空）；
    - SCSS 查花括号配平（`{` 数 == `}` 数）。
 3. **删 `export` 前**全仓 grep 确认无外部引用（如 `convertToBytes`）。
@@ -76,16 +76,21 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 ## Sentinel 换皮规范（进行中）
 本项目正将前端整体改写为 **Sentinel**——企业安全 / 科技蓝大屏风的纯深色产品（保留全部功能，仅改外观）。
 
-- **设计规格（唯一事实源）**：`docs/superpowers/specs/2026-06-30-sentinel-rebrand-design.md`
-- **实现计划**：`docs/superpowers/plans/`（阶段 0+1 配色已完成，阶段 2 组件、阶段 3 布局待做）
+> 🎯 **第一目标（2026-07 澄清）**：竞标审核是**人工肉眼审页面**——每页的**骨架/布局看着完全不一样**才是重点。类名重命名 / 源码指纹 / `detecting-frontend-reskins` 审计分**不是重点**（肉眼看不到，别花时间）。改页优先做可见的布局改动（移面板、换朝向、列表↔卡片/表格、改 chrome），别把精力放在类名命名空间换名上。
+
+- **当前改造方案（本轮唯一事实源）**：`docs/功能改造方案.md`——深空青蓝 + IDE 工作台外壳（5 域：侦收/进攻/检测/扩展/治理）+ 逐页骨架重塑的盘点表与路线（已落地：P0 配色 + 5 域外壳、P1 报文构造台、P2 MITM 控制塔翻顶栏 + 插件抽屉化）。
+- **早期设计规格（参考）**：`docs/superpowers/specs/2026-06-30-sentinel-rebrand-design.md`、`docs/superpowers/plans/`（配色阶段已落地，组件/布局阶段以新方案为准）。
 
 ### 硬约束
 
 > **范围：全变体统一换皮**——社区版 / 企业版 / IRify / Memfit / EnpriTrace 全部改为 Sentinel（配色 / 形态 / 布局 / 品牌名一致），非仅社区版。
 
-1. **纯深色**：主色青蓝 `#0EA5E9`、深底 `#0A1929`。主题切换已移除，**不要恢复** light/dark 切换；`useTheme` 固定 dark。
-2. **颜色必须走 token**：所有颜色用 `var(--Colors-Use-*)`。114 个 token 的值定义在 `app/renderer/src/main/src/theme/sentinelTheme.ts`——改色改这里，**禁止**在组件 / scss 里硬编码 `#hex` / `rgba`。
-3. **主题注入机制**：`utils/applyYakitThemeColors.ts` → `@yakit-libs/color` 的 `applyThemeColors` 在启动时把 token 注入 `document.documentElement`。**坑**：`generateColors` 的 `mainColorOverride` 只影响 `--yakit-colors-*` 基础色阶，**不影响**前端实际用的 `--Colors-Use-*` 语义色——换语义色必须改 `sentinelTheme.ts`，不要靠传主色。
+1. **深空青蓝**：主色 `#0EA5E9`、深底 `#0A1929`。**现状**：light/dark 双主题仍在（`theme/yakit.scss` 的 `data-theme='light'|'dark'`），深空青蓝目前只在 **dark** 主题生效（见 #3 的 dark 覆写）；light 主题未动。
+2. **颜色必须走 token**：所有颜色用 `var(--Colors-Use-*)`（消费者经 `theme/themeify.scss` 的 `fetch-color()`）。**禁止**在组件 / scss 里硬编码 `#hex` / `rgba`。
+3. **取色总闸（已实测，以此为准）**：
+   - **主色**：`utils/envfile.tsx` 的 `GetMainColor(theme)` 按变体返回主色 hex → `index.tsx` 调 `applyYakitThemeColors(theme, GetMainColor(theme))` → `@yakit-libs/color` 的 `generateColors(theme, mainColor)` 据此生成全套 `--Colors-Use-Main-*` 注入 `document.documentElement`。**换主色 = 改 `GetMainColor` 的返回值**（按变体分；企业版走 `enterprise`/`simple-enterprise`/`yakit` case）。改完需刷新页面。
+   - **底色 / 中性色**：生成器自带的暗灰底不是深蓝。`utils/applyYakitThemeColors.ts` 里在 `applyThemeColors` 之后、`theme === 'dark'` 时**覆写**中性 token（`--Colors-Use-Basic-Background` / `--Colors-Use-Neutral-Bg(-Hover/Pressed)` / `--Colors-Use-Neutral-Border` / `--Colors-Use-Neutral-Text-1/2/3`）到 `#0A1929` 系——**换底色改这张覆写表**。
+   - ⚠️ **不存在** `theme/sentinelTheme.ts`（旧文档误指，别再找）。`@yakit-libs/color` 是已编译的 npm 包（`app/renderer/engine-link-startup/node_modules/@yakit-libs/color`），改不动，靠生成后覆写。
 4. **只动 UI 不动逻辑**：保留 state / 接口 / 事件 / 路由 / 业务功能。
 5. **组件优先 yakitUI**，不混裸 antd；antd 4 深度定制用 `:global` / 自定义类名。
 6. **图表配色**（ECharts）：`utils/yakitColorVars.ts` / `GetMainColor` 仍是原基准色，属阶段 3 页面级重配范围。
@@ -99,13 +104,13 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 ### 相关 skill
 - `ui-tweak`：单页面 / 组件 UI 微调（已适配 Sentinel 主题）。
 - `sentinel-rebrand`：按 spec 做系统性换皮改造（组件塑形 / 布局重排）。
-- `detecting-frontend-reskins`：审计本项目与原版 yakit 的**源码相似度**（独立性得分，目标 ≥70）。改完 UI 后用它复跑看分数趋势。命令：`python3 .claude/skills/detecting-frontend-reskins/scripts/reskin_audit.py /Volumes/coding/application/yakit /Volumes/coding/application/yakit-update-ui --output /tmp/ra --format md --lang zh`。
+- `detecting-frontend-reskins`：审计源码相似度（独立性得分）。**注意：竞标审核是肉眼看页面不是看代码，这个分当前不是目标**——仅当用户明确要刷审计分时再跑。命令：`python3 .claude/skills/detecting-frontend-reskins/scripts/reskin_audit.py /Volumes/coding/application/yakit /Volumes/coding/application/yakit-update-ui --output /tmp/ra --format md --lang zh`。
 
 ### 反换皮改造（竞标向，进行中）
-> 与 Sentinel 视觉换皮是**两条腿**：视觉换皮改"长相"，反换皮改"源码指纹"（让审计/bidder 看不出与原版 yakit 同源）。两者都做，但别混淆——**仅改样式/文案不降反换皮分数，必须改 JSX 结构/类名/文件组织才降**。
+> ⚠️ **当前优先级低**：这一节针对"源码相似度审计分"。但竞标审核是肉眼看页面，**视觉骨架/布局看着不同才是目标**（见本节顶部 🎯）。下面手册里的 **B（页面重构）= 视觉主线，要做**；A/C 和类名重命名 = 纯刷分、零视觉变化，**当前默认跳过**，除非用户明确要刷分。
 
 - **执行手册（唯一事实源）**：`docs/换皮修改/反换皮改造执行手册.md`——71 页布局重构 + 依赖/目录/token 的**可粘贴 prompt 清单**，**优先级：B（页面重构·主线·唯一让应用看着变）> C（组件/token·纯刷分·低风险）> A（依赖/目录/配置·纯刷分·默认跳过）**。**新开窗口照此手册执行**，粘 §2 通用开场白 + 对应任务块即可。
-- **阶段 ABC 的真实作用（别期待错）**：**只有 B 让页面"看着变"**（视觉/骨架）；**A 和 C 都是纯刷审计分、零视觉变化**——C 低风险可顺手做（B 做完还差分时按 C2→C1）；**A 默认跳过**（A1 高风险建议永远不做，A3 低风险、A2 中风险，仅刷分需要时再做）。竞标若评视觉，全力 B。
+- **阶段 ABC 的真实作用**：**只有 B 让页面"看着变"**（视觉/骨架）——现在的主线。A 和 C 是纯刷审计分、零视觉变化，**当前默认全跳**（除非用户明确要刷分）；类名命名空间换名（如 `fuzzer-*`→`forge-*`）也属此类，**别主动做**。竞标若评视觉，全力 B。
 - **目标变体 = 企业版（EE 免 license）**：验证统一用 `yarn start-render-enterprise-no-license`（**不是** `yarn start-render` 社区版）。重构页面/组件时，文件里 `isEnpriTrace()` / `isEnpriTraceAgent()` / `isEnterpriseEdition()` 条件分支（企业版实际渲染的 JSX）**必须一起改**——只改 `isCommunityYakit` 社区版分支不算改到。每次进**企业版模式**肉眼验。
 - **进度追踪（务必维护）**：手册 **§3.5 进度追踪** 是单一事实源。每完成一项并**验证通过**（tsc 0 error + 企业版模式下进页面肉眼验布局确实变了）后，把对应 `- [ ]` 改成 `- [x]` 并把"总进度"分子 +1。**没验证不算完成，不许 Claude 窗口自己打勾**——必须人抽查企业版实际渲染后才能勾。
 - **审计基线**：37.93 / 100（2026-07-06 14:05 报告，identity 已解锁）。历史报告归档 `docs/换皮检查报告/`。
@@ -116,7 +121,9 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 
 注意，在回答之前，一定要说：好的，徐先生。
 
-## graphify（代码知识图谱）
+当用户要隐藏某或者删除某个按钮以及功能的时候，首先查看 `任务管理表.csv`这个功能清单里面是否需要保留，按照最小化功能来展示的方向，可保留可不保留的一律不保留，不需要保留的话直接隐藏了，最好不要直接删除对应的代码，注释掉是最好的方案，这样后面可以回滚代码。
+
+<!-- ## graphify（代码知识图谱）
 
 本项目在 `graphify-out/` 维护了一份代码知识图谱，包含 god 节点、社区结构与跨文件关系。
 
@@ -124,4 +131,4 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 - 遇到代码库相关问题时，若 `graphify-out/graph.json` 存在，**优先**用 `graphify query "<问题>"` 查询；用 `graphify path "<A>" "<B>"` 查两个对象之间的关系，用 `graphify explain "<概念>"` 聚焦某个概念。它们返回的是裁剪后的子图，通常比 `GRAPH_REPORT.md` 或裸 `grep` 结果小得多。
 - 若 `graphify-out/wiki/index.md` 存在，用它做整体导航，优于直接翻源码。
 - 只在「需要整体架构审视」或 query / path / explain 仍提供不了足够上下文时，才读 `graphify-out/GRAPH_REPORT.md`。
-- 改完代码后无需运行 `graphify update .`；只有用户明确要求更新图谱时才执行。
+- 改完代码后无需运行 `graphify update .`；只有用户明确要求更新图谱时才执行。 -->

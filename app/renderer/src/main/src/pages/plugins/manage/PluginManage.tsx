@@ -474,7 +474,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
           return (
             <div className={styles['col-tags']}>
               {values.slice(0, 3).map((tag) => (
-                <YakitTag key={tag} color="info">
+                <YakitTag key={tag} color="main">
                   {tag}
                 </YakitTag>
               ))}
@@ -1230,7 +1230,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
                           {showGroupList.length <= 2 ? (
                             showGroupList.map((group) => {
                               return (
-                                <YakitTag key={group} color="info" closable onClose={() => onRemoveGroup(group)}>
+                                <YakitTag key={group} color="main" closable onClose={() => onRemoveGroup(group)}>
                                   {group}
                                 </YakitTag>
                               )

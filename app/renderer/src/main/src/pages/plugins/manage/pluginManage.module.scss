@@ -92,8 +92,10 @@
 
 .plugin-manage-inline-filters {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
   margin-left: 4px;
 }
 
@@ -156,8 +158,8 @@
     }
 
     .ant-table-thead > tr > th {
-      background: var(--Colors-Use-Neutral-Bg) !important;
-      color: var(--Colors-Use-Neutral-Text-3-Secondary);
+      background: var(--Colors-Use-Main-Focus) !important;
+      color: var(--Colors-Use-Main-Primary) !important;
       font-size: 12px;
     }
 

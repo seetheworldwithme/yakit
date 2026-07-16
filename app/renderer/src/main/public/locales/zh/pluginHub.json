@@ -104,7 +104,8 @@
     "removeGroupConfirmMulti": "是否从 “{{groups}}” 组移除{{count}}个插件？",
     "removeGroupConfirmMultiItem": "是否从 “{{groups}}” 组中移除插件 “{{scriptName}}” ？",
     "removeGroupSuccess": "{{count}}个插件已从“{{groups}}”组移除",
-    "addGroupSuccess": "{{count}}个插件已添加至“{{groups}}”组"
+    "addGroupSuccess": "{{count}}个插件已添加至“{{groups}}”组",
+    "paginationTotal": "共 {{total}} 条"
   },
   "HubListRecycle": {
     "title": "回收站",

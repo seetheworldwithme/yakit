@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Space, Tag } from 'antd'
+import { Space } from 'antd'
+import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import YakitTabs from '@/components/yakitUI/YakitTabs/YakitTabs'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
 import { ColumnsTypeProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
@@ -96,9 +97,9 @@ export const ChaosMakerRuleTable: React.FC<ChaosMakerRuleTableProp> = (props) =>
                 return index < 3
               })
               .map((i) => {
-                return <Tag color={'orange'}>{i.Title}</Tag>
+                return <YakitTag color="main">{i.Title}</YakitTag>
               })}
-            {(props?.groups || []).length > 3 && <Tag color={'orange'}>+{(props?.groups || []).length - 3}</Tag>}
+            {(props?.groups || []).length > 3 && <YakitTag color="main">+{(props?.groups || []).length - 3}</YakitTag>}
           </Space>
         </div>
       }
@@ -107,7 +108,7 @@ export const ChaosMakerRuleTable: React.FC<ChaosMakerRuleTableProp> = (props) =>
       style={{ marginLeft: 6 }}
       extra={
         <>
-          <Tag color={'orange'}>已选{total}攻击规则</Tag>
+          <YakitTag color="main">已选{total}攻击规则</YakitTag>
         </>
       }
       bodyStyle={{ display: 'flex', flexDirection: 'column' }}

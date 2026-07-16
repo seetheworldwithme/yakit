@@ -104,7 +104,8 @@
     "removeGroupConfirmMulti": "是否從 “{{groups}}” 組移除{{count}}個外掛？",
     "removeGroupConfirmMultiItem": "是否從 “{{groups}}” 組中移除外掛 “{{scriptName}}” ？",
     "removeGroupSuccess": "{{count}}個外掛已從“{{groups}}”組移除",
-    "addGroupSuccess": "{{count}}個外掛已新增至“{{groups}}”組"
+    "addGroupSuccess": "{{count}}個外掛已新增至“{{groups}}”組",
+    "paginationTotal": "共 {{total}} 條"
   },
   "HubListRecycle": {
     "title": "回收站",
