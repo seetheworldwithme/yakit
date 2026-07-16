@@ -105,6 +105,29 @@
         }
       }
     }
+    .action-text {
+      padding: 0 12px;
+      color: var(--Colors-Use-Neutral-Text-1-Title);
+      border-right: 1px solid var(--Colors-Use-Neutral-Border);
+      cursor: pointer;
+      white-space: nowrap;
+      &:first-child {
+        padding-left: 0;
+      }
+      &:last-child {
+        border-right: none;
+      }
+      &:hover {
+        color: var(--Colors-Use-Main-Primary);
+      }
+    }
+    .del-text {
+      color: var(--Colors-Use-Error-Primary);
+      &:hover {
+        color: var(--Colors-Use-Error-Primary);
+        opacity: 0.8;
+      }
+    }
     span {
       padding: 0 12px;
       color: var(--Colors-Use-Neutral-Text-1-Title);

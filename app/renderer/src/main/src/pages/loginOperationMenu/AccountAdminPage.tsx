@@ -9,26 +9,21 @@ import ReactResizeDetector from 'react-resize-detector'
 import { NetWorkApi } from '@/services/fetch'
 import { API } from '@/services/swagger/resposeType'
 import { yakitNotify } from '@/utils/notification'
-import {
-  OutlineChevronrightIcon,
-  OutlineDocumentduplicateIcon,
-  OutlinePencilaltIcon,
-  OutlineRefreshIcon,
-  OutlineTrashIcon,
-} from '@/assets/icon/outline'
+import { OutlineChevronrightIcon, OutlinePencilaltIcon, OutlineTrashIcon } from '@/assets/icon/outline'
 import classNames from 'classnames'
 import { YakitPopconfirm } from '@/components/yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
-import { Avatar, Form, Tooltip } from 'antd'
+import { Avatar, Form } from 'antd'
 import { useControllableValue, useCreation, useDebounceFn, useMemoizedFn, useThrottleFn, useUpdateEffect } from 'ahooks'
 import { TableVirtualResize } from '@/components/TableVirtualResize/TableVirtualResize'
 import { ColumnsTypeProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
 import moment from 'moment'
 import { useCampare } from '@/hook/useCompare/useCompare'
 import { YakitModal } from '@/components/yakitUI/YakitModal/YakitModal'
-import { unReadable } from '../dynamicControl/DynamicControl'
+// copySecretKey 下线，unReadable 暂不再使用，保留 import 以便回滚
+// import { unReadable } from '../dynamicControl/DynamicControl'
 import YakitCascader from '@/components/yakitUI/YakitCascader/YakitCascader'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
 import { DefaultOptionType } from 'antd/lib/cascader'
@@ -120,7 +115,7 @@ export const AccountAdminPage: React.FC<AccountAdminPageProp> = (props) => {
             />
           }
           firstRatio="30%"
-          firstMinSize="400px"
+          firstMinSize="200px"
           firstNodeStyle={{ padding: 0 }}
           secondNode={
             <AccountList
@@ -871,37 +866,31 @@ const AccountList: React.FC<AccountListProps> = (props) => {
     {
       title: t('YakitTable.action'),
       dataKey: 'action',
-      width: 170,
+      width: 200,
       fixed: 'right',
       render: (_, record: API.UrmUserList) => (
         <div className={styles['table-action-icon']}>
-          <OutlinePencilaltIcon
-            className={styles['action-icon']}
+          <span
+            className={styles['action-text']}
             onClick={() => {
               editInfoRef.current = record
               setCreatCountVisible(true)
             }}
-          />
+          >
+            编辑
+          </span>
           <YakitPopconfirm
             title={t('AccountList.resetPwdConfirm')}
             onConfirm={() => onResetPwd(record.uid, record.user_name)}
           >
-            <Tooltip title={t('AccountList.resetPwdTooltip')} align={{ targetOffset: [0, -15] }}>
-              <OutlineRefreshIcon className={styles['action-icon']} onClick={() => {}} />
-            </Tooltip>
+            <span className={styles['action-text']}>重置密码</span>
           </YakitPopconfirm>
-          <Tooltip title={t('AccountList.copySecretKeyTooltip')} align={{ targetOffset: [0, -15] }}>
-            <OutlineDocumentduplicateIcon
-              className={styles['action-icon']}
-              onClick={() => copySecretKey(record.user_name)}
-            />
-          </Tooltip>
           <YakitPopconfirm
             title={t('AccountList.deleteUserConfirm')}
             onConfirm={() => onRemoveSingle(record.uid, record.department_id)}
             placement="right"
           >
-            <OutlineTrashIcon className={styles['del-icon']} />
+            <span className={classNames(styles['action-text'], styles['del-text'])}>删除</span>
           </YakitPopconfirm>
         </div>
       ),
@@ -1030,6 +1019,7 @@ const AccountList: React.FC<AccountListProps> = (props) => {
       .finally(() => {})
   }
 
+  /* 「复制远程链接」按钮已下线，逻辑保留以便回滚
   const copySecretKey = (note: string) => {
     NetWorkApi<any, API.RemoteOperationResponse>({
       url: 'remote/operation',
@@ -1062,6 +1052,7 @@ const AccountList: React.FC<AccountListProps> = (props) => {
       })
       .finally(() => {})
   }
+  */
 
   const onRemoveMultiple = () => {
     setLoading(true)

@@ -22,7 +22,7 @@
     "role": "角色",
     "createdAt": "建立時間",
     "resetPwdConfirm": "確定要重置該使用者密碼嗎？",
-    "resetPwdTooltip": "重置使用者密碼",
+    "resetPwdTooltip": "重置密碼",
     "copySecretKeyTooltip": "複製遠端連線",
     "deleteUserConfirm": "確定刪除該使用者嗎？",
     "getListFailed": "獲取賬號列表失敗：{{error}}",

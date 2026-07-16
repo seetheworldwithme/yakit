@@ -22,7 +22,7 @@
     "role": "角色",
     "createdAt": "创建时间",
     "resetPwdConfirm": "确定要重置该用户密码吗？",
-    "resetPwdTooltip": "重置用户密码",
+    "resetPwdTooltip": "重置密码",
     "copySecretKeyTooltip": "复制远程连接",
     "deleteUserConfirm": "确定删除该用户吗？",
     "getListFailed": "获取账号列表失败：{{error}}",

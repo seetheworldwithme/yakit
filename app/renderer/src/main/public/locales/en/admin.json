@@ -22,7 +22,7 @@
     "role": "Role",
     "createdAt": "Creation Time",
     "resetPwdConfirm": "Are you sure to reset this user's password?",
-    "resetPwdTooltip": "Reset User Password",
+    "resetPwdTooltip": "Reset Password",
     "copySecretKeyTooltip": "Copy Secret Key",
     "deleteUserConfirm": "Are you sure to delete this user?",
     "getListFailed": "Failed to get account list: {{error}}",
