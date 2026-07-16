@@ -201,6 +201,8 @@ interface HubOuterListProps {
   /** 搜索条件 */
   filters: PluginFilterParams
   setFilters: (filters: PluginFilterParams) => void
+  /** 不展示列表工具栏中的筛选条件回显 */
+  hideFilterTags?: boolean
   children?: ReactNode
   listTabs?: PluginListTabs[]
   listTabActive?: string
@@ -221,6 +223,7 @@ export const HubOuterList: React.FC<HubOuterListProps> = memo((props) => {
     onSearch,
     filters,
     setFilters,
+    hideFilterTags = false,
     children,
     listTabs = [],
     listTabActive = '',
@@ -296,7 +299,7 @@ export const HubOuterList: React.FC<HubOuterListProps> = memo((props) => {
               </div>
             </div>
 
-            {tagLength > 0 && (
+            {!hideFilterTags && tagLength > 0 && (
               <div className={styles['header-filter-tag']}>
                 {tagLength <= 2 ? (
                   showTagList.map((item) => {

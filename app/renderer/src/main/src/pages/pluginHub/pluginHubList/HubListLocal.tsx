@@ -1307,15 +1307,14 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                               {(group.data || []).map((opt) => {
                                 const active = selected.some((item) => item.value === opt.value)
                                 return (
-                                  <span
+                                  <YakitButton
                                     key={opt.value}
-                                    className={classNames(styles['hub-filter-chip'], {
-                                      [styles['hub-filter-chip-active']]: active,
-                                    })}
+                                    type={active ? 'primary' : 'text'}
+                                    size="small"
                                     onClick={() => toggleFilter(group.groupKey, opt, !active)}
                                   >
                                     {opt.label}
-                                  </span>
+                                  </YakitButton>
                                 )
                               })}
                             </div>
@@ -1490,6 +1489,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                 onSearch={onSearch}
                 filters={filters as Record<string, API.PluginsSearchData[]>}
                 setFilters={setFilters}
+                hideFilterTags={true}
               >
                 {listLength > 0 ? (
                   <div className={styles['hub-local-table-wrap']}>
