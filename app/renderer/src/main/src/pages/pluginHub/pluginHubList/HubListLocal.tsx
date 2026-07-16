@@ -1253,37 +1253,39 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
             <div className={classNames(styles['hub-filter-row'], { [styles['hidden-view']]: hiddenFilter })}>
               <span className={styles['hub-filter-row-title']}>{t('YakitButton.advancedFilter')}</span>
               <div className={styles['hub-filter-row-groups']}>
-                {filterGroup.map((group) => {
-                  const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
-                    []) as API.PluginsSearchData[]
-                  return (
-                    <div className={styles['hub-filter-group']} key={group.groupKey}>
-                      <span className={styles['hub-filter-group-name']}>{group.groupName}</span>
-                      <div className={styles['hub-filter-group-items']}>
-                        {(group.data || []).map((opt) => {
-                          const active = selected.some((s) => s.value === opt.value)
-                          return (
-                            <span
-                              key={opt.value}
-                              className={classNames(styles['hub-filter-chip'], {
-                                [styles['hub-filter-chip-active']]: active,
-                              })}
-                              onClick={() => toggleFilter(group.groupKey, opt, !active)}
-                            >
-                              <span className={styles['hub-filter-chip-label']}>{opt.label}</span>
-                              {!!opt.count && <em className={styles['hub-filter-chip-count']}>{opt.count}</em>}
+                {filterGroup
+                  .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                  .map((group) => {
+                    const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                      []) as API.PluginsSearchData[]
+                    return (
+                      <div className={styles['hub-filter-group']} key={group.groupKey}>
+                        <span className={styles['hub-filter-group-name']}>{group.groupName}</span>
+                        <div className={styles['hub-filter-group-items']}>
+                          {(group.data || []).map((opt) => {
+                            const active = selected.some((s) => s.value === opt.value)
+                            return (
+                              <span
+                                key={opt.value}
+                                className={classNames(styles['hub-filter-chip'], {
+                                  [styles['hub-filter-chip-active']]: active,
+                                })}
+                                onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                              >
+                                <span className={styles['hub-filter-chip-label']}>{opt.label}</span>
+                                {!!opt.count && <em className={styles['hub-filter-chip-count']}>{opt.count}</em>}
+                              </span>
+                            )
+                          })}
+                          {group.groupKey === 'plugin_group' && (
+                            <span className={styles['hub-filter-manage']} onClick={onOpenPluginGroup}>
+                              {t('HubListLocal.manage')}
                             </span>
-                          )
-                        })}
-                        {group.groupKey === 'plugin_group' && (
-                          <span className={styles['hub-filter-manage']} onClick={onOpenPluginGroup}>
-                            {t('HubListLocal.manage')}
-                          </span>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
               </div>
             </div>
 

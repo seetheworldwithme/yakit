@@ -35,6 +35,8 @@ export interface PluginsContainerProps {
   /** ClassName */
   filterClassName?: string
   loadingTip?: string
+  /** 不渲染左侧高级筛选面板 */
+  hideFilterPanel?: boolean
 }
 
 export interface PluginDetailsProps<T> {

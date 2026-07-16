@@ -488,6 +488,7 @@ export const PluginsList: React.FC<PluginsListProps> = memo((props) => {
     children,
     visible,
     setVisible,
+    hideFilterTags = false,
   } = props
   const { t } = useI18nNamespaces(['plugin', 'yakitUi'])
 
@@ -564,7 +565,7 @@ export const PluginsList: React.FC<PluginsListProps> = memo((props) => {
               Selected <span className={styles['num-style']}>{+selected || 0}</span>
             </div>
           </div>
-          {tagLength > 0 && (
+          {!hideFilterTags && tagLength > 0 && (
             <div className={classNames(styles['body-filter-tag'], 'plugin-filter-tag-summary')}>
               {tagLength <= 2 ? (
                 showTagList.map((item) => {

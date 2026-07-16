@@ -96,6 +96,8 @@ export interface PluginsListProps {
   visible: boolean
   /** 设置是否可见 */
   setVisible: (show: boolean) => any
+  /** 隐藏已选筛选条件摘要 */
+  hideFilterTags?: boolean
 }
 
 export interface ListShowContainerProps<T> {

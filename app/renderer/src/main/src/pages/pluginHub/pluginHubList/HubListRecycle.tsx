@@ -31,6 +31,7 @@ import emiter from '@/utils/eventBus/eventBus'
 import { PluginOperateHint } from '../defaultConstant'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { Table, Tooltip } from 'antd'
+import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 
 import classNames from 'classnames'
 import styles from './PluginHubList.module.scss'
@@ -442,6 +443,32 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
             <span className={styles['col-desc']}>{text || '-'}</span>
           </Tooltip>
         ),
+      },
+      {
+        title: '上传者',
+        dataIndex: 'author',
+        width: 140,
+        ellipsis: true,
+        render: (author: string) => author || '-',
+      },
+      {
+        title: '标签',
+        dataIndex: 'tags',
+        width: 220,
+        render: (tags: string) => {
+          const values = (tags || '').split(',').filter(Boolean)
+          return values.length ? (
+            <div className={styles['col-tags']}>
+              {values.map((tag) => (
+                <YakitTag key={tag} color="info">
+                  {tag}
+                </YakitTag>
+              ))}
+            </div>
+          ) : (
+            '-'
+          )
+        },
       },
       {
         title: t('HubListLocal.createdAt'),

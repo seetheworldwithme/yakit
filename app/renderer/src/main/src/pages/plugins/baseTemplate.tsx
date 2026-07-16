@@ -106,21 +106,24 @@ export const PluginsContainer: React.FC<PluginsContainerProps> = memo((props) =>
     children,
     filterClassName,
     loadingTip = '',
+    hideFilterPanel = false,
   } = props
   return (
     <YakitSpin spinning={loading} tip={loadingTip}>
       <div className={styles['plugins-container-wrapper']}>
-        <FilterPanel
-          wrapperClassName={classNames(styles['container-filter-wrapper'], {
-            [styles['container-filter-wrapper-hidden']]: !visible,
-          })}
-          listClassName={filterClassName}
-          visible={visible}
-          setVisible={setVisible}
-          selecteds={selecteds}
-          onSelect={onSelect}
-          groupList={groupList}
-        />
+        {!hideFilterPanel && (
+          <FilterPanel
+            wrapperClassName={classNames(styles['container-filter-wrapper'], {
+              [styles['container-filter-wrapper-hidden']]: !visible,
+            })}
+            listClassName={filterClassName}
+            visible={visible}
+            setVisible={setVisible}
+            selecteds={selecteds}
+            onSelect={onSelect}
+            groupList={groupList}
+          />
+        )}
         <div className={styles['container-body']}>{children}</div>
       </div>
     </YakitSpin>

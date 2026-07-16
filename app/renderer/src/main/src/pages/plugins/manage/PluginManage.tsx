@@ -1207,6 +1207,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
             selecteds={filters as Record<string, API.PluginsSearchData[]>}
             onSelect={onFilter}
             groupList={filterPanelGroups}
+            hideFilterPanel={true}
           >
             <PluginsList
               checked={allCheck}
@@ -1217,6 +1218,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
               selected={selectNum}
               filters={filters}
               setFilters={setFilters}
+              hideFilterTags={true}
               visible={true}
               setVisible={() => {}}
               extraHeader={

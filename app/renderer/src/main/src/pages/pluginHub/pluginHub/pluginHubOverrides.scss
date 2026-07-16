@@ -1,8 +1,3 @@
-/* 按产品要求隐藏“本地”子标签页中的高级筛选区域；保留原 JSX 和筛选逻辑，便于后续恢复 */
-#yakit-plugin-hub [class*='hub-filter-row'] {
-  display: none !important;
-}
-
 /* 按产品要求隐藏本地插件页“新建插件 / 导出 / 上传 / 删除”按钮前的图标；保留按钮行为与状态 */
 #yakit-plugin-hub [class*='hub-list-header-extra'] button svg {
   display: none !important;
