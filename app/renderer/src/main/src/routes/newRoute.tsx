@@ -259,7 +259,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.fuzzTestingForWebSocketPackets',
   },
   codec: {
-    label: 'Codec',
+    label: '解编码台',
     labelUi: 'YakitRoute.Codec',
     describeUi: 'YakitRoute.dataProcessingDescription',
   },

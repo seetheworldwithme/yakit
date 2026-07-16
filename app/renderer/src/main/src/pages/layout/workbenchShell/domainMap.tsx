@@ -34,7 +34,7 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
     icon: <RadarChartOutlined />,
     modules: [
       { route: YakitRoute.DB_HTTPHistory, label: '历史流量' },
-      { route: YakitRoute.Codec, label: '编解码工作台' },
+      { route: YakitRoute.Codec, label: '解编码台' },
       { route: YakitRoute.DataCompare, label: '报文差异对比' },
     ],
   },
