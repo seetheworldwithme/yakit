@@ -90,11 +90,32 @@
   }
 }
 
-.plugin-manage-filter-popover {
-  :global(.ant-popover-inner-content) {
-    width: 280px;
-    height: min(560px, calc(100vh - 120px));
-    padding: 0;
+.plugin-manage-inline-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.inline-filter-row {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  gap: 8px;
+
+  > span {
+    flex: 0 0 auto;
+    color: var(--Colors-Use-Neutral-Text-3-Secondary);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+
+  .inline-filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
   }
 }
 

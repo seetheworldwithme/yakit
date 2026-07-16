@@ -80,7 +80,6 @@ import { httpUploadPluginToEE } from '@/pages/pluginHub/utils/http'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { formatDate } from '@/utils/timeUtil'
-import { FilterPanel } from '@/components/businessUI/FilterPanel/FilterPanel'
 
 const { ipcRenderer } = window.require('electron')
 interface PluginManageProps {}
@@ -115,11 +114,6 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   const latestLoadingRef = useLatest(loading)
   /** 是否为首屏加载 */
   const isLoadingRef = useRef<boolean>(true)
-
-  const [showFilter, setShowFilter] = useState<boolean>(false)
-  const onSetShowFilter = useMemoizedFn((v) => {
-    setShowFilter(v)
-  })
 
   const [filters, setFilters] = useState<PluginFilterParams>({
     plugin_type: [],
@@ -1090,6 +1084,16 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
     }
   })
 
+  const inlineFilterGroups = filterPanelGroups.filter((item) => ['plugin_type', 'tags'].includes(item.groupKey))
+  const onToggleInlineFilter = useMemoizedFn((groupKey: string, item: API.PluginsSearchData) => {
+    const selected = filters[groupKey] || []
+    const checked = selected.some((selectedItem) => selectedItem.value === item.value)
+    onFilter({
+      ...filters,
+      [groupKey]: checked ? selected.filter((selectedItem) => selectedItem.value !== item.value) : [...selected, item],
+    })
+  })
+
   return (
     <section ref={layoutRef} className={styles['plugin-audit-shell']}>
       {/* 暂时隐藏左侧下载/删除操作栏，保留原入口结构以便后续恢复
@@ -1162,25 +1166,30 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
                   {selectNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
                 </YakitButton>
               )}
-              <YakitPopover
-                visible={showFilter}
-                onVisibleChange={onSetShowFilter}
-                trigger="click"
-                placement="bottomLeft"
-                overlayClassName={styles['plugin-manage-filter-popover']}
-                content={
-                  <FilterPanel
-                    loading={loading && isLoadingRef.current}
-                    visible={showFilter}
-                    setVisible={onSetShowFilter}
-                    selecteds={filters as Record<string, API.PluginsSearchData[]>}
-                    onSelect={onFilter}
-                    groupList={filterPanelGroups}
-                  />
-                }
-              >
-                <YakitButton type="text">{t('YakitButton.advancedFilter')}</YakitButton>
-              </YakitPopover>
+              <div className={styles['plugin-manage-inline-filters']}>
+                {inlineFilterGroups.map((group) => (
+                  <div className={styles['inline-filter-row']} key={group.groupKey}>
+                    <span>{group.groupName}</span>
+                    <div className={styles['inline-filter-options']}>
+                      {(group.data || []).map((item) => {
+                        const checked = (filters[group.groupKey] || []).some(
+                          (selectedItem) => selectedItem.value === item.value,
+                        )
+                        return (
+                          <YakitButton
+                            key={item.value}
+                            type={checked ? 'primary' : 'text'}
+                            size="small"
+                            onClick={() => onToggleInlineFilter(group.groupKey, item)}
+                          >
+                            {item.label}
+                          </YakitButton>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           }
           hidden={!!plugin}
