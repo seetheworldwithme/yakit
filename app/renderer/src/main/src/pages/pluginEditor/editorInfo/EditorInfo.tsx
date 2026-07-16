@@ -1,6 +1,6 @@
 import React, { ForwardedRef, forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useDebounceEffect, useMemoizedFn, usePrevious, useUpdateEffect } from 'ahooks'
-import { OutlineCloseIcon, OutlineIdentificationIcon, OutlineTagIcon } from '@/assets/icon/outline'
+import { OutlineCloseIcon } from '@/assets/icon/outline'
 import { Form, Tooltip } from 'antd'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
@@ -457,6 +457,7 @@ export const EditorInfoForm: React.FC<EditorInfoFormProps> = memo(
 
     return (
       <div className={styles['editor-info-form']}>
+        {/* 暂时隐藏 AI 生成提示，保留生成与配置能力以便后续恢复
         <div className={styles['editor-info-form-highlight']}>
           {t('EditorInfo.aiGenerateHint')}
           <YakitButton
@@ -471,7 +472,7 @@ export const EditorInfoForm: React.FC<EditorInfoFormProps> = memo(
           <YakitButton type="text" className={styles['editor-info-form-highlight-btn']} onClick={handleSetting}>
             {t('EditorInfo.aiConfigureClick')}
           </YakitButton>
-        </div>
+        </div> */}
         <Form className={styles['editor-info-form-global']} form={form} layout="vertical">
           <Form.Item
             label={
@@ -515,7 +516,6 @@ export const EditorInfoForm: React.FC<EditorInfoFormProps> = memo(
               wrapperClassName={styles['item-input']}
               placeholder={t('YakitInput.please_enter')}
               size="large"
-              prefix={<OutlineIdentificationIcon />}
               maxLength={100}
             />
           </Form.Item>
@@ -542,9 +542,10 @@ export const EditorInfoForm: React.FC<EditorInfoFormProps> = memo(
                 })}
               </YakitSelect>
             </Form.Item>
+            {/* 暂时隐藏 Tags 输入框图标，保留结构以便后续恢复
             <div className={styles['item-select-prefix-icon']}>
               <OutlineTagIcon />
-            </div>
+            </div> */}
           </Form.Item>
 
           {/* 隐藏插件配置区块（开关/联动/AI配置），保留代码以备恢复，恢复时移除 {false && ( 与对应 )} 即可 */}
@@ -750,14 +751,13 @@ export const PluginTypeSelect: React.FC<YakitSelectProps> = memo((props) => {
         return (
           <YakitSelect.Option key={item.key} disabled={item.key === 'lua'}>
             <div key={item.key} className={styles['plugin-type-select-option']}>
-              <div className={styles['header-icon']}>{item.icon}</div>
               <div className={styles['type-content']}>
                 <div
                   className={classNames(styles['name-style'], {
                     [styles['disable-color']]: item.key === 'lua',
                   })}
                 >
-                  {item.name}
+                  {item.name.replace(/^Yak(?:-|\s+)/, '')}
                 </div>
                 <div
                   className={classNames(styles['description-style'], {

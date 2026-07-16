@@ -77,6 +77,27 @@
   flex-direction: column;
 }
 
+.plugin-manage-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  > span {
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+  }
+}
+
+.plugin-manage-filter-popover {
+  :global(.ant-popover-inner-content) {
+    width: 280px;
+    height: min(560px, calc(100vh - 120px));
+    padding: 0;
+  }
+}
+
 // 顶栏搜索条（取代原 extra-header-wrapper）
 .audit-search-bar {
   display: flex;

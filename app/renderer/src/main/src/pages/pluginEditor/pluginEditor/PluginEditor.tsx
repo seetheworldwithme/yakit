@@ -13,16 +13,8 @@ import React, {
 } from 'react'
 import { useDebounceFn, useMemoizedFn, useUpdateEffect } from 'ahooks'
 import useListenWidth from '@/pages/pluginHub/hooks/useListenWidth'
-import {
-  OutlineClouduploadIcon,
-  OutlineDocumentduplicateIcon,
-  OutlineExitIcon,
-  OutlinePaperairplaneIcon,
-  OutlineQuestionmarkcircleIcon,
-} from '@/assets/icon/outline'
-import { SolidStoreIcon } from '@/assets/icon/solid'
+import { OutlineDocumentduplicateIcon, OutlinePaperairplaneIcon } from '@/assets/icon/outline'
 import { HubButton } from '@/pages/pluginHub/hubExtraOperate/funcTemplate'
-import { WebsiteGV } from '@/enums/website'
 import { EditorInfo, EditorInfoFormRefProps } from '../editorInfo/EditorInfo'
 import { EditorCode, EditorCodeRefProps } from '../editorCode/EditorCode'
 import { KeyParamsFetchPluginDetail, YakitPluginBaseInfo, YakitPluginInfo } from '../base'
@@ -342,10 +334,11 @@ export const PluginEditor: React.FC<PluginEditorProps> = memo(
     const wrapperWidth = useListenWidth(document.body)
 
     // 打开帮助文档
-    const handleOpenHelp = useMemoizedFn((e) => {
-      e.stopPropagation()
-      ipcRenderer.invoke('open-url', WebsiteGV.PluginParamsHelp)
-    })
+    // 暂时隐藏帮助文档入口，保留原跳转逻辑以便后续恢复
+    // const handleOpenHelp = useMemoizedFn((e) => {
+    //   e.stopPropagation()
+    //   ipcRenderer.invoke('open-url', WebsiteGV.PluginParamsHelp)
+    // })
 
     /** ---------- 全局基础逻辑 Start ---------- */
     const [expand, setExpand] = React.useState<boolean>(true)
@@ -943,10 +936,11 @@ export const PluginEditor: React.FC<PluginEditorProps> = memo(
             >
               <div className={styles['header-title']}>
                 {title}
+                {/* 暂时隐藏帮助文档入口，保留原有跳转逻辑以便后续恢复
                 <div className={styles['header-subtitle']} onClick={handleOpenHelp}>
                   <span className={classNames(styles['subtitle-style'])}>{t('PluginEditor.helpDoc')}</span>
                   <OutlineQuestionmarkcircleIcon />
-                </div>
+                </div> */}
               </div>
 
               <div className={styles['header-btn-group']}>
@@ -981,11 +975,11 @@ export const PluginEditor: React.FC<PluginEditorProps> = memo(
                     loading={onlineLoading}
                     type="outline1"
                     size={isEdit ? 'middle' : 'large'}
-                    icon={<OutlineClouduploadIcon />}
                     name={t('PluginEditor.syncToCloud')}
                     onClick={onBtnOnlineSave}
                   />
                 )}
+                {/* 暂时隐藏“保存并退出”，保留保存退出逻辑以便后续恢复
                 <HubButton
                   width={wrapperWidth}
                   iconWidth={1000}
@@ -995,13 +989,12 @@ export const PluginEditor: React.FC<PluginEditorProps> = memo(
                   icon={<OutlineExitIcon />}
                   name={t('PluginEditor.saveAndExit')}
                   onClick={onBtnLocalSaveAndExit}
-                />
+                /> */}
                 <HubButton
                   width={wrapperWidth}
                   iconWidth={1000}
                   loading={localLoading}
                   size={isEdit ? 'middle' : 'large'}
-                  icon={<SolidStoreIcon />}
                   name={t('YakitButton.save')}
                   onClick={onBtnLocalSave}
                 />

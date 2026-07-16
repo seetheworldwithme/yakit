@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { PluginsContainer, PluginsLayout } from '../baseTemplate'
-import { AuthorImg, FuncBtnIcon, FuncSearch, PluginsList } from '../funcTemplate'
+import { AuthorImg, FuncSearch, PluginsList } from '../funcTemplate'
 import {
   OutlineClouddownloadIcon,
   OutlinePluscircleIcon,
@@ -80,6 +80,7 @@ import { httpUploadPluginToEE } from '@/pages/pluginHub/utils/http'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { formatDate } from '@/utils/timeUtil'
+import { FilterPanel } from '@/components/businessUI/FilterPanel/FilterPanel'
 
 const { ipcRenderer } = window.require('electron')
 interface PluginManageProps {}
@@ -115,16 +116,8 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   /** 是否为首屏加载 */
   const isLoadingRef = useRef<boolean>(true)
 
-  const [showFilter, setShowFilter] = useState<boolean>(true)
-  // 获取筛选栏展示状态
-  useEffect(() => {
-    getRemoteValue(RemotePluginGV.AuditFilterCloseStatus).then((value: string) => {
-      if (value === 'true') setShowFilter(true)
-      if (value === 'false') setShowFilter(false)
-    })
-  }, [])
+  const [showFilter, setShowFilter] = useState<boolean>(false)
   const onSetShowFilter = useMemoizedFn((v) => {
-    setRemoteValue(RemotePluginGV.AuditFilterCloseStatus, `${v}`)
     setShowFilter(v)
   })
 
@@ -1079,8 +1072,27 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
   })
   /** ---------- 同步插件到企业版 end ---------- */
 
+  const filterPanelGroups = pluginFilters.map((item) => {
+    if (item.groupKey !== 'plugin_group') return item
+
+    return {
+      ...item,
+      groupExtraOptBtn: magGroupState() ? (
+        <>
+          <YakitButton type="text" onClick={onOpenPluginGroup}>
+            {t('PluginManage.manage')}
+          </YakitButton>
+          <div className={styles['divider-style']} />
+        </>
+      ) : (
+        <></>
+      ),
+    }
+  })
+
   return (
     <section ref={layoutRef} className={styles['plugin-audit-shell']}>
+      {/* 暂时隐藏左侧下载/删除操作栏，保留原入口结构以便后续恢复
       {!plugin && (
         <aside className={styles['plugin-action-rail']}>
           <div className={styles['rail-brand']} title={t('PluginManage.title')}>
@@ -1109,7 +1121,7 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
             )}
           </nav>
         </aside>
-      )}
+      )} */}
       <main className={styles['plugin-stage']}>
         {!!plugin && (
           <PluginManageDetail
@@ -1134,7 +1146,43 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
           />
         )}
         <PluginsLayout
-          title={t('PluginManage.title')}
+          title={
+            <div className={styles['plugin-manage-title-actions']}>
+              <span>{t('PluginManage.title')}</span>
+              <YakitButton
+                type="text"
+                loading={downloadLoading}
+                onClick={() => headerExtraDownload()}
+                disabled={initTotal === 0}
+              >
+                {selectNum > 0 ? t('YakitButton.download') : t('YakitButton.oneClickDownload')}
+              </YakitButton>
+              {admin.isAdmin && (
+                <YakitButton type="text" onClick={onShowDelPlugin} disabled={initTotal === 0}>
+                  {selectNum > 0 ? t('YakitButton.delete') : t('YakitButton.clear')}
+                </YakitButton>
+              )}
+              <YakitPopover
+                visible={showFilter}
+                onVisibleChange={onSetShowFilter}
+                trigger="click"
+                placement="bottomLeft"
+                overlayClassName={styles['plugin-manage-filter-popover']}
+                content={
+                  <FilterPanel
+                    loading={loading && isLoadingRef.current}
+                    visible={showFilter}
+                    setVisible={onSetShowFilter}
+                    selecteds={filters as Record<string, API.PluginsSearchData[]>}
+                    onSelect={onFilter}
+                    groupList={filterPanelGroups}
+                  />
+                }
+              >
+                <YakitButton type="text">{t('YakitButton.advancedFilter')}</YakitButton>
+              </YakitPopover>
+            </div>
+          }
           hidden={!!plugin}
           subTitle={null}
           extraHeader={
@@ -1145,25 +1193,11 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
         >
           <PluginsContainer
             loading={loading && isLoadingRef.current}
-            visible={showFilter}
-            setVisible={onSetShowFilter}
+            visible={false}
+            setVisible={() => {}}
             selecteds={filters as Record<string, API.PluginsSearchData[]>}
             onSelect={onFilter}
-            groupList={pluginFilters.map((item) => {
-              if (item.groupKey === 'plugin_group') {
-                item.groupExtraOptBtn = magGroupState() ? (
-                  <>
-                    <YakitButton type="text" onClick={onOpenPluginGroup}>
-                      {t('PluginManage.manage')}
-                    </YakitButton>
-                    <div className={styles['divider-style']} />
-                  </>
-                ) : (
-                  <></>
-                )
-              }
-              return item
-            })}
+            groupList={filterPanelGroups}
           >
             <PluginsList
               checked={allCheck}
@@ -1174,8 +1208,8 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
               selected={selectNum}
               filters={filters}
               setFilters={setFilters}
-              visible={showFilter}
-              setVisible={onSetShowFilter}
+              visible={true}
+              setVisible={() => {}}
               extraHeader={
                 <div className={styles['hub-list-header-right-extra']}>
                   {magGroupState() ? (

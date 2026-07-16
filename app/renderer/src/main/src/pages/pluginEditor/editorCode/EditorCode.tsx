@@ -1,7 +1,6 @@
 import React, { ForwardedRef, forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useDebounceFn, useMemoizedFn, useUpdateEffect } from 'ahooks'
 import { OutlineOpenIcon } from '@/assets/icon/outline'
-import { SolidPlayIcon } from '@/assets/icon/solid'
 import { YakitRadioButtons } from '@/components/yakitUI/YakitRadioButtons/YakitRadioButtons'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import { YakitTagColor } from '@/components/yakitUI/YakitTag/YakitTagType'
@@ -519,7 +518,7 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
           <div className={styles['header-title']}>
             {!!type && (
               <YakitTag color={(pluginTypeToName[type]?.color || undefined) as YakitTagColor | undefined}>
-                {pluginTypeToName[type]?.name || type}
+                {(pluginTypeToName[type]?.name || type).replace(/^Yak(?:-|\s+)/, '')}
               </YakitTag>
             )}
             <div className={classNames(styles['title-style'], 'yakit-content-single-ellipsis')} title={name || ''}>
@@ -592,9 +591,7 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
                       停止
                     </YakitButton>
                   ) : (
-                    <YakitButton icon={<SolidPlayIcon />} onClick={onStartExecute}>
-                      执行
-                    </YakitButton>
+                    <YakitButton onClick={onStartExecute}>执行</YakitButton>
                   )}
                 </div>
               </div>
