@@ -5,8 +5,9 @@ import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { RemotePluginGV } from '@/enums/plugin'
-import { PluginSearchParams, PluginListPageMeta } from '@/pages/plugins/baseTemplateType'
-import { defaultSearch } from '@/pages/plugins/builtInData'
+import { PluginSearchParams, PluginListPageMeta, PluginFilterParams } from '@/pages/plugins/baseTemplateType'
+import { API } from '@/services/swagger/resposeType'
+import { defaultFilter, defaultSearch, pluginTypeToName } from '@/pages/plugins/builtInData'
 import { YakitPluginOnlineDetail } from '@/pages/plugins/online/PluginsOnlineType'
 import { pluginOnlineReducer, initialOnlineState } from '@/pages/plugins/pluginReducer'
 import {
@@ -74,6 +75,39 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
   const [selectList, setSelectList] = useState<YakitPluginOnlineDetail[]>([])
   // 搜索条件
   const [search, setSearch, getSearch] = useGetSetState<PluginSearchParams>(cloneDeep(defaultSearch))
+  const [filters, setFilters] = useState<PluginFilterParams>(cloneDeep(defaultFilter))
+
+  const filterGroups = useMemo(() => {
+    const types = Array.from(new Set(response.data.map((item) => item.type).filter(Boolean))).map((value) => ({
+      value,
+      label: pluginTypeToName[value]?.name.replace(/^Yak(?:-|\s+)/, '') || value,
+      count: 0,
+    }))
+    const tags = Array.from(new Set(response.data.flatMap((item) => (item.tags || '').split(',').filter(Boolean)))).map(
+      (value) => ({ value, label: value, count: 0 }),
+    )
+    return [
+      { key: 'plugin_type', label: '插件类型', data: types },
+      { key: 'tags', label: 'Tag', data: tags },
+    ]
+  }, [response.data])
+  const filteredRecycleData = useMemo(() => {
+    const types = filters.plugin_type || []
+    const tags = filters.tags || []
+    return response.data.filter((item) => {
+      const typeMatch = !types.length || types.some((filter) => filter.value === item.type)
+      const tagMatch = !tags.length || tags.some((filter) => (item.tags || '').split(',').includes(filter.value))
+      return typeMatch && tagMatch
+    })
+  }, [filters, response.data])
+  const toggleFilter = useMemoizedFn((key: 'plugin_type' | 'tags', option: API.PluginsSearchData) => {
+    const selected = filters[key] || []
+    const active = selected.some((item) => item.value === option.value)
+    setFilters({
+      ...filters,
+      [key]: active ? selected.filter((item) => item.value !== option.value) : [...selected, option],
+    })
+  })
 
   const showIndex = useRef<number>(0)
   const setShowIndex = useMemoizedFn((index: number) => {
@@ -502,7 +536,29 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
       <OnlineJudgment isJudgingLogin={true}>
         <YakitSpin spinning={loading && isInitLoading.current}>
           <HubOuterList
-            title={t('HubListRecycle.title')}
+            title={
+              <div className={styles['hub-inline-title-filters']}>
+                <span>{t('HubListRecycle.title')}</span>
+                {filterGroups.map((group) => (
+                  <div className={styles['hub-inline-filter-group']} key={group.key}>
+                    <span>{group.label}</span>
+                    {group.data.map((option) => {
+                      const active = (filters[group.key] || []).some((item) => item.value === option.value)
+                      return (
+                        <YakitButton
+                          key={option.value}
+                          type={active ? 'primary' : 'text'}
+                          size="small"
+                          onClick={() => toggleFilter(group.key as 'plugin_type' | 'tags', option)}
+                        >
+                          {option.label}
+                        </YakitButton>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            }
             headerExtra={
               <div className={styles['hub-list-header-extra']}>
                 <YakitButton
@@ -534,8 +590,9 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
             search={search}
             setSearch={setSearch}
             onSearch={onSearch}
-            filters={{}}
-            setFilters={() => {}}
+            filters={filters}
+            setFilters={setFilters}
+            hideFilterTags={true}
           >
             {listLength > 0 ? (
               <div className={styles['hub-local-table-wrap']}>
@@ -543,7 +600,7 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
                   rowKey="uuid"
                   size="small"
                   columns={tableColumns}
-                  dataSource={response.data}
+                  dataSource={filteredRecycleData}
                   pagination={{
                     current: pageNum,
                     pageSize: pageSize,
