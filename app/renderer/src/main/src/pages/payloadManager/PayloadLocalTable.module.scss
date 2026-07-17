@@ -92,23 +92,7 @@
   .table-operation {
     display: flex;
     justify-content: center;
-    .copy {
-      cursor: pointer;
-      color: var(--Colors-Use-Neutral-Text-3-Secondary);
-    }
-    .delete {
-      cursor: pointer;
-      color: var(--Colors-Use-Error-Primary);
-    }
-    .edit {
-      cursor: pointer;
-      color: var(--Colors-Use-Neutral-Text-3-Secondary);
-    }
-
-    svg {
-      height: 16px;
-      width: 16px;
-    }
+    gap: 8px;
   }
   .show-total {
     color: var(--Colors-Use-Neutral-Text-3-Secondary);

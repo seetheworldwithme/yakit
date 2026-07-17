@@ -581,6 +581,11 @@
     }
   }
   .extra {
+    .file-operation {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
     .file-count {
       color: var(--Colors-Use-Neutral-Text-3-Secondary);
     }

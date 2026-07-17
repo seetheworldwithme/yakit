@@ -27,8 +27,6 @@ import {
   OutlineImportIcon,
   OutlinePaperclipIcon,
   OutlinePencilaltIcon,
-  OutlinePlusIcon,
-  OutlineRefreshIcon,
   OutlineSparklesIcon,
   OutlineTrashIcon,
   OutlineUploadIcon,
@@ -83,7 +81,7 @@ import { setClipboardText } from '@/utils/clipboard'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { YakitResizeBox } from '@/components/yakitUI/YakitResizeBox/YakitResizeBox'
 import { isEnpriTrace } from '@/utils/envfile'
-import { NewPayloadOnlineList } from './onlinePayload/NewPayloadOnlineList'
+// import { NewPayloadOnlineList } from './onlinePayload/NewPayloadOnlineList'
 import { UserInfoProps, useStore } from '@/store'
 import {
   apiDeleteOnlinePayloadList,
@@ -1168,15 +1166,15 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                 : t('NewPayloadLocalList.dictionaryManagement')}
             </div>
             <div className={styles['count']}>{getPayloadCount}</div>
-            {!onlyInsert && (
-              <YakitButton
-                type="text2"
-                icon={<OutlineRefreshIcon />}
-                onClick={() => {
-                  onQueryGroup()
-                }}
-              />
-            )}
+            {/*
+            <YakitButton
+              type="text2"
+              icon={<OutlineRefreshIcon />}
+              onClick={() => {
+                onQueryGroup()
+              }}
+            />
+            */}
           </div>
           <div className={styles['extra']}>
             {onlyInsert ? (
@@ -1194,6 +1192,7 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
               </>
             ) : (
               <div className={styles['option']}>
+                {/*
                 <Tooltip title={t('YakitButton.batchExport')}>
                   <YakitButton
                     type="text2"
@@ -1208,6 +1207,7 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                     }}
                   />
                 </Tooltip>
+                */}
                 <YakitDropdownMenu
                   menu={{
                     data: [
@@ -1278,9 +1278,7 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                     placement: 'bottomRight',
                   }}
                 >
-                  <Tooltip title={t('YakitButton.add_new')}>
-                    <YakitButton type="secondary2" icon={<OutlinePlusIcon />} />
-                  </Tooltip>
+                  <YakitButton type="secondary2">新增</YakitButton>
                 </YakitDropdownMenu>
               </div>
             )}
@@ -1482,11 +1480,7 @@ export const FileComponentClone: React.FC<FileComponentCloneProps> = (props) => 
         <div className={styles['drag-icon']}>
           <SolidDragsortIcon />
         </div>
-        {file.type === 'DataBase' ? (
-          <div className={classNames(styles['file-icon'], styles['file-icon-database'])}>
-            <SolidDatabaseIcon />
-          </div>
-        ) : (
+        {file.type !== 'DataBase' && (
           <div className={classNames(styles['file-icon'], styles['file-icon-document'])}>
             <SolidDocumenttextIcon />
           </div>
@@ -2589,11 +2583,7 @@ export const FileComponent: React.FC<FileComponentProps> = (props) => {
                   </div>
                 </>
               )}
-              {file.type === 'DataBase' ? (
-                <div className={classNames(styles['file-icon'], styles['file-icon-database'])}>
-                  <SolidDatabaseIcon />
-                </div>
-              ) : (
+              {file.type !== 'DataBase' && (
                 <div className={classNames(styles['file-icon'], styles['file-icon-document'])}>
                   <SolidDocumenttextIcon />
                 </div>
@@ -2612,6 +2602,8 @@ export const FileComponent: React.FC<FileComponentProps> = (props) => {
                 {file.type === 'DataBase' ? file.number : ''}
               </div>
               {!onlyInsert && (
+                <div className={styles['file-operation']}>
+                  {/*
                 <YakitDropdownMenu
                   menu={{
                     data: fileMenuData as YakitMenuItemProps[],
@@ -2684,6 +2676,14 @@ export const FileComponent: React.FC<FileComponentProps> = (props) => {
                     <SolidDotsverticalIcon />
                   </div>
                 </YakitDropdownMenu>
+                  */}
+                  <YakitButton type="text2" onClick={() => setEditInput(true)}>
+                    重命名
+                  </YakitButton>
+                  <YakitButton type="text2" colors="danger" onClick={() => setDeleteVisible(true)}>
+                    删除
+                  </YakitButton>
+                </div>
               )}
             </div>
           </div>
@@ -3114,9 +3114,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
                 <span className={styles['total-item-text']}>Selected</span>
                 <span className={styles['total-item-number']}>{selectPayloadArr?.length}</span>
               </div>
-            ) : (
-              t('PayloadLocalContent.fuzzModuleRenderHint')
-            )}
+            ) : null}
           </div>
         </div>
         {!onlyInsert && showContentType === 'table' && (
@@ -3144,6 +3142,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
                 }
               }}
             />
+            {/*
             {isNoSelect && (
               <YakitButton
                 type="outline2"
@@ -3156,6 +3155,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
                 {t('YakitButton.export')}
               </YakitButton>
             )}
+            */}
             {!isNoSelect && size && (
               <>
                 {size.width < 950 ? (
@@ -3196,7 +3196,6 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
               </>
             )}
             <YakitButton
-              icon={<OutlinePlusIcon />}
               onClick={() => {
                 const m = showYakitModal({
                   getContainer: document.getElementById('new-payload') || document.body,
@@ -3226,7 +3225,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
             >
               {t('PayloadLocalContent.extend')}
             </YakitButton>
-            {setExpand && Expand()}
+            {/* 暂时隐藏全局展开入口，保留展开逻辑以便后续恢复。 */}
           </div>
         )}
 
@@ -3951,6 +3950,8 @@ export const NewPayload: React.FC<NewPayloadProps> = (props) => {
   const [listLoading, setListLoading] = useState<boolean>(false)
   const [data, setData] = useState<DataItem[]>([])
   const [isOnlyShowLocal, setOnlyShowLocal] = useState<boolean>(true)
+  // 线上 Payload 暂不展示，保留组件与数据逻辑以便后续恢复。
+  const showOnlinePayload = false
 
   // 关闭Payload
   const [isClosePayload, setClosePayload] = useState<boolean>(false)
@@ -4110,12 +4111,12 @@ export const NewPayload: React.FC<NewPayloadProps> = (props) => {
       firstMinSize: 250,
       secondMinSize: 250,
     }
-    if (isOnlyShowLocal || !isEnpriTrace()) {
+    if (!showOnlinePayload || isOnlyShowLocal || !isEnpriTrace()) {
       p.firstRatio = '100%'
       p.secondRatio = '0%'
     }
     return p
-  }, [isOnlyShowLocal])
+  }, [isOnlyShowLocal, showOnlinePayload])
 
   useEffect(() => {
     if (userInfo.isLogin) {
@@ -4131,8 +4132,11 @@ export const NewPayload: React.FC<NewPayloadProps> = (props) => {
         <YakitResizeBox
           isVer={true}
           firstNodeStyle={{ padding: 0 }}
-          lineStyle={{ display: isOnlyShowLocal || !isEnpriTrace() ? 'none' : '' }}
-          secondNodeStyle={{ padding: 0, display: isOnlyShowLocal || !isEnpriTrace() ? 'none' : '' }}
+          lineStyle={{ display: !showOnlinePayload || isOnlyShowLocal || !isEnpriTrace() ? 'none' : '' }}
+          secondNodeStyle={{
+            padding: 0,
+            display: !showOnlinePayload || isOnlyShowLocal || !isEnpriTrace() ? 'none' : '',
+          }}
           firstNode={
             <NewPayloadLocalList
               listLoading={listLoading}
@@ -4151,6 +4155,8 @@ export const NewPayload: React.FC<NewPayloadProps> = (props) => {
             />
           }
           secondNode={
+            <>
+              {/*
             <NewPayloadOnlineList
               setGroup={setGroup}
               setFolder={setFolder}
@@ -4158,6 +4164,8 @@ export const NewPayload: React.FC<NewPayloadProps> = (props) => {
               showType={showType}
               setShowType={setShowType}
             />
+              */}
+            </>
           }
           {...ResizeBoxProps}
         />

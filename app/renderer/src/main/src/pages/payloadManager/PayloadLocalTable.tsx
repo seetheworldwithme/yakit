@@ -3,18 +3,11 @@ import { useMemoizedFn } from 'ahooks'
 import styles from './PayloadLocalTable.module.scss'
 import { failed, success, warn, info } from '@/utils/notification'
 import classNames from 'classnames'
-import { Divider, Form, Space, Table, Tooltip } from 'antd'
+import { Form, Space, Table, Tooltip } from 'antd'
 import { YakitCheckbox } from '@/components/yakitUI/YakitCheckbox/YakitCheckbox'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
-import {
-  OutlineArrowdownIcon,
-  OutlineArrowupIcon,
-  OutlineDocumentduplicateIcon,
-  OutlinePencilaltIcon,
-  OutlineSelectorIcon,
-  OutlineTrashIcon,
-} from '@/assets/icon/outline'
+import { OutlineArrowdownIcon, OutlineArrowupIcon, OutlineSelectorIcon } from '@/assets/icon/outline'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
 import { PaginationSchema, QueryGeneralRequest, QueryGeneralResponse } from '../invoker/schema'
 import { YakitInputNumber } from '@/components/yakitUI/YakitInputNumber/YakitInputNumber'
@@ -398,22 +391,20 @@ export const NewPayloadTable: React.FC<NewPayloadTableProps> = (props) => {
       render: (_, record: Payload) => {
         return (
           <div className={styles['table-operation']}>
-            <OutlineDocumentduplicateIcon
-              className={styles['copy']}
-              onClick={() => {
-                setClipboardText(record.Content)
-              }}
-            />
-            <Divider type="vertical" style={{ top: 1, height: 12, margin: '0px 12px' }} />
-            <OutlineTrashIcon
-              className={styles['delete']}
+            <YakitButton type="text2" onClick={() => setClipboardText(record.Content)}>
+              复制
+            </YakitButton>
+            <YakitButton
+              type="text2"
+              colors="danger"
               onClick={() => {
                 onDeletePayload && onDeletePayload({ Id: record.Id })
               }}
-            />
-            <Divider type="vertical" style={{ top: 1, height: 12, margin: '0px 12px' }} />
-            <OutlinePencilaltIcon
-              className={styles['edit']}
+            >
+              删除
+            </YakitButton>
+            <YakitButton
+              type="text2"
               onClick={() => {
                 const m = showYakitModal({
                   title: '编辑',
@@ -426,7 +417,9 @@ export const NewPayloadTable: React.FC<NewPayloadTableProps> = (props) => {
                   ),
                 })
               }}
-            />
+            >
+              编辑
+            </YakitButton>
           </div>
         )
       },
