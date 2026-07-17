@@ -40,6 +40,7 @@ vi.mock('@/utils/envfile', () => ({
   FetchSoftwareVersion: vi.fn(() => 'yakit'),
   getReleaseEditionName: vi.fn(() => 'Yakit'),
   isCommunityYakit: vi.fn(() => true),
+  isEnpriTrace: vi.fn(() => false),
   isEnpriTraceAgent: vi.fn(() => false),
 }))
 

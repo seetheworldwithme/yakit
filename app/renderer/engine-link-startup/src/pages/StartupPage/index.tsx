@@ -68,6 +68,7 @@ import memfitRightDark from '@/assets/memfit-right-dark.webm'
 import { SolidIrifyFontLogoIcon, SolidMemfitFontLogoIcon, SolidYakitFontLogoIcon } from '@/assets/colors'
 import { Theme, useTheme } from '@/hooks/useTheme'
 import { Lange, YakitSoftMode } from './components/SoftwareBasics'
+import { getEnterpriseBuiltInEngineAction } from './enterpriseEnginePolicy'
 import { yakitApp, yakitEngine } from '@/utils/electronBridge'
 import { useYakitStatus } from '@/hooks/useYakitStatus'
 import styles from './index.module.scss'
@@ -589,6 +590,23 @@ export const StartupPage: React.FC = () => {
         return
     }
   })
+
+  const enterpriseEngineActionRef = useRef<YakitStatusType>('')
+  useEffect(() => {
+    const action = getEnterpriseBuiltInEngineAction(isEnpriTrace(), yakitStatus)
+    if (!action) {
+      enterpriseEngineActionRef.current = ''
+      return
+    }
+    if (enterpriseEngineActionRef.current === yakitStatus) return
+
+    enterpriseEngineActionRef.current = yakitStatus
+    if (action === 'restore-and-relaunch') {
+      loadingClickCallback('install')
+    } else {
+      loadingClickCallback('update_yak', { downYak: true })
+    }
+  }, [yakitStatus])
 
   // 在 3 秒内，不断尝试让主进程取消所有正在执行的任务
   const cancelAllTasks = async () => {
@@ -1129,8 +1147,8 @@ export const StartupPage: React.FC = () => {
                   softLang={softLang}
                   setSoftLang={setSoftLang}
                 />
-                {/* 更新引擎 */}
-                {yaklangDownload && (
+                {/* 企业版固定使用安装包内置引擎，不展示联网更新弹窗 */}
+                {!isEnpriTrace() && yaklangDownload && (
                   <DownloadYaklang
                     isTop={isTop}
                     setIsTop={setIsTop}

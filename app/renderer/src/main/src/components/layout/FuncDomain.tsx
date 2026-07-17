@@ -2324,7 +2324,7 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
     const unRead = messageList.filter((item) => !item.isRead).length > 0
     return (
       (yakitLastVersion !== '' && removePrefixV(yakitLastVersion) !== removePrefixV(yakitVersion)) ||
-      lowerYaklangLastVersion ||
+      (!isEnpriTrace() && lowerYaklangLastVersion) ||
       unRead
     )
   }, [yakitVersion, yakitLastVersion, lowerYaklangLastVersion, messageList])
@@ -2482,20 +2482,23 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
                   isUpdate={isUpdateYakit}
                   onResetUpdateWait={() => setIsYakitUpdateWait(false)}
                 />
-                <UIOpUpdateYaklang
-                  version={yaklangVersion}
-                  lastVersion={yaklangLastVersion}
-                  localVersion={yaklangLocalVersion}
-                  moreYaklangVersionList={moreYaklangVersionList}
-                  isRemoteMode={isRemoteMode}
-                  onDownload={onDownload}
-                  role={userInfo.role}
-                  updateContent={communityYaklang}
-                  onUpdateEdit={UpdateContentEdit}
-                  onNoticeShow={setShow}
-                  isUpdate={isUpdateYaklang}
-                  isUpdateYakit={isUpdateYakit}
-                />
+                {/* 企业版安装包已内置 Yak 引擎，不展示引擎版本与更新入口 */}
+                {!isEnpriTrace() && (
+                  <UIOpUpdateYaklang
+                    version={yaklangVersion}
+                    lastVersion={yaklangLastVersion}
+                    localVersion={yaklangLocalVersion}
+                    moreYaklangVersionList={moreYaklangVersionList}
+                    isRemoteMode={isRemoteMode}
+                    onDownload={onDownload}
+                    role={userInfo.role}
+                    updateContent={communityYaklang}
+                    onUpdateEdit={UpdateContentEdit}
+                    onNoticeShow={setShow}
+                    isUpdate={isUpdateYaklang}
+                    isUpdateYakit={isUpdateYakit}
+                  />
+                )}
               </div>
               <div className={styles['history-version']}>
                 <div
