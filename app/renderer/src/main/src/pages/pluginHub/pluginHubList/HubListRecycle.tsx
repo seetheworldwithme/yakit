@@ -486,7 +486,7 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
       },
       {
         title: '上传者',
-        dataIndex: 'author',
+        dataIndex: 'authors',
         width: 140,
         ellipsis: true,
         render: (author: string) => author || '-',

@@ -48,7 +48,7 @@ export const HubSideBarList: YakitTabsProps[] = [
     label: 'PluginHubList.recycle',
     // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
     // icon: <OutlineTrashSecondIcon />,
-    hint: () => '回收站',
+    hint: () => '云端回收站',
   },
 ]
 

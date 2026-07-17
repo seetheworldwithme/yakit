@@ -15,7 +15,7 @@
     "own": "Cloud",
     "local": "Local",
     "setting": "Setting",
-    "recycle": "Recycle Bin",
+    "recycle": "Cloud Recycle Bin",
     "ownHint": "Cloud Plugins",
     "localHint": "Local Plugins",
     "clickToEnter": "Click to enter {{target}}",
@@ -108,7 +108,7 @@
     "paginationTotal": "Total {{total}} items"
   },
   "HubListRecycle": {
-    "title": "Recycle Bin",
+    "title": "Cloud Recycle Bin",
     "deleteBusy": "This plugin is currently deleting, please try again later",
     "restore": "Restore",
     "deleteConfirm": "Are you sure you want to delete the plugin?"

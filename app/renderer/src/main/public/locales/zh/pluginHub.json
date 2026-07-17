@@ -15,7 +15,7 @@
     "own": "云端",
     "local": "本地",
     "setting": "配置",
-    "recycle": "回收站",
+    "recycle": "云端回收站",
     "ownHint": "云端插件",
     "localHint": "本地插件",
     "clickToEnter": "点击进入{{target}}",
@@ -108,7 +108,7 @@
     "paginationTotal": "共 {{total}} 条"
   },
   "HubListRecycle": {
-    "title": "回收站",
+    "title": "云端回收站",
     "deleteBusy": "该插件正在执行删除操作,请稍后再试",
     "restore": "还原",
     "deleteConfirm": "是否要删除插件"
