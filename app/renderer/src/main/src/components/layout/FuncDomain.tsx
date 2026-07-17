@@ -1061,7 +1061,7 @@ const GetUIOpSettingMenu = () => {
       //     },
       //   ],
       // },
-      { type: 'divider' },
+      // { type: 'divider' },
       {
         key: 'logs',
         label: ' 日志文件',
@@ -1132,7 +1132,7 @@ const GetUIOpSettingMenu = () => {
     //     },
     //   ],
     // },
-    { type: 'divider' },
+    // { type: 'divider' },
     DBCacheManager(),
     {
       key: 'store',
@@ -1154,37 +1154,38 @@ const GetUIOpSettingMenu = () => {
     //     { label: '远程', key: 'remote' },
     //   ],
     // },
-    { type: 'divider' },
-    {
-      key: 'systemSet',
-      label: '系统设置',
-      children: [
-        { key: 'reverse', label: '全局反连' },
-        { key: 'agent', label: '系统代理' },
-        // { key: "engineVar",label: "引擎环境变量" },
-        { key: 'config-network', label: '全局配置' },
-        // { key: 'setShortcutKey', label: '快捷键设置' },
-        // { key: 'configMcp', label: 'Yak Mcp配置' },
-      ],
-    },
-    {
-      key: 'diagnose-network',
-      label: '网络诊断',
-    },
+    // { type: 'divider' },
+    // {
+    //   key: 'systemSet',
+    //   label: '系统设置',
+    //   children: [
+    //     { key: 'reverse', label: '全局反连' },
+    //     { key: 'agent', label: '系统代理' },
+    //     // { key: "engineVar",label: "引擎环境变量" },
+    //     { key: 'config-network', label: '全局配置' },
+    //     // { key: 'setShortcutKey', label: '快捷键设置' },
+    //     // { key: 'configMcp', label: 'Yak Mcp配置' },
+    //   ],
+    // },
+    { key: 'agent', label: '系统代理' },
+    // {
+    //   key: 'diagnose-network',
+    //   label: '网络诊断',
+    // },
     // {
     //   key: 'refreshMenu',
     //   label: '刷新菜单',
     // },
-    { type: 'divider' },
-    {
-      key: 'logs',
-      label: ' 日志文件',
-      children: [
-        { label: '渲染端日志', key: 'renderLog' },
-        { label: '引擎日志', key: 'engineLog' },
-        { label: '调试信息日志', key: 'printLog' },
-      ],
-    },
+    // { type: 'divider' },
+    // {
+    //   key: 'logs',
+    //   label: ' 日志文件',
+    //   children: [
+    //     { label: '渲染端日志', key: 'renderLog' },
+    //     { label: '引擎日志', key: 'engineLog' },
+    //     { label: '调试信息日志', key: 'printLog' },
+    //   ],
+    // },
   ].filter((item) => item)
 }
 

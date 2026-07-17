@@ -328,8 +328,8 @@ export const defSort: SortProps = {
 }
 
 export const SourceType = [
-  { text: (t) => 'MITM', value: 'mitm' },
-  { text: (t) => t('HTTPFlowTable.plugin'), value: 'scan' },
+  { text: (t) => 'MITM 历史流量', value: 'mitm' },
+  { text: (t) => '插件历史流量', value: 'scan' },
 ]
 
 export const contentType: FiltersItemProps[] = [
