@@ -1210,6 +1210,7 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                   />
                 </Tooltip>
                 */}
+                {/*
                 <YakitDropdownMenu
                   menu={{
                     data: [
@@ -1282,6 +1283,25 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                 >
                   <YakitButton type="secondary2">新增</YakitButton>
                 </YakitDropdownMenu>
+                */}
+                <YakitButton
+                  type="secondary2"
+                  onClick={() => {
+                    const uuid = uuidv4()
+                    setData([
+                      {
+                        type: 'Folder',
+                        name: '',
+                        id: uuid,
+                        isCreate: true,
+                        number: 0,
+                      },
+                      ...data,
+                    ])
+                  }}
+                >
+                  新增字典文件夹
+                </YakitButton>
               </div>
             )}
           </div>
@@ -1496,7 +1516,7 @@ export const FileComponentClone: React.FC<FileComponentCloneProps> = (props) => 
           [styles['extra-hover']]: !menuOpen,
         })}
       >
-        <div className={styles['file-count']}>{file.type === 'DataBase' ? file.number : ''}</div>
+        {/* 暂时隐藏字典数量，保留数据字段以便后续恢复。 */}
         <div
           className={styles['extra-icon']}
           onClick={(e) => {
@@ -2600,9 +2620,7 @@ export const FileComponent: React.FC<FileComponentProps> = (props) => {
               })}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className={styles['file-count']} style={onlyInsert ? { display: 'block' } : {}}>
-                {file.type === 'DataBase' ? file.number : ''}
-              </div>
+              {/* 暂时隐藏字典数量，保留数据字段以便后续恢复。 */}
               {!onlyInsert && (
                 <div className={styles['file-operation']}>
                   {/*
@@ -3225,7 +3243,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
                 })
               }}
             >
-              {t('PayloadLocalContent.extend')}
+              新增字典
             </YakitButton>
             {/* 暂时隐藏全局展开入口，保留展开逻辑以便后续恢复。 */}
           </div>
