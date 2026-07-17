@@ -17,6 +17,7 @@ const { windowStatePatch } = require('./filePath')
 const Screenshots = require('./screenshots')
 const windowStateKeeper = require('electron-window-state')
 const { MenuTemplate } = require('./menu')
+const { clearWindowRenderState, closeWindow } = require('./windowLifecycle')
 const {
   renderLogOutputFile,
   getAllLogHandles,
@@ -366,8 +367,7 @@ function markRenderOk(curWin) {
 }
 // 关闭、reload清理渲染map
 function clearRenderMap(targetWin) {
-  renderMap.delete(targetWin.id)
-  messageQueue.delete(targetWin.id)
+  clearWindowRenderState(targetWin, renderMap, messageQueue)
 }
 // 窗口隐藏
 function winHide(targetWin) {
@@ -422,11 +422,7 @@ function showMainWindowWhenReady() {
 }
 // 窗口关闭
 function winClose(targetWin, removeEvent) {
-  if (targetWin && !targetWin.isDestroyed()) {
-    removeEvent && targetWin.removeAllListeners('close')
-    targetWin.close()
-    targetWin = null
-  }
+  closeWindow(targetWin, removeEvent)
 }
 // 获取当前窗口
 function getActiveWindow() {
@@ -615,8 +611,8 @@ function registerGlobalIPC() {
     const exitCleanupOperation = () => {
       clearRenderMap(engineLinkWin)
       clearRenderMap(win)
-      winClose(engineLinkWin, false)
-      winClose(win, false)
+      winClose(engineLinkWin, true)
+      winClose(win, true)
       closeAllLogHandles()
       app.exit()
     }
