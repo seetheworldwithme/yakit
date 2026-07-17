@@ -82,6 +82,11 @@
         font-size: 12px;
         box-sizing: border-box;
 
+        :global(.virtual-col-title) {
+          justify-content: center;
+          text-align: center;
+        }
+
         &:last-child {
           border-right: 0;
         }
@@ -249,6 +254,8 @@
           border-top: 1px solid var(--Colors-Use-Neutral-Border);
           display: flex;
           align-items: center;
+          justify-content: center;
+          text-align: center;
           color: var(--Colors-Use-Neutral-Text-1-Title);
 
           &:first-child {

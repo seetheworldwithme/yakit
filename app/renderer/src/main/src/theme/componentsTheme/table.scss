@@ -8,6 +8,7 @@
   color: var(--Colors-Use-Main-Primary) !important;
   border-bottom: 1px solid var(--Colors-Use-Main-Border) !important;
   font-weight: 600;
+  text-align: center !important;
 
   &:hover {
     background: var(--Colors-Use-Main-Border) !important;
@@ -19,9 +20,16 @@
   background: var(--Colors-Use-Main-Border) !important;
 }
 
+// antd 的排序与筛选表头使用 flex，单靠 text-align 无法让内容居中
+.ant-table-wrapper .ant-table .ant-table-thead > tr > th .ant-table-column-sorters,
+.ant-table-wrapper .ant-table .ant-table-thead > tr > th .ant-table-filter-column {
+  justify-content: center;
+}
+
 // 数据行（内容区）统一用原表头灰做底色
 .ant-table-wrapper .ant-table .ant-table-tbody > tr > td {
   background: var(--Colors-Use-Neutral-Bg-Hover) !important;
+  text-align: center !important;
 }
 .ant-table-wrapper .ant-table .ant-table-tbody > tr:hover > td {
   background: var(--Colors-Use-Neutral-Bg) !important;
