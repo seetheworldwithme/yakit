@@ -1293,7 +1293,12 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     <div className={styles['hub-inline-title-filters']}>
                       <span>{t('PluginTabName.localPlugin')}</span>
                       {filterGroup
-                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                        .filter((group) => ['plugin_type', 'plugin_group', 'tags'].includes(group.groupKey))
+                        .sort(
+                          (a, b) =>
+                            ['plugin_type', 'plugin_group', 'tags'].indexOf(a.groupKey) -
+                            ['plugin_type', 'plugin_group', 'tags'].indexOf(b.groupKey),
+                        )
                         .map((group) => {
                           const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
                             []) as API.PluginsSearchData[]
@@ -1368,7 +1373,8 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                 }
                 listHeaderRightExtra={
                   <div className={styles['hub-list-header-right-extra']}>
-                    <YakitCheckbox
+                    {/* 按产品要求隐藏「不下载」勾选按钮及其与添加分组间的分割线，保留逻辑便于后续恢复 */}
+                    {/* <YakitCheckbox
                       disabled={!(selectList.length || allChecked)}
                       checked={skipUpdate}
                       onChange={setYakScriptSkipUpdate}
@@ -1378,7 +1384,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         <OutlineExclamationcircleIcon className={styles['exclamationcircleIcon']} />
                       </Tooltip>
                     </YakitCheckbox>
-                    <div className={styles['divider-style']}></div>
+                    <div className={styles['divider-style']}></div> */}
                     {showGroupList.length > 0 && (
                       <div className={styles['header-filter-tag']}>
                         {showGroupList.length <= 2 ? (

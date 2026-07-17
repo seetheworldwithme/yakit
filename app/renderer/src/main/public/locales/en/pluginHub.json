@@ -12,11 +12,11 @@
   },
   "PluginHubList": {
     "online": "Plugin Hub",
-    "own": "My Plugins",
+    "own": "Cloud",
     "local": "Local",
     "setting": "Setting",
     "recycle": "Recycle Bin",
-    "ownHint": "My Plugins",
+    "ownHint": "Cloud Plugins",
     "localHint": "Local Plugins",
     "clickToEnter": "Click to enter {{target}}",
     "list": "list",
@@ -63,7 +63,7 @@
   },
   "HubListOwn": {
     "newPlugin": "New Plugin",
-    "myPlugins": "My Plugins",
+    "myPlugins": "Cloud Plugins",
     "noDataDesc": "Create a plugin and sync it to the cloud to make your own plugin",
     "downloadTip": "After downloading in remote mode, check the export file in the ~\\Yakit\\yakit-projects\\projects path; no file extension is required",
     "uploadPlugin": "Upload Plugin",

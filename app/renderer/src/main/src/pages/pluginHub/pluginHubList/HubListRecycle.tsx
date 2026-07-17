@@ -86,21 +86,27 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
     const tags = Array.from(new Set(response.data.flatMap((item) => (item.tags || '').split(',').filter(Boolean)))).map(
       (value) => ({ value, label: value, count: 0 }),
     )
+    const groups = Array.from(
+      new Set(response.data.flatMap((item) => (item.group || '').split(',').filter(Boolean))),
+    ).map((value) => ({ value, label: value, count: 0 }))
     return [
       { key: 'plugin_type', label: '插件类型', data: types },
+      { key: 'plugin_group', label: '插件组', data: groups },
       { key: 'tags', label: 'Tag', data: tags },
     ]
   }, [response.data])
   const filteredRecycleData = useMemo(() => {
     const types = filters.plugin_type || []
+    const groups = filters.plugin_group || []
     const tags = filters.tags || []
     return response.data.filter((item) => {
       const typeMatch = !types.length || types.some((filter) => filter.value === item.type)
+      const groupMatch = !groups.length || groups.some((filter) => (item.group || '').split(',').includes(filter.value))
       const tagMatch = !tags.length || tags.some((filter) => (item.tags || '').split(',').includes(filter.value))
-      return typeMatch && tagMatch
+      return typeMatch && groupMatch && tagMatch
     })
   }, [filters, response.data])
-  const toggleFilter = useMemoizedFn((key: 'plugin_type' | 'tags', option: API.PluginsSearchData) => {
+  const toggleFilter = useMemoizedFn((key: 'plugin_type' | 'plugin_group' | 'tags', option: API.PluginsSearchData) => {
     const selected = filters[key] || []
     const active = selected.some((item) => item.value === option.value)
     setFilters({
@@ -545,7 +551,7 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
                           key={option.value}
                           type={active ? 'primary' : 'text'}
                           size="small"
-                          onClick={() => toggleFilter(group.key as 'plugin_type' | 'tags', option)}
+                          onClick={() => toggleFilter(group.key as 'plugin_type' | 'plugin_group' | 'tags', option)}
                         >
                           {option.label}
                         </YakitButton>

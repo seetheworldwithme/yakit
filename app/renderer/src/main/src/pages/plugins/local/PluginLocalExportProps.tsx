@@ -174,7 +174,7 @@ export const PluginLocalExportForm = forwardRef((props: PluginLocalExportFormPro
 
   useEffect(() => {
     if (!isRemoteEngine) {
-      ipcRenderer.invoke('GetProjectsFilePath').then((path) => {
+      ipcRenderer.invoke('GetPluginExportDefaultPath').then((path) => {
         form.setFieldsValue({ OutputPluginDir: path })
       })
     }

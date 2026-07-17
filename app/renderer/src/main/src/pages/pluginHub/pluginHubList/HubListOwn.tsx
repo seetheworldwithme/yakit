@@ -696,7 +696,7 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
       },
       {
         title: '上传者',
-        dataIndex: 'author',
+        dataIndex: 'authors',
         width: 140,
         ellipsis: true,
         render: (author: string) => author || '-',
@@ -729,19 +729,25 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
       {
         title: t('HubListLocal.operation'),
         width: 150,
-        render: (_: any, record: YakitPluginOnlineDetail) => (
-          <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
-            <YakitButton type="text2" onClick={() => onFooterExtraDownload(record)}>
-              {t('YakitButton.download')}
-            </YakitButton>
-            <YakitButton type="text2" danger onClick={() => onFooterExtraDel(record)}>
-              {t('YakitButton.delete')}
-            </YakitButton>
-          </div>
-        ),
+        render: (_: any, record: YakitPluginOnlineDetail) => {
+          // 权限：仅作者本人或管理员可删除
+          const canManage = record.user_id === userinfo.user_id || userinfo.role === 'admin'
+          return (
+            <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
+              <YakitButton type="text2" onClick={() => onFooterExtraDownload(record)}>
+                {t('YakitButton.download')}
+              </YakitButton>
+              {canManage && (
+                <YakitButton type="text2" danger onClick={() => onFooterExtraDel(record)}>
+                  {t('YakitButton.delete')}
+                </YakitButton>
+              )}
+            </div>
+          )
+        },
       },
     ]
-  }, [allChecked, selectList, t])
+  }, [allChecked, selectList, t, userinfo.user_id, userinfo.role])
   // 单项副标题
   const optSubTitle = useMemoizedFn((info: YakitPluginOnlineDetail) => {
     return <>{info.is_private ? <SolidPrivatepluginIcon /> : statusTag[`${info.status}`]}</>
@@ -815,7 +821,12 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
                     <div className={styles['hub-inline-title-filters']}>
                       <span>{t('HubListOwn.myPlugins')}</span>
                       {filterGroup
-                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                        .filter((group) => ['plugin_type', 'plugin_group', 'tags'].includes(group.groupKey))
+                        .sort(
+                          (a, b) =>
+                            ['plugin_type', 'plugin_group', 'tags'].indexOf(a.groupKey) -
+                            ['plugin_type', 'plugin_group', 'tags'].indexOf(b.groupKey),
+                        )
                         .map((group) => {
                           const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
                             []) as API.PluginsSearchData[]

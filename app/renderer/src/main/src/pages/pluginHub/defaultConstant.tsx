@@ -26,7 +26,7 @@ export const HubSideBarList: YakitTabsProps[] = [
     label: 'PluginHubList.own',
     // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
     // icon: <OutlineOwnPluginIcon />,
-    hint: () => '我的插件',
+    hint: () => '云端插件',
   },
   {
     value: 'local',
@@ -35,13 +35,14 @@ export const HubSideBarList: YakitTabsProps[] = [
     // icon: <OutlineLocalPluginIcon />,
     hint: () => '本地插件',
   },
-  {
-    value: 'setting',
-    label: 'PluginHubList.setting',
-    // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
-    // icon: <OutlineAdjustmentsIcon />,
-    hint: () => '配置',
-  },
+  // 按产品要求隐藏插件仓库「配置（全局变量）」子标签入口，保留页面/逻辑便于后续恢复
+  // {
+  //   value: 'setting',
+  //   label: 'PluginHubList.setting',
+  //   // 按产品要求隐藏子标签前的图标，保留配置位置便于后续恢复
+  //   // icon: <OutlineAdjustmentsIcon />,
+  //   hint: () => '配置',
+  // },
   {
     value: 'recycle',
     label: 'PluginHubList.recycle',

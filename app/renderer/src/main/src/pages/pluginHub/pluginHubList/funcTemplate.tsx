@@ -1202,6 +1202,9 @@ export const OwnOptFooterExtra: React.FC<OwnOptFooterExtraProps> = memo((props) 
     }
   })
 
+  // 权限：仅作者本人或管理员可删除 / 改公开私密
+  const canManage = info.user_id === userinfo.user_id || userinfo.role === 'admin'
+
   return (
     <div className={styles['hub-opt-footer-extra']}>
       <YakitButton
@@ -1212,31 +1215,33 @@ export const OwnOptFooterExtra: React.FC<OwnOptFooterExtraProps> = memo((props) 
       />
       <div className={styles['divider-style']}></div>
       <YakitButton type="text2" icon={<OutlineShareIcon />} onClick={onShare} />
-      <div className={styles['divider-style']}></div>
-      <FuncFilterPopover
-        icon={<OutlineDotshorizontalIcon />}
-        menu={{
-          type: 'primary',
-          data: [
-            {
-              key: 'state',
-              label: info.is_private ? t('OwnOptFooterExtra.makePublic') : t('OwnOptFooterExtra.makePrivate'),
-              itemIcon: info.is_private ? <OutlineLockopenIcon /> : <OutlineLockclosedIcon />,
-              disabled: stateLoading,
-            },
-            {
-              key: 'del',
-              label: t('OwnOptFooterExtra.deleteOnline'),
-              type: 'danger',
-              itemIcon: <OutlineTrashIcon />,
-              disabled: delLoading,
-            },
-          ],
-          onClick: ({ key }) => onMenu(key),
-        }}
-        button={{ type: 'text2' }}
-        placement="bottomRight"
-      />
+      {canManage && <div className={styles['divider-style']}></div>}
+      {canManage && (
+        <FuncFilterPopover
+          icon={<OutlineDotshorizontalIcon />}
+          menu={{
+            type: 'primary',
+            data: [
+              {
+                key: 'state',
+                label: info.is_private ? t('OwnOptFooterExtra.makePublic') : t('OwnOptFooterExtra.makePrivate'),
+                itemIcon: info.is_private ? <OutlineLockopenIcon /> : <OutlineLockclosedIcon />,
+                disabled: stateLoading,
+              },
+              {
+                key: 'del',
+                label: t('OwnOptFooterExtra.deleteOnline'),
+                type: 'danger',
+                itemIcon: <OutlineTrashIcon />,
+                disabled: delLoading,
+              },
+            ],
+            onClick: ({ key }) => onMenu(key),
+          }}
+          button={{ type: 'text2' }}
+          placement="bottomRight"
+        />
+      )}
     </div>
   )
 })

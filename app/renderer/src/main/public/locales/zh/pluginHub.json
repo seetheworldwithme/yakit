@@ -12,11 +12,11 @@
   },
   "PluginHubList": {
     "online": "插件商店",
-    "own": "我的",
+    "own": "云端",
     "local": "本地",
     "setting": "配置",
     "recycle": "回收站",
-    "ownHint": "我的插件",
+    "ownHint": "云端插件",
     "localHint": "本地插件",
     "clickToEnter": "点击进入{{target}}",
     "list": "列表",
@@ -63,7 +63,7 @@
   },
   "HubListOwn": {
     "newPlugin": "新建插件",
-    "myPlugins": "我的插件",
+    "myPlugins": "云端插件",
     "noDataDesc": "可新建插件同步至云端，创建属于自己的插件",
     "downloadTip": "远程模式下导出后请打开~Yakit\\yakit-projects\\projects路径查看导出文件，文件名无需填写后缀",
     "uploadPlugin": "上传插件",

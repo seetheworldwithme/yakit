@@ -1,7 +1,24 @@
-const { ipcMain } = require('electron')
+const { ipcMain, app } = require('electron')
 const path = require('path')
 const fs = require('fs')
 module.exports = (win, getClient) => {
+  // 插件导出默认路径：mac/win 为桌面下 plugin 文件夹，linux 为根目录下 plugin 文件夹
+  ipcMain.handle('GetPluginExportDefaultPath', async () => {
+    try {
+      switch (process.platform) {
+        case 'darwin':
+        case 'win32':
+          return path.join(app.getPath('desktop'), 'plugin')
+        case 'linux':
+          return '/plugin'
+        default:
+          return path.join(app.getPath('desktop'), 'plugin')
+      }
+    } catch (error) {
+      console.log(`获取插件导出默认路径失败：${error}`)
+      return path.join(app.getPath('home') || '', 'plugin')
+    }
+  })
   // asyncQueryYakScript wrapper
   const asyncQueryYakScript = (params) => {
     return new Promise((resolve, reject) => {
