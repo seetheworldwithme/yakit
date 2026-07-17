@@ -213,7 +213,7 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
   const messageWarnRef = useRef<boolean>(false)
 
   // 上传文件/手动输入
-  const [uploadType, setUploadType] = useState<'dragger' | 'editor'>('dragger')
+  const [uploadType, setUploadType] = useState<'dragger' | 'editor'>(isDictionaries ? 'dragger' : 'editor')
 
   // 存储类型
   const [storeType, setStoreType] = useState<'database' | 'file'>()
@@ -365,30 +365,32 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
               </div>
             )}
             <div className={styles['card-box']}>
-              <div className={styles['card-heard']}>
-                <YakitRadioButtons
-                  value={uploadType}
-                  onChange={(e) => {
-                    setEditorValue('')
-                    setUploadList([])
-                    setUploadType(e.target.value)
-                  }}
-                  buttonStyle="solid"
-                  options={[
-                    {
-                      value: 'dragger',
-                      label: t('CreateDictionaries.uploadFile'),
-                    },
-                    {
-                      value: 'editor',
-                      label: t('CreateDictionaries.manualInput'),
-                    },
-                  ]}
-                  // size={"small"}
-                />
-              </div>
+              {isDictionaries && (
+                <div className={styles['card-heard']}>
+                  <YakitRadioButtons
+                    value={uploadType}
+                    onChange={(e) => {
+                      setEditorValue('')
+                      setUploadList([])
+                      setUploadType(e.target.value)
+                    }}
+                    buttonStyle="solid"
+                    options={[
+                      {
+                        value: 'dragger',
+                        label: t('CreateDictionaries.uploadFile'),
+                      },
+                      {
+                        value: 'editor',
+                        label: t('CreateDictionaries.manualInput'),
+                      },
+                    ]}
+                    // size={"small"}
+                  />
+                </div>
+              )}
               <>
-                {uploadType === 'dragger' && (
+                {isDictionaries && uploadType === 'dragger' && (
                   <div className={styles['upload-dragger-box']}>
                     <Dragger
                       className={styles['upload-dragger']}
