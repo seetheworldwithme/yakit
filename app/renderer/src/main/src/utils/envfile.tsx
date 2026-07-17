@@ -281,15 +281,5 @@ export const GetConnectPort = () => {
 }
 
 export const GetMainColor = (themeMode: Theme) => {
-  switch (fetchEnv()) {
-    case 'irify':
-    case 'irify-enterprise':
-      return themeMode === 'dark' ? '#B081FF' : '#6A44A9'
-    case 'memfit':
-      return themeMode === 'dark' ? '#5E9DEA' : '#2E63B3'
-    case 'enterprise':
-    case 'simple-enterprise':
-    case 'yakit':
-      return '#0EA5E9'
-  }
+  return themeMode === 'dark' ? '#0EA5E9' : '#0284C7'
 }
