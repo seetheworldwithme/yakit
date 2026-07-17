@@ -33,6 +33,7 @@ const {
 const { engineCancelRequestWithProgress, yakitCancelRequestWithProgress } = require('./utils/requestWithProgress')
 const { getCheckTextUrl, fetchSpecifiedYakVersionHash } = require('../handlers/utils/network')
 const { engineLogOutputFileAndUI } = require('../logFile')
+const { findEmbeddedEngineEntry } = require('../embeddedEngineArchive')
 
 const userChromeDataDir = path.join(YakitProjectPath, 'chrome-profile')
 const authMeta = []
@@ -777,28 +778,12 @@ module.exports = {
           }
 
           console.info('we will extract file to: ' + buildInPath)
-          const extractedFile = (() => {
-            switch (os.platform()) {
-              case 'darwin':
-                switch (os.arch()) {
-                  case 'arm64':
-                    return 'bins/yak_darwin_arm64'
-                  default:
-                    return 'bins/yak_darwin_amd64'
-                }
-              case 'win32':
-                return 'bins/yak_windows_amd64.exe'
-              case 'linux':
-                switch (os.arch()) {
-                  case 'arm64':
-                    return 'bins/yak_linux_arm64'
-                  default:
-                    return 'bins/yak_linux_amd64'
-                }
-              default:
-                return ''
-            }
-          })()
+          const extractedFile = findEmbeddedEngineEntry(zipHandler.entries(), os.platform(), os.arch())
+          if (!extractedFile) {
+            reject(`Embedded engine entry not found for ${os.platform()} ${os.arch()}`)
+            zipHandler.close()
+            return
+          }
           zipHandler.extract(extractedFile, buildInPath, (err, res) => {
             if (!fs.existsSync(buildInPath)) {
               reject(`Extract BuildIn Engine Failed`)
@@ -1099,28 +1084,12 @@ module.exports = {
           }
 
           console.info('we will extract file to: ' + buildInPath)
-          const extractedFile = (() => {
-            switch (os.platform()) {
-              case 'darwin':
-                switch (os.arch()) {
-                  case 'arm64':
-                    return 'bins/yak_darwin_arm64'
-                  default:
-                    return 'bins/yak_darwin_amd64'
-                }
-              case 'win32':
-                return 'bins/yak_windows_amd64.exe'
-              case 'linux':
-                switch (os.arch()) {
-                  case 'arm64':
-                    return 'bins/yak_linux_arm64'
-                  default:
-                    return 'bins/yak_linux_amd64'
-                }
-              default:
-                return ''
-            }
-          })()
+          const extractedFile = findEmbeddedEngineEntry(zipHandler.entries(), os.platform(), os.arch())
+          if (!extractedFile) {
+            reject(`Embedded engine entry not found for ${os.platform()} ${os.arch()}`)
+            zipHandler.close()
+            return
+          }
           zipHandler.extract(extractedFile, buildInPath, (err, res) => {
             if (!fs.existsSync(buildInPath)) {
               reject(`Extract BuildIn Engine Failed`)

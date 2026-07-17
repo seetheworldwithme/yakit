@@ -38,6 +38,11 @@ module.exports = async function (context) {
         to: 'yakit-projects/yak-engine/yak.exe',
       },
       {
+        // 同时保留可恢复的内置引擎包，供“恢复内置引擎”和版本检测使用
+        from: 'bins/yak_windows_amd64.zip',
+        to: 'bins/yak.zip',
+      },
+      {
         from: 'LICENSE.md',
         to: 'LICENSE.md',
       },
