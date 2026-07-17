@@ -700,12 +700,13 @@ export const FuncDomain: React.FC<FuncDomainProp> = React.memo((props) => {
           {!hideNotice && !isEnpriTraceAgent() && (
             <UIOpNotice isEngineLink={isEngineLink} isRemoteMode={isRemoteMode} onLogin={() => setLoginShow(true)} />
           )}
-          {!showProjectManage && SHOW_HEADER_SETTING_USER && (
+          {!showProjectManage && (
             <UIOpSetting
               engineMode={engineMode}
               onEngineModeChange={onEngineModeChange}
               typeCallback={typeCallback}
               mcp={mcp}
+              hideTrigger={!SHOW_HEADER_SETTING_USER}
             />
           )}
         </div>
@@ -969,6 +970,8 @@ interface UIOpSettingProp {
   onEngineModeChange: (type: YaklangEngineMode) => any
   typeCallback: (type: YakitSettingCallbackType) => any
   mcp: mcpStreamHooks
+  /** 隐藏旧顶栏入口，但保留设置菜单事件处理 */
+  hideTrigger?: boolean
 }
 
 /** @name 菜单模式切换 目前只有Yakit 社区版有 */
@@ -1077,25 +1080,25 @@ const GetUIOpSettingMenu = () => {
       key: 'pcapfix',
       label: '网卡权限修复',
     },
-    {
-      key: 'explab',
-      label: '试验性功能',
-      children: [
-        {
-          key: 'debug-monaco-editor',
-          label: '(DEV)调试Playground',
-        },
-        {
-          key: 'debug-traffic-analize',
-          label: '流量分析',
-        },
-        {
-          key: 'run-node',
-          label: '运行节点',
-        },
-        // { key: 'mcp', label: 'Yak Mcp' },
-      ],
-    },
+    // {
+    //   key: 'explab',
+    //   label: '试验性功能',
+    //   children: [
+    //     {
+    //       key: 'debug-monaco-editor',
+    //       label: '(DEV)调试Playground',
+    //     },
+    //     {
+    //       key: 'debug-traffic-analize',
+    //       label: '流量分析',
+    //     },
+    //     {
+    //       key: 'run-node',
+    //       label: '运行节点',
+    //     },
+    //     // { key: 'mcp', label: 'Yak Mcp' },
+    //   ],
+    // },
     ModeSwitch(),
     // {
     //   key: 'themeSwitching',
@@ -1135,14 +1138,14 @@ const GetUIOpSettingMenu = () => {
       key: 'store',
       label: '配置插件源',
     },
-    {
-      key: 'cve-database',
-      label: 'CVE 数据库',
-      children: [
-        { label: '全量更新', key: 'cve-database-all-update' },
-        { label: '差量更新', key: 'cve-database-differential-update' },
-      ],
-    },
+    // {
+    //   key: 'cve-database',
+    //   label: 'CVE 数据库',
+    //   children: [
+    //     { label: '全量更新', key: 'cve-database-all-update' },
+    //     { label: '差量更新', key: 'cve-database-differential-update' },
+    //   ],
+    // },
     // {
     //   key: 'link',
     //   label: '切换连接模式',
@@ -1186,7 +1189,7 @@ const GetUIOpSettingMenu = () => {
 }
 
 const UIOpSetting: React.FC<UIOpSettingProp> = React.memo((props) => {
-  const { engineMode, onEngineModeChange, typeCallback, mcp } = props
+  const { engineMode, onEngineModeChange, typeCallback, mcp, hideTrigger = false } = props
 
   const [runNodeModalVisible, setRunNodeModalVisible] = useState<boolean>(false)
   const [show, setShow] = useState<boolean>(false)
@@ -1384,20 +1387,22 @@ const UIOpSetting: React.FC<UIOpSettingProp> = React.memo((props) => {
 
   return (
     <>
-      <YakitPopover
-        overlayClassName={classNames(styles['ui-op-dropdown'], styles['ui-op-setting-dropdown'])}
-        placement={'bottom'}
-        content={menu}
-        visible={show}
-        onVisibleChange={(visible) => setShow(visible)}
-        trigger="click"
-      >
-        <div className={styles['ui-op-btn-wrapper']}>
-          <div className={classNames(styles['op-btn-body'], { [styles['op-btn-body-hover']]: show })}>
-            <UISettingSvgIcon className={show ? styles['icon-hover-style'] : styles['icon-style']} />
+      {!hideTrigger && (
+        <YakitPopover
+          overlayClassName={classNames(styles['ui-op-dropdown'], styles['ui-op-setting-dropdown'])}
+          placement={'bottom'}
+          content={menu}
+          visible={show}
+          onVisibleChange={(visible) => setShow(visible)}
+          trigger="click"
+        >
+          <div className={styles['ui-op-btn-wrapper']}>
+            <div className={classNames(styles['op-btn-body'], { [styles['op-btn-body-hover']]: show })}>
+              <UISettingSvgIcon className={show ? styles['icon-hover-style'] : styles['icon-style']} />
+            </div>
           </div>
-        </div>
-      </YakitPopover>
+        </YakitPopover>
+      )}
       <DatabaseUpdateModal
         available={available}
         visible={dataBaseUpdateVisible}
