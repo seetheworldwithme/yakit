@@ -19,7 +19,7 @@ import ReactResizeDetector from 'react-resize-detector'
 import { generateYakCodeByRequest, RequestToYakCodeTemplate } from '../../pages/invoker/fromPacketToYakCode'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { TableVirtualResize } from '../TableVirtualResize/TableVirtualResize'
-import { ColorSwatchIcon, ChevronDownIcon, CloudDownloadIcon } from '@/assets/newIcon'
+import { ColorSwatchIcon, CloudDownloadIcon } from '@/assets/newIcon'
 import classNames from 'classnames'
 import { ColumnsTypeProps, FiltersItemProps, SortProps } from '../TableVirtualResize/TableVirtualResizeType'
 import { minWinSendToChildWin, openExternalWebsite, openPacketNewWindow } from '@/utils/openWebsite'
@@ -79,6 +79,7 @@ import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { PublicHTTPHistoryIcon } from '@/routes/publicIcon'
 import { debugToPrintLogs } from '@/utils/logCollection'
 import { JSONParseLog } from '@/utils/tool'
+import { isEnpriTrace } from '@/utils/envfile'
 import {
   defFilterConfig,
   FilterConfig,
@@ -233,7 +234,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
 
   const [checkBodyLength, setCheckBodyLength] = useState<boolean>(false) // 查询BodyLength大于0
 
-  const [batchVisible, setBatchVisible] = useState<boolean>(false)
+  const [, setBatchVisible] = useState<boolean>(false)
 
   const [exportDataKey, setExportDataKey] = useState<string[]>([])
 
@@ -2052,7 +2053,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     setParams((prev) => ({ ...prev, Keyword: searchValue, KeywordType: searchType }))
   })
 
-  const { getBatchContextMenu, onMultipleClick, onRowContextMenu } = useHTTPFlowTableContextMenu({
+  const { onMultipleClick, onRowContextMenu } = useHTTPFlowTableContextMenu({
     t,
     i18n,
     userInfo,
@@ -2472,36 +2473,55 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                 </YakitPopover>
               </div>
             )}
+            {/* {showBatchActions && (
+              <YakitPopover
+                overlayClassName={style['http-history-table-drop-down-popover']}
+                content={
+                  <YakitMenu
+                    width={150}
+                    selectedKeys={[]}
+                    data={getBatchContextMenu()}
+                    onClick={({ key, keyPath }) => {
+                      onMultipleClick(key, keyPath)
+                    }}
+                  />
+                }
+                trigger="click"
+                placement="bottomLeft"
+                onVisibleChange={setBatchVisible}
+                visible={batchVisible}
+              >
+                <YakitButton type="outline2" disabled={selectedRowKeys.length === 0}>
+                  {t('YakitButton.batchOperation')}
+                  <ChevronDownIcon />
+                </YakitButton>
+              </YakitPopover>
+            )} */}
             {showBatchActions && (
               <>
-                {(selectedRowKeys.length === 0 && (
-                  <YakitButton type="outline2" disabled={selectedRowKeys.length === 0}>
-                    {t('YakitButton.batchOperation')}
-                    <ChevronDownIcon style={{ color: '#85899E' }} />
-                  </YakitButton>
-                )) || (
-                  <YakitPopover
-                    overlayClassName={style['http-history-table-drop-down-popover']}
-                    content={
-                      <YakitMenu
-                        width={150}
-                        selectedKeys={[]}
-                        data={getBatchContextMenu()}
-                        onClick={({ key, keyPath }) => {
-                          onMultipleClick(key, keyPath)
-                        }}
-                      />
-                    }
-                    trigger="click"
-                    placement="bottomLeft"
-                    onVisibleChange={setBatchVisible}
-                    visible={batchVisible}
+                <YakitButton
+                  type="outline1"
+                  colors="danger"
+                  disabled={selectedRowKeys.length === 0}
+                  onClick={() => onMultipleClick('删除记录', [])}
+                >
+                  删除
+                </YakitButton>
+                <YakitButton
+                  type="outline2"
+                  disabled={selectedRowKeys.length === 0}
+                  onClick={() => onMultipleClick('导出为Excel', [])}
+                >
+                  导出为 Excel
+                </YakitButton>
+                {isEnpriTrace() && userInfo.isLogin && (
+                  <YakitButton
+                    type="outline2"
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={() => onMultipleClick('上传数据', [])}
                   >
-                    <YakitButton type="outline2" disabled={selectedRowKeys.length === 0}>
-                      {t('YakitButton.batchOperation')}
-                      <ChevronDownIcon />
-                    </YakitButton>
-                  </YakitPopover>
+                    上传数据
+                  </YakitButton>
                 )}
               </>
             )}
@@ -2621,12 +2641,10 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     )
   }, [
     noTableTitle,
-    batchVisible,
     cancleAllFilter,
     cancleFilter,
     color,
     filterTagDom,
-    getBatchContextMenu,
     handleSearch,
     isAdvancedSet,
     isAllSelect,
