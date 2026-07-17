@@ -38,6 +38,8 @@ export interface YakitHintModalProps {
   wrapClassName?: string
   /** 左上侧区域提示性图标 */
   heardIcon?: ReactNode
+  /** 是否展示左侧提示图标 */
+  showIcon?: boolean
   /** 左下侧区域拓展图标 */
   extraIcon?: ReactNode
   /** 弹窗标题 */

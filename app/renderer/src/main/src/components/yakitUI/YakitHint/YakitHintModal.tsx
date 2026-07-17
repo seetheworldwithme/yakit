@@ -21,6 +21,7 @@ export const YakitHintModal: React.FC<YakitHintModalProps> = memo((props) => {
     setTop,
     wrapClassName,
     heardIcon,
+    showIcon = true,
     extraIcon,
     title,
     content,
@@ -51,10 +52,12 @@ export const YakitHintModal: React.FC<YakitHintModalProps> = memo((props) => {
         containerClassName={styles['container-wrapper-padding']}
         children={
           <>
-            <div className={styles['container-left-wrapper']}>
-              <div className={styles['left-hint-icon']}>{heardIcon ? heardIcon : <ShieldExclamationSvgIcon />}</div>
-              <div className={styles['left-hint-icon-extra']}>{extraIcon}</div>
-            </div>
+            {showIcon && (
+              <div className={styles['container-left-wrapper']}>
+                <div className={styles['left-hint-icon']}>{heardIcon ? heardIcon : <ShieldExclamationSvgIcon />}</div>
+                <div className={styles['left-hint-icon-extra']}>{extraIcon}</div>
+              </div>
+            )}
 
             <div className={styles['container-right-wrapper']}>
               {!!title && <div className={styles['right-title']}>{title}</div>}

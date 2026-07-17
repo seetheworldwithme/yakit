@@ -1903,6 +1903,7 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
       {/* 由普通项目进入项目管理的二次确认框 */}
       <YakitHint
         visible={linkDatabaseHint}
+        showIcon={false}
         title={t('UILayout.enterProjectManageConfirmTitle')}
         content={t('UILayout.enterProjectManageConfirmContent')}
         onOk={() => {
