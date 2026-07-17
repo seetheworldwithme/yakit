@@ -403,7 +403,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
     showDelAll = true,
     showSetting = true,
     showRefresh = true,
-    resetQueryOnRefresh = false,
+    resetQueryOnRefresh = true,
     showHistorySearchHint = true,
     showFavorites = true,
     showFlod = true,
