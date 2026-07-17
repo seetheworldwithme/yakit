@@ -1,6 +1,6 @@
 {
   "PluginEnvVariables": {
-    "title": "Plugin Global Variables",
+    "title": "Plugin Config",
     "isPluginSubtitle": "Only variables used by this plugin are displayed, synchronized to global after editing",
     "allPluginSubtitle": "Stores all plugin global variables, double-click value to modify, unconfigured variables won't show here",
     "searchPlaceholder": "Please enter variable name keywords",

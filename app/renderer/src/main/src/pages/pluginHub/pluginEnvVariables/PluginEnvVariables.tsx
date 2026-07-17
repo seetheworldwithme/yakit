@@ -1,7 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from 'react'
 import { useDebounceFn, useInViewport, useMemoizedFn, useVirtualList } from 'ahooks'
 import { InputRef } from 'antd'
-import { OutlinePluscircleIcon } from '@/assets/icon/outline'
 import { PluginEnvInfo, PluginEnvVariablesProps } from './PluginEnvVariablesType'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
@@ -288,9 +287,10 @@ export const PluginEnvVariables: React.FC<PluginEnvVariablesProps> = memo((props
       <div className={styles['plugin-env-variables-header']}>
         <div className={styles['header-title']}>
           <div className={styles['title-style']}>{t('PluginEnvVariables.title')}</div>
-          <div className={styles['subtitle-style']}>
+          {/* 按产品要求隐藏副标题说明文字，保留 i18n key 便于后续恢复 */}
+          {/* <div className={styles['subtitle-style']}>
             {isPlugin ? t('PluginEnvVariables.isPluginSubtitle') : t('PluginEnvVariables.allPluginSubtitle')}
-          </div>
+          </div> */}
         </div>
 
         <div className={styles['header-extra']}>
@@ -306,7 +306,6 @@ export const PluginEnvVariables: React.FC<PluginEnvVariablesProps> = memo((props
             <YakitButton
               type="outline2"
               size="large"
-              icon={<OutlinePluscircleIcon />}
               onClick={() => {
                 handleOpenEdit(false)
               }}

@@ -11,6 +11,7 @@ import {
   SentinelHomeDomainAssetsIcon,
   SentinelHomeHistoryIcon,
   SentinelHomeICMPSizeLogIcon,
+  SentinelHomeMitmIcon,
   SentinelHomePayloadGeneraterIcon,
   SentinelHomePayloadIcon,
   SentinelHomePluginHubIcon,
@@ -23,6 +24,7 @@ import {
   SentinelHomeRiskIcon,
   SentinelHomeScanPortIcon,
   SentinelHomeTCPPortLogIcon,
+  SentinelHomeWebFuzzerIcon,
 } from '@/assets/icon/sentinelHome/SentinelHomeIcons'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { SolidCheckIcon, SolidExclamationIcon, SolidPlayIcon } from '@/assets/icon/solid'
@@ -83,12 +85,41 @@ const Home: React.FC<HomeProp> = (props) => {
   // 首页工具网格统一数据源：原 signle-jump 三个小按钮(Yso-Java Hack / DNSLog / Codec) + 原工具箱工具列表
   const toolsList = useMemo(() => {
     return [
+      // 按产品要求隐藏首页 Yso-Java Hack 卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.Yso-Java Hack'),
+      //   icon: <SentinelHomePayloadGeneraterIcon />,
+      //   desc: t('YakitRoute.fuzzPayLoadDeserialization'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.PayloadGenerater_New }),
+      // },
       {
-        label: t('YakitRoute.Yso-Java Hack'),
-        icon: <SentinelHomePayloadGeneraterIcon />,
-        desc: t('YakitRoute.fuzzPayLoadDeserialization'),
+        label: '流量劫持',
+        icon: <SentinelHomeMitmIcon />,
+        desc: t('YakitRoute.mitmSslHijack'),
         rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.PayloadGenerater_New }),
+        onClick: () => onMenu({ route: YakitRoute.MITMHacker }),
+      },
+      {
+        label: '报文构造台',
+        icon: <SentinelHomeWebFuzzerIcon />,
+        desc: t('YakitRoute.fuzzBurpIntegration'),
+        rightIcon: <OutlineArrowrightIcon />,
+        onClick: () => onMenu({ route: YakitRoute.HTTPFuzzer }),
+      },
+      {
+        label: '凭证爆破',
+        icon: <SentinelHomeBruteIcon />,
+        desc: t('YakitRoute.bruteForceDescription'),
+        rightIcon: <OutlineArrowrightIcon />,
+        onClick: () => onMenu({ route: YakitRoute.Mod_Brute }),
+      },
+      {
+        label: '漏洞检测',
+        icon: <SentinelHomePocIcon />,
+        desc: t('YakitRoute.vulnerabilityDetectionDescription'),
+        rightIcon: <OutlineArrowrightIcon />,
+        onClick: () => onMenu({ route: YakitRoute.PoC }),
       },
       // 按功能裁剪方案 A9（反连模块整组）：隐藏 DNSLog 入口
       // 保留路由/页面/IPC（fastjson/shiro 专项检测插件可能需要 OOB 回调），仅隐首页展示
@@ -107,26 +138,27 @@ const Home: React.FC<HomeProp> = (props) => {
         onClick: () => onMenu({ route: YakitRoute.Codec }),
       },
       {
-        label: t('YakitRoute.Payload'),
+        label: '字典库',
         icon: <SentinelHomePayloadIcon />,
         desc: t('YakitRoute.customPayload'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.PayloadManager }),
       },
       {
-        label: t('YakitRoute.dataCompare'),
+        label: '报文差异对比',
         icon: <SentinelHomeDataCompareIcon />,
         desc: t('YakitRoute.quicklyIdentifyDifferencesInData'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DataCompare }),
       },
-      {
-        label: t('YakitRoute.cVEManagement'),
-        icon: <SentinelHomeCVEIcon />,
-        desc: t('YakitRoute.searchAndQueryCVEData'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.DB_CVE }),
-      },
+      // 按产品要求隐藏首页「CVE 管理」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.cVEManagement'),
+      //   icon: <SentinelHomeCVEIcon />,
+      //   desc: t('YakitRoute.searchAndQueryCVEData'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.DB_CVE }),
+      // },
       {
         label: t('YakitRoute.pluginHub'),
         icon: <SentinelHomePluginHubIcon />,
@@ -134,34 +166,38 @@ const Home: React.FC<HomeProp> = (props) => {
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.Plugin_Hub }),
       },
-      {
-        label: t('YakitRoute.portListener'),
-        icon: <SentinelHomePortListenerIcon />,
-        desc: t('YakitRoute.reverseShellTool'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.ShellReceiver }),
-      },
-      {
-        label: t('YakitRoute.ICMP-SizeLog'),
-        icon: <SentinelHomeICMPSizeLogIcon />,
-        desc: t('YakitRoute.detectICMPCallbackViaPingWithSpecificPacketSize'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.ICMPSizeLog }),
-      },
-      {
-        label: t('YakitRoute.TCP-PortLog'),
-        icon: <SentinelHomeTCPPortLogIcon />,
-        desc: t('YakitRoute.detectTCPCallbackViaRandomClosedPorts'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.TCPPortLog }),
-      },
-      {
-        label: t('YakitRoute.reverseServer'),
-        icon: <SentinelHomeReverseServerIcon />,
-        desc: t('YakitRoute.simultaneouslyProvideHTTP/RMI/HTTPSReverseConnectionsOnOnePort'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.ReverseServer_New }),
-      },
+      // 按产品要求隐藏首页「端口监听器」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.portListener'),
+      //   icon: <SentinelHomePortListenerIcon />,
+      //   desc: t('YakitRoute.reverseShellTool'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.ShellReceiver }),
+      // },
+      // 按产品要求隐藏首页「ICMP-SizeLog」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.ICMP-SizeLog'),
+      //   icon: <SentinelHomeICMPSizeLogIcon />,
+      //   desc: t('YakitRoute.detectICMPCallbackViaPingWithSpecificPacketSize'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.ICMPSizeLog }),
+      // },
+      // 按产品要求隐藏首页「TCP-PortLog」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.TCP-PortLog'),
+      //   icon: <SentinelHomeTCPPortLogIcon />,
+      //   desc: t('YakitRoute.detectTCPCallbackViaRandomClosedPorts'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.TCPPortLog }),
+      // },
+      // 按产品要求隐藏首页「反连服务器」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.reverseServer'),
+      //   icon: <SentinelHomeReverseServerIcon />,
+      //   desc: t('YakitRoute.simultaneouslyProvideHTTP/RMI/HTTPSReverseConnectionsOnOnePort'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.ReverseServer_New }),
+      // },
       {
         label: t('YakitRoute.History'),
         icon: <SentinelHomeHistoryIcon />,
@@ -169,34 +205,37 @@ const Home: React.FC<HomeProp> = (props) => {
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_HTTPHistory }),
       },
+      // 按产品要求隐藏首页「报告」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.report'),
+      //   icon: <SentinelHomeReportIcon />,
+      //   desc: t('YakitRoute.viewAndManageReportsGeneratedDuringScanning'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.DB_Report }),
+      // },
       {
-        label: t('YakitRoute.report'),
-        icon: <SentinelHomeReportIcon />,
-        desc: t('YakitRoute.viewAndManageReportsGeneratedDuringScanning'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.DB_Report }),
-      },
-      {
-        label: t('Home.vulnerabilityRiskStatistics'),
+        label: '风险台账',
         icon: <SentinelHomeRiskIcon />,
         desc: t('YakitRoute.manageAllDetectedVulnerabilitiesAndRisks'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.DB_Risk }),
       },
-      {
-        label: t('YakitRoute.portAssets'),
-        icon: <SentinelHomePortAssetsIcon />,
-        desc: t('YakitRoute.manageAllDiscoveredPortAssets'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.DB_Ports }),
-      },
-      {
-        label: t('YakitRoute.domainAssets'),
-        icon: <SentinelHomeDomainAssetsIcon />,
-        desc: t('YakitRoute.manageAllDiscoveredDomainAssets'),
-        rightIcon: <OutlineArrowrightIcon />,
-        onClick: () => onMenu({ route: YakitRoute.DB_Domain }),
-      },
+      // 按产品要求隐藏首页「端口资产」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.portAssets'),
+      //   icon: <SentinelHomePortAssetsIcon />,
+      //   desc: t('YakitRoute.manageAllDiscoveredPortAssets'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.DB_Ports }),
+      // },
+      // 按产品要求隐藏首页「域名资产」卡片，保留路由/页面便于后续恢复
+      // {
+      //   label: t('YakitRoute.domainAssets'),
+      //   icon: <SentinelHomeDomainAssetsIcon />,
+      //   desc: t('YakitRoute.manageAllDiscoveredDomainAssets'),
+      //   rightIcon: <OutlineArrowrightIcon />,
+      //   onClick: () => onMenu({ route: YakitRoute.DB_Domain }),
+      // },
     ] as ToolInfo[]
   }, [i18n.language, pluginToId])
   const isScanMode = useMemo(() => {

@@ -1,6 +1,6 @@
 {
   "PluginEnvVariables": {
-    "title": "插件全局变量",
+    "title": "插件配置",
     "isPluginSubtitle": "仅展示本插件使用到的变量，编辑后会同步到全局",
     "allPluginSubtitle": "存放所有插件全局变量，可双击变量值修改，但未配置的变量不会在此显示",
     "searchPlaceholder": "请输入变量名关键词",

@@ -136,6 +136,7 @@ import {
   SentinelHomeICMPSizeLogIcon,
   SentinelHomeMitmIcon,
   SentinelHomePayloadGeneraterIcon,
+  SentinelHomePayloadIcon,
   SentinelHomePluginHubIcon,
   SentinelHomePocIcon,
   SentinelHomePortAssetsIcon,
@@ -280,7 +281,7 @@ export const YakitRouteToPageInfo: Record<
   },
   'plugin-op': { label: '插件', labelUi: 'YakitRoute.plugin' },
   brute: {
-    label: '弱口令检测',
+    label: '凭证爆破',
     labelUi: 'YakitRoute.weakPasswordCheck',
     describeUi: 'YakitRoute.bruteForceDescription',
   },
@@ -354,7 +355,7 @@ export const YakitRouteToPageInfo: Record<
     describeUi: 'YakitRoute.yaklangProgramming',
   },
   'payload-manager': {
-    label: '字典管理',
+    label: '字典库',
     labelUi: 'YakitRoute.Payload',
     describeUi: 'YakitRoute.customPayload',
   },
@@ -1781,6 +1782,12 @@ export const PrivateAllMenus: Record<string, PrivateRouteMenuProps> = {
     icon: <SentinelHomePluginHubIcon />,
     hoverIcon: <SentinelHomePluginHubIcon />,
     ...YakitRouteToPageInfo[YakitRoute.Plugin_Hub],
+  },
+  [YakitRoute.PayloadManager]: {
+    page: YakitRoute.PayloadManager,
+    icon: <SentinelHomePayloadIcon />,
+    hoverIcon: <SentinelHomePayloadIcon />,
+    ...YakitRouteToPageInfo[YakitRoute.PayloadManager],
   },
   [YakitRoute.BatchExecutorPage]: {
     page: YakitRoute.BatchExecutorPage,

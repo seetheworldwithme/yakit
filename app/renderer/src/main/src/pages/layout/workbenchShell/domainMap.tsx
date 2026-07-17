@@ -46,7 +46,8 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
       { route: YakitRoute.MITMHacker, label: '流量劫持' },
       { route: YakitRoute.HTTPFuzzer, label: '报文构造台' },
       { route: YakitRoute.Mod_Brute, label: '凭证爆破' },
-      { route: YakitRoute.BatchExecutorPage, label: '批量投递' },
+      // 隐藏「批量投递」侧边栏入口，保留路由与页面实现，便于后续恢复
+      // { route: YakitRoute.BatchExecutorPage, label: '批量投递' },
       // { route: YakitRoute.DNSLog, label: '反连接收' },
     ],
   },
@@ -68,7 +69,7 @@ export const WORKBENCH_DOMAINS: WorkbenchDomain[] = [
     icon: <AppstoreOutlined />,
     modules: [
       // { route: YakitRoute.YakScript, label: '脚本引擎' },
-      { route: YakitRoute.Plugin_Hub, label: '插件市场' },
+      { route: YakitRoute.Plugin_Hub, label: '插件仓库' },
       { route: YakitRoute.PayloadManager, label: '字典库' },
     ],
   },

@@ -515,16 +515,12 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
         width: 120,
         render: (_: any, record: YakitPluginOnlineDetail) => (
           <div className={styles['col-ops']} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={t('HubListRecycle.restore')} overlayClassName="plugins-tooltip">
-              <YakitButton
-                type="text2"
-                icon={<OutlineDatabasebackupIcon />}
-                onClick={() => onFooterExtraRestore(record)}
-              />
-            </Tooltip>
-            <Tooltip title={t('YakitButton.delete')} overlayClassName="plugins-tooltip">
-              <YakitButton type="text2" icon={<OutlineTrashIcon />} onClick={() => onFooterExtraDel(record)} />
-            </Tooltip>
+            <YakitButton type="text2" onClick={() => onFooterExtraRestore(record)}>
+              {t('HubListRecycle.restore')}
+            </YakitButton>
+            <YakitButton type="text2" onClick={() => onFooterExtraDel(record)}>
+              {t('YakitButton.delete')}
+            </YakitButton>
           </div>
         ),
       },
