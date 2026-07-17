@@ -7,9 +7,9 @@
 
 ::-webkit-scrollbar-thumb {
   /*滚动条里面小方块*/
-  border-radius: 10px;
-  box-shadow: inset 0 0 5px rgba(193, 193, 193);
-  background: #c1c1c1;
+  border-radius: var(--Radius-Pill);
+  box-shadow: inset 0 0 5px var(--Colors-Use-Basic-Shadow);
+  background: var(--Colors-Use-Neutral-Text-3-Secondary);
 }
 
 // ::-webkit-scrollbar-track {

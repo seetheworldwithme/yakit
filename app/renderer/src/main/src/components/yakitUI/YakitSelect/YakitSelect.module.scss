@@ -57,7 +57,7 @@
     }
 
     .ant-select:not(.ant-select-customize-input) .ant-select-selector {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       border: 1px solid var(--select-border-color);
       width: 100%;
     }
@@ -81,7 +81,7 @@
 
     .ant-select-multiple .ant-select-selection-item {
       align-items: center;
-      border-radius: 4px;
+      border-radius: var(--Radius-XS);
       border: 1px solid var(--select-border-color);
       background: var(--Colors-Use-Neutral-Bg-Hover);
       margin: 0;
@@ -101,9 +101,10 @@
 
 // ========================== popup ==========================
 .yakit-select-popup {
+  overflow: hidden;
   background-color: var(--Colors-Use-Basic-Background);
   padding: 6px 4px;
-  border-radius: 4px;
+  border-radius: var(--Radius-Popup);
   border: 1px solid var(--Colors-Use-Neutral-Bg-Hover);
   background: var(--Colors-Use-Basic-Background);
   box-shadow: 0px 8px 16px 0px var(--Colors-Use-Basic-Shadow);
@@ -114,7 +115,7 @@
     }
 
     .ant-select-item:not(.ant-select-item-group) {
-      border-radius: 4px;
+      border-radius: var(--Radius-Control);
 
       &:hover {
         background: var(--Colors-Use-Neutral-Bg-Hover);

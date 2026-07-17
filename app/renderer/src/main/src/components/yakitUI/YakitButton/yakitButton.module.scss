@@ -432,7 +432,7 @@
   }
 }
 .yakit-button {
-  --yakit-button-border-radius: 4px;
+  --yakit-button-border-radius: var(--Radius-Control);
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -511,5 +511,5 @@
 }
 
 .yakit-border-radius-button {
-  --yakit-button-border-radius: 8px;
+  --yakit-button-border-radius: var(--Radius-Input);
 }

@@ -175,7 +175,7 @@
         height: 28px;
 
         &:hover {
-          background-color: #eef0f3;
+          background-color: var(--Colors-Use-Neutral-Bg-Hover);
         }
 
         .item-label {

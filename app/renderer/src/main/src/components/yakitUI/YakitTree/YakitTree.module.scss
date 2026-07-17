@@ -27,6 +27,7 @@
     }
     .ant-tree-list-scrollbar-thumb {
       background: var(--Colors-Use-Neutral-Disable) !important;
+      border-radius: var(--Radius-Pill);
       width: 6px !important;
       transition: top 0.35s ease;
     }
@@ -119,7 +120,7 @@
       background-color: var(--checkbox-background-disabled-color);
     }
     .ant-tree-checkbox-disabled.ant-tree-checkbox-checked .ant-tree-checkbox-inner::after {
-      border-color: #ffffff;
+      border-color: var(--Colors-Use-Neutral-Text-1-Title);
     }
     .ant-tree-checkbox-wrapper-checked {
       .ant-tree-checkbox-disabled .ant-tree-checkbox-inner {

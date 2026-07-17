@@ -4,9 +4,11 @@
       display: none;
     }
     .ant-popover-inner {
+      overflow: hidden;
+      background: var(--Colors-Use-Basic-Background);
       border: 1px solid var(--Colors-Use-Neutral-Border);
       box-shadow: 0px 8px 16px var(--Colors-Use-Basic-Shadow);
-      border-radius: 4px;
+      border-radius: var(--Radius-Popup);
     }
     .ant-popover-inner-content {
       padding: 16px 12px;

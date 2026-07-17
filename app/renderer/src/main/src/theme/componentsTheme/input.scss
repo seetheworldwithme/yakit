@@ -1,3 +1,20 @@
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-input-number-affix-wrapper,
+.ant-picker {
+  border-radius: var(--Radius-Input);
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-input-number-affix-wrapper-focused,
+.ant-picker-focused {
+  box-shadow: 0 0 0 2px var(--Colors-Use-Main-Focus);
+}
+
 // ========================== antd input-group select - yakit start ==========================
 .yakit-input-group {
   display: flex !important;
@@ -7,18 +24,18 @@
   }
   > :first-child {
     .ant-input-affix-wrapper {
-      border-radius: 4px 0 0 4px;
+      border-radius: var(--Radius-Input) 0 0 var(--Radius-Input);
     }
     .ant-input {
-      border-radius: 4px 0 0 4px;
+      border-radius: var(--Radius-Input) 0 0 var(--Radius-Input);
     }
   }
   > :last-child {
     .ant-input-affix-wrapper {
-      border-radius: 0 4px 4px 0;
+      border-radius: 0 var(--Radius-Input) var(--Radius-Input) 0;
     }
     .ant-input {
-      border-radius: 0 4px 4px 0;
+      border-radius: 0 var(--Radius-Input) var(--Radius-Input) 0;
     }
   }
   > *:not(:last-child) {
@@ -35,24 +52,24 @@
     &:focus,
     &:active {
       border-left-width: 1px !important;
-      border-top-left-radius: 4px !important;
-      border-bottom-left-radius: 4px !important;
+      border-top-left-radius: var(--Radius-Input) !important;
+      border-bottom-left-radius: var(--Radius-Input) !important;
     }
   }
   .ant-select-focused {
     .ant-select-selector {
       // z-index: 1;
       border-left-width: 1px !important;
-      border-top-left-radius: 4px !important;
-      border-bottom-left-radius: 4px !important;
+      border-top-left-radius: var(--Radius-Input) !important;
+      border-bottom-left-radius: var(--Radius-Input) !important;
     }
   }
   .ant-select-open {
     .ant-select-selector {
       // z-index: 1;
       border-left-width: 1px !important;
-      border-top-left-radius: 4px !important;
-      border-bottom-left-radius: 4px !important;
+      border-top-left-radius: var(--Radius-Input) !important;
+      border-bottom-left-radius: var(--Radius-Input) !important;
     }
   }
 }

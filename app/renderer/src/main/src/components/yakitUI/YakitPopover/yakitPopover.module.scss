@@ -1,5 +1,12 @@
 .yakit-popover-wrapper {
   :global {
+    .ant-popover-inner {
+      overflow: hidden;
+      background: var(--Colors-Use-Basic-Background);
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      border-radius: var(--Radius-Popup);
+      box-shadow: 0 8px 16px var(--Colors-Use-Basic-Shadow);
+    }
     .ant-popover-title {
       padding: 8px 12px 8px 12px;
       line-height: 16px;

@@ -2,13 +2,15 @@
 .yakit-notification-failed,
 .yakit-notification-error {
   background: var(--Colors-Use-Basic-Background);
-  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow, rgba(23, 23, 23, 0.08));
+  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow);
+  border-radius: var(--Radius-Popup);
+  overflow: hidden;
   padding: 0;
 
   .ant-notification-notice-content {
     background: var(--Colors-Use-Error-Bg-Hover);
     border: 1px solid var(--Colors-Use-Error-Border);
-    border-radius: 4px;
+    border-radius: var(--Radius-Popup);
     padding: 8px 12px;
   }
 
@@ -43,13 +45,15 @@
 
 .yakit-notification-success {
   background: var(--Colors-Use-Basic-Background);
-  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow, rgba(23, 23, 23, 0.08));
+  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow);
+  border-radius: var(--Radius-Popup);
+  overflow: hidden;
   padding: 0;
 
   .ant-notification-notice-content {
     background: var(--Colors-Use-Success-Bg);
     border: 1px solid var(--Colors-Use-Success-Border);
-    border-radius: 4px;
+    border-radius: var(--Radius-Popup);
     padding: 8px 12px;
   }
 
@@ -84,13 +88,15 @@
 
 .yakit-notification-warning {
   background: var(--Colors-Use-Basic-Background);
-  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow, rgba(23, 23, 23, 0.08));
+  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow);
+  border-radius: var(--Radius-Popup);
+  overflow: hidden;
   padding: 0;
 
   .ant-notification-notice-content {
     background: var(--Colors-Use-Warning-Bg);
     border: 1px solid var(--Colors-Use-Warning-Border);
-    border-radius: 4px;
+    border-radius: var(--Radius-Popup);
     padding: 8px 12px;
   }
 
@@ -125,12 +131,14 @@
 
 .yakit-notification-info {
   background: var(--Colors-Use-Basic-Background);
-  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow, rgba(23, 23, 23, 0.08));
+  box-shadow: 0 2px 4px 0 var(--Colors-Use-Basic-Shadow);
+  border-radius: var(--Radius-Popup);
+  overflow: hidden;
   padding: 0;
 
   .ant-notification-notice-content {
     border: 1px solid var(--Colors-Use-Neutral-Border);
-    border-radius: 4px;
+    border-radius: var(--Radius-Popup);
     padding: 8px 12px;
   }
 
@@ -193,7 +201,7 @@
   transform: translateX(-50%);
 }
 .ant-notification-notice {
-  border-radius: 4px;
+  border-radius: var(--Radius-Popup);
   margin-bottom: 5px;
 }
 

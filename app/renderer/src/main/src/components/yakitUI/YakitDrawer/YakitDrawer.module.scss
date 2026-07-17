@@ -6,6 +6,7 @@
     .ant-drawer-content {
       box-shadow: -2px 0px 0px 0px var(--Colors-Use-Basic-Shadow);
       background-color: var(--Colors-Use-Basic-Background);
+      overflow: hidden;
     }
     .ant-drawer-header {
       display: flex;
@@ -35,6 +36,34 @@
       background: var(--Colors-Use-Basic-Background);
       border-left: 1px solid var(--Colors-Use-Neutral-Bg-Hover);
       box-shadow: 0 -2px 4px 0 var(--Colors-Use-Basic-Shadow);
+    }
+  }
+
+  &:global(.ant-drawer-right) {
+    :global(.ant-drawer-content-wrapper),
+    :global(.ant-drawer-content) {
+      border-radius: var(--Radius-Popup) 0 0 var(--Radius-Popup);
+    }
+  }
+
+  &:global(.ant-drawer-left) {
+    :global(.ant-drawer-content-wrapper),
+    :global(.ant-drawer-content) {
+      border-radius: 0 var(--Radius-Popup) var(--Radius-Popup) 0;
+    }
+  }
+
+  &:global(.ant-drawer-bottom) {
+    :global(.ant-drawer-content-wrapper),
+    :global(.ant-drawer-content) {
+      border-radius: var(--Radius-Popup) var(--Radius-Popup) 0 0;
+    }
+  }
+
+  &:global(.ant-drawer-top) {
+    :global(.ant-drawer-content-wrapper),
+    :global(.ant-drawer-content) {
+      border-radius: 0 0 var(--Radius-Popup) var(--Radius-Popup);
     }
   }
 }

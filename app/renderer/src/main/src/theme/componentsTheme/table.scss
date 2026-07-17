@@ -2,6 +2,11 @@
 // 表头统一改为浅蓝底 + 蓝字（与主色按钮同色系），替换 antd 默认灰色 #fafafa
 // 底色用 Main-Border(Main-40≈#92D6F5 清楚浅蓝)，Focus(Main-30)太淡会看成灰
 // 用高特异性 + !important 确保盖过各 .module.scss 里的局部 thead 覆盖（如 PluginHubList）
+.ant-table-wrapper .ant-table {
+  background: var(--Colors-Use-Basic-Background);
+  color: var(--Colors-Use-Neutral-Text-1-Title);
+}
+
 .ant-table-wrapper .ant-table .ant-table-container .ant-table-thead > tr > th,
 .ant-table-wrapper .ant-table .ant-table-thead > tr > th {
   background: var(--Colors-Use-Main-Border) !important;
@@ -29,6 +34,7 @@
 // 数据行（内容区）统一用原表头灰做底色
 .ant-table-wrapper .ant-table .ant-table-tbody > tr > td {
   background: var(--Colors-Use-Neutral-Bg-Hover) !important;
+  color: var(--Colors-Use-Neutral-Text-1-Title) !important;
   text-align: center !important;
 }
 .ant-table-wrapper .ant-table .ant-table-tbody > tr:hover > td {

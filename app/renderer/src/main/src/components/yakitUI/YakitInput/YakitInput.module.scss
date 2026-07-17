@@ -20,7 +20,7 @@
     }
 
     .ant-input-group-addon {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       border-color: var(--Colors-Use-Neutral-Border);
       background: var(--Colors-Use-Neutral-Bg);
       color: var(--Colors-Use-Neutral-Text-1-Title);
@@ -48,7 +48,7 @@
     .ant-input {
       border-color: var(--Colors-Use-Neutral-Border);
       background: var(--Colors-Use-Basic-Background);
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
     }
 
     .ant-input:hover {
@@ -65,7 +65,7 @@
       color: var(--Colors-Use-Neutral-Text-1-Title);
       border-color: var(--Colors-Use-Neutral-Border);
       background: var(--Colors-Use-Basic-Background) !important;
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       input {
         color: var(--Colors-Use-Neutral-Text-1-Title);
         background-color: var(--Colors-Use-Basic-Background) !important;
@@ -94,7 +94,7 @@
     border-left: 1px solid var(--Colors-Use-Neutral-Border);
     display: flex;
     align-items: center;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--Radius-Input) var(--Radius-Input) 0;
   }
 
   .yakit-input-addonBefore {
@@ -104,7 +104,7 @@
     border-right: 1px solid var(--Colors-Use-Neutral-Border);
     display: flex;
     align-items: center;
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--Radius-Input) 0 0 var(--Radius-Input);
   }
 }
 
@@ -123,7 +123,7 @@
 
 .yakit-input-middle {
   height: 28px;
-  border-radius: 4px;
+  border-radius: var(--Radius-Input);
   padding: 6px 12px;
   font-size: 12px;
   color: var(--Colors-Use-Neutral-Text-1-Title);
@@ -189,14 +189,14 @@
   --search-border-hover-color: var(--Colors-Use-Main-Hover);
   --search-border-focus-color: var(--Colors-Use-Main-Pressed);
 
-  border-radius: 4px;
+  border-radius: var(--Radius-Input);
   height: 24px;
 
   :global {
     .ant-input,
     .ant-input-affix-wrapper {
       border-right: 0;
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       border-color: var(--search-border-color);
       background-color: var(--Colors-Use-Basic-Background);
       color: var(--Colors-Use-Neutral-Text-1-Title);
@@ -261,7 +261,7 @@
     }
 
     .ant-input-search > .ant-input-group > .ant-input-group-addon:last-child .ant-input-search-button {
-      border-radius: 0 4px 4px 0;
+      border-radius: 0 var(--Radius-Input) var(--Radius-Input) 0;
       border: 0;
       display: inline-flex;
       align-items: center;
@@ -269,7 +269,7 @@
     }
 
     .ant-input-group-addon {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
     }
 
     .ant-btn-primary {
@@ -278,8 +278,8 @@
       box-shadow: none;
     }
     .ant-input-search .ant-input-group .ant-input-affix-wrapper:not(:last-child) {
-      border-top-left-radius: 4px;
-      border-bottom-left-radius: 4px;
+      border-top-left-radius: var(--Radius-Input);
+      border-bottom-left-radius: var(--Radius-Input);
     }
     .ant-input-search-button .anticon-search {
       height: 16px;
@@ -290,11 +290,11 @@
 .yakit-search-wrapper-focus {
   border-color: var(--search-border-focus-color);
   box-shadow: 0 0 0 2px var(--search-box-shadow-color);
-  border-radius: 4px !important;
+  border-radius: var(--Radius-Input) !important;
   :global {
     .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled) {
       border-color: var(--search-border-focus-color);
-      border-radius: 4px 0 0 4px;
+      border-radius: var(--Radius-Input) 0 0 var(--Radius-Input);
     }
   }
 }
@@ -472,7 +472,7 @@
       color: var(--Colors-Use-Neutral-Text-1-Title);
     }
     .ant-input {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       border: 1px solid var(--Colors-Use-Neutral-Border);
       background-color: var(--Colors-Use-Basic-Background);
       color: var(--Colors-Use-Neutral-Text-1-Title);
@@ -539,7 +539,7 @@
 .yakit-password-wrapper-middle {
   :global {
     .ant-input-affix-wrapper {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       height: 28px;
       border-color: var(--Colors-Use-Neutral-Border);
       font-size: 12px;

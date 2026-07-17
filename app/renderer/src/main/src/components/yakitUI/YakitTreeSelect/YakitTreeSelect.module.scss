@@ -1,7 +1,7 @@
 .yakit-tree-select-wrapper {
   :global {
     .ant-select:not(.ant-select-customize-input) .ant-select-selector {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
     }
 
     .ant-select-multiple .ant-select-selector {
@@ -31,6 +31,13 @@
   --checkbox-border-primary-color: var(--Colors-Use-Main-Primary);
   --checkbox-box-shadow-color: var(--Colors-Use-Main-Focus);
   --checkbox-hover-color: var(--Colors-Use-Main-Hover);
+  overflow: hidden;
+  padding: var(--Spacing-1);
+  background: var(--Colors-Use-Basic-Background);
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  border-radius: var(--Radius-Popup);
+  box-shadow: 0 8px 16px var(--Colors-Use-Basic-Shadow);
+
   .yakit-tree-select-switcher-icon {
     color: var(--Colors-Use-Neutral-Text-3-Secondary);
     svg {
@@ -88,7 +95,7 @@
     .ant-select-tree-checkbox-indeterminate .ant-select-tree-checkbox-inner {
       border-width: 2px !important;
       border-color: var(--checkbox-border-primary-color);
-      background-color: #ffffff !important;
+      background-color: var(--Colors-Use-Basic-Background) !important;
     }
     .ant-select-tree-checkbox-indeterminate:hover {
       .ant-select-tree-checkbox-inner {
@@ -126,7 +133,7 @@
       background-color: var(--checkbox-background-disabled-color);
     }
     .ant-select-tree-checkbox-disabled.ant-select-tree-checkbox-checked .ant-select-tree-checkbox-inner::after {
-      border-color: #ffffff;
+      border-color: var(--Colors-Use-Basic-Background);
     }
     .ant-select-tree-checkbox-wrapper-checked {
       .ant-select-tree-checkbox-disabled .ant-select-tree-checkbox-inner {
@@ -157,7 +164,8 @@
     }
 
     .ant-select-tree-list-scrollbar-thumb {
-      background: #c1c1c1 !important;
+      background: var(--Colors-Use-Neutral-Text-3-Secondary) !important;
+      border-radius: var(--Radius-Pill);
       width: 6px !important;
       transition: top 0.35s ease;
     }

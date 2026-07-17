@@ -39,12 +39,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 4px;
-  border: 1px solid #eaecf3;
-  background: #fff;
-  box-shadow:
-    0px 8px 10px -6px rgba(49, 52, 63, 0.1),
-    0px 20px 25px -5px rgba(49, 52, 63, 0.1);
+  border-radius: var(--Radius-Popup);
+  border: 1px solid var(--Colors-Use-Neutral-Border);
+  background: var(--Colors-Use-Basic-Background);
+  box-shadow: 0 12px 24px var(--Colors-Use-Basic-Shadow);
 }
 .yakit-window-left-body {
   border-radius: 0;
@@ -71,8 +69,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 4px 4px 0px 0px;
-  border-bottom: 1px solid #eaecf3;
+  border-radius: var(--Radius-Popup) var(--Radius-Popup) 0 0;
+  border-bottom: 1px solid var(--Colors-Use-Neutral-Border);
   background: var(--Colors-Use-Neutral-Bg);
   cursor: pointer;
   .header-left {
@@ -93,7 +91,7 @@
     .subtitle-wrapper {
       flex: 1;
       overflow: hidden;
-      color: #b4bbca;
+      color: var(--Colors-Use-Neutral-Text-3-Secondary);
       font-size: 12px;
       font-weight: 400;
       line-height: 16px;
@@ -122,7 +120,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #eaecf3;
+  border-top: 1px solid var(--Colors-Use-Neutral-Border);
   background: var(--Colors-Use-Neutral-Bg);
   .btn-group {
     display: flex;

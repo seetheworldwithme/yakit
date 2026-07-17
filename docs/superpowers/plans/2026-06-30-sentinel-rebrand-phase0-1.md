@@ -14,7 +14,7 @@
 
 ## 执行约束
 
-1. 直接在当前 `main` 工作，不新建 feature 分支；开始前确认 `git branch --show-current` 为 `main`。
+1. 直接在当前 `main` 工作，不新建 feature 分支；开始前确认 `git rev-parse --abbrev-ref HEAD` 为 `main`。
 2. 当前仓库可能有其他窗口的 WIP。只暂存本任务明确修改的文件，严禁 `git add -A`、`git add .`、`git commit -am`。
 3. 颜色只允许硬编码在集中主题覆盖表中；组件和页面样式一律使用 `var(--Colors-Use-*)`。
 4. 不删除主题切换，不固定 dark，不创建 `sentinelTheme.ts`，不复制 114 个 token。
@@ -35,7 +35,7 @@
 
 ```bash
 git status --short --branch
-git branch --show-current
+git rev-parse --abbrev-ref HEAD
 ```
 
 预期：当前分支为 `main`。记录已有修改，后续不得暂存或覆盖无关 WIP。
@@ -503,7 +503,7 @@ git commit -m "style(ui): round popups and form controls"
 推送前运行：
 
 ```bash
-git branch --show-current
+git rev-parse --abbrev-ref HEAD
 git status --short
 git log -2 --oneline
 ```

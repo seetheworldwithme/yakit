@@ -6,7 +6,7 @@
       .ant-tabs-tab {
         font-size: 12px;
         .ant-tabs-tab-btn {
-          color: #ccd2de;
+          color: var(--Colors-Use-Neutral-Text-3-Secondary);
         }
       }
       .ant-tabs-tab-active {
@@ -20,15 +20,15 @@
     }
     .yakit-tabs-card {
       .ant-tabs-tab {
-        background-color: #eaecf3;
+        background-color: var(--Colors-Use-Neutral-Bg-Hover);
         .ant-tabs-tab-btn {
-          color: #31343f !important;
+          color: var(--Colors-Use-Neutral-Text-1-Title) !important;
         }
       }
       .ant-tabs-tab-active {
         background-color: var(--Colors-Use-Main-Primary);
         .ant-tabs-tab-btn {
-          color: #ffffff !important;
+          color: var(--Colors-Use-Main-On-Primary) !important;
         }
       }
     }
@@ -36,8 +36,8 @@
       & > .ant-tabs-nav {
         .ant-tabs-tab {
           padding: 4px 8px;
-          border-top-left-radius: 4px !important;
-          border-top-right-radius: 4px !important;
+          border-top-left-radius: var(--Radius-Control) !important;
+          border-top-right-radius: var(--Radius-Control) !important;
         }
       }
     }
@@ -45,8 +45,8 @@
       & > .ant-tabs-nav {
         .ant-tabs-tab {
           padding: 4px 8px;
-          border-bottom-right-radius: 4px !important;
-          border-bottom-left-radius: 4px !important;
+          border-bottom-right-radius: var(--Radius-Control) !important;
+          border-bottom-left-radius: var(--Radius-Control) !important;
         }
       }
     }
@@ -57,8 +57,8 @@
         .ant-tabs-tab {
           width: 26px;
           padding: 8px 2px;
-          border-top-right-radius: 4px !important;
-          border-bottom-right-radius: 4px !important;
+          border-top-right-radius: var(--Radius-Control) !important;
+          border-bottom-right-radius: var(--Radius-Control) !important;
           .ant-tabs-tab-btn {
             text-orientation: upright;
             writing-mode: vertical-rl;
@@ -80,8 +80,8 @@
         .ant-tabs-tab {
           width: 26px;
           padding: 8px 2px;
-          border-top-left-radius: 4px !important;
-          border-bottom-left-radius: 4px !important;
+          border-top-left-radius: var(--Radius-Control) !important;
+          border-bottom-left-radius: var(--Radius-Control) !important;
           .ant-tabs-tab-btn {
             text-orientation: upright;
             writing-mode: vertical-rl;

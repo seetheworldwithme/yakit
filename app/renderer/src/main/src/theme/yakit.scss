@@ -1,10 +1,27 @@
+html {
+  --Radius-XS: 4px;
+  --Radius-Control: 6px;
+  --Radius-Input: 8px;
+  --Radius-Container: 10px;
+  --Radius-Popup: 12px;
+  --Radius-Large: 16px;
+  --Radius-Pill: 999px;
+
+  --Spacing-1: 4px;
+  --Spacing-2: 8px;
+  --Spacing-3: 12px;
+  --Spacing-4: 16px;
+  --Spacing-5: 24px;
+  --Spacing-6: 32px;
+}
+
 html[data-theme='light'] {
   --mitm-bg-image: url('../assets/mitm-bg-light.png');
   --mitm-bg-color: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0) 21.72%,
-    rgba(255, 255, 255, 0.6) 37.87%,
-    #fff 102.46%
+    transparent 21.72%,
+    color-mix(in srgb, var(--Colors-Use-Basic-Background) 60%, transparent) 37.87%,
+    var(--Colors-Use-Basic-Background) 102.46%
   );
   h1,
   h2,
@@ -12,18 +29,23 @@ html[data-theme='light'] {
   h4,
   h5,
   h6 {
-    color: #353639;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 }
 html[data-theme='dark'] {
   --mitm-bg-image: url('../assets/mitm-bg-dark.png');
-  --mitm-bg-color: linear-gradient(181deg, rgba(52, 33, 21, 0) 0.51%, rgba(23, 23, 23, 0.6) 20.79%, #171717 101.92%);
+  --mitm-bg-color: linear-gradient(
+    181deg,
+    transparent 0.51%,
+    color-mix(in srgb, var(--Colors-Use-Basic-Background) 60%, transparent) 20.79%,
+    var(--Colors-Use-Basic-Background) 101.92%
+  );
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    color: #c8d0dd;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 }

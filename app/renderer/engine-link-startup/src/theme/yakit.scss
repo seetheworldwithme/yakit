@@ -1,3 +1,20 @@
+html {
+  --Radius-XS: 4px;
+  --Radius-Control: 6px;
+  --Radius-Input: 8px;
+  --Radius-Container: 10px;
+  --Radius-Popup: 12px;
+  --Radius-Large: 16px;
+  --Radius-Pill: 999px;
+
+  --Spacing-1: 4px;
+  --Spacing-2: 8px;
+  --Spacing-3: 12px;
+  --Spacing-4: 16px;
+  --Spacing-5: 24px;
+  --Spacing-6: 32px;
+}
+
 html[data-theme='light'] {
   h1,
   h2,
@@ -5,7 +22,7 @@ html[data-theme='light'] {
   h4,
   h5,
   h6 {
-    color: #353639;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 }
 html[data-theme='dark'] {
@@ -15,6 +32,6 @@ html[data-theme='dark'] {
   h4,
   h5,
   h6 {
-    color: #c8d0dd;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 }

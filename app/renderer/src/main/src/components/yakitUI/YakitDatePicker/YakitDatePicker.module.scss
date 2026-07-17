@@ -8,7 +8,7 @@
   }
   :global {
     .ant-picker-range {
-      border-radius: 4px;
+      border-radius: var(--Radius-Input);
       border: 1px solid var(--Colors-Use-Neutral-Border);
       padding: 6px 8px;
       background-color: var(--Colors-Use-Neutral-Bg);
@@ -25,7 +25,7 @@
     .ant-picker-range:hover,
     .ant-picker-focused {
       border-color: var(--Colors-Use-Main-Primary);
-      box-shadow: 0 0 0 2px rgb(242 139 68 / 20%);
+      box-shadow: 0 0 0 2px var(--Colors-Use-Main-Focus);
     }
     .ant-picker-range .ant-picker-active-bar {
       background-color: var(--Colors-Use-Main-Primary);
@@ -38,6 +38,13 @@
 }
 .yakit-range-picker-dropdaown {
   :global {
+    .ant-picker-panel-container {
+      overflow: hidden;
+      background: var(--Colors-Use-Neutral-Bg);
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      border-radius: var(--Radius-Popup);
+      box-shadow: 0 8px 16px var(--Colors-Use-Basic-Shadow);
+    }
     .ant-picker-header-super-prev-btn,
     .ant-picker-header-prev-btn,
     .ant-picker-header-super-next-btn,
@@ -138,7 +145,7 @@
     .ant-picker-ranges .ant-picker-ok .ant-btn-primary {
       background-color: var(--Colors-Use-Main-Primary);
       color: var(--Colors-Use-Neutral-Text-1-Title);
-      border-radius: 4px;
+      border-radius: var(--Radius-Control);
       border: none;
       font-size: 12px;
     }
@@ -177,9 +184,10 @@
   }
   :global {
     .ant-picker {
-      border-radius: 4px;
-      border: 1px solid #eaecf3;
+      border-radius: var(--Radius-Input);
+      border: 1px solid var(--Colors-Use-Neutral-Border);
       padding: 6px 8px;
+      background: var(--Colors-Use-Basic-Background);
     }
     .ant-picker-input > input {
       color: var(--Colors-Use-Neutral-Text-1-Title);
@@ -190,7 +198,7 @@
     .ant-picker:hover,
     .ant-picker-focused {
       border-color: var(--Colors-Use-Main-Primary);
-      box-shadow: 0 0 0 2px rgb(242 139 68 / 20%);
+      box-shadow: 0 0 0 2px var(--Colors-Use-Main-Focus);
     }
     .ant-picker .ant-picker-active-bar {
       background-color: var(--Colors-Use-Main-Primary);
@@ -199,6 +207,13 @@
 }
 .yakit-data-picker-dropdaown {
   :global {
+    .ant-picker-panel-container {
+      overflow: hidden;
+      background: var(--Colors-Use-Neutral-Bg);
+      border: 1px solid var(--Colors-Use-Neutral-Border);
+      border-radius: var(--Radius-Popup);
+      box-shadow: 0 8px 16px var(--Colors-Use-Basic-Shadow);
+    }
     .ant-picker-header-super-prev-btn,
     .ant-picker-header-prev-btn,
     .ant-picker-header-super-next-btn,

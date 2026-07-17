@@ -25,7 +25,7 @@
         overflow: hidden;
         margin: 4px 0;
         width: 1px;
-        background-color: #eaecf3;
+        background-color: var(--Colors-Use-Neutral-Border);
       }
     }
     .time-line-content {
@@ -43,7 +43,7 @@
     }
   }
   .time-line-item-bottom {
-    color: #ccd2de;
+    color: var(--Colors-Use-Neutral-Disable);
     text-align: center;
     font-size: 12px;
     font-weight: 400;
