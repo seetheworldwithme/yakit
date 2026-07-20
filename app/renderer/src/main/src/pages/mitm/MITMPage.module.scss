@@ -190,6 +190,22 @@
         padding: 4px 0 8px;
       }
 
+      .plugin-list-body {
+        &::-webkit-scrollbar {
+          width: 8px;
+        }
+        &::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        &::-webkit-scrollbar-thumb {
+          background: var(--Colors-Use-Neutral-Border);
+          border-radius: 4px;
+          &:hover {
+            background: var(--Colors-Use-Main-Border);
+          }
+        }
+      }
+
       .display-flex {
         flex-wrap: wrap;
         gap: 8px 0;

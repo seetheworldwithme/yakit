@@ -1074,7 +1074,7 @@ export const MITMServer: React.FC<MITMServerProps> = React.memo((props) => {
           onClose={() => setIdlePluginDrawerOpen(false)}
           bodyStyle={{ padding: 12, height: 'calc(100% - 55px)', overflow: 'hidden' }}
         >
-          {onRenderFirstNode()}
+          <div className={style['mitm-server-start-pre-first']}>{onRenderFirstNode()}</div>
         </YakitDrawer>
       </main>
     )
