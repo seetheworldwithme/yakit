@@ -2335,12 +2335,12 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
             )}
             <div className={style['http-history-table-total']}>
               <div className={style['http-history-table-total-item']}>
-                <span className={style['http-history-table-total-item-text']}>Total</span>
+                <span className={style['http-history-table-total-item-text']}>总数</span>
                 <span className={style['http-history-table-total-item-number']}>{total}</span>
               </div>
               <Divider type="vertical" />
               <div className={style['http-history-table-total-item']}>
-                <span className={style['http-history-table-total-item-text']}>Selected</span>
+                <span className={style['http-history-table-total-item-text']}>已选</span>
                 <span className={style['http-history-table-total-item-number']}>
                   {isAllSelect ? total : selectedRowKeys?.length}
                 </span>

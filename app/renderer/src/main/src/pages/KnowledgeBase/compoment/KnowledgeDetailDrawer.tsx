@@ -243,7 +243,7 @@ const KnowledgeDetailDrawer: FC<KnowledgeDetailDrawerProps> = ({
               />
               {type === 'related' ? (
                 <>
-                  <div className={styles['caption']}>Total</div>
+                  <div className={styles['caption']}>总数</div>
                   <div className={styles['number']}>{QueryEntityData?.length ?? 0}</div>
                 </>
               ) : null}

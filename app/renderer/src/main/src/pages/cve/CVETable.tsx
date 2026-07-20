@@ -351,7 +351,7 @@ const CVETableList: React.FC<CVETableListProps> = React.memo((props) => {
               )}
               <div className={styles['cve-list-title']}>CVE 数据库管理</div>
               <div className={styles['cve-list-total']}>
-                <span>Total</span>
+                <span>总数</span>
                 <span className={styles['cve-list-total-number']}>{total}</span>
               </div>
               <div className={styles['cve-list-time']}>更新时间:{updateTime ? formatDate(updateTime) : '-'}</div>

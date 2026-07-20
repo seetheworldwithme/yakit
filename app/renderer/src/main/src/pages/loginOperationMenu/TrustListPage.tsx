@@ -300,12 +300,12 @@ export const TrustListPage: React.FC<TrustListPageProp> = (props) => {
           <div className={styles['virtual-table-header-wrap']}>
             <div className={styles['virtual-table-heard-left']}>
               <div className={styles['virtual-table-heard-left-item']}>
-                <span className={styles['virtual-table-heard-left-text']}>Total</span>
+                <span className={styles['virtual-table-heard-left-text']}>总数</span>
                 <span className={styles['virtual-table-heard-left-number']}>{response.pagemeta.total}</span>
               </div>
               <Divider type="vertical" />
               <div className={styles['virtual-table-heard-left-item']}>
-                <span className={styles['virtual-table-heard-left-text']}>Selected</span>
+                <span className={styles['virtual-table-heard-left-text']}>已选</span>
                 <span className={styles['virtual-table-heard-left-number']}>{selectNum}</span>
               </div>
             </div>

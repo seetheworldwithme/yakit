@@ -3132,7 +3132,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
               <YakitTag color="danger">{t('PayloadOnlineContent.hugeDictionary')}</YakitTag>
             ) : selectPayloadArr.length > 0 ? (
               <div className={styles['total-item']}>
-                <span className={styles['total-item-text']}>Selected</span>
+                <span className={styles['total-item-text']}>已选</span>
                 <span className={styles['total-item-number']}>{selectPayloadArr?.length}</span>
               </div>
             ) : null}
@@ -3562,7 +3562,7 @@ export const PayloadOnlineContent: React.FC<PayloadLocalContentProps> = (props) 
               <YakitTag color="danger">{t('PayloadOnlineContent.hugeDictionary')}</YakitTag>
             ) : selectPayloadArr.length > 0 ? (
               <div className={styles['total-item']}>
-                <span className={styles['total-item-text']}>Selected</span>
+                <span className={styles['total-item-text']}>已选</span>
                 <span className={styles['total-item-number']}>{selectPayloadArr?.length}</span>
               </div>
             ) : (

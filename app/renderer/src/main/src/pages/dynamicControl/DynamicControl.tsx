@@ -588,7 +588,7 @@ export const ControlAdminPage: React.FC<ControlAdminPageProps> = (props) => {
             <div className={styles['title-box']}>远程管理</div>
 
             <span className={styles['total-box']}>
-              <span className={styles['title']}>Total</span> <span className={styles['content']}>{total}</span>
+              <span className={styles['title']}>总数</span> <span className={styles['content']}>{total}</span>
             </span>
           </div>
 

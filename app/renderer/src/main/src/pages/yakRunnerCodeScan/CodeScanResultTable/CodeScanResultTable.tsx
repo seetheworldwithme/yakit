@@ -663,7 +663,7 @@ export const CodeScanResultTable: React.FC<CodeScanResultTableProps> = React.mem
             <div className={styles['virtual-table-header-wrap']}>
               <div className={styles['virtual-table-heard-left']}>
                 <div className={styles['virtual-table-heard-left-item']}>
-                  <span className={styles['virtual-table-heard-left-text']}>Total</span>
+                  <span className={styles['virtual-table-heard-left-text']}>总数</span>
                   <span className={styles['virtual-table-heard-left-number']}>{total}</span>
                 </div>
               </div>

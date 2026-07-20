@@ -1272,12 +1272,12 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                     {
                       <div className={styles['virtual-table-heard-right']}>
                         <div className={styles['virtual-table-heard-right-item']}>
-                          <span className={styles['virtual-table-heard-right-text']}>Total</span>
+                          <span className={styles['virtual-table-heard-right-text']}>总数</span>
                           <span className={styles['virtual-table-heard-right-number']}>{allTotal}</span>
                         </div>
                         <Divider type="vertical" />
                         <div className={styles['virtual-table-heard-right-item']}>
-                          <span className={styles['virtual-table-heard-right-text']}>Selected</span>
+                          <span className={styles['virtual-table-heard-right-text']}>已选</span>
                           <span className={styles['virtual-table-heard-right-number']}>{selectNum}</span>
                         </div>
                       </div>

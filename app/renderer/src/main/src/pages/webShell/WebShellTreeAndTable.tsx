@@ -406,7 +406,7 @@ export const WebShellURLTreeAndTable: React.FC<WebShellURLTreeAndTableProp> = (p
                     </Tooltip>
                   </Space>
                   <div className={cveStyles['cve-list-total']}>
-                    <span>Total</span>
+                    <span>总数</span>
                     <span className={cveStyles['cve-list-total-number']}>{total}</span>
                   </div>
                 </div>

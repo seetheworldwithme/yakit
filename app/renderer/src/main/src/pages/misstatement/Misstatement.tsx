@@ -585,7 +585,7 @@ export const Misstatement: React.FC<MisstatementProp> = (props) => {
             />
             <div className={styles['virtual-table-heard-right']}>
               <div className={styles['virtual-table-heard-right-item']}>
-                <span className={styles['virtual-table-heard-right-text']}>Total</span>
+                <span className={styles['virtual-table-heard-right-text']}>总数</span>
                 <span className={styles['virtual-table-heard-right-number']}>{tableResponse.pagemeta.total}</span>
               </div>
             </div>

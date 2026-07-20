@@ -1912,12 +1912,12 @@ const PluginListContent: React.FC<PluginListContentProps> = memo((props) => {
                 </div>
                 <div className={styles['show-box']}>
                   <div className={styles['show']}>
-                    <div className={styles['title']}>Total</div>
+                    <div className={styles['title']}>总数</div>
                     <div className={styles['count']}>{datsSource.data.length}</div>
                   </div>
                   <div className={styles['line']} />
                   <div className={styles['show']}>
-                    <div className={styles['title']}>Selected</div>
+                    <div className={styles['title']}>已选</div>
                     <div className={styles['count']}>{checkedList.length}</div>
                   </div>
                 </div>

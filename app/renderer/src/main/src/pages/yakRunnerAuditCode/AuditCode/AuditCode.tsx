@@ -2963,12 +2963,12 @@ export const AuditHistoryTable: React.FC<AuditHistoryTableProps> = memo((props) 
         <div className={styles['main']}>
           <div className={styles['title']}>{t('AuditCode.projectManagement')}</div>
           <div className={styles['sub-title']}>
-            <div className={styles['text']}>Total</div>
+            <div className={styles['text']}>总数</div>
             <div className={styles['number']}>{total}</div>
           </div>
           <Divider type={'vertical'} style={{ margin: 0 }} />
           <div className={styles['sub-title']}>
-            <div className={styles['text']}>Selected</div>
+            <div className={styles['text']}>已选</div>
             <div className={styles['number']}>{selectedRowKeys.length}</div>
           </div>
         </div>
