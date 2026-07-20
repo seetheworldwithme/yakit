@@ -220,12 +220,9 @@ const ProxyRulesConfig = (props: ProxyRulesConfigProps) => {
             dataIndex: 'action',
             render: (_, record) => (
               <>
-                <YakitButton
-                  icon={<OutlineTrashIcon className={styles['icon-trash']} />}
-                  type="text2"
-                  size="small"
-                  onClick={() => onDelete(record.Id)}
-                />
+                <YakitButton type="text2" size="small" onClick={() => onDelete(record.Id)}>
+                  删除
+                </YakitButton>
                 <Divider type="vertical" style={{ margin: '0 12px' }} />
                 <YakitButton icon={<OutlinePencilaltIcon />} type="text2" onClick={() => onEdit(record)} />
                 <Divider type="vertical" style={{ margin: '0 12px' }} />
@@ -300,11 +297,9 @@ const ProxyRulesConfig = (props: ProxyRulesConfigProps) => {
             dataIndex: 'action',
             render: (_, record) => (
               <>
-                <YakitButton
-                  icon={<OutlineTrashIcon className={styles['icon-trash']} />}
-                  type="text2"
-                  onClick={() => onDelete(record.Id)}
-                />
+                <YakitButton type="text2" onClick={() => onDelete(record.Id)}>
+                  删除
+                </YakitButton>
                 <Divider type="vertical" style={{ margin: '0 12px' }} />
                 <YakitButton icon={<OutlinePencilaltIcon />} type="text2" onClick={() => onEdit(record)} />
                 <Divider type="vertical" style={{ margin: '0 12px' }} />

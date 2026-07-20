@@ -58,7 +58,7 @@ const HybridScanTaskListDrawer: React.FC<HybridScanTaskListDrawerProps> = React.
       onClose={onClose}
       width="45%"
       placement={hybridScanTaskSource === 'yakPoc' ? 'left' : 'right'}
-      title="任务列表"
+      title="历史任务"
       extra={
         <>
           {selectedRowKeys.length === 0 ? (
@@ -216,7 +216,7 @@ const HybridScanTaskList: React.FC<HybridScanTaskListProps> = React.memo(
           return (
             <YakitButton
               type="text"
-              danger
+              className={styles['action-btn-text']}
               onClick={(e) => {
                 e.stopPropagation()
                 onRemoveSingle(record.TaskId)
@@ -280,6 +280,7 @@ const HybridScanTaskList: React.FC<HybridScanTaskListProps> = React.memo(
               ) : (
                 <YakitButton
                   type="text"
+                  className={styles['action-btn-text']}
                   onClick={(e) => {
                     e.stopPropagation()
                     onDetails(record.TaskId, 'status')

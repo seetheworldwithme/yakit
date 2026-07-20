@@ -21,7 +21,7 @@ export const YakitHintModal: React.FC<YakitHintModalProps> = memo((props) => {
     setTop,
     wrapClassName,
     heardIcon,
-    showIcon = true,
+    showIcon = false,
     extraIcon,
     title,
     content,

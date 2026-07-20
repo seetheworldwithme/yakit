@@ -17,6 +17,10 @@
     }
   }
   .ant-modal-confirm-body {
+    // 隐藏 antd Modal.confirm/info/error 的默认问号/感叹号图标
+    > .anticon {
+      display: none;
+    }
     .anticon {
       color: var(--Colors-Use-Main-Primary);
     }

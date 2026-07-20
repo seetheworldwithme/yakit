@@ -552,19 +552,19 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
       {
         title: t('YakitTable.action'),
         dataKey: 'action',
-        width: 70,
+        width: 80,
         fixed: 'right',
         render: (text, record: Risk, index) => (
           <>
             <YakitButton
               type="text"
-              danger
               onClick={(e) => {
                 e.stopPropagation()
                 onRemoveSingle(record.Id)
               }}
-              icon={<OutlineTrashIcon />}
-            />
+            >
+              删除
+            </YakitButton>
           </>
         ),
       },

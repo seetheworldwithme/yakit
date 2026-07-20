@@ -298,24 +298,14 @@ export const getHTTPFlowReqAndResToString = (flow: HTTPFlow) => {
   }
 }
 
-export const StatusCodeToColor = (code: number) => {
-  if (code >= 400) {
-    return 'var( --yakit-danger-5)'
-  } else if (code < 400 && code >= 300) {
-    return 'var( --Colors-Use-Warning-Primary)'
-  } else {
-    return 'var( --Colors-Use-Success-Primary)'
-  }
+// 状态码统一按默认黑色展示，不再按 2xx/3xx/4xx+ 着色。原配色见 git 历史，可回滚。
+export const StatusCodeToColor = (_code: number) => {
+  return ''
 }
 
-export const DurationMsToColor = (code: number) => {
-  if (code >= 600) {
-    return 'var( --yakit-danger-5)'
-  } else if (code < 600 && code >= 300) {
-    return 'var( --Colors-Use-Warning-Primary)'
-  } else {
-    return 'var( --Colors-Use-Success-Primary)'
-  }
+// 响应耗时统一按默认黑色展示，不再按耗时阈值着色。原配色见 git 历史，可回滚。
+export const DurationMsToColor = (_code: number) => {
+  return ''
 }
 
 export const LogLevelToCode = (level: string) => {

@@ -351,13 +351,13 @@ export const RuleManagement: React.FC<RuleManagementProps> = memo((props) => {
                 <div className={styles['divider-style']}></div>
                 <YakitButton
                   type="text"
-                  colors="danger"
-                  icon={<OutlineTrashIcon />}
                   loading={isLoading}
                   onClick={() => {
                     handleDelRule(rowData)
                   }}
-                />
+                >
+                  删除
+                </YakitButton>
               </div>
             )
           }
@@ -882,13 +882,13 @@ export const RuleManagement: React.FC<RuleManagementProps> = memo((props) => {
               {canUpAndDel && (
                 <YakitButton
                   type="text"
-                  colors="danger"
-                  icon={<OutlineTrashIcon />}
                   loading={isLoading}
                   onClick={() => {
                     handleDelOnlineRule(rowData)
                   }}
-                />
+                >
+                  删除
+                </YakitButton>
               )}
             </div>
           )

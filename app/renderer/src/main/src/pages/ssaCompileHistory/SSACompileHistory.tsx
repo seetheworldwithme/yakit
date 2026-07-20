@@ -304,8 +304,6 @@ const SSACompileHistory: React.FC<SSACompileHistoryProps> = (props) => {
             </Tooltip>
             <YakitButton
               type="text"
-              danger
-              icon={<OutlineTrashIcon />}
               onClick={(e) => {
                 e?.stopPropagation()
                 setDeleteParams({
@@ -317,7 +315,9 @@ const SSACompileHistory: React.FC<SSACompileHistoryProps> = (props) => {
                   },
                 })
               }}
-            />
+            >
+              删除
+            </YakitButton>
           </div>
         )
       },

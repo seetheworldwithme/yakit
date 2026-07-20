@@ -21,7 +21,7 @@
   "YakPoCExecuteContent": {
     "selectedPlugin": "Selected Plugins",
     "pluginLog": "Plugin Log",
-    "taskList": "Task List",
+    "taskList": "Task History",
     "pluginExecute": "Plugin Execution"
   },
   "PluginExecuteLog": {

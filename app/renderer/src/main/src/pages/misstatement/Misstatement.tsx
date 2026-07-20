@@ -283,13 +283,13 @@ export const Misstatement: React.FC<MisstatementProp> = (props) => {
           <>
             <YakitButton
               type="text"
-              danger
               onClick={(e) => {
                 e.stopPropagation()
                 onRemoveSingle(record)
               }}
-              icon={<OutlineTrashIcon />}
-            />
+            >
+              删除
+            </YakitButton>
           </>
         ),
       },

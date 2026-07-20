@@ -1057,12 +1057,7 @@ const HTTPFuzzerPageCore: React.FC<HTTPFuzzerPageProp> = (props) => {
   useEffect(() => {
     setSubscribeClose(YakitRoute.HTTPFuzzer, {
       close: {
-        title: t('YakitModal.closePrompt'),
-        content: (
-          <div style={{ color: 'var(--Colors-Use-Neutral-Text-3-Secondary)' }}>
-            {t('HTTPFuzzerPage.closeMenuPrompt')}
-          </div>
-        ),
+        title: '是否关闭',
         onOkText: t('YakitButton.ok'),
         onCancelText: t('YakitButton.cancel'),
         onOk: (m) => onCloseTab(m),

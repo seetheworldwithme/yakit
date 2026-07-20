@@ -281,13 +281,13 @@ const MemoryTable: React.FC<MemoryTableProps> = React.memo((props) => {
               }}
             >
               <YakitButton
-                icon={<OutlineTrashIcon />}
                 type="text"
-                danger
                 onClick={(e) => {
                   e.stopPropagation()
                 }}
-              />
+              >
+                删除
+              </YakitButton>
             </YakitPopconfirm>
           </div>
         ),

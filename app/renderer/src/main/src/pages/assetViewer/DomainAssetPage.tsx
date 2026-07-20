@@ -109,13 +109,13 @@ export const DomainAssetPage: React.FC<DomainAssetPageProps> = (props) => {
         <>
           <YakitButton
             type="text"
-            danger
             onClick={(e) => {
               e.stopPropagation()
               onRemoveSingle(record.DomainName, record.ID)
             }}
-            icon={<OutlineTrashIcon />}
-          />
+          >
+            删除
+          </YakitButton>
         </>
       ),
     },

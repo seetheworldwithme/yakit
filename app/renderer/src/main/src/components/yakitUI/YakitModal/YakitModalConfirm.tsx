@@ -155,7 +155,7 @@ export const YakitModalConfirm = (props: YakitModalConfirmProps) => {
               <div className={style['modal-content-warp']}>
                 <div className={style['down-modal']}>
                   <div className={style['down-modal-heard']}>
-                    <ExclamationCircleOutlined className={style['modal-icon']} />
+                    {/* 感叹号 icon 去掉（全局确认弹窗不再展示图标）：<ExclamationCircleOutlined className={style['modal-icon']} /> */}
                     <div>
                       {props.title && (
                         <div className={style['modal-title']}>

@@ -1229,7 +1229,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
             <YakitButton type="text2" onClick={() => onFooterExtraExport(record)}>
               {t('YakitButton.export')}
             </YakitButton>
-            <YakitButton type="text2" danger onClick={() => onFooterExtraDel(record)}>
+            <YakitButton type="text2" onClick={() => onFooterExtraDel(record)}>
               {t('YakitButton.delete')}
             </YakitButton>
           </div>

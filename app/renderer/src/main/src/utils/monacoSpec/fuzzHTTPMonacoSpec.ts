@@ -460,7 +460,8 @@ monaco.languages.setMonarchTokensProvider(fuzzHTTPMonacoSpec, {
       [/(\[)/, { token: 'json.array.start', next: '@body_json_array' }], // JSON 数组根节点
       [/-{2,}.*/, 'body.boundary', '@body_form'],
       [/%[0-9ABCDEFabcdef]{2}/, 'http.urlencoded'],
-      [/./, 'http.query.params', '@http_query_params'],
+      // 响应体等非 JSON 文本走独立中性 token，不再复用 query 的橙色，避免整段橙看上去没换皮
+      [/./, 'body.text'],
     ],
     // 通用 JSON 对象内部（用于根对象和嵌套对象）
     body_json_object: [

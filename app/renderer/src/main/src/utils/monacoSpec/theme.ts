@@ -9,7 +9,8 @@ let currentAppliedTheme: Theme | null = null
  * 定义并应用 monaco 编辑器主题
  */
 const applyYakitMonacoTheme = (themeGlobal: Theme) => {
-  if (!monaco || currentAppliedTheme === themeGlobal) return
+  if (!monaco) return
+  // 换皮期间需要频繁调整主题色，去掉「同主题不重 define」缓存，保证 HMR/重载一定能刷出新配色
   currentAppliedTheme = themeGlobal
 
   requestAnimationFrame(() => {
@@ -76,7 +77,7 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       },
       {
         token: 'tag.html',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
         fontStyle: 'bold',
       },
       {
@@ -93,20 +94,20 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       },
       {
         token: 'attribute.value.html',
-        foreground: vars['--yakit-colors-Blue-80'],
+        foreground: vars['--yakit-colors-Green-80'],
       },
       {
         token: 'attribute.name.html',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
         fontStyle: 'bold',
       },
       {
         token: 'attribute.name.css',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
       },
       {
         token: 'metatag.content.html',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
         fontStyle: 'bold',
       },
       {
@@ -153,7 +154,7 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       },
       {
         token: 'metatag.php',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
       },
       {
         token: 'comment.yaml',
@@ -173,11 +174,11 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       },
       {
         token: 'string.key.json',
-        foreground: vars['--yakit-colors-Error-80'],
+        foreground: vars['--Colors-Use-Main-Primary'],
       },
       {
         token: 'string.value.json',
-        foreground: vars['--yakit-colors-Blue-80'],
+        foreground: vars['--yakit-colors-Green-80'],
       },
       {
         token: 'keyword.json',
@@ -222,8 +223,9 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
         foreground: '#c4652f',
         token: 'libFunction',
       },
+      // fuzz 标签改用琥珀，不再刺眼大红
       {
-        foreground: '#ff0000',
+        foreground: vars['--yakit-colors-Orange-80'],
         token: 'fuzz.tag.inner',
         fontStyle: 'bold underline',
       },
@@ -251,33 +253,43 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
         foreground: vars['--yakit-colors-Blue-80'],
         token: 'http.header.info',
       },
-      { token: 'http.header.mime.xml', fontStyle: 'bold', foreground: '#b27777' },
-      { token: 'http.header.mime.json', fontStyle: 'bold', foreground: '#3d8e86' },
-      { token: 'http.header.mime.urlencoded', fontStyle: 'bold', foreground: '#6a5b6d' },
-      { token: 'http.header.mime.form', fontStyle: 'bold', foreground: '#814662' },
-      { token: 'http.method', fontStyle: 'bold', foreground: '#d56161' },
-      { token: 'http.protocol', fontStyle: 'bold', foreground: vars['--yakit-colors-Green-80'] },
-      { token: 'bold-keyword', fontStyle: 'bold' },
-      { token: 'http.path', fontStyle: 'bold', foreground: '#01949a' },
-      { token: 'http.anchor', foreground: '#808184' },
-      { token: 'http.query.params', fontStyle: 'bold', foreground: '#d26900' },
-      { token: 'http.query.index', fontStyle: 'bold', foreground: '#a67eb7' },
-      { token: 'http.query.index.values', fontStyle: 'bold', foreground: '#f57a00' },
-      { token: 'http.query.values', fontStyle: 'bold', foreground: vars['--yakit-colors-Magenta-80'] },
-      { foreground: '#639300', token: 'json.key', fontStyle: 'bold' },
-      { foreground: '#9C6CFF', token: 'json.value', fontStyle: 'bold' },
+      // Sentinel 配色：header 统一中性灰白
+      { token: 'http.header.mime.xml', fontStyle: 'bold', foreground: vars['--Colors-Use-Neutral-Text-2-Primary'] },
+      { token: 'http.header.mime.json', fontStyle: 'bold', foreground: vars['--Colors-Use-Neutral-Text-2-Primary'] },
       {
-        foreground: '#808184',
+        token: 'http.header.mime.urlencoded',
+        fontStyle: 'bold',
+        foreground: vars['--Colors-Use-Neutral-Text-2-Primary'],
+      },
+      { token: 'http.header.mime.form', fontStyle: 'bold', foreground: vars['--Colors-Use-Neutral-Text-2-Primary'] },
+      // method 琥珀 / protocol 青蓝
+      { token: 'http.method', fontStyle: 'bold', foreground: vars['--yakit-colors-Orange-80'] },
+      { token: 'http.protocol', fontStyle: 'bold', foreground: vars['--Colors-Use-Main-Primary'] },
+      // 响应体非 JSON 文本：中性石板色，不再复用 query 橙色
+      { token: 'body.text', foreground: vars['--Colors-Use-Neutral-Text-2-Primary'] },
+      { token: 'bold-keyword', fontStyle: 'bold' },
+      { token: 'http.path', fontStyle: 'bold', foreground: vars['--Colors-Use-Main-Primary'] },
+      { token: 'http.anchor', foreground: '#808184' },
+      { token: 'http.query.params', fontStyle: 'bold', foreground: vars['--yakit-colors-Orange-80'] },
+      { token: 'http.query.index', fontStyle: 'bold', foreground: vars['--Colors-Use-Neutral-Text-2-Primary'] },
+      { token: 'http.query.index.values', fontStyle: 'bold', foreground: vars['--yakit-colors-Orange-80'] },
+      { token: 'http.query.values', fontStyle: 'bold', foreground: vars['--yakit-colors-Magenta-80'] },
+      // JSON：key 青蓝 / value 浅绿
+      { foreground: vars['--Colors-Use-Main-Primary'], token: 'json.key', fontStyle: 'bold' },
+      { foreground: vars['--yakit-colors-Green-80'], token: 'json.value', fontStyle: 'bold' },
+      {
+        foreground: vars['--yakit-colors-Green-80'],
         token: 'string.value',
         fontStyle: 'bold',
       },
+      // URL / path 青蓝
       {
-        foreground: '#0045e8',
+        foreground: vars['--Colors-Use-Main-Primary'],
         token: 'http.url',
         fontStyle: 'underline',
       },
       {
-        foreground: '#0045e8',
+        foreground: vars['--Colors-Use-Main-Primary'],
         token: 'http.urlencoded',
         fontStyle: '',
       },
@@ -335,7 +347,7 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
         token: 'keyword.operator.logical',
       },
       {
-        foreground: '#639300',
+        foreground: vars['--yakit-colors-Green-80'],
         token: 'string',
       },
       {
@@ -640,7 +652,7 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
         token: 'punctuation.definition.end',
       },
       {
-        foreground: '#629f9e',
+        foreground: vars['--Colors-Use-Main-Primary'],
         token: 'entity.other.attribute-name.html',
       },
       {

@@ -81,7 +81,7 @@
     "getGeneratedFileClickToOpen": "获取生成的文件（点击打开文件位置）"
   },
   "HTTPFuzzerPage": {
-    "closeMenuPrompt": "关闭一级菜单会关闭一级菜单下的所有二级菜单？",
+    "closeMenuPrompt": "当前包含二级菜单，是否关闭？",
     "clearOldDataFailed": "清空老数据失败：",
     "wfHistoryDataRestoreFailed": "WF历史数据恢复失败：",
     "fuzzTestRequestFailed": "提交模糊测试请求失败：",

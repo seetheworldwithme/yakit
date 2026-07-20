@@ -21,7 +21,7 @@
   "YakPoCExecuteContent": {
     "selectedPlugin": "已選外掛",
     "pluginLog": "外掛日誌",
-    "taskList": "任務列表",
+    "taskList": "歷史任務",
     "pluginExecute": "外掛執行"
   },
   "PluginExecuteLog": {

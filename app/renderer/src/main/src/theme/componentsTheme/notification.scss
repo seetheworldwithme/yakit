@@ -1,4 +1,12 @@
 // ========================== notification start ==========================
+// 隐藏所有通知（toast）的图标，并去掉为图标预留的左侧缩进
+.ant-notification-notice-icon {
+  display: none !important;
+}
+.ant-notification-notice-message {
+  margin-left: 0 !important;
+}
+
 .yakit-notification-failed,
 .yakit-notification-error {
   background: var(--Colors-Use-Basic-Background);

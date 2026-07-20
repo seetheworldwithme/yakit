@@ -400,13 +400,13 @@ export const YakitAuditHoleTable: React.FC<YakitAuditHoleTableProps> = React.mem
           <>
             <YakitButton
               type="text"
-              danger
               onClick={(e) => {
                 e.stopPropagation()
                 onRemoveSingle(record.Id)
               }}
-              icon={<OutlineTrashIcon />}
-            />
+            >
+              删除
+            </YakitButton>
             <Divider type="vertical" />
             <Tooltip title={t('YakitAuditHoleTable.openInAudit')}>
               <YakitButton
