@@ -125,11 +125,7 @@ const AdvancedSet: React.FC<AdvancedSetProps> = memo((props) => {
             {t('YakitButton.reset')}
           </YakitButton>
         </Form.Item>
-        <Form.Item
-          label={t('HttpQueryAdvancedConfig.repeat_send')}
-          name="repeatTimes"
-          help={t('HttpQueryAdvancedConfig.concurrency_test_tip')}
-        >
+        <Form.Item label={t('HttpQueryAdvancedConfig.repeat_send')} name="repeatTimes">
           <YakitInputNumber type="horizontal" size="small" min={0} />
         </Form.Item>
         <Form.Item label={t('HttpQueryAdvancedConfig.concurrent_threads')} name="concurrent">
@@ -213,11 +209,7 @@ const AdvancedSetV2: React.FC<AdvancedSetV2Props> = memo((props) => {
             >
               <YakitSwitch />
             </Form.Item>
-            <Form.Item
-              label={t('HttpQueryAdvancedConfig.repeat_send')}
-              name="repeatTimes"
-              help={t('HttpQueryAdvancedConfig.concurrency_test_tip')}
-            >
+            <Form.Item label={t('HttpQueryAdvancedConfig.repeat_send')} name="repeatTimes">
               <YakitInputNumber type="horizontal" size="small" min={0} />
             </Form.Item>
             <Form.Item label={t('HttpQueryAdvancedConfig.concurrent_threads')} name="concurrent">
