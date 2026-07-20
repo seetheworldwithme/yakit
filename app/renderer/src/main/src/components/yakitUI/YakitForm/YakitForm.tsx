@@ -535,13 +535,7 @@ export const YakitDragger: React.FC<YakitDraggerProps> = React.memo((props) => {
                   </span>
                 )}
               </span>
-              {isShowPathNumber && (
-                <span>
-                  {t('YakitFormDragger.detected')}
-                  <span className={styles['dragger-help-number']}>{fileNumber}</span>
-                  {t('YakitFormDragger.filesPath')}
-                </span>
-              )}
+              {isShowPathNumber && <span>{t('YakitFormDragger.orDragUpload')}</span>}
               {showExtraHelp}
             </div>,
           )}
@@ -567,13 +561,7 @@ export const YakitDragger: React.FC<YakitDraggerProps> = React.memo((props) => {
                   </span>
                 )}
               </span>
-              {isShowPathNumber && (
-                <span>
-                  {t('YakitFormDragger.detected')}
-                  <span className={styles['dragger-help-number']}>{fileNumber}</span>
-                  {t('YakitFormDragger.filesPath')}
-                </span>
-              )}
+              {isShowPathNumber && <span>{t('YakitFormDragger.orDragUpload')}</span>}
               {showExtraHelp}
             </div>,
           )}
@@ -613,13 +601,7 @@ export const YakitDragger: React.FC<YakitDraggerProps> = React.memo((props) => {
                   </>
                 )}
               </span>
-              {isShowPathNumber && (
-                <span>
-                  {t('YakitFormDragger.detected')}
-                  <span className={styles['dragger-help-number']}>{fileNumber}</span>
-                  {t('YakitFormDragger.filesPath')}
-                </span>
-              )}
+              {isShowPathNumber && <span>{t('YakitFormDragger.orDragUpload')}</span>}
               {showExtraHelp}
             </div>,
           )}

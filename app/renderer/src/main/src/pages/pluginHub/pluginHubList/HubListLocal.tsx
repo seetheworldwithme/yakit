@@ -9,6 +9,7 @@ import {
   OutlinePlusIcon,
   OutlineRefreshIcon,
   OutlineReplyIcon,
+  OutlineSaveIcon,
   OutlineTrashIcon,
   OutlineXIcon,
 } from '@/assets/icon/outline'
@@ -43,6 +44,7 @@ import { SolidPluscircleIcon } from '@/assets/icon/solid'
 import emiter from '@/utils/eventBus/eventBus'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { FilterPopoverBtn } from '@/pages/plugins/funcTemplate'
+import { ImportLocalPlugin } from '@/pages/mitm/MITMPage'
 import { ExportYakScriptStreamRequest, PluginGroupList } from '@/pages/plugins/local/PluginsLocalType'
 import { QueryYakScriptRequest, YakScript } from '@/pages/invoker/schema'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
@@ -105,7 +107,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
     externalSearchParams,
     onChangeOnline,
   } = props
-  const { t, i18n } = useI18nNamespaces(['yakitUi', 'plugin', 'pluginHub'])
+  const { t, i18n } = useI18nNamespaces(['yakitUi', 'plugin', 'pluginHub', 'mitm'])
   const isRemoteEngine = SystemInfo.mode === 'remote'
 
   const emptyImageTarget = useEmptyImage('search')
@@ -553,6 +555,14 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
   const [exportModal, setExportModal] = useState<boolean>(false)
   const exportParams = useRef<ExportYakScriptStreamRequest>({ ...DefaultExportRequest })
   const exportSource = useRef<string>('')
+
+  /** ---------- 导入插件 Start ---------- */
+  // 导入本地插件（与导出配套，消费 .zip / .zip.enc）
+  const [importPluginVisible, setImportPluginVisible] = useState<boolean>(false)
+  const onHeaderExtraImport = useMemoizedFn(() => {
+    setImportPluginVisible(true)
+  })
+  /** ---------- 导入插件 End ---------- */
   const onHeaderExtraExport = useMemoizedFn(() => {
     exportSource.current = 'batch'
     const names: string[] = selectList.map((ele) => ele.ScriptName).filter((item) => !!item)
@@ -1339,6 +1349,9 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     <YakitButton type="primary" icon={<SolidPluscircleIcon />} onClick={onNewPlugin}>
                       {t('HubListLocal.newPlugin')}
                     </YakitButton>
+                    <YakitButton type="outline2" size="large" icon={<OutlineSaveIcon />} onClick={onHeaderExtraImport}>
+                      {t('YakitButton.importPlugin')}
+                    </YakitButton>
                     <YakitButton
                       type="outline2"
                       size="large"
@@ -1653,6 +1666,14 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
         getContainer={document.getElementById(rootElementId || '') || document.body}
         exportLocalParams={exportParams.current}
         onClose={closeExportModal}
+      />
+      <ImportLocalPlugin
+        visible={importPluginVisible}
+        setVisible={setImportPluginVisible}
+        loadPluginMode="local"
+        sendPluginLocal
+        titleText={t('ImportLocalPlugin.importLocalPluginTitle')}
+        hideExternalWarning
       />
 
       {editPlugin.current && (

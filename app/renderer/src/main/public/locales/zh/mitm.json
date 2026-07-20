@@ -218,6 +218,7 @@
     "importLocalNuclei": "导入本地Nuclei",
     "pluginImportSuccess": "插件导入成功",
     "pluginImportMethod": "导入插件方式",
+    "importLocalPluginTitle": "导入插件到本地",
     "externalResourceWarning": "导入外部资源存在潜在风险，可能会被植入恶意代码或Payload，造成数据泄露、系统被入侵等严重后果。请务必谨慎考虑引入外部资源的必要性，并确保资源来源可信、内容安全。如果确实需要使用外部资源，建议优先选择官方发布的安全版本，或自行编写可控的数据源。同时，请保持系统和软件的最新版本，及时修复已知漏洞，做好日常安全防护。",
     "onlineNuclei": "线上 Nuclei",
     "localPlugin": "本地插件",

@@ -218,6 +218,7 @@
     "importLocalNuclei": "Import Local Nuclei",
     "pluginImportSuccess": "Plugin imported successfully",
     "pluginImportMethod": "Plugin Import Method",
+    "importLocalPluginTitle": "Import Plugin to Local",
     "externalResourceWarning": "Importing external resources has potential risks and may introduce malicious code or payloads, leading to data leaks, system compromises, and other serious consequences. Please carefully consider the necessity of importing external resources and ensure the source is trustworthy and the content is safe. If you must use external resources, it is recommended to prioritize official, secure versions or write your own controllable data sources. Additionally, please keep your system and software up to date, promptly fix known vulnerabilities, and maintain daily security protection.",
     "onlineNuclei": "Online Nuclei",
     "localPlugin": "Local Plugin",

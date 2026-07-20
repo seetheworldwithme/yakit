@@ -210,6 +210,7 @@
     "uploadFolder": "Upload Folder",
     "detected": "Detected ",
     "filesPath": " file paths",
+    "orDragUpload": "or drag to upload",
     "enterPath": "Please enter the path",
     "enterValidPath": "Please enter a valid path",
     "onlySupportFormat": "Only files in {{accept}} format are supported",

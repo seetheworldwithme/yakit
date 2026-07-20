@@ -210,6 +210,7 @@
     "uploadFolder": "上傳資料夾",
     "detected": "識別到",
     "filesPath": "個檔案路徑",
+    "orDragUpload": "或拖曳上傳",
     "enterPath": "請輸入路徑",
     "enterValidPath": "請輸入正確的路徑",
     "onlySupportFormat": "僅支援{{accept}}格式的檔案",

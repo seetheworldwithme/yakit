@@ -1130,6 +1130,10 @@ interface ImportLocalPluginProps {
   setVisible: (b: boolean) => void
   loadPluginMode?: LoadPluginMode
   sendPluginLocal?: boolean
+  // 自定义弹窗标题（不传则按 loadPluginMode 走默认拼接）
+  titleText?: string
+  // 隐藏「导入外部资源存在潜在风险…」安全提示
+  hideExternalWarning?: boolean
 }
 interface ImportYakScriptStreamRequest {
   Filename: string
@@ -1137,7 +1141,7 @@ interface ImportYakScriptStreamRequest {
 }
 
 export const ImportLocalPlugin: React.FC<ImportLocalPluginProps> = React.memo((props) => {
-  const { visible, setVisible, loadPluginMode, sendPluginLocal = false } = props
+  const { visible, setVisible, loadPluginMode, sendPluginLocal = false, titleText, hideExternalWarning } = props
   const { t, i18n } = useI18nNamespaces(['yakitUi', 'mitm'])
   const [form] = Form.useForm()
   const [loadMode, setLoadMode] = useState<LoadPluginMode>(loadPluginMode || 'giturl')
@@ -1410,7 +1414,9 @@ export const ImportLocalPlugin: React.FC<ImportLocalPluginProps> = React.memo((p
         maskClosable={false}
         destroyOnClose={true}
         title={
-          !loadPluginMode ? (
+          titleText ? (
+            titleText
+          ) : !loadPluginMode ? (
             t('ImportLocalPlugin.pluginImportMethod')
           ) : (
             <>
@@ -1446,7 +1452,9 @@ export const ImportLocalPlugin: React.FC<ImportLocalPluginProps> = React.memo((p
           </>
         }
       >
-        <div className={style.infoBox}>{t('ImportLocalPlugin.externalResourceWarning')}</div>
+        {hideExternalWarning ? null : (
+          <div className={style.infoBox}>{t('ImportLocalPlugin.externalResourceWarning')}</div>
+        )}
         <Form form={form} className={style['import-local-plugin-form']}>
           {getRenderByLoadMode(loadMode)}
         </Form>
