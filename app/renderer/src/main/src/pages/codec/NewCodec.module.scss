@@ -550,13 +550,13 @@
         box-sizing: content-box;
         padding: 4px;
         cursor: pointer;
-        color: var(--Colors-Use-Neutral-Text-3-Secondary);
+        color: var(--Colors-Use-Main-Hover);
         svg {
           width: 16px;
           height: 16px;
         }
         &:hover {
-          color: var(--Colors-Use-Error-Primary);
+          color: var(--Colors-Use-Main-Primary);
         }
       }
     }

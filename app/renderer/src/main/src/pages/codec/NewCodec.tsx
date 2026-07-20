@@ -386,6 +386,7 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                 )}
               </div>
               <div className={styles['extra']}>
+                {/* 隐藏「导入」与「不自动换行」icon
                 <Tooltip title={t('YakitButton.import')}>
                   <Upload
                     className={classNames(styles['upload-box'], {
@@ -420,6 +421,7 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                     />
                   </Tooltip>
                 )}
+                */}
 
                 {size && size.width <= 300 && (
                   <YakitDropdownMenu
@@ -526,11 +528,13 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                     <>
                       {size && size.width > 300 ? (
                         <>
+                          {/* 隐藏「保存」icon
                           <Tooltip title={t('YakitButton.save')}>
                             <div className={styles['extra-icon']} onClick={onSave}>
                               <OutlineStorageIcon />
                             </div>
                           </Tooltip>
+                          */}
                           <Tooltip title={t('NewCodecRightEditorBox.replaceOutputToInput')}>
                             <div className={styles['extra-icon']} onClick={onReplace}>
                               <OutlineArrowBigUpIcon />
@@ -541,6 +545,7 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                               <OutlineDocumentduplicateIcon />
                             </div>
                           </Tooltip>
+                          {/* 隐藏「不自动换行」icon
                           <Tooltip title={t('NewCodecRightEditorBox.noAutoWordwrap')}>
                             <YakitButton
                               size={'small'}
@@ -551,6 +556,7 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                               }}
                             />
                           </Tooltip>
+                          */}
                         </>
                       ) : (
                         <YakitDropdownMenu
@@ -594,7 +600,7 @@ export const NewCodecRightEditorBox: React.FC<NewCodecRightEditorBoxProps> = (pr
                     </>
                   )}
                   <Divider type={'vertical'} style={{ margin: '4px 0px 0px' }} />
-                  {Expand()}
+                  {/* 隐藏全屏 icon {Expand()} */}
                 </div>
               </div>
               <>
@@ -1708,6 +1714,7 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
           </div>
           <span className={styles['text']}>{item.CodecName}</span>
         </div>
+        {/* 隐藏收藏 icon
         <div className={styles['extra']}>
           {collectList.includes(item.CodecName) ? (
             <div
@@ -1734,6 +1741,7 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
             </div>
           )}
         </div>
+        */}
       </div>
     </YakitPopover>
   ))
@@ -1764,6 +1772,7 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
                     </div>
                     <span className={styles['text']}>{item[0].CodecName}</span>
                   </div>
+                  {/* 隐藏收藏 icon
                   <div className={styles['extra']}>
                     {collectList.includes(item[0].CodecName) ? (
                       <div className={classNames(styles['star-icon'], styles['star-icon-active'])}>
@@ -1775,6 +1784,7 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
                       </div>
                     )}
                   </div>
+                  */}
                 </div>
               )}
             </>
@@ -1857,7 +1867,8 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
       })}
     >
       <div className={styles['header']}>
-        <div className={styles['title']}>{t('NewCodecLeftDragList.codecCategory')}</div>
+        {/* <div className={styles['title']}>{t('NewCodecLeftDragList.codecCategory')}</div> */}
+        {/* 隐藏折叠分类列表的伸缩 icon，不再收起分类列表
         <div className={classNames(styles['extra'], styles['fold-icon'])}>
           <Tooltip placement="top" title={t('NewCodecLeftDragList.collapseCodecCategory')}>
             <OutlineCloseIcon
@@ -1868,6 +1879,7 @@ export const NewCodecLeftDragList: React.FC<NewCodecLeftDragListProps> = (props)
             />
           </Tooltip>
         </div>
+        */}
       </div>
       <div className={styles['search']}>
         <YakitInput
@@ -2093,8 +2105,8 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
   useEffect(() => {
     setSubscribeClose(YakitRoute.Codec, {
       close: {
-        title: t('YakitModal.closePrompt'),
-        content: t('YakitModal.closeContent'),
+        title: '是否关闭',
+        // content: t('YakitModal.closeContent'),
         onOkText: t('YakitButton.ok'),
         onCancelText: t('YakitButton.cancel'),
         onOk: (m) => onCloseTab(m),
