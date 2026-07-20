@@ -81,9 +81,9 @@ const { ipcRenderer } = window.require('electron')
 
 const SaveCodecMethods = 'SaveCodecMethods'
 
-// 客户端仅展示主流编/解码 + 国密(SM2/SM3/SM4) + AES/RSA 加解密；
-// 其余引擎下发的方法（Hash/MAC/签名/Java/Yak脚本/其他等）一律隐藏不展示。
-// 以 yak 引擎下发的 CodecMethod 技术名做精确白名单匹配。
+// 客户端仅展示主流编/解码 + 国密(SM2/SM3/SM4) + AES/RSA 加解密 + 常见 Hash(MD5/SHA1/SHA2xx/SHA5xx)；
+// 其余引擎下发的方法（MAC/签名/Java/Yak脚本/其他等）一律隐藏不展示。
+// 以 yak 引擎下发的 CodecMethod 技术名做精确白名单匹配；Hash 走 ALLOWED_HASH_PATTERN 兜底。
 const ALLOWED_CODEC_METHODS = new Set<string>([
   // Base64
   'Base64Encode',
@@ -119,6 +119,10 @@ const ALLOWED_CODEC_METHODS = new Set<string>([
   'RSASign',
   'RSAVerify',
 ])
+
+// 常见 Hash（MD5 / SHA1 / SHA224 / SHA256 / SHA384 / SHA512）也放行展示；
+// 引擎下发的大小写/带横线变体（Md5、sha256、SHA-256 等）一律命中。
+const ALLOWED_HASH_PATTERN = /^(md5|sha-?(1|224|256|384|512))$/i
 
 export interface CodecResponseProps {
   Result: string
@@ -2208,11 +2212,13 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
     }
   })
 
-  // 获取codec列表（仅保留白名单内的主流编/解码与国密/AES/RSA 加解密方法）
+  // 获取codec列表（保留白名单内的主流编/解码、国密/AES/RSA 加解密方法，以及常见 Hash）
   const getLeftData = useMemoizedFn(() => {
     ipcRenderer.invoke('GetAllCodecMethods').then((res: CodecMethods) => {
       const { Methods } = res
-      const allowed = Methods.filter((m) => ALLOWED_CODEC_METHODS.has(m.CodecMethod))
+      const allowed = Methods.filter(
+        (m) => ALLOWED_CODEC_METHODS.has(m.CodecMethod) || ALLOWED_HASH_PATTERN.test(m.CodecMethod),
+      )
       cacheCodecRef.current = allowed
       getCollectData()
       initLeftData(allowed)

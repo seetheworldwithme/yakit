@@ -1,3 +1,16 @@
+.compare-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  &-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+  }
+}
+
 .data-compare-modal {
   height: 716px;
   display: flex;

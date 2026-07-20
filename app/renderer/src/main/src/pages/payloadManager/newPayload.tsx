@@ -1405,13 +1405,12 @@ export const NewPayloadLocalList: React.FC<NewPayloadLocalListProps> = (props) =
                                   <div
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
                                     style={{
                                       // ...provided.draggableProps.style
                                       ...getItemStyle(snapshot.isDragging, provided.draggableProps.style),
                                     }}
                                   >
-                                    {/* 渲染你的文件夹或文件组件 */}
+                                    {/* 禁用列表拖动：已移除 {...provided.dragHandleProps}，恢复拖动时把该属性加回上面的 div */}
                                     {/* 使用 item.type 来区分文件夹和文件 */}
                                     {item.type === 'Folder' ? (
                                       // 渲染文件夹组件
@@ -2600,9 +2599,11 @@ export const FileComponent: React.FC<FileComponentProps> = (props) => {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
+                  {/* 隐藏拖动图标，保留结构便于后续恢复
                   <div className={styles['drag-icon']}>
                     <SolidDragsortIcon />
                   </div>
+                  */}
                 </>
               )}
               {file.type !== 'DataBase' && (
@@ -3154,14 +3155,15 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
             <YakitButton
               type="outline1"
               colors="danger"
-              icon={<OutlineTrashIcon />}
               disabled={isNoSelect}
               onClick={() => {
                 if (!isNoSelect) {
                   onDeletePayload({ Ids: selectPayloadArr })
                 }
               }}
-            />
+            >
+              {t('YakitButton.delete')}
+            </YakitButton>
             {/*
             {isNoSelect && (
               <YakitButton
@@ -3176,6 +3178,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
               </YakitButton>
             )}
             */}
+            {/* 按要求隐藏「备份到其他字典 / 移动到其他字典」按钮，保留逻辑便于后续恢复
             {!isNoSelect && size && (
               <>
                 {size.width < 950 ? (
@@ -3215,6 +3218,7 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
                 )}
               </>
             )}
+            */}
             <YakitButton
               onClick={() => {
                 const m = showYakitModal({

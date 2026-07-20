@@ -1293,11 +1293,10 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     <div className={styles['hub-inline-title-filters']}>
                       <span>{t('PluginTabName.localPlugin')}</span>
                       {filterGroup
-                        .filter((group) => ['plugin_type', 'plugin_group', 'tags'].includes(group.groupKey))
+                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
                         .sort(
                           (a, b) =>
-                            ['plugin_type', 'plugin_group', 'tags'].indexOf(a.groupKey) -
-                            ['plugin_type', 'plugin_group', 'tags'].indexOf(b.groupKey),
+                            ['plugin_type', 'tags'].indexOf(a.groupKey) - ['plugin_type', 'tags'].indexOf(b.groupKey),
                         )
                         .map((group) => {
                           const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
@@ -1435,6 +1434,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         )}
                       </div>
                     )}
+                    {/* 按要求隐藏「添加分组」按钮，保留逻辑便于后续恢复
                     <YakitPopover
                       visible={addGroupVisible}
                       overlayClassName={styles['add-group-popover']}
@@ -1480,6 +1480,7 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         </YakitButton>
                       )}
                     </YakitPopover>
+                    */}
                   </div>
                 }
                 allChecked={allChecked}

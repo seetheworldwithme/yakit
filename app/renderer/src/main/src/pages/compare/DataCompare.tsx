@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useImperativeHandle, useLayoutEffect, useMemo } from 'react'
-import { Button, Space } from 'antd'
+import { Button } from 'antd'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
 import { AutoCard } from '../../components/AutoCard'
 import { LineConversionIcon } from '../../assets/icons'
@@ -38,32 +38,27 @@ export const DataCompare: React.FC<DataCompareProps> = (props) => {
 
   const codeComparisonRef = useRef<any>(null)
   return (
-    <AutoCard
-      title={''}
-      bodyStyle={{ padding: 0 }}
-      bordered={false}
-      extra={
-        <Space>
-          <Button
-            size={'small'}
-            type={!noWrap ? 'primary' : 'link'}
-            icon={<LineConversionIcon />}
-            onClick={() => {
-              codeComparisonRef.current?.onChangeLineConversion()
-            }}
-          />
-        </Space>
-      }
-    >
-      <CodeComparison
-        ref={codeComparisonRef}
-        noWrap={noWrap}
-        setNoWrap={setNoWrap}
-        leftCode={left}
-        setLeftCode={setLeft}
-        rightCode={right}
-        setRightCode={setRight}
-      />
+    <AutoCard title={''} bodyStyle={{ padding: 0 }} bordered={false}>
+      <div className={styles['compare-wrap']}>
+        <Button
+          className={styles['compare-wrap-btn']}
+          size={'small'}
+          type={!noWrap ? 'primary' : 'link'}
+          icon={<LineConversionIcon />}
+          onClick={() => {
+            codeComparisonRef.current?.onChangeLineConversion()
+          }}
+        />
+        <CodeComparison
+          ref={codeComparisonRef}
+          noWrap={noWrap}
+          setNoWrap={setNoWrap}
+          leftCode={left}
+          setLeftCode={setLeft}
+          rightCode={right}
+          setRightCode={setRight}
+        />
+      </div>
     </AutoCard>
   )
 }

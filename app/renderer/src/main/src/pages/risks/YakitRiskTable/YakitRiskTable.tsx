@@ -30,13 +30,10 @@ import {
   OutlineChevronleftIcon,
   OutlineChevronrightIcon,
   OutlineClockIcon,
-  OutlineExportIcon,
-  OutlineEyeIcon,
   OutlinePlayIcon,
   OutlineRefreshIcon,
   OutlineSearchIcon,
   OutlineTerminalIcon,
-  OutlineTrashIcon,
   OutlineUploadIcon,
 } from '@/assets/icon/outline'
 import { ColumnsTypeProps, SortProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
@@ -142,18 +139,19 @@ const batchExportMenuData: (t: TFunction) => YakitMenuItemProps[] = (t) => {
     },
   ]
 }
-const batchRefreshMenuData: (t: TFunction) => YakitMenuItemProps[] = (t) => {
-  return [
-    {
-      key: 'noResetRefresh',
-      label: t('YakitButton.refreshOnly'),
-    },
-    {
-      key: 'resetRefresh',
-      label: t('YakitButton.resetQueryAndRefresh'),
-    },
-  ]
-}
+// 已移除刷新下拉框，保留以下菜单定义以便回滚
+// const batchRefreshMenuData: (t: TFunction) => YakitMenuItemProps[] = (t) => {
+//   return [
+//     {
+//       key: 'noResetRefresh',
+//       label: t('YakitButton.refreshOnly'),
+//     },
+//     {
+//       key: 'resetRefresh',
+//       label: t('YakitButton.resetQueryAndRefresh'),
+//     },
+//   ]
+// }
 
 /**name字段里面的内容不可随意更改，与查询条件有关 */
 export const SeverityMapTag = [
@@ -871,18 +869,19 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
       setRiskLoading(false)
     }, 200)
   })
-  const onRefreshMenuSelect = useMemoizedFn((key: string) => {
-    switch (key) {
-      case 'noResetRefresh':
-        onRefRiskList()
-        break
-      case 'resetRefresh':
-        onResetRefresh()
-        break
-      default:
-        break
-    }
-  })
+  // 已移除刷新下拉框，保留菜单选择逻辑以便回滚
+  // const onRefreshMenuSelect = useMemoizedFn((key: string) => {
+  //   switch (key) {
+  //     case 'noResetRefresh':
+  //       onRefRiskList()
+  //       break
+  //     case 'resetRefresh':
+  //       onResetRefresh()
+  //       break
+  //     default:
+  //       break
+  //   }
+  // })
   /**条件变化会自动查询新数据 */
   const onResetRefresh = useMemoizedFn(() => {
     setQuery(cloneDeep(defQueryRisksRequest))
@@ -1296,14 +1295,12 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                     <FuncBtn
                       maxWidth={1200}
                       type="outline2"
-                      icon={<OutlineEyeIcon />}
                       onClick={onAllRead}
                       name={t('YakitRiskTable.mark_all_as_read')}
                     />
                     <FuncBtn
                       maxWidth={1200}
                       type="outline2"
-                      icon={<OutlineExportIcon />}
                       name={'导出为 HTML'}
                       onClick={() => onExportHTML()}
                       disabled={allTotal === 0}
@@ -1320,27 +1317,13 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                         maxWidth={1200}
                         type="outline1"
                         colors="danger"
-                        icon={<OutlineTrashIcon />}
                         disabled={allTotal === 0}
                         name={selectNum === 0 ? t('YakitButton.clear') : t('YakitButton.delete')}
                       />
                     </YakitPopconfirm>
-                    <YakitDropdownMenu
-                      menu={{
-                        data: batchRefreshMenuData(t),
-                        onClick: ({ key }) => {
-                          onRefreshMenuSelect(key)
-                        },
-                      }}
-                      dropdown={{
-                        trigger: ['hover'],
-                        placement: 'bottom',
-                      }}
-                    >
-                      <Badge dot={offsetDataInTop.length > 0} offset={[-5, 4]}>
-                        <YakitButton type="text2" icon={<OutlineRefreshIcon />} />
-                      </Badge>
-                    </YakitDropdownMenu>
+                    <Badge dot={offsetDataInTop.length > 0} offset={[-5, 4]}>
+                      <YakitButton type="text2" icon={<OutlineRefreshIcon />} onClick={onResetRefresh} />
+                    </Badge>
                   </div>
                 </div>
               )
