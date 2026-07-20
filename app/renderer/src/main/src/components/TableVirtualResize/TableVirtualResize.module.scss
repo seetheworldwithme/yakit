@@ -148,6 +148,16 @@
             display: flex;
             color: var(--Colors-Use-Neutral-Border);
           }
+
+          // 隐藏列名后的 icon（排序 sorter / 筛选 filter 及其各状态变体）
+          // 仅隐藏视觉，逻辑与样式保留，便于回滚；drag 列宽拖拽手柄不在其中，保持可用
+          .virtual-table-sorter,
+          .virtual-table-sorter-active,
+          .virtual-table-sorter-disable,
+          .virtual-table-filter,
+          .virtual-table-filter-value {
+            display: none;
+          }
         }
       }
 
