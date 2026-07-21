@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   buildHTTPFlowTableAdvancedQuery,
   buildLegacyHTTPFlowTableFilterConfig,
   buildRuleSummaryList,
+  refreshHistoryPageForFilterChange,
   getClassNameData,
   hasActiveHTTPFlowTableFilterConfig,
   mergeRuleSummaryItems,
@@ -59,6 +60,17 @@ describe('getClassNameData', () => {
         cellClassName: undefined,
       },
     ])
+  })
+})
+
+describe('refreshHistoryPageForFilterChange', () => {
+  it('refetches the first page even when the current page is already one', () => {
+    const fetchPage = vi.fn()
+
+    const nextPage = refreshHistoryPageForFilterChange(50, fetchPage)
+
+    expect(nextPage).toEqual({ Page: 1, Limit: 50 })
+    expect(fetchPage).toHaveBeenCalledWith(1, 50)
   })
 })
 

@@ -403,6 +403,12 @@ export const getRunTimeIdObj = (runTimeId?: string) => {
   }
 }
 
+export const refreshHistoryPageForFilterChange = (limit: number, fetchPage: (page: number, limit: number) => void) => {
+  const nextPage = { Page: 1, Limit: limit }
+  fetchPage(nextPage.Page, nextPage.Limit)
+  return nextPage
+}
+
 export function getFullRange(id: number, count = 10, minId = 1, maxId = null) {
   const range: number[] = []
   const start = Math.max(minId, id - count)

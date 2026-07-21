@@ -1,5 +1,5 @@
 import React, { Ref, useEffect, useMemo, useRef, useState, useContext } from 'react'
-import { Divider, Tooltip, Badge } from 'antd'
+import { Divider, Tooltip, Badge, Pagination } from 'antd'
 import { YakQueryHTTPFlowRequest } from '../../utils/yakQueryHTTPFlow'
 import { YakScript } from '../../pages/invoker/schema'
 import { HTTPFlowDetailProp } from '../HTTPFlowDetail'
@@ -129,6 +129,7 @@ import {
   getHTTPFlowReqAndResToString,
   getRunTimeIdObj,
   filterHTTPFlowsByFavoriteAndTags,
+  refreshHistoryPageForFilterChange,
 } from './HTTPFlowTable.utils'
 
 //导出给其他组件用
@@ -281,6 +282,13 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   )
 
   const [total, setTotal] = useState(0)
+
+  // #region History 页真分页（页码 / 每页条数 / 跳转）：旁路游标 hook，按 Page/Limit 偏移拉取
+  const isHistory = pageType === 'History'
+  const [historyPage, setHistoryPage] = useState<{ Page: number; Limit: number }>({ Page: 1, Limit: 50 })
+  const [historyData, setHistoryData] = useState<HTTPFlow[]>([])
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false)
+  // #endregion
   const extraTimerRef = useRef<ReturnType<typeof setInterval>>()
   const getAddDataByGrpcRef = useRef<(query: YakQueryHTTPFlowRequest) => void>(() => {})
   const offsetDataRef = useRef<HTTPFlow[]>([])
@@ -345,6 +353,10 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   const grpcQueryHTTPFlows = useMemoizedFn(async (hookParams: ParamsTProps & { Filter: YakQueryHTTPFlowRequest }) => {
     const { Pagination } = hookParams
     const { AfterId, BeforeId, Order, OrderBy, ...paginationFields } = Pagination
+    // History 页走真分页通道，hook 的游标拉取在此短路，数据由 fetchHistoryPage 提供
+    if (isHistory) {
+      return { Data: [], Total: 0, Pagination: paginationFields }
+    }
     if (!backgroundRefresh && pageType !== 'MITM' && isTopLoadRequest(hookParams) && Order !== 'asc') {
       try {
         const rsp = await apiQueryHTTPFlows({
@@ -374,7 +386,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     pagination,
     loading,
     offsetData,
-    { startT, setTLoad: setLoading, setTData, noResetRefreshT: updateData, setP },
+    { startT, stopT, setTLoad: setLoading, setTData, noResetRefreshT: updateData, setP },
   ] = useVirtualTableHook<ParamsTProps & { Filter: YakQueryHTTPFlowRequest }, HTTPFlow, 'Data', 'Id'>({
     tableBoxRef: useRef(null), // props.inViewport 判断可见性，不必再挂一个 ref
     tableRef,
@@ -459,8 +471,16 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     }))
   }, [runTimeId])
 
-  // 兼容原来 setData 写法（收藏、改标签等会原地改表格行）
+  // 兼容原来 setData 写法（收藏、改标签等会原地改表格行）；History 真分页写 historyData
   const setData = useMemoizedFn((value: React.SetStateAction<HTTPFlow[]>) => {
+    if (isHistory) {
+      if (typeof value === 'function') {
+        setHistoryData(value(historyData))
+        return
+      }
+      setHistoryData(value)
+      return
+    }
     if (typeof value === 'function') {
       setTData(value(data))
       return
@@ -468,6 +488,49 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     setTData(value)
   })
   updateDataRef.current = updateData
+
+  // #region History 真分页：按 Page/Limit 偏移拉取（不带游标），数据写入 historyData
+  const fetchHistoryPage = useMemoizedFn(async (page: number, limit: number) => {
+    setHistoryLoading(true)
+    try {
+      const filter = getParams() ?? {}
+      const { Order, OrderBy } = tableParams.Pagination
+      const rsp = (await ipcRenderer.invoke('QueryHTTPFlows', {
+        ...filter,
+        Pagination: {
+          Page: page,
+          Limit: limit,
+          Order: Order || 'desc',
+          OrderBy: (OrderBy === 'DurationMs' ? 'duration' : OrderBy) || 'created_at',
+        },
+      })) as YakQueryHTTPFlowResponse
+      setHistoryData(rsp?.Data || [])
+      setTotal(Number(rsp?.Total) || 0)
+    } catch (e) {
+      yakitNotify('error', `${e}`)
+    } finally {
+      setHistoryLoading(false)
+    }
+  })
+
+  // History 下停掉游标滚动轮询，避免空转
+  useEffect(() => {
+    if (isHistory) stopT()
+  }, [isHistory])
+
+  // 初次进入 / 翻页 / 改每页条数 → 拉对应页
+  useEffect(() => {
+    if (!isHistory) return
+    fetchHistoryPage(historyPage.Page, historyPage.Limit)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHistory, historyPage.Page, historyPage.Limit])
+
+  // 筛选 / 搜索 / 排序变化 → 回到第 1 页（tableParams 随 setP 变化）
+  useUpdateEffect(() => {
+    if (!isHistory) return
+    setHistoryPage(refreshHistoryPageForFilterChange(historyPage.Limit, fetchHistoryPage))
+  }, [tableParams])
+  // #endregion
 
   useEffect(() => {
     if (!viewAttachIdFirstRef.current || !data.length) return
@@ -483,6 +546,10 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   }, [offsetData])
 
   useUpdateEffect(() => {
+    if (isHistory) {
+      fetchHistoryPage(historyPage.Page, historyPage.Limit)
+      return
+    }
     updateData()
   }, [refresh])
 
@@ -2224,9 +2291,12 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   }, [total, isAllSelect, selectedRowKeys])
 
   const realData = useMemo(() => {
+    // History 真分页：数据源切到 historyData；其余模式沿用游标 hook 的 data
+    const sourceData = isHistory ? historyData : data
+    const writeBack = isHistory ? setHistoryData : setData
     if (updateCacheData.length) {
       let findFlag = false
-      const dataMap = new Map(data.map((item) => [+item.Id, item]))
+      const dataMap = new Map(sourceData.map((item) => [+item.Id, item]))
       updateCacheData.forEach((target, index) => {
         if (dataMap.has(target.id)) {
           const targetObject = dataMap.get(target.id)
@@ -2239,15 +2309,15 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
         }
       })
       if (findFlag) {
-        const newData = getClassNameData(data, pageType === 'History' ? ['YELLOW'] : [])
-        setData(newData)
+        const newData = getClassNameData(sourceData, pageType === 'History' ? ['YELLOW'] : [])
+        writeBack(newData)
         return newData
       }
-      return data
+      return sourceData
     } else {
-      return data
+      return sourceData
     }
-  }, [updateCacheData, data])
+  }, [updateCacheData, data, historyData, isHistory])
 
   useThrottleEffect(() => {
     // 当realData长度大于1000时，打印日志
@@ -2688,7 +2758,13 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   ])
 
   return (
-    <div ref={ref as Ref<any>} tabIndex={-1} className={style['http-history-flow-table-wrapper']}>
+    <div
+      ref={ref as Ref<any>}
+      tabIndex={-1}
+      className={classNames(style['http-history-flow-table-wrapper'], {
+        [style['history-paged']]: isHistory,
+      })}
+    >
       <ReactResizeDetector
         onResize={(width, height) => {
           if (!width || !height) {
@@ -2731,7 +2807,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
             onSelectAll: onSelectAll,
             onChangeCheckboxSingle: onSelectChange,
           }}
-          loading={loading}
+          loading={isHistory ? historyLoading : loading}
           enableDrag={true}
           enableDragSelection={dragSelectEnabled}
           columns={columns}
@@ -2750,6 +2826,21 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
           disableDeselect={true}
         />
       </div>
+      {isHistory && (
+        <div className={style['http-flow-table-pagination']}>
+          <Pagination
+            current={historyPage.Page}
+            pageSize={historyPage.Limit}
+            total={total}
+            showSizeChanger
+            showQuickJumper
+            size="small"
+            pageSizeOptions={['20', '50', '100']}
+            showTotal={(count) => t('HTTPFlowTable.paginationTotal', { count })}
+            onChange={(p, s) => setHistoryPage({ Page: p, Limit: s })}
+          />
+        </div>
+      )}
       <HTTPFlowTableFormConfiguration
         visible={drawerFormVisible}
         setVisible={setDrawerFormVisible}

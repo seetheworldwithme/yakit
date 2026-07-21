@@ -267,6 +267,7 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
 
   return (
     <div className={styles.hTTPHistory} ref={httpHistoryRef}>
+      {/* 隐藏最左侧「网站树筛选」入口按钮及其容器，保留逻辑便于后续恢复
       <div className={styles['history-filter-rail']}>
         <Tooltip title={t('HTTPHistory.websiteTree')}>
           <YakitButton type="text" onClick={() => setFilterDrawerOpen(true)} className={styles['filter-rail-btn']}>
@@ -274,6 +275,7 @@ const HTTPHistoryInner: React.FC<HTTPHistoryProp> = (props) => {
           </YakitButton>
         </Tooltip>
       </div>
+      */}
       <div className={styles['hTTPHistory-right']}>
         <HTTPFlowRealTimeTableAndEditor
           pageType={pageType}
