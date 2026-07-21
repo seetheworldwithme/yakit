@@ -5,12 +5,10 @@ import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import { YakEditor } from '@/utils/editors'
 import { CaCertData } from '../MITMServerHijacking/MITMServerHijacking'
 import { useMemoizedFn } from 'ahooks'
-import { saveABSFileToOpen, openExternalWebsite } from '@/utils/openWebsite'
+import { saveABSFileToOpen } from '@/utils/openWebsite'
 import { YakitCard } from '@/components/yakitUI/YakitCard/YakitCard'
 import { YakitRadioButtons } from '@/components/yakitUI/YakitRadioButtons/YakitRadioButtons'
-import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import { OutlineQuestionmarkcircleIcon } from '@/assets/icon/outline'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -45,10 +43,10 @@ export const MITMCertificateDownloadModal: React.FC<MITMCertificateDownloadModal
       visible={visible}
       onCancel={() => setVisible(false)}
       closable={true}
-      title={t('MITMCertificateDownloadModal.download_cert')}
+      title={'证书下载'}
       width={720}
       className={styles['mitm-certificate-download-modal']}
-      okText={t('MITMCertificateDownloadModal.download_and_open')}
+      okText={'下载'}
       footerExtra={
         <div className={styles['certificate-download-modal-footer']}>
           {t('MITMCertificateDownloadModal.after_proxy_visit')}
@@ -66,11 +64,11 @@ export const MITMCertificateDownloadModal: React.FC<MITMCertificateDownloadModal
             options={[
               {
                 value: false,
-                label: t('MITMCertificateDownloadModal.ssl_tls_cert'),
+                label: 'SSL 证书',
               },
               {
                 value: true,
-                label: t('MITMCertificateDownloadModal.gm_ssl_tls_cert'),
+                label: '国密证书',
               },
             ]}
             value={isGMState}
@@ -82,20 +80,6 @@ export const MITMCertificateDownloadModal: React.FC<MITMCertificateDownloadModal
         style={{ borderRadius: 4 }}
         headStyle={{ height: 36 }}
         bodyStyle={{ padding: 0 }}
-        extra={
-          isGMState ? (
-            <YakitButton
-              type="text"
-              onClick={() => {
-                openExternalWebsite('https://mp.weixin.qq.com/s/smGfZar2H0arbkZx_4b-Iw')
-              }}
-              className={styles['certificate-download-modal-btn']}
-            >
-              {t('YakitButton.ImportTutorial')}
-              <OutlineQuestionmarkcircleIcon className={styles['certificate-download-modal-icon']} />
-            </YakitButton>
-          ) : null
-        }
       >
         <div className={styles['certificate-download-modal-body']}>
           <YakEditor bytes={true} valueBytes={caCerts.CaCerts} />
