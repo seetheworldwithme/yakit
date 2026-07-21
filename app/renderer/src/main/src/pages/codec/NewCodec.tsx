@@ -1658,45 +1658,12 @@ interface NewCodecLeftDragListItemProps {
   parentItem?: LeftDataProps
 }
 
-let lastIsDragging = false
-const getLeftItemStyle = (isDragging, draggableStyle) => {
-  let transform: string = draggableStyle['transform'] || ''
-  // console.log("transform---",transform,isDragging);
-  if (isDragging) {
-    // 使用正则表达式匹配 translate 函数中的两个参数
-    const match = transform.match(/translate\((-?\d+)px, (-?\d+)px\)/)
-    if (match) {
-      lastIsDragging = true
-      // 提取匹配到的两个值，并将它们转换为数字
-      const [value1, value2] = match.slice(1).map(Number)
-      // 判断值是否小于 0
-      if (value1 < 0) {
-        // 修改值为 0
-        const modifiedString = transform.replace(/translate\((-?\d+)px, (-?\d+)px\)/, `translate(0px, ${value2}px)`)
-        transform = modifiedString
-      }
-    } else {
-      if (!lastIsDragging) {
-        // 解决拖拽送松开时,样式溢出（屏蔽异常样式）
-        transform = `translate(0px, 0px)`
-      }
-    }
-  } else {
-    lastIsDragging = false
-  }
-  return {
-    ...draggableStyle,
-    transform,
-  }
-}
-
-// 左边拖拽源
+// 左边可用列表（点击添加到运行列表，不再支持拖拽）
 export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> = (props) => {
-  const { node, collectList, parentItem, getCollectData, onClickToRunList, selectedCodecType } = props
+  const { node, parentItem, onClickToRunList, selectedCodecType } = props
 
   const dragListItemDom = useMemoizedFn((item: CodecMethod) => (
     <YakitPopover
-      // visible={true}
       placement="right"
       overlayClassName={styles['drag-list-item-popover']}
       content={
@@ -1713,117 +1680,18 @@ export const NewCodecLeftDragListItem: React.FC<NewCodecLeftDragListItemProps> =
         onClick={() => onClickToRunList(item)}
       >
         <div className={styles['title']}>
-          <div className={styles['drag-icon']}>
-            <SolidDragsortIcon />
-          </div>
           <span className={styles['text']}>{item.CodecName}</span>
         </div>
-        {/* 隐藏收藏 icon
-        <div className={styles['extra']}>
-          {collectList.includes(item.CodecName) ? (
-            <div
-              className={classNames(styles['star-icon'], styles['star-icon-active'])}
-              onClick={(e) => {
-                e.stopPropagation()
-                const list = collectList.filter((itemIn) => itemIn !== item.CodecName)
-                getCollectData(list)
-                setRemoteValue(SaveCodecMethods, JSON.stringify(list))
-              }}
-            >
-              <SolidStarIcon />
-            </div>
-          ) : (
-            <div
-              className={classNames(styles['star-icon'], styles['star-icon-default'])}
-              onClick={(e) => {
-                e.stopPropagation()
-                getCollectData([...collectList, item.CodecName])
-                setRemoteValue(SaveCodecMethods, JSON.stringify([...collectList, item.CodecName]))
-              }}
-            >
-              <OutlineStarIcon />
-            </div>
-          )}
-        </div>
-        */}
       </div>
     </YakitPopover>
   ))
 
   return (
-    <Droppable
-      droppableId="left"
-      direction="vertical"
-      isDropDisabled={true}
-      renderClone={(provided, snapshot, rubric) => {
-        const item: CodecMethod[] =
-          node.filter((item) => `${parentItem?.title || 'search'}-${item.CodecName}` === rubric.draggableId) || []
-        return (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            style={{
-              ...getLeftItemStyle(snapshot.isDragging, provided.draggableProps.style),
-            }}
-          >
-            <>
-              {item.length > 0 && (
-                <div className={styles['drag-list-item-clone']}>
-                  <div className={styles['title']}>
-                    <div className={styles['drag-icon']}>
-                      <SolidDragsortIcon />
-                    </div>
-                    <span className={styles['text']}>{item[0].CodecName}</span>
-                  </div>
-                  {/* 隐藏收藏 icon
-                  <div className={styles['extra']}>
-                    {collectList.includes(item[0].CodecName) ? (
-                      <div className={classNames(styles['star-icon'], styles['star-icon-active'])}>
-                        <SolidStarIcon />
-                      </div>
-                    ) : (
-                      <div className={classNames(styles['star-icon'], styles['star-icon-default'])}>
-                        <OutlineStarIcon />
-                      </div>
-                    )}
-                  </div>
-                  */}
-                </div>
-              )}
-            </>
-          </div>
-        )
-      }}
-    >
-      {(provided) => (
-        <div ref={provided.innerRef} {...provided.droppableProps}>
-          {node.map((item, index) => {
-            return (
-              <Draggable
-                key={`${parentItem?.title || 'search'}-${item.CodecName}`}
-                draggableId={`${parentItem?.title || 'search'}-${item.CodecName}`}
-                index={index}
-              >
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    style={{
-                      ...getLeftItemStyle(snapshot.isDragging, provided.draggableProps.style),
-                    }}
-                  >
-                    {dragListItemDom(item)}
-                  </div>
-                )}
-              </Draggable>
-            )
-          })}
-          {provided.placeholder}
-        </div>
-      )}
-    </Droppable>
+    <div>
+      {node.map((item) => (
+        <div key={`${parentItem?.title || 'search'}-${item.CodecName}`}>{dragListItemDom(item)}</div>
+      ))}
+    </div>
   )
 }
 
@@ -2186,7 +2054,14 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
   // 计算编码值总和
   // 构造页面左边列表数据（扁平展示，按显示名首字母排序，不再按 Tag 分组折叠）
   const initLeftData = useMemoizedFn((Methods: CodecMethod[]) => {
-    const sorted = [...Methods].sort((a, b) => a.CodecName.localeCompare(b.CodecName, 'zh-Hans-CN'))
+    // 英文（含 ASCII 起首）在前按字母序，中文在后按拼音排序
+    const isCn = (s: string) => /[一-鿿]/.test(s)
+    const sorted = [...Methods].sort((a, b) => {
+      const aCn = isCn(a.CodecName)
+      const bCn = isCn(b.CodecName)
+      if (aCn !== bCn) return aCn ? 1 : -1
+      return a.CodecName.localeCompare(b.CodecName, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+    })
     setLeftData(sorted)
   })
 
