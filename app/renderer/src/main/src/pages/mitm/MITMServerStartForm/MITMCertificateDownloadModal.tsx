@@ -43,17 +43,19 @@ export const MITMCertificateDownloadModal: React.FC<MITMCertificateDownloadModal
       visible={visible}
       onCancel={() => setVisible(false)}
       closable={true}
-      title={'证书下载'}
+      title={
+        <div className={styles['certificate-download-modal-title']}>
+          <div className={styles['certificate-download-modal-title-text']}>证书下载</div>
+          <div className={styles['certificate-download-modal-hint']}>
+            {t('MITMCertificateDownloadModal.after_proxy_visit')}
+            <YakitTag enableCopy copyText="http://mitm" iconColor="var(--Colors-Use-Main-Primary)" />
+            {t('MITMCertificateDownloadModal.auto_download_cert')}
+          </div>
+        </div>
+      }
       width={720}
       className={styles['mitm-certificate-download-modal']}
       okText={'下载'}
-      footerExtra={
-        <div className={styles['certificate-download-modal-footer']}>
-          {t('MITMCertificateDownloadModal.after_proxy_visit')}
-          <YakitTag enableCopy copyText="http://mitm" iconColor="var(--Colors-Use-Main-Primary)" />
-          {t('MITMCertificateDownloadModal.auto_download_cert')}
-        </div>
-      }
       onOk={() => onDown()}
       bodyStyle={{ padding: 8 }}
     >

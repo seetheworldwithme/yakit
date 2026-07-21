@@ -441,7 +441,31 @@
 }
 
 .mitm-certificate-download-modal {
-  .certificate-download-modal-footer {
+  .certificate-download-modal-title {
+    position: relative;
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    height: 22px;
+  }
+
+  .certificate-download-modal-title-text {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+  }
+
+  .certificate-download-modal-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     font-weight: 400;
     font-size: 12px;
     line-height: 16px;
