@@ -10,7 +10,6 @@ import styles from './MITMServerStartForm.module.scss'
 import { YakitInputNumber } from '@/components/yakitUI/YakitInputNumber/YakitInputNumber'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { yakitFailed } from '@/utils/notification'
-import { RefreshIcon } from '@/assets/newIcon'
 import { RuleExportAndImportButton } from '../MITMRule/MITMRule'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { useCreation, useDebounceEffect, useMemoizedFn, useUpdateEffect } from 'ahooks'
@@ -551,24 +550,7 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                 <div className={styles['mitm-start-section-subtitle']}>内容规则、插件预载与启动动作</div>
               </div>
             </div>
-            <Item
-              label={t('MITMServerForm.contentRule')}
-              help={
-                <span className={styles['form-rule-help']}>
-                  {t('MITMServerForm.contentRuleHelp')}
-                  <span
-                    className={styles['form-rule-help-setting']}
-                    onClick={() => {
-                      setIsUseDefRules(true)
-                      ruleButtonRef.current.onSetImportVisible(true)
-                    }}
-                  >
-                    {t('MITMServerForm.defaultConfig')}&nbsp;
-                    <RefreshIcon />
-                  </span>
-                </span>
-              }
-            >
+            <Item label={t('MITMServerForm.contentRule')}>
               <div className={styles['form-rule-wrapper']}>
                 <div className={styles['form-rule-body']}>
                   <div className={styles['form-rule']} onClick={() => props.setVisible(true)}>
@@ -578,12 +560,26 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                     <div className={styles['form-rule-icon']}>规则配置</div>
                   </div>
                 </div>
-                <div>
+                <div className={styles['form-rule-actions']}>
                   <RuleExportAndImportButton
                     ref={ruleButtonRef}
                     isUseDefRules={isUseDefRules}
                     setIsUseDefRules={setIsUseDefRules}
                     onOkImport={() => getRules()}
+                    onBeforeNode={
+                      <>
+                        <YakitButton
+                          type="text"
+                          onClick={() => {
+                            setIsUseDefRules(true)
+                            ruleButtonRef.current.onSetImportVisible(true)
+                          }}
+                        >
+                          恢复默认配置
+                        </YakitButton>
+                        <Divider type="vertical" style={{ margin: '0 4px' }} />
+                      </>
+                    }
                   />
                 </div>
               </div>

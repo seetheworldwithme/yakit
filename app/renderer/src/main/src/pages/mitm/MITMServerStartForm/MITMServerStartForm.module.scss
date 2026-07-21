@@ -225,6 +225,12 @@
     }
   }
 
+  .form-rule-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
   .form-item-inline-help {
     display: flex;
     align-items: center;
