@@ -10,7 +10,7 @@ import styles from './MITMServerStartForm.module.scss'
 import { YakitInputNumber } from '@/components/yakitUI/YakitInputNumber/YakitInputNumber'
 import { YakitSwitch } from '@/components/yakitUI/YakitSwitch/YakitSwitch'
 import { yakitFailed } from '@/utils/notification'
-import { CogIcon, RefreshIcon } from '@/assets/newIcon'
+import { RefreshIcon } from '@/assets/newIcon'
 import { RuleExportAndImportButton } from '../MITMRule/MITMRule'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { useCreation, useDebounceEffect, useMemoizedFn, useUpdateEffect } from 'ahooks'
@@ -575,9 +575,7 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
                     <div className={styles['form-rule-text']}>
                       {t('MITMServerForm.existingRules', { count: rules.length })}
                     </div>
-                    <div className={styles['form-rule-icon']}>
-                      <CogIcon />
-                    </div>
+                    <div className={styles['form-rule-icon']}>规则配置</div>
                   </div>
                 </div>
                 <div>
