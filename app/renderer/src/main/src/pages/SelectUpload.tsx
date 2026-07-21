@@ -3,7 +3,12 @@ import { Form, Progress } from 'antd'
 import { useMemoizedFn, useGetState } from 'ahooks'
 import { failed, success, warn } from '@/utils/notification'
 import { randomString } from '@/utils/randomUtil'
-import { FileProjectInfoProps, ProjectIOProgress, ProjectsResponse } from './softwareSettings/ProjectManage'
+import {
+  FileProjectInfoProps,
+  ProjectIOProgress,
+  ProjectsResponse,
+  formatProjectName,
+} from './softwareSettings/ProjectManage'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
@@ -171,6 +176,7 @@ const SelectUpload: React.FC<SelectUploadProps> = (props) => {
             } else {
               targetOption.children = [...rsp.Projects].map((item) => {
                 const info: FileProjectInfoProps = { ...item }
+                info.ProjectName = formatProjectName(info.ProjectName)
                 if (info.Type === 'file') {
                   info.isLeaf = false
                 } else {
@@ -203,6 +209,7 @@ const SelectUpload: React.FC<SelectUploadProps> = (props) => {
           setData(
             rsp.Projects.map((item) => {
               const info: FileProjectInfoProps = { ...item }
+              info.ProjectName = formatProjectName(info.ProjectName)
               if (info.Type === 'file') {
                 info.isLeaf = false
               } else {

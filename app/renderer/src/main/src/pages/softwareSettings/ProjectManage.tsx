@@ -81,6 +81,19 @@ const formatDatabasePath = (rawPath: string): string => {
   return display
 }
 
+/**
+ * 项目名展示口径转换（仅改展示，不动真实值）：
+ * 引擎内置的特殊项目名显示为中文别名，底层传给接口的值仍为原值。
+ *   [default] → 默认数据库
+ */
+const PROJECT_NAME_DISPLAY: Record<string, string> = {
+  '[default]': '默认数据库',
+}
+export const formatProjectName = (rawName?: string): string => {
+  if (!rawName) return ''
+  return PROJECT_NAME_DISPLAY[rawName] || rawName
+}
+
 export interface ProjectManageProp {
   engineMode: YaklangEngineMode
   onEngineModeChange: (mode: YaklangEngineMode, keepalive?: boolean) => any
@@ -339,8 +352,8 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
               ) : (
                 <ProjectFolderOpenSvgIcon className={styles['opt-floder-icon']} />
               )}
-              <div className={styles['project-style']} title={data.ProjectName}>
-                {data.ProjectName}
+              <div className={styles['project-style']} title={formatProjectName(data.ProjectName)}>
+                {formatProjectName(data.ProjectName)}
               </div>
               {(data?.OnlineSubTaskID || '').length > 0 && (
                 <YakitTag color="info">{t('ProjectManage.server')}</YakitTag>
@@ -1341,12 +1354,12 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                 }
               }}
             >
-              {files[0].ProjectName}
+              {formatProjectName(files[0].ProjectName)}
             </div>
             {files.length > 1 && (
               <>
                 <ChevronRightIcon className={styles['icon-style']} />
-                <div className={styles['path-style']}>{files[1].ProjectName}</div>
+                <div className={styles['path-style']}>{formatProjectName(files[1].ProjectName)}</div>
               </>
             )}
           </div>
@@ -1381,7 +1394,9 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                               descriptionReactNode={
                                 <>
                                   <div className={styles['title-style']}>
-                                    <span className={styles['file-style']}>{files[files.length - 1].ProjectName}</span>{' '}
+                                    <span className={styles['file-style']}>
+                                      {formatProjectName(files[files.length - 1].ProjectName)}
+                                    </span>{' '}
                                     {t('ProjectManage.noProjectContent')}
                                   </div>
                                   <div className={styles['operate-btn']}>
@@ -1454,8 +1469,8 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
                                 ) : (
                                   <ProjectDocumentTextSvgIcon className={styles['card-icon']} />
                                 )}
-                                <span className={styles['card-name']} title={data.ProjectName}>
-                                  {data.ProjectName}
+                                <span className={styles['card-name']} title={formatProjectName(data.ProjectName)}>
+                                  {formatProjectName(data.ProjectName)}
                                 </span>
                                 {(data?.OnlineSubTaskID || '').length > 0 && (
                                   <YakitTag color="info">{t('ProjectManage.server')}</YakitTag>
