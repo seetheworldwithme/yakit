@@ -438,14 +438,17 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
               label={t('MITMServerForm.downstreamProxyLabel')}
               name="downstreamProxy"
               extra={
-                <span className={styles['form-rule-help']}>
-                  {t('MITMServerForm.downstreamProxyHelp')}
-                  <span className={styles['form-rule-help-setting']} onClick={onClickDownstreamProxy}>
-                    {t('AgentConfigModal.proxy_configuration')}
+                // 隐藏下游代理说明文字与「代理配置/代理检测」按钮；恢复时把 false 改为 true
+                false ? (
+                  <span className={styles['form-rule-help']}>
+                    {t('MITMServerForm.downstreamProxyHelp')}
+                    <span className={styles['form-rule-help-setting']} onClick={onClickDownstreamProxy}>
+                      {t('AgentConfigModal.proxy_configuration')}
+                    </span>
+                    <Divider type="vertical" />
+                    <ProxyTest onEchoNode={(downstreamProxy) => form.setFieldsValue({ downstreamProxy })} />
                   </span>
-                  <Divider type="vertical" />
-                  <ProxyTest onEchoNode={(downstreamProxy) => form.setFieldsValue({ downstreamProxy })} />
-                </span>
+                ) : null
               }
               getValueFromEvent={(value) => {
                 // 只保留最后一个选中的值
