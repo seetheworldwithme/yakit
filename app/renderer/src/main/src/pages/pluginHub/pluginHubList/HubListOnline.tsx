@@ -429,6 +429,7 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
             uuid: res.UUID || '',
           }),
         )
+        yakitNotify('success', t('PluginHubDetail.downloadSuccess'))
       })
       .catch(() => {})
       .finally(() => {
