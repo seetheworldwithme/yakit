@@ -60,6 +60,10 @@ const ShowColorClass: Record<string, string> = {
   loading: styles['loading-wrapper-bgcolor'],
 }
 
+/** 系统检测面板按最小化展示，保留状态逻辑与配置入口以便后续恢复。 */
+const showSystemCheckStatusHint = false
+const showSystemCheckAdvancedItems = false
+
 /** 系统检测项使用统一的安全提醒图标，避免与全局告警色冲突 */
 const SystemCheckNoticeIcon = () => <SafetyCertificateOutlined className={styles['system-check-notice-icon']} />
 
@@ -814,16 +818,18 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
       >
         <div className={styles['body-header']}>
           <div className={styles['header-title']}>{t('GlobalState.systemCheck')}</div>
-          <div className={styles['header-hint']}>
-            <span className={styles['hint-title']}>
-              {isChecking
-                ? t('GlobalState.checking')
-                : stateNum === 0
-                  ? t('GlobalState.noException')
-                  : t('GlobalState.exceptionsDetected', { count: stateNum })}
-            </span>
-            {isChecking ? ShowIcon['loading'] : ShowIcon[state]}
-          </div>
+          {showSystemCheckStatusHint && (
+            <div className={styles['header-hint']}>
+              <span className={styles['hint-title']}>
+                {isChecking
+                  ? t('GlobalState.checking')
+                  : stateNum === 0
+                    ? t('GlobalState.noException')
+                    : t('GlobalState.exceptionsDetected', { count: stateNum })}
+              </span>
+              {isChecking ? ShowIcon['loading'] : ShowIcon[state]}
+            </div>
+          )}
         </div>
         <div className={styles['body-wrapper']}>
           {/* 引擎是否是官方发布版本 */}
@@ -929,67 +935,69 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
           {!isEnpriTraceAgent() && (
             <>
               {/* 全局反连 */}
-              <div className={styles['body-info']}>
-                <div className={styles['info-left']}>
-                  {isReverseState ? <SuccessIcon /> : <HelpIcon />}
-                  <div className={styles['left-body']}>
-                    <div className={styles['title-style']} style={{ marginBottom: 2 }}>
-                      {t('GlobalState.reverseNotConfigured')}{' '}
-                      <YakitTag color={isReverseState ? 'success' : 'danger'}>
-                        {isReverseState ? t('YakitButton.enabled') : t('YakitButton.notEnabled')}
-                      </YakitTag>
+              {showSystemCheckAdvancedItems && (
+                <div className={styles['body-info']}>
+                  <div className={styles['info-left']}>
+                    {isReverseState ? <SuccessIcon /> : <HelpIcon />}
+                    <div className={styles['left-body']}>
+                      <div className={styles['title-style']} style={{ marginBottom: 2 }}>
+                        {t('GlobalState.reverseNotConfigured')}{' '}
+                        <YakitTag color={isReverseState ? 'success' : 'danger'}>
+                          {isReverseState ? t('YakitButton.enabled') : t('YakitButton.notEnabled')}
+                        </YakitTag>
+                      </div>
+                      <div className={styles['subtitle-style']}>{t('GlobalState.reverseNotConfiguredDesc')}</div>
                     </div>
-                    <div className={styles['subtitle-style']}>{t('GlobalState.reverseNotConfiguredDesc')}</div>
+                  </div>
+                  <div className={styles['info-right']}>
+                    {isReverseState ? (
+                      <YakitButton
+                        type="text"
+                        colors="danger"
+                        className={styles['btn-style']}
+                        onClick={() => {
+                          setShow(false)
+                          showYakitModal({
+                            type: 'white',
+                            title: (modalT) => modalT('GlobalState.configGlobalReverse'),
+                            width: 800,
+                            content: (
+                              <div style={{ width: 800 }}>
+                                <ConfigGlobalReverse />
+                              </div>
+                            ),
+                            footer: null,
+                          })
+                        }}
+                      >
+                        {' '}
+                        {t('GlobalState.disable')}
+                      </YakitButton>
+                    ) : (
+                      <YakitButton
+                        type="text"
+                        className={styles['btn-style']}
+                        onClick={() => {
+                          setShow(false)
+                          showYakitModal({
+                            type: 'white',
+                            title: (modalT) => modalT('GlobalState.configGlobalReverse'),
+                            width: 800,
+                            content: (
+                              <div style={{ width: 800 }}>
+                                <ConfigGlobalReverse />
+                              </div>
+                            ),
+                            footer: null,
+                          })
+                        }}
+                      >
+                        {t('GlobalState.toConfigure')}
+                      </YakitButton>
+                    )}
                   </div>
                 </div>
-                <div className={styles['info-right']}>
-                  {isReverseState ? (
-                    <YakitButton
-                      type="text"
-                      colors="danger"
-                      className={styles['btn-style']}
-                      onClick={() => {
-                        setShow(false)
-                        showYakitModal({
-                          type: 'white',
-                          title: (modalT) => modalT('GlobalState.configGlobalReverse'),
-                          width: 800,
-                          content: (
-                            <div style={{ width: 800 }}>
-                              <ConfigGlobalReverse />
-                            </div>
-                          ),
-                          footer: null,
-                        })
-                      }}
-                    >
-                      {' '}
-                      {t('GlobalState.disable')}
-                    </YakitButton>
-                  ) : (
-                    <YakitButton
-                      type="text"
-                      className={styles['btn-style']}
-                      onClick={() => {
-                        setShow(false)
-                        showYakitModal({
-                          type: 'white',
-                          title: (modalT) => modalT('GlobalState.configGlobalReverse'),
-                          width: 800,
-                          content: (
-                            <div style={{ width: 800 }}>
-                              <ConfigGlobalReverse />
-                            </div>
-                          ),
-                          footer: null,
-                        })
-                      }}
-                    >
-                      {t('GlobalState.toConfigure')}
-                    </YakitButton>
-                  )}
-                </div>
-              </div>
+              )}
               {/* Chrome启动路径 */}
               {showChromeWarn && (
                 <div className={styles['body-info']}>
@@ -1015,46 +1023,48 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
                 </div>
               )}
               {/* 系统代理 */}
-              <div className={styles['body-info']}>
-                <div className={styles['info-left']}>
-                  {systemProxy.Enable ? <SuccessIcon /> : <HelpIcon />}
-                  <div className={styles['left-body']}>
-                    <div className={styles['system-proxy-title']}>
-                      {t('GlobalState.systemProxy')}
-                      <YakitTag color={systemProxy.Enable ? 'success' : 'danger'}>
-                        {systemProxy.Enable ? t('YakitButton.enabled') : t('YakitButton.notEnabled')}
-                      </YakitTag>
+              {showSystemCheckAdvancedItems && (
+                <div className={styles['body-info']}>
+                  <div className={styles['info-left']}>
+                    {systemProxy.Enable ? <SuccessIcon /> : <HelpIcon />}
+                    <div className={styles['left-body']}>
+                      <div className={styles['system-proxy-title']}>
+                        {t('GlobalState.systemProxy')}
+                        <YakitTag color={systemProxy.Enable ? 'success' : 'danger'}>
+                          {systemProxy.Enable ? t('YakitButton.enabled') : t('YakitButton.notEnabled')}
+                        </YakitTag>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className={styles['info-right']}>
-                  {systemProxy.Enable ? (
-                    <div className={styles['system-proxy-info']}>
-                      {systemProxy.CurrentProxy}
+                  <div className={styles['info-right']}>
+                    {systemProxy.Enable ? (
+                      <div className={styles['system-proxy-info']}>
+                        {systemProxy.CurrentProxy}
+                        <YakitButton
+                          type="text"
+                          colors="danger"
+                          className={styles['btn-style']}
+                          onClick={onCloseSystemProxy}
+                        >
+                          {' '}
+                          {t('GlobalState.disable')}
+                        </YakitButton>
+                      </div>
+                    ) : (
                       <YakitButton
                         type="text"
-                        colors="danger"
                         className={styles['btn-style']}
-                        onClick={onCloseSystemProxy}
+                        onClick={() => {
+                          setShow(false)
+                          showConfigSystemProxyForm()
+                        }}
                       >
-                        {' '}
-                        {t('GlobalState.disable')}
+                        {t('GlobalState.toConfigure')}
                       </YakitButton>
-                    </div>
-                  ) : (
-                    <YakitButton
-                      type="text"
-                      className={styles['btn-style']}
-                      onClick={() => {
-                        setShow(false)
-                        showConfigSystemProxyForm()
-                      }}
-                    >
-                      {t('GlobalState.toConfigure')}
-                    </YakitButton>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
               {/* Yak Mcp 检测项已按功能裁剪方案隐藏（§B14） */}
             </>
           )}
@@ -1117,42 +1127,44 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
             </>
           )}
           {/* 应用缩放 */}
-          <div className={styles['body-info']}>
-            <div className={styles['info-left']}>
-              <HelpIcon />
-              <div className={styles['left-body']}>
-                <div className={styles['system-proxy-title']}>
-                  {t('GlobalState.zoomScale')}
-                  <YakitInputNumber
-                    size="small"
-                    type="horizontal"
-                    wrapperClassName={styles['yakit-input-number']}
-                    min={1}
-                    formatter={(value) => `${value}%`}
-                    parser={(value) => value!.replace('%', '')}
-                    value={zoomScale}
-                    onChange={(value) => {
-                      if (!value) setZoomScale(100)
-                      else {
-                        if (+value !== zoomScale) setZoomScale(+value || 100)
-                      }
-                    }}
-                  />
+          {showSystemCheckAdvancedItems && (
+            <div className={styles['body-info']}>
+              <div className={styles['info-left']}>
+                <HelpIcon />
+                <div className={styles['left-body']}>
+                  <div className={styles['system-proxy-title']}>
+                    {t('GlobalState.zoomScale')}
+                    <YakitInputNumber
+                      size="small"
+                      type="horizontal"
+                      wrapperClassName={styles['yakit-input-number']}
+                      min={1}
+                      formatter={(value) => `${value}%`}
+                      parser={(value) => value!.replace('%', '')}
+                      value={zoomScale}
+                      onChange={(value) => {
+                        if (!value) setZoomScale(100)
+                        else {
+                          if (+value !== zoomScale) setZoomScale(+value || 100)
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
+              <div className={styles['info-right']}>
+                <YakitButton
+                  type="text"
+                  className={styles['btn-style']}
+                  onClick={() => {
+                    setZoomScale(100)
+                  }}
+                >
+                  {t('YakitButton.reset')}
+                </YakitButton>
+              </div>
             </div>
-            <div className={styles['info-right']}>
-              <YakitButton
-                type="text"
-                className={styles['btn-style']}
-                onClick={() => {
-                  setZoomScale(100)
-                }}
-              >
-                {t('YakitButton.reset')}
-              </YakitButton>
-            </div>
-          </div>
+          )}
         </div>
         {/* 状态刷新间隔时间 — 已按功能裁剪方案隐藏 */}
       </div>
@@ -1182,12 +1194,14 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
       <div className={styles['global-state-content-wrapper']}>
         <div className={styles['body-header']}>
           <div className={styles['header-title']}>系统检测</div>
-          <div className={styles['header-hint']}>
-            <span className={styles['hint-title']}>
-              {isChecking ? '自检中...' : stateNum === 0 ? `暂无异常` : `检测到${stateNum}项异常`}
-            </span>
-            {isChecking ? ShowIcon['loading'] : ShowIcon[state]}
-          </div>
+          {showSystemCheckStatusHint && (
+            <div className={styles['header-hint']}>
+              <span className={styles['hint-title']}>
+                {isChecking ? '自检中...' : stateNum === 0 ? `暂无异常` : `检测到${stateNum}项异常`}
+              </span>
+              {isChecking ? ShowIcon['loading'] : ShowIcon[state]}
+            </div>
+          )}
         </div>
         {stateNum !== 0 && (
           <div className={styles['body-wrapper']}>
@@ -1241,42 +1255,44 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
               </div>
             )}
             {/* 应用缩放 */}
-            <div className={styles['body-info']}>
-              <div className={styles['info-left']}>
-                <HelpIcon />
-                <div className={styles['left-body']}>
-                  <div className={styles['system-proxy-title']}>
-                    {t('GlobalState.zoomScale')}
-                    <YakitInputNumber
-                      size="small"
-                      type="horizontal"
-                      wrapperClassName={styles['yakit-input-number']}
-                      min={1}
-                      formatter={(value) => `${value}%`}
-                      parser={(value) => value!.replace('%', '')}
-                      value={zoomScale}
-                      onChange={(value) => {
-                        if (!value) setZoomScale(100)
-                        else {
-                          if (+value !== zoomScale) setZoomScale(+value || 100)
-                        }
-                      }}
-                    />
+            {showSystemCheckAdvancedItems && (
+              <div className={styles['body-info']}>
+                <div className={styles['info-left']}>
+                  <HelpIcon />
+                  <div className={styles['left-body']}>
+                    <div className={styles['system-proxy-title']}>
+                      {t('GlobalState.zoomScale')}
+                      <YakitInputNumber
+                        size="small"
+                        type="horizontal"
+                        wrapperClassName={styles['yakit-input-number']}
+                        min={1}
+                        formatter={(value) => `${value}%`}
+                        parser={(value) => value!.replace('%', '')}
+                        value={zoomScale}
+                        onChange={(value) => {
+                          if (!value) setZoomScale(100)
+                          else {
+                            if (+value !== zoomScale) setZoomScale(+value || 100)
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
+                <div className={styles['info-right']}>
+                  <YakitButton
+                    type="text"
+                    className={styles['btn-style']}
+                    onClick={() => {
+                      setZoomScale(100)
+                    }}
+                  >
+                    {t('YakitButton.reset')}
+                  </YakitButton>
+                </div>
               </div>
-              <div className={styles['info-right']}>
-                <YakitButton
-                  type="text"
-                  className={styles['btn-style']}
-                  onClick={() => {
-                    setZoomScale(100)
-                  }}
-                >
-                  {t('YakitButton.reset')}
-                </YakitButton>
-              </div>
-            </div>
+            )}
           </div>
         )}
         <div className={styles['body-setting']}>
