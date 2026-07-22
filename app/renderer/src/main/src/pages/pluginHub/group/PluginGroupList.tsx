@@ -83,7 +83,9 @@ export const PluginGroupList: React.FC<PluginGroupListProps> = (props) => {
           )
         })}
       </div>
+      {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
       <div className={styles['plugin-group-footer']}>已经到底啦 ~ </div>
+      */}
     </div>
   )
 }

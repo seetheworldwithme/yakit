@@ -46,11 +46,13 @@ export const MITMCertificateDownloadModal: React.FC<MITMCertificateDownloadModal
       title={
         <div className={styles['certificate-download-modal-title']}>
           <div className={styles['certificate-download-modal-title-text']}>证书下载</div>
-          <div className={styles['certificate-download-modal-hint']}>
-            {t('MITMCertificateDownloadModal.after_proxy_visit')}
-            <YakitTag enableCopy copyText="http://mitm" iconColor="var(--Colors-Use-Main-Primary)" />
-            {t('MITMCertificateDownloadModal.auto_download_cert')}
-          </div>
+          {/* 证书下载提示按产品要求隐藏，保留代码以备恢复
+              <div className={styles['certificate-download-modal-hint']}>
+                {t('MITMCertificateDownloadModal.after_proxy_visit')}
+                <YakitTag enableCopy copyText="http://mitm" iconColor="var(--Colors-Use-Main-Primary)" />
+                {t('MITMCertificateDownloadModal.auto_download_cert')}
+              </div>
+              */}
         </div>
       }
       width={720}

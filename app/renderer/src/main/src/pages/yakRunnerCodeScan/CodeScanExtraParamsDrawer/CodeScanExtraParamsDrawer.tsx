@@ -48,7 +48,9 @@ const CodeScanExtraParamsDrawer: React.FC<CodeScanExtraParamsDrawerProps> = Reac
           <YakitSwitch size="large" checkedChildren="开" unCheckedChildren="关" />
         </Form.Item>
       </Form>
+      {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
       <div className={styles['to-end']}>已经到底啦～</div>
+      */}
     </YakitDrawer>
   )
 })

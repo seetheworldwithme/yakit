@@ -379,7 +379,9 @@ export const PluginLogList: React.FC<PluginLogListProps> = memo((props) => {
             <YakitSpin wrapperClassName={styles['loading-style']} spinning={true} tip="加载中..." />
           </div>
         )}
+        {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
         {!loading && !hasMore.current && <div className={styles['list-bottom']}>已经到底啦～</div>}
+        */}
       </div>
 
       {/* 合并信息展示框 */}

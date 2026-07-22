@@ -292,7 +292,9 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
                 jsonSchemaListRef={jsonSchemaListRef}
               />
 
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </>
           )
         case 'codec':
@@ -307,7 +309,9 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
                 pluginType={type}
                 jsonSchemaListRef={jsonSchemaListRef}
               />
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </>
           )
         case 'mitm':
@@ -341,7 +345,9 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
                   />
                 </>
               )}
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </>
           )
         case 'port-scan':

@@ -253,7 +253,7 @@
   "YakitEmpty": {
     "noData": "No data available",
     "noMoreData": "No More Data",
-    "end_of_list": "You've reached the end~",
+    "end_of_list": "",
     "searchEmpty": "Search result is empty",
     "noImage": "No image",
     "noDescription": "No description"

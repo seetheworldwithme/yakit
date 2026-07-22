@@ -253,7 +253,7 @@
   "YakitEmpty": {
     "noData": "暂无数据",
     "noMoreData": "暂无更多数据",
-    "end_of_list": "已经到底啦～",
+    "end_of_list": "",
     "searchEmpty": "搜索结果“空”",
     "noImage": "暂无图片",
     "noDescription": "暂无描述"

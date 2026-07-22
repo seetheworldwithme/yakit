@@ -122,7 +122,9 @@ const PluginExecuteExtraParams: React.FC<PluginExecuteExtraParamsProps> = React.
                 pluginType={pluginType}
                 jsonSchemaListRef={jsonSchemaListRef}
               />
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </Form>
           )
         case 'codec':
@@ -147,7 +149,9 @@ const PluginExecuteExtraParams: React.FC<PluginExecuteExtraParamsProps> = React.
                   <FixExtraParamsNode form={form} pathRef={pathRef} onReset={onReset} />
                 </>
               )}
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </Form>
           )
         case 'port-scan':
@@ -155,7 +159,9 @@ const PluginExecuteExtraParams: React.FC<PluginExecuteExtraParamsProps> = React.
           return (
             <Form size="small" labelWrap={true} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }} form={form}>
               <FixExtraParamsNode form={form} pathRef={pathRef} onReset={onReset} />
+              {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
               <div className={styles['to-end']}>已经到底啦～</div>
+              */}
             </Form>
           )
 

@@ -195,7 +195,8 @@ const GlobalFilterFunction: React.FC<GlobalFilterFunctionProps> = React.memo((pr
           } else {
             childData.push({
               parent: null,
-              name: '已经到底啦~',
+              // 已经到底啦提示按产品要求隐藏，保留底部占位逻辑以备恢复
+              name: '',
               id: `${id}/111`,
               depth: 1,
               isBottom: true,

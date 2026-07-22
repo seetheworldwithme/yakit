@@ -84,7 +84,9 @@ const SimpleDetectExtraParamsDrawer: React.FC<SimpleDetectExtraParamsDrawerProps
       <Form size="small" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }} form={portScanForm}>
         <SimpleDetectExtraParams visible={visible} />
       </Form>
+      {/* 已经到底啦提示按产品要求隐藏，保留代码以备恢复
       <div className={styles['to-end']}>已经到底啦～</div>
+      */}
     </YakitDrawer>
   )
 })

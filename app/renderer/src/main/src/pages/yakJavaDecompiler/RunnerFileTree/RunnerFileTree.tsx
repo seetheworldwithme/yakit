@@ -89,7 +89,8 @@ export const RunnerFileTree: React.FC<RunnerFileTreeProps> = memo((props) => {
     if (initTree.length > 0) {
       initTree.push({
         parent: null,
-        name: '已经到底啦~',
+        // 已经到底啦提示按产品要求隐藏，保留底部占位逻辑以备恢复
+        name: '',
         path: '',
         isFolder: false,
         icon: '',
