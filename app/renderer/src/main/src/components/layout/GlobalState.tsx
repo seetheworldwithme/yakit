@@ -49,6 +49,7 @@ import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import { JSONParseLog } from '@/utils/tool'
 import { OutlineShieldcheckIcon } from '@/assets/icon/outline'
 import { yakitApp, yakitHost, yakitPlugin, yakitReverse } from '@/services/electronBridge'
+import { useLayoutRailStore } from '@/store/layoutRail'
 
 /** 不同状态下展示的ICON */
 const ShowIcon: Record<string, ReactNode> = {
@@ -71,6 +72,8 @@ export interface GlobalReverseStateProp {
   isEngineLink: boolean
   system: YakitSystem
   mcp: mcpStreamHooks
+  /** 企业版系统检测入口已迁至侧边栏，保留本组件作为弹窗逻辑宿主 */
+  hiddenTrigger?: boolean
 }
 
 export interface CheckSyntaxFlowRuleUpdateResponse {
@@ -87,7 +90,8 @@ interface ReverseDetail {
 }
 
 export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) => {
-  const { isEngineLink, system, mcp } = props
+  const { isEngineLink, system, mcp, hiddenTrigger = false } = props
+  const setGlobalStateBridge = useLayoutRailStore((s) => s.setGlobalStateBridge)
   const { t, i18n } = useI18nNamespaces(['yakitRoute', 'home', 'yakitUi', 'layout', 'utils'])
   const [configMcpModalVisible, setConfigMcpModalVisible] = useState<boolean>(false)
   const enableMcp = useMemo(() => {
@@ -681,6 +685,10 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
   )
 
   const [show, setShow] = useState<boolean>(false)
+
+  useEffect(() => {
+    setGlobalStateBridge(() => setShow(true))
+  }, [setGlobalStateBridge])
 
   const [pcapHintShow, setPcapHintShow] = useState<boolean>(false)
   const [pcapResult, setPcapResult] = useState<boolean>(false)
@@ -1311,6 +1319,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
           className={classNames(
             styles['global-state-wrapper'],
             isChecking ? ShowColorClass['loading'] : ShowColorClass[state],
+            { [styles['global-state-trigger-hidden']]: hiddenTrigger },
           )}
         >
           <div className={classNames(styles['state-body'])}>{isChecking ? ShowIcon['loading'] : ShowIcon[state]}</div>

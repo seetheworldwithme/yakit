@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { SlidersOutlined, KeyOutlined } from '@ant-design/icons'
+import { SlidersOutlined, KeyOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
 import { YakitRoute } from '@/enums/yakitRoute'
 import { WorkbenchDomain, moduleIcon } from './domainMap'
 import { DesktopComputerSvgIcon } from '@/assets/newIcon'
@@ -26,6 +26,7 @@ export const DomainRail: React.FC<DomainRailProps> = React.memo((props) => {
   const onUserMenuClick = useLayoutRailStore((s) => s.onUserMenuClick)
   const openLogin = useLayoutRailStore((s) => s.openLogin)
   const settingMenu = useLayoutRailStore((s) => s.settingMenu)
+  const openGlobalState = useLayoutRailStore((s) => s.openGlobalState)
 
   // 用户菜单 label 为 i18n key，这里翻译成文案（与 FuncDomain 头部下拉保持一致）
   const userMenuData = useMemo(
@@ -111,6 +112,14 @@ export const DomainRail: React.FC<DomainRailProps> = React.memo((props) => {
             <span className="wb-rail-item-label">登录</span>
           </div>
         )}
+
+        {/* 系统检测：复用顶部 GlobalState 的原有检测与弹窗逻辑 */}
+        <div className="wb-rail-item" onClick={() => setTimeout(openGlobalState, 0)}>
+          <span className="wb-rail-item-icon">
+            <SafetyCertificateOutlined />
+          </span>
+          <span className="wb-rail-item-label">系统检测</span>
+        </div>
       </div>
     </nav>
   )

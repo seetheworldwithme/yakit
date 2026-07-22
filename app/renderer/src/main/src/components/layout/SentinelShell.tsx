@@ -1729,8 +1729,13 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                       />
                       {!showProjectManage && (
                         <>
-                          <div className={styles['sentinel-shell-divider']}></div>
-                          <GlobalState isEngineLink={engineLink} system={system} mcp={mcp} />
+                          {!isEnpriTrace() && <div className={styles['sentinel-shell-divider']}></div>}
+                          <GlobalState
+                            isEngineLink={engineLink}
+                            system={system}
+                            mcp={mcp}
+                            hiddenTrigger={isEnpriTrace()}
+                          />
                         </>
                       )}
                     </>
@@ -1756,9 +1761,16 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                 <div className={styles['sentinel-shell-bar-left']}>
                   {engineLink && (
                     <>
-                      {!showProjectManage && <GlobalState isEngineLink={engineLink} system={system} mcp={mcp} />}
+                      {!showProjectManage && (
+                        <GlobalState
+                          isEngineLink={engineLink}
+                          system={system}
+                          mcp={mcp}
+                          hiddenTrigger={isEnpriTrace()}
+                        />
+                      )}
 
-                      <div className={styles['sentinel-shell-divider']}></div>
+                      {!isEnpriTrace() && <div className={styles['sentinel-shell-divider']}></div>}
                       <div>
                         <FuncDomain
                           isEngineLink={engineLink}

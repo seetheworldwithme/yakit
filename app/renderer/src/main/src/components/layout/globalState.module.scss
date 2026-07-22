@@ -48,6 +48,13 @@
   }
 }
 
+// 企业版入口位于工作台侧边栏；保留该锚点以复用原有 Popover 和全部检测逻辑。
+.global-state-trigger-hidden {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .global-state-popover {
   top: 27px !important;
 
