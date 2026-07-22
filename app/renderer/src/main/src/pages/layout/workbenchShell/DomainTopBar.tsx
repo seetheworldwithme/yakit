@@ -1,5 +1,6 @@
 import React from 'react'
-import { SettingOutlined } from '@ant-design/icons'
+// 已隐藏：顶栏右侧设置入口（无功能占位 icon），如需恢复取消注释即可
+// import { SettingOutlined } from '@ant-design/icons'
 import { DomainKey, WorkbenchDomain } from './domainMap'
 import './DomainTopBar.scss'
 
@@ -29,9 +30,11 @@ export const DomainTopBar: React.FC<DomainTopBarProps> = React.memo((props) => {
       <div className="wb-topbar-right">
         <span className="wb-conn-dot" />
         <span className="wb-conn-text">已连接</span>
+        {/* 已隐藏：顶栏右侧设置 icon（无功能占位），如需恢复取消注释即可
         <span className="wb-icon-btn">
           <SettingOutlined />
         </span>
+        */}
       </div>
     </header>
   )

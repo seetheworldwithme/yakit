@@ -25,9 +25,10 @@ Function DirectoryPageShow
     ; 获取目录页面顶部文本控件的句柄
     GetDlgItem $1 $0 1006
     ${If} $IS_INSTALLED == "true"
-        SendMessage $1 ${WM_SETTEXT} 0 "STR:检测到程序已经安装。点击安装会将旧程序卸载并重新进行安装。安装程序会自动迁移 yakit-projects 文件夹。"
+        SendMessage $1 ${WM_SETTEXT} 0 "STR:检测到程序已经安装。点击安装会将旧程序卸载并重新进行安装。"
     ${Else}
-        SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移 yakit-projects 文件夹。"
+        ; 已隐藏：安装程序会自动迁移 yakit-projects 文件夹。
+        ; SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移 yakit-projects 文件夹。"
     ${EndIf}
 FunctionEnd
 
