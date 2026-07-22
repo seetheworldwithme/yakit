@@ -72,8 +72,9 @@ FunctionEnd
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_SHOWREADME
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "创建桌面快捷方式"
-!define MUI_FINISHPAGE_LINK "Yakit官网"
-!define MUI_FINISHPAGE_LINK_LOCATION "https://yaklang.com"
+; 企业版安装完成页隐藏官网入口，保留其余完成页操作供后续回滚。
+; !define MUI_FINISHPAGE_LINK "Yakit官网"
+; !define MUI_FINISHPAGE_LINK_LOCATION "https://yaklang.com"
 !insertmacro MUI_PAGE_FINISH
 
 
