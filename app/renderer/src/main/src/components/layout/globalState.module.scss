@@ -6,6 +6,10 @@
   --global-state-bg-color: var(--Colors-Use-Warning-Primary);
   --global-state-text-color: var(--Colors-Use-Warning-On-Primary);
 }
+.notice-wrapper-bgcolor {
+  --global-state-bg-color: var(--Colors-Use-Main-Primary);
+  --global-state-text-color: var(--Colors-Use-Main-On-Primary);
+}
 .success-wrapper-bgcolor {
   --global-state-bg-color: var(--Colors-Use-Success-Primary);
   --global-state-text-color: var(--Colors-Use-Success-On-Primary);
@@ -29,6 +33,19 @@
 .btn-style {
   padding-left: 0px;
   padding-right: 0px;
+}
+
+.system-check-notice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--Colors-Use-Main-Primary);
+  background: var(--Colors-Use-Main-Bg);
+  border: 1px dashed var(--Colors-Use-Main-Primary);
+  border-radius: 50%;
+  font-size: 16px;
 }
 
 .global-state-wrapper {

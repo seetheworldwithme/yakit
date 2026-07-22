@@ -3,23 +3,15 @@ import { useDebounceEffect, useGetState, useMemoizedFn } from 'ahooks'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { RemoteGV } from '@/yakitGV'
 import { failed, info, yakitFailed, yakitNotify } from '@/utils/notification'
-import { ExclamationIcon } from '@/assets/newIcon'
 import { YakitSystem } from '@/yakitGVDefine'
 import { YakitPopover } from '../yakitUI/YakitPopover/YakitPopover'
 import { YakitButton } from '../yakitUI/YakitButton/YakitButton'
-import {
-  ErrorIcon,
-  HelpIcon,
-  ShieldCheckIcon as AllShieldCheckIcon,
-  SuccessIcon,
-  WarningIcon,
-  RocketIcon,
-} from './globalStateIcon'
+import { HelpIcon, ShieldCheckIcon as AllShieldCheckIcon, SuccessIcon, RocketIcon } from './globalStateIcon'
 import { showConfigSystemProxyForm, showConfigChromePathForm } from '@/utils/ConfigSystemProxy'
 import { ConfigGlobalReverse } from '@/utils/basic'
 import { YakitHint } from '../yakitUI/YakitHint/YakitHint'
 import { Tooltip, Row, Col } from 'antd'
-import { LoadingOutlined } from '@ant-design/icons'
+import { BellOutlined, LoadingOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
 import { isEnpriTraceAgent, isIRify } from '@/utils/envfile'
 import { QueryYakScriptsResponse } from '@/pages/invoker/schema'
 import {
@@ -53,20 +45,23 @@ import { useLayoutRailStore } from '@/store/layoutRail'
 
 /** 不同状态下展示的ICON */
 const ShowIcon: Record<string, ReactNode> = {
-  error: <ExclamationIcon className={styles['icon-style']} />,
-  warning: <ExclamationIcon className={styles['icon-style']} />,
+  error: <BellOutlined className={styles['icon-style']} />,
+  warning: <BellOutlined className={styles['icon-style']} />,
   success: <RocketIcon className={styles['icon-style']} />,
   help: <OutlineShieldcheckIcon className={styles['icon-style']} />,
   loading: <LoadingOutlined className={styles['icon-style']} style={{ color: 'var(--Colors-Use-Main-Primary)' }} />,
 }
 /** 不同状态下组件展示的颜色 */
 const ShowColorClass: Record<string, string> = {
-  error: styles['error-wrapper-bgcolor'],
-  warning: styles['warning-wrapper-bgcolor'],
+  error: styles['notice-wrapper-bgcolor'],
+  warning: styles['notice-wrapper-bgcolor'],
   success: styles['success-wrapper-bgcolor'],
   help: styles['success-wrapper-bgcolor'],
   loading: styles['loading-wrapper-bgcolor'],
 }
+
+/** 系统检测项使用统一的安全提醒图标，避免与全局告警色冲突 */
+const SystemCheckNoticeIcon = () => <SafetyCertificateOutlined className={styles['system-check-notice-icon']} />
 
 export interface GlobalReverseStateProp {
   isEngineLink: boolean
@@ -835,7 +830,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
           {showCheckEngine && (
             <div className={styles['body-info']}>
               <div className={styles['info-left']}>
-                <ErrorIcon />
+                <SystemCheckNoticeIcon />
                 <div className={styles['left-body']}>
                   <div className={styles['title-style']}>{t('GlobalState.engineNotOfficial')}</div>
                   <div className={styles['subtitle-style']}>{t('GlobalState.engineNotOfficialDesc')}</div>
@@ -859,7 +854,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
           {showMITMCertWarn && (
             <div className={styles['body-info']}>
               <div className={styles['info-left']}>
-                <ErrorIcon />
+                <SystemCheckNoticeIcon />
                 <div className={styles['left-body']}>
                   <div className={styles['title-style']}>{t('GlobalState.mitmCert')}</div>
                   <div className={styles['subtitle-style']}>{t('GlobalState.mitmCertDesc')}</div>
@@ -883,7 +878,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
               {system !== 'Windows_NT' ? (
                 <>
                   <div className={styles['info-left']}>
-                    <ErrorIcon />
+                    <SystemCheckNoticeIcon />
                     <div className={styles['left-body']}>
                       <div className={styles['title-style']}>{t('GlobalState.pcapNotFixed')}</div>
                       <div className={styles['subtitle-style']}>{t('GlobalState.pcapNotFixedDesc')}</div>
@@ -905,7 +900,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
                 </>
               ) : (
                 <div className={styles['info-left']}>
-                  <WarningIcon />
+                  <SystemCheckNoticeIcon />
                   <div className={styles['left-body']}>
                     <div className={styles['title-style']}>{t('GlobalState.runAsAdmin')}</div>
                     <div className={styles['subtitle-style']}>{t('GlobalState.runAsAdminDesc')}</div>
@@ -918,7 +913,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
           {pluginTotal === 0 && (
             <div className={styles['body-info']}>
               <div className={styles['info-left']}>
-                <ErrorIcon />
+                <SystemCheckNoticeIcon />
                 <div className={styles['left-body']}>
                   <div className={styles['title-style']}>{t('GlobalState.noLocalPlugin')}</div>
                   <div className={styles['subtitle-style']}>{t('GlobalState.noLocalPluginDesc')}</div>
@@ -999,7 +994,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
               {showChromeWarn && (
                 <div className={styles['body-info']}>
                   <div className={styles['info-left']}>
-                    {isAlreadyChromePath ? <SuccessIcon /> : <WarningIcon />}
+                    {isAlreadyChromePath ? <SuccessIcon /> : <SystemCheckNoticeIcon />}
                     <div className={styles['left-body']}>
                       <div className={styles['title-style']}>{t('GlobalState.chromePath')}</div>
                       <div className={styles['subtitle-style']}>{t('GlobalState.chromePathDesc')}</div>
@@ -1200,7 +1195,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
             {showCheckEngine && (
               <div className={styles['body-info']}>
                 <div className={styles['info-left']}>
-                  <ErrorIcon />
+                  <SystemCheckNoticeIcon />
                   <div className={styles['left-body']}>
                     <div className={styles['title-style']}>引擎不是官方发布版本</div>
                     <div className={styles['subtitle-style']}>可能会造成本地使用出现问题</div>
@@ -1224,7 +1219,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
             {ruleUpdate?.NeedUpdate && (
               <div className={styles['body-info']}>
                 <div className={styles['info-left']}>
-                  <ErrorIcon />
+                  <SystemCheckNoticeIcon />
                   <div className={styles['left-body']}>
                     <div className={styles['title-style']}>
                       {ruleUpdate.State === 'empty'
