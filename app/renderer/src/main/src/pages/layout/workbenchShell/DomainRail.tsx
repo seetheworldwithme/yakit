@@ -115,7 +115,7 @@ export const DomainRail: React.FC<DomainRailProps> = React.memo((props) => {
 
         {/* 系统检测：复用顶部 GlobalState 的原有检测与弹窗逻辑 */}
         <div
-          className="wb-rail-item"
+          className="wb-rail-item wb-rail-system-check"
           onClick={(event) => {
             const anchorRect = event.currentTarget.getBoundingClientRect()
             setTimeout(() => openGlobalState(anchorRect), 0)

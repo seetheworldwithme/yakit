@@ -62,3 +62,10 @@
   padding-top: 8px;
   border-top: 1px solid var(--Colors-Use-Neutral-Border);
 }
+.wb-rail-system-check {
+  color: var(--Colors-Use-Main-Primary);
+  &:hover {
+    color: var(--Colors-Use-Main-Primary);
+    background: var(--Colors-Use-Main-Bg);
+  }
+}
