@@ -88,11 +88,25 @@ FunctionEnd
 Function FinishLeave
     ${NSD_GetState} $mui.FinishPage.Run $0
     ${If} $0 <> 0
-    ExecShell "open" "$INSTDIR\$EXE_NAME.exe"
+        ; 企业版（靖云甲）安装包为中文命名，$EXE_NAME 指向的是不存在的 Yakit.exe，需用真实 exe 名
+        ${StrStr} $1 $EXEFILE "靖云甲"
+        ${If} $1 != ""
+            ExecShell "open" "$INSTDIR\靖云甲web应用漏洞扫描.exe"
+        ${Else}
+            ExecShell "open" "$INSTDIR\$EXE_NAME.exe"
+        ${EndIf}
     ${EndIf}
     ${NSD_GetState} $mui.FinishPage.ShowReadme $0
     ${If} $0 <> 0
-    CreateShortCut "$DESKTOP\$EXE_NAME.lnk" "$INSTDIR\$EXE_NAME.exe"
+        ; 企业版（靖云甲）安装包为中文命名，走专用快捷方式：
+        ;   名字 = 靖云甲web应用漏洞扫描，目标 = 同名 exe，图标 = 打包进来的 yakitlogo.ico
+        ; 其它变体保持原行为（沿用 $EXE_NAME，图标取 exe 内嵌图标）
+        ${StrStr} $1 $EXEFILE "靖云甲"
+        ${If} $1 != ""
+            CreateShortCut "$DESKTOP\靖云甲web应用漏洞扫描.lnk" "$INSTDIR\靖云甲web应用漏洞扫描.exe" "" "$INSTDIR\yakitlogo.ico"
+        ${Else}
+            CreateShortCut "$DESKTOP\$EXE_NAME.lnk" "$INSTDIR\$EXE_NAME.exe"
+        ${EndIf}
     ${EndIf}
     ${NSD_GetState} $DeleteOldEngine $0
     ${If} $0 <> 0
@@ -222,6 +236,8 @@ FunctionEnd
     ${EndIf}
     ; 删除桌面快捷方式
     Delete "$DESKTOP\$EXE_NAME.lnk"
+    ; 企业版（靖云甲）专用桌面快捷方式（名字固定，$EXE_NAME 不会匹配到它）
+    Delete "$DESKTOP\靖云甲web应用漏洞扫描.lnk"
     ; 非更新时才删除以下的东西
     ${If} $IS_UPDATED != "true"
         ; 删除开始菜单快捷方式

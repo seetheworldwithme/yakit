@@ -30,6 +30,17 @@ interface OnlineProfileProps {
   pwd: string
 }
 
+/** 判断连接地址是否与 yaklang 官方域（yaklang.com 及其子域）相关 */
+const isYaklangRelatedUrl = (url: string) => {
+  if (!url) return false
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    return host === 'yaklang.com' || host.endsWith('.yaklang.com')
+  } catch {
+    return /yaklang\.com/i.test(url)
+  }
+}
+
 const layout = {
   labelCol: { span: 7 },
   wrapperCol: { span: 17 },
@@ -216,7 +227,9 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
     getRemoteValue(getRemoteHttpSettingGV()).then((setting) => {
       if (!setting) return
       const value = JSONParseLog(setting, { page: 'ConfigPrivateDomain', fun: 'getHttpSetting' })
-      setDefaultHttpUrl(value.BaseUrl)
+      // 企业登录时若上次地址与 yaklang 官方域相关，则默认不预填，留给用户自行输入；其它历史地址照旧回填
+      const baseUrlForForm = enterpriseLogin && isYaklangRelatedUrl(value.BaseUrl) ? '' : value.BaseUrl
+      setDefaultHttpUrl(baseUrlForForm)
       if (value?.pwd && value.pwd.length > 0) {
         // 解密
         yakitCodec
@@ -224,16 +237,18 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
           .then((res) => {
             form.setFieldsValue({
               ...value,
+              BaseUrl: baseUrlForForm,
               pwd: res.Result,
             })
-            setFormValue({ ...value, pwd: res.Result })
+            setFormValue({ ...value, BaseUrl: baseUrlForForm, pwd: res.Result })
           })
           .catch(() => {})
       } else {
         form.setFieldsValue({
           ...value,
+          BaseUrl: baseUrlForForm,
         })
-        setFormValue({ ...value })
+        setFormValue({ ...value, BaseUrl: baseUrlForForm })
       }
     })
   })
@@ -337,6 +352,8 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
                   initValue={defaultHttpUrl}
                   placeholder={t('ConfigPrivateDomain.enterPrivateDomain')}
                   defaultOpen={!enterpriseLogin}
+                  // 企业登录下拉历史中隐藏与 yaklang 官方域相关的网址
+                  optionFilter={enterpriseLogin ? (item) => !isYaklangRelatedUrl(item.value) : undefined}
                 />
               </Form.Item>
               <div className="form-row-2col">

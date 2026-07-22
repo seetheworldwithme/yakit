@@ -68,7 +68,7 @@ export const DefaultExportRequest: ExportYakScriptStreamRequest = {
 /** @name 插件相关操作提示语 */
 export const PluginOperateHint: Record<string, string> = {
   /** 删除本地插件提示语 */
-  delLocal: '确认删除后，插件将彻底删除',
+  delLocal: '插件将从本地删除，是否确认',
   /** 删除我的插件提示语 */
   delOnline: '确认删除插件后，插件将会放在回收站',
   /** 删除回收站插件提示语 */

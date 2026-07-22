@@ -113,31 +113,38 @@ switch (platform) {
     break
 }
 
+/** @description extraFiles 可以在各自平台独立配置 */
+const extraFiles = [
+  { from: 'bins/scripts/auto-install-cert.zip', to: 'bins/scripts/auto-install-cert.zip' },
+  { from: 'bins/scripts/start-engine.zip', to: 'bins/scripts/start-engine.zip' },
+  // 跳过 Chrome 抓包扩展（按需打包，文件缺失时临时注释）
+  // { from: 'bins/scripts/google-chrome-plugin.zip', to: 'bins/scripts/google-chrome-plugin.zip' },
+  { from: 'bins/flag.txt', to: 'bins/flag.txt' },
+  { from: 'bins/engine-version.txt', to: 'bins/engine-version.txt' },
+  {
+    from: 'bins/resources',
+    to: 'bins/resources',
+    filter: ['**/*', '*.txt'],
+  },
+  {
+    from: 'bins/database/',
+    to: 'bins/database/',
+    filter: ['**/*', '*.txt', '*.gzip', '!*.db'],
+  },
+  {
+    from: 'report/template.zip',
+    to: 'report/template.zip',
+  },
+]
+// 企业版（靖云甲）专用：把桌面快捷方式图标落到安装根目录，供 NSIS CreateShortCut 引用
+if (platform === 'yakitEE') {
+  extraFiles.push({ from: 'app/assets/yakitlogo.ico', to: 'yakitlogo.ico' })
+}
+
 const configOption = {
   ...(appInfoOption || {}),
   /** @description extraFiles 可以在各自平台独立配置 */
-  extraFiles: [
-    { from: 'bins/scripts/auto-install-cert.zip', to: 'bins/scripts/auto-install-cert.zip' },
-    { from: 'bins/scripts/start-engine.zip', to: 'bins/scripts/start-engine.zip' },
-    // 跳过 Chrome 抓包扩展（按需打包，文件缺失时临时注释）
-    // { from: 'bins/scripts/google-chrome-plugin.zip', to: 'bins/scripts/google-chrome-plugin.zip' },
-    { from: 'bins/flag.txt', to: 'bins/flag.txt' },
-    { from: 'bins/engine-version.txt', to: 'bins/engine-version.txt' },
-    {
-      from: 'bins/resources',
-      to: 'bins/resources',
-      filter: ['**/*', '*.txt'],
-    },
-    {
-      from: 'bins/database/',
-      to: 'bins/database/',
-      filter: ['**/*', '*.txt', '*.gzip', '!*.db'],
-    },
-    {
-      from: 'report/template.zip',
-      to: 'report/template.zip',
-    },
-  ],
+  extraFiles,
   directories: {
     buildResources: 'resources',
     output: 'release/',

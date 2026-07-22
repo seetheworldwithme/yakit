@@ -18,6 +18,7 @@ const Screenshots = require('./screenshots')
 const windowStateKeeper = require('electron-window-state')
 const { MenuTemplate } = require('./menu')
 const { clearWindowRenderState, closeWindow } = require('./windowLifecycle')
+const { shouldSkipStartupWindow } = require('./startupWindowPolicy')
 const {
   renderLogOutputFile,
   getAllLogHandles,
@@ -111,7 +112,8 @@ let ipcRegistered = false
  * ---------------- 创建 yakitEngineLink 窗口 ----------------
  */
 let readyEngineLinkShow = false
-let startupWinHidden = false // 标记启动窗口是否被渲染进程请求隐藏（EnpriTrace 跳过启动页）
+// 企业版不展示启动页，避免等待渲染进程挂载后再隐藏造成双窗口闪现。
+let startupWinHidden = shouldSkipStartupWindow({ isPackaged: app.isPackaged, appName: app.getName() })
 function createEngineLinkWindow() {
   const state = windowStateKeeper({
     defaultWidth: 900,
@@ -277,6 +279,7 @@ function createWindow() {
   win.once('ready-to-show', () => {
     readyWinShow = true
     printLogOutputFile(`[mainWin] ready-to-show, isVisible: ${win.isVisible()}, isDestroyed: ${win.isDestroyed()}`)
+    if (startupWinHidden) showMainWindowWhenReady()
   })
 
   win.webContents.on('did-finish-load', () => {
@@ -524,7 +527,7 @@ function registerGlobalIPC() {
     winHide(win)
     engineLinkWin.webContents.reload()
     setTimeout(() => {
-      winShow(engineLinkWin, readyEngineLinkShow)
+      if (!startupWinHidden) winShow(engineLinkWin, readyEngineLinkShow)
     }, 500)
     return
   })
@@ -536,7 +539,7 @@ function registerGlobalIPC() {
     winHide(win)
     engineLinkWin.webContents.reloadIgnoringCache()
     setTimeout(() => {
-      winShow(engineLinkWin, readyEngineLinkShow)
+      if (!startupWinHidden) winShow(engineLinkWin, readyEngineLinkShow)
     }, 500)
     return
   })
@@ -582,8 +585,10 @@ function registerGlobalIPC() {
 
   // win 完成操作
   ipcMain.handle('yakitMainWin-done', async (event, data) => {
-    winHide(win)
-    winShow(engineLinkWin, readyEngineLinkShow)
+    if (!startupWinHidden) {
+      winHide(win)
+      winShow(engineLinkWin, readyEngineLinkShow)
+    }
     safeSend(engineLinkWin, 'from-win', data)
   })
 

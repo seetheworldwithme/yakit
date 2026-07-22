@@ -29,6 +29,7 @@ export const YakitAutoComplete: React.FC<YakitAutoCompleteProps> = React.forward
     initValue = '',
     wrapperStyle,
     isInit = true,
+    optionFilter,
     ...restProps
   } = props
   const autoCompleteRef = useRef<HTMLDivElement>(null)
@@ -138,11 +139,16 @@ export const YakitAutoComplete: React.FC<YakitAutoCompleteProps> = React.forward
 
   const options = useMemo(() => {
     if (cacheHistoryData.options.length) {
-      return cacheHistoryData.options.map((item) => renderItem(item))
+      const list = optionFilter ? cacheHistoryData.options.filter(optionFilter) : cacheHistoryData.options
+      return list.map((item) => renderItem(item))
     } else {
-      return restProps.options
+      const list =
+        optionFilter && restProps.options
+          ? restProps.options.filter((item) => optionFilter(item as YakitOptionTypeProps))
+          : restProps.options
+      return list
     }
-  }, [cacheHistoryData, restProps])
+  }, [cacheHistoryData, restProps, optionFilter])
 
   return (
     <div

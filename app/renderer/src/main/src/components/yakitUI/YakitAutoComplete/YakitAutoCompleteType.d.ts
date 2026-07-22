@@ -1,6 +1,6 @@
 import { AutoCompleteProps } from 'antd'
 import { SizeType } from 'antd/lib/config-provider/SizeContext'
-import { CacheDataHistoryProps } from '../utils'
+import { CacheDataHistoryProps, YakitOptionTypeProps } from '../utils'
 import { BaseSelectRef } from 'rc-select'
 import { CSSProperties, ReactNode } from 'react'
 
@@ -34,6 +34,10 @@ export interface YakitAutoCompleteProps extends AutoCompleteProps {
   searchResultEmptyLabel?: ReactNode
   /** 下方分组标题 */
   allOptionsGroupLabel?: ReactNode
+  /**
+   * 自定义历史选项过滤，返回 false 的项不在下拉中展示（仅过滤展示，不删除缓存数据）
+   */
+  optionFilter?: (item: YakitOptionTypeProps) => boolean
 }
 
 export interface YakitAutoCompleteRefProps {
