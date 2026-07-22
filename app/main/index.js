@@ -96,6 +96,8 @@ let engineLinkWin = null
 
 /** 是否展示关闭二次确认弹窗的标志位 */
 let closeFlag = true
+/** 企业版按最小化交互展示，关闭窗口时直接退出；保留原确认流程便于后续恢复。 */
+const enableCloseConfirmation = false
 
 process.on('uncaughtException', (error) => {
   try {
@@ -621,7 +623,7 @@ function registerGlobalIPC() {
       closeAllLogHandles()
       app.exit()
     }
-    if (closeFlag && showCloseMessageBox && parentWindow) {
+    if (enableCloseConfirmation && closeFlag && showCloseMessageBox && parentWindow) {
       const showIcon = isIRify
         ? '../assets/irify-close.png'
         : isMemfit
