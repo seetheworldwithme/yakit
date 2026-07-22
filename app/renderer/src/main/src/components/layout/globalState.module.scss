@@ -50,14 +50,15 @@
 
 // 企业版入口位于工作台侧边栏；保留该锚点以复用原有 Popover 和全部检测逻辑。
 .global-state-trigger-hidden {
-  position: absolute;
+  position: fixed;
+  width: 1px;
+  height: 34px;
+  padding: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
 .global-state-popover {
-  top: 27px !important;
-
   :global {
     .ant-popover-arrow {
       .ant-popover-arrow-content {
@@ -75,6 +76,10 @@
       }
     }
   }
+}
+
+.global-state-header-popover {
+  top: 27px !important;
 }
 
 .global-state-content-wrapper {

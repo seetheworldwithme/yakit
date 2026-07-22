@@ -19,7 +19,7 @@ interface LayoutRailStoreProps {
   /** 设置浮层菜单数据 */
   settingMenu: YakitMenuItemType[]
   /** 打开系统检测浮层（由 GlobalState 注册，供侧边栏入口复用） */
-  openGlobalState: () => void
+  openGlobalState: (anchorRect: DOMRect) => void
   /** 注册用户菜单数据与动作（由 FuncDomain 调用） */
   setUserMenuBridge: (payload: {
     userMenuItems: YakitMenuItemType[]
@@ -29,7 +29,7 @@ interface LayoutRailStoreProps {
   /** 注册设置浮层菜单数据（由 FuncDomain 调用） */
   setSettingMenu: (settingMenu: YakitMenuItemType[]) => void
   /** 注册系统检测浮层打开动作（由 GlobalState 调用） */
-  setGlobalStateBridge: (openGlobalState: () => void) => void
+  setGlobalStateBridge: (openGlobalState: (anchorRect: DOMRect) => void) => void
 }
 
 const noop = () => {}

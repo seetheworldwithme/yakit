@@ -685,9 +685,13 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
   )
 
   const [show, setShow] = useState<boolean>(false)
+  const [railTriggerPosition, setRailTriggerPosition] = useState<{ left: number; top: number }>()
 
   useEffect(() => {
-    setGlobalStateBridge(() => setShow(true))
+    setGlobalStateBridge((anchorRect) => {
+      setRailTriggerPosition({ left: anchorRect.right, top: anchorRect.top })
+      setShow(true)
+    })
   }, [setGlobalStateBridge])
 
   const [pcapHintShow, setPcapHintShow] = useState<boolean>(false)
@@ -1307,9 +1311,10 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
       <YakitPopover
         overlayClassName={classNames(
           styles['global-state-popover'],
+          hiddenTrigger ? styles['global-state-rail-popover'] : styles['global-state-header-popover'],
           isChecking ? ShowColorClass['loading'] : ShowColorClass[state],
         )}
-        placement={system === 'Darwin' ? 'bottomRight' : 'bottomLeft'}
+        placement={hiddenTrigger ? 'rightTop' : system === 'Darwin' ? 'bottomRight' : 'bottomLeft'}
         content={isIRify() ? irifyContent : content}
         visible={show}
         trigger="click"
@@ -1321,6 +1326,7 @@ export const GlobalState: React.FC<GlobalReverseStateProp> = React.memo((props) 
             isChecking ? ShowColorClass['loading'] : ShowColorClass[state],
             { [styles['global-state-trigger-hidden']]: hiddenTrigger },
           )}
+          style={hiddenTrigger && railTriggerPosition ? railTriggerPosition : undefined}
         >
           <div className={classNames(styles['state-body'])}>{isChecking ? ShowIcon['loading'] : ShowIcon[state]}</div>
         </div>

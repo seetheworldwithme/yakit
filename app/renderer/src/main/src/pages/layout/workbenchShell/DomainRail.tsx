@@ -114,7 +114,13 @@ export const DomainRail: React.FC<DomainRailProps> = React.memo((props) => {
         )}
 
         {/* 系统检测：复用顶部 GlobalState 的原有检测与弹窗逻辑 */}
-        <div className="wb-rail-item" onClick={() => setTimeout(openGlobalState, 0)}>
+        <div
+          className="wb-rail-item"
+          onClick={(event) => {
+            const anchorRect = event.currentTarget.getBoundingClientRect()
+            setTimeout(() => openGlobalState(anchorRect), 0)
+          }}
+        >
           <span className="wb-rail-item-icon">
             <SafetyCertificateOutlined />
           </span>
