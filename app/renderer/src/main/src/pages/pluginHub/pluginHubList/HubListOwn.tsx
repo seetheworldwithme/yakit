@@ -395,6 +395,7 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
             uuid: res.UUID || '',
           }),
         )
+        yakitNotify('success', t('PluginHubDetail.downloadSuccess'))
       })
       .catch(() => {})
       .finally(() => {
