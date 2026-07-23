@@ -1,26 +1,18 @@
 /**
- * 启动窗口展示策略
- * 企业版（EnpriTrace / IRifyEnpriTrace / EnpriTraceAgent / Memfit）跳过启动页，
- * 避免等待渲染进程挂载后再隐藏造成双窗口闪现。
+ * 启动窗口展示策略。
+ *
+ * 所有变体均需在引擎连接成功前保留启动页，以便展示端口冲突、数据库修复、
+ * 杀毒软件拦截等可恢复错误；连接成功后由 engineLinkWin-done 统一关闭启动页。
  */
 'use strict'
 
-// 匹配需要跳过启动页的应用名（企业版变体）
-const SKIP_STARTUP_APP_NAMES = ['EnpriTrace', 'IRifyEnpriTrace', 'EnpriTraceAgent', 'Memfit AI']
-
 /**
- * 根据打包状态与应用名判断是否跳过启动窗口
+ * 启动阶段不能跳过启动窗口。
  * @param {{ isPackaged: boolean, appName: string }} opts
  * @returns {boolean}
  */
-function shouldSkipStartupWindow({ isPackaged, appName }) {
-  if (!isPackaged) {
-    return false
-  }
-  if (!appName || typeof appName !== 'string') {
-    return false
-  }
-  return SKIP_STARTUP_APP_NAMES.some((name) => appName.includes(name))
+function shouldSkipStartupWindow() {
+  return false
 }
 
 module.exports = {
