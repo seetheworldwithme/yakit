@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Checkbox, Divider, Form, Tooltip } from 'antd'
 import { getLocalValue, setLocalValue } from '@/utils/kv'
-import { OutlineArrowcirclerightIcon, OutlineExitIcon, OutlineQuestionmarkcircleIcon } from '@/assets/outline'
+import {
+  OutlineArrowcirclerightIcon,
+  OutlineExclamationcircleIcon,
+  OutlineExitIcon,
+  OutlineQuestionmarkcircleIcon,
+} from '@/assets/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
 import { LoadingClickExtra, ModalIsTop, System, YakitStatusType, YaklangEngineMode } from '../../types'
@@ -628,6 +633,8 @@ export const YakitLoading: React.FC<YakitLoadingProp> = (props) => {
     return yakitStatus && !statusArr.includes(yakitStatus)
   }, [yakitStatus])
 
+  const isPortOccupied = yakitStatus === 'port_occupied_prev' || yakitStatus === 'port_occupied'
+
   return (
     <YakitSpin spinning={disableYakitLoading} tip={yakitLoadingTip}>
       <div className={styles['startup-loading-wrapper']}>
@@ -640,6 +647,54 @@ export const YakitLoading: React.FC<YakitLoadingProp> = (props) => {
             softLang={softLang}
             setSoftLang={setSoftLang}
           />
+        ) : isPortOccupied ? (
+          <section className={styles['port-conflict-panel']} aria-live="assertive">
+            <div className={styles['port-conflict-header']}>
+              <div className={styles['port-conflict-icon']}>
+                <OutlineExclamationcircleIcon />
+              </div>
+              <div>
+                <span className={styles['port-conflict-eyebrow']}>ENGINE CONNECTION</span>
+                <h2>引擎端口被占用</h2>
+              </div>
+            </div>
+            <p className={styles['port-conflict-description']}>
+              Yakit 引擎默认使用 <strong>{port}</strong> 端口。请释放正在使用该端口的进程，或切换到其他可用端口。
+            </p>
+            <div className={styles['port-conflict-port']}>
+              <span>当前端口</span>
+              <strong>{port}</strong>
+              <span className={styles['port-conflict-status']}>不可用</span>
+            </div>
+            {yakitStatus === 'port_occupied_prev' ? (
+              <p className={styles['port-conflict-hint']}>
+                可尝试结束当前 Yakit 引擎进程后重新连接，或直接配置新的连接端口。
+              </p>
+            ) : (
+              <Form
+                className={styles['port-conflict-form']}
+                form={form}
+                requiredMark={false}
+                colon={false}
+                layout="vertical"
+              >
+                <Form.Item
+                  label="新的引擎端口"
+                  rules={[
+                    { required: true, message: '请输入端口号' },
+                    {
+                      pattern: /^(?:[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$/,
+                      message: '请输入正确的端口号',
+                    },
+                  ]}
+                  name="newLinkport"
+                >
+                  <YakitInput placeholder="例如 9013" disabled={restartLoading} />
+                </Form.Item>
+              </Form>
+            )}
+            <div className={styles['port-conflict-actions']}>{btns}</div>
+          </section>
         ) : (
           <div
             className={classNames(styles['log-wrapper'], {
@@ -665,32 +720,7 @@ export const YakitLoading: React.FC<YakitLoadingProp> = (props) => {
             </div>
           </div>
         )}
-        <div className={styles['engine-log-btn']}>
-          <Form
-            form={form}
-            requiredMark={false}
-            colon={false}
-            layout={'horizontal'}
-            labelCol={{ span: 0 }}
-            wrapperCol={{ span: 24 }}
-            style={{ display: yakitStatus === 'port_occupied' ? 'block' : 'none' }}
-          >
-            <Form.Item
-              label={''}
-              rules={[
-                { required: true, message: `请输入端口号` },
-                {
-                  pattern: /^(?:[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$/,
-                  message: '请输入正确的端口号',
-                },
-              ]}
-              name={'newLinkport'}
-            >
-              <YakitInput placeholder="切换端口..." disabled={restartLoading} />
-            </Form.Item>
-          </Form>
-          {btns}
-        </div>
+        {!isPortOccupied && <div className={styles['engine-log-btn']}>{btns}</div>}
         <div className={styles['footer-wrapper']}>
           <span className={styles['exit-btn']} onClick={() => yakitApp.closeWindow()}>
             <OutlineExitIcon className={styles['exit-icon']} />
