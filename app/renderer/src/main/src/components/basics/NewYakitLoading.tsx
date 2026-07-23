@@ -260,7 +260,7 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
 
             <div className={styles['log-wrapper']}>
               <div className={styles['log-body']}>
-                {(enginePortConflict ? ['引擎端口冲突'] : checkLog).map((item) => {
+                {(enginePortConflict ? ['引擎端口冲突,请切换'] : checkLog).map((item) => {
                   return (
                     <div key={item} className={styles['log-item']}>
                       {item}

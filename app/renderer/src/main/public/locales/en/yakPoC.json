@@ -8,7 +8,9 @@
     "selectPrompt": "Please select keywords or plugin groups to scan"
   },
   "PluginGroupByKeyWord": {
-    "noDataDesc": "One-click to get default keywords and plugins. Please restart {{edition}} after downloading."
+    "noDataDesc": "No vulnerability plugins are available. Install the offline defaults from the enterprise server.",
+    "downloadDefaultPlugins": "Install Default Vulnerability Plugins",
+    "downloadingDefaultPlugins": "Installing default vulnerability plugins from the enterprise server..."
   },
   "PluginGroupGrid": {
     "searchGroupNamePlaceholder": "Enter group name to search",

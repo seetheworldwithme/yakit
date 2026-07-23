@@ -36,7 +36,6 @@ import {
   OutlineOpenIcon,
 } from '@/assets/icon/outline'
 import { RollingLoadList } from '@/components/RollingLoadList/RollingLoadList'
-import { SolidCloudpluginIcon, SolidPrivatepluginIcon } from '@/assets/icon/colors'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { CloudDownloadIcon } from '@/assets/newIcon'
 import { YakitGetOnlinePlugin } from '@/pages/mitm/MITMServerHijacking/MITMPluginLocalList'
@@ -55,7 +54,6 @@ import emiter from '@/utils/eventBus/eventBus'
 import { apiFetchQueryYakScriptGroupLocalByPoc } from './utils'
 import { PluginListPageMeta } from '@/pages/plugins/baseTemplateType'
 import { initialLocalState, pluginLocalReducer } from '@/pages/plugins/pluginReducer'
-import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { PluginDetailsListItem } from '@/pages/plugins/baseTemplate'
 import moment from 'moment'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
@@ -63,7 +61,7 @@ import { compareAsc } from '@/pages/yakitStore/viewers/base'
 import { batchPluginType } from '@/defaultConstants/PluginBatchExecutor'
 import { defaultPocPageInfo } from '@/defaultConstants/YakPoC'
 import { HybridScanControlAfterRequest } from '@/models/HybridScan'
-import { getReleaseEditionName, getRemoteHttpSettingGV } from '@/utils/envfile'
+import { getReleaseEditionName } from '@/utils/envfile'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 
 const HybridScanTaskListDrawer = React.lazy(
@@ -250,22 +248,6 @@ const PluginGroupPluginInline: React.FC<PluginGroupPluginInlineProps> = React.me
   /**已加载过且非空的分组缓存，避免重复请求 */
   const loadedGroupRef = useRef<string>('')
 
-  const privateDomainRef = useRef<string>('') // 连接地址
-
-  useEffect(() => {
-    getPrivateDomainAndRefList()
-  }, [])
-
-  /**获取最新的私有域,并刷新列表 */
-  const getPrivateDomainAndRefList = useMemoizedFn(() => {
-    getRemoteValue(getRemoteHttpSettingGV()).then((setting) => {
-      if (setting) {
-        const values = JSON.parse(setting)
-        privateDomainRef.current = values.BaseUrl
-      }
-    })
-  })
-
   useEffect(() => {
     fetchList(true)
   }, [group])
@@ -300,17 +282,10 @@ const PluginGroupPluginInline: React.FC<PluginGroupPluginInlineProps> = React.me
         if (!res.Data) res.Data = []
         const length = +res.Pagination.Page === 1 ? res.Data.length : res.Data.length + response.Data.length
         setHasMore(length < +res.Total)
-        const newData = res.Data.map((ele) => ({
-          ...ele,
-          isLocalPlugin: privateDomainRef.current !== ele.OnlineBaseUrl,
-        }))
         dispatch({
           type: 'add',
           payload: {
-            response: {
-              ...res,
-              Data: newData,
-            },
+            response: res,
           },
         })
         if (+res.Pagination.Page === 1) {
@@ -327,15 +302,6 @@ const PluginGroupPluginInline: React.FC<PluginGroupPluginInlineProps> = React.me
   // 滚动更多加载
   const onUpdateList = useMemoizedFn(() => {
     fetchList()
-  })
-  /** 单项副标题组件 */
-  const optExtra = useMemoizedFn((data: YakScript) => {
-    if (privateDomainRef.current !== data.OnlineBaseUrl) return <></>
-    if (data.OnlineIsPrivate) {
-      return <SolidPrivatepluginIcon className="icon-svg-16" />
-    } else {
-      return <SolidCloudpluginIcon className="icon-svg-16" />
-    }
   })
   return (
     <div className={styles['group-inline-list-wrapper']}>
@@ -362,7 +328,6 @@ const PluginGroupPluginInline: React.FC<PluginGroupPluginInlineProps> = React.me
                 isCorePlugin={!!info.IsCorePlugin}
                 pluginType={info.Type}
                 onPluginClick={() => {}}
-                extra={optExtra}
                 enableClick={false}
                 enableCheck={false}
                 hideHeadImg
@@ -505,7 +470,7 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
           />
           <div className={styles['yak-poc-buttons']}>
             <YakitButton type="outline1" icon={<CloudDownloadIcon />} onClick={() => setVisibleOnline(true)}>
-              {t('YakitButton.oneClickDownload')}
+              {t('PluginGroupByKeyWord.downloadDefaultPlugins')}
             </YakitButton>
           </div>
         </div>
@@ -536,6 +501,9 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
           }, 200)
         }}
         listType="online"
+        pluginType={batchPluginType.split(',')}
+        official={[true]}
+        downloadTitle={t('PluginGroupByKeyWord.downloadingDefaultPlugins')}
         getContainer={document.getElementById(`main-operator-page-body-${YakitRoute.PoC}`) || undefined}
       />
     </div>

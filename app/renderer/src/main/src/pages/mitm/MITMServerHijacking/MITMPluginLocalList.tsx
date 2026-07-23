@@ -326,6 +326,8 @@ export interface YakitGetOnlinePluginProps {
   listType?: 'online' | 'mine' | 'recycle' | 'check'
   // 限制下载的类型
   pluginType?: string[]
+  official?: boolean[]
+  downloadTitle?: string
   visible: boolean
   setVisible: (b: boolean) => void
   onFinish?: () => void
@@ -340,6 +342,8 @@ export const YakitGetOnlinePlugin: React.FC<YakitGetOnlinePluginProps> = React.m
   const {
     listType = 'online',
     pluginType,
+    official,
+    downloadTitle,
     visible,
     setVisible,
     onFinish,
@@ -381,6 +385,7 @@ export const YakitGetOnlinePlugin: React.FC<YakitGetOnlinePluginProps> = React.m
       const addParams: DownloadOnlinePluginsRequest = {
         ListType: listType === 'online' ? '' : listType,
         PluginType: pluginType ? pluginType : [],
+        Official: official ? official : [],
       }
       ipcRenderer
         .invoke('DownloadOnlinePlugins', addParams, taskToken)
@@ -403,7 +408,7 @@ export const YakitGetOnlinePlugin: React.FC<YakitGetOnlinePluginProps> = React.m
   return (
     <YakitHint
       visible={visible}
-      title={`${getReleaseEditionName()} 云端插件下载中...`}
+      title={downloadTitle || `${getReleaseEditionName()} 云端插件下载中...`}
       heardIcon={<SolidCloudDownloadIcon style={{ color: 'var(--Colors-Use-Warning-Primary)' }} />}
       onCancel={() => {
         StopAllPlugin()

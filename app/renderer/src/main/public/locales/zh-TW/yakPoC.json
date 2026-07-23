@@ -8,7 +8,9 @@
     "selectPrompt": "請選擇關鍵詞或外掛組進行掃描"
   },
   "PluginGroupByKeyWord": {
-    "noDataDesc": "可一鍵獲取預設關鍵詞與外掛,下載後請重啟 {{edition}} 獲取預設關鍵詞"
+    "noDataDesc": "目前沒有可用的漏洞外掛，可從企業服務端安裝離線預設外掛。",
+    "downloadDefaultPlugins": "安裝預設漏洞外掛",
+    "downloadingDefaultPlugins": "正在從企業服務端安裝預設漏洞外掛..."
   },
   "PluginGroupGrid": {
     "searchGroupNamePlaceholder": "請輸入組名搜尋",
