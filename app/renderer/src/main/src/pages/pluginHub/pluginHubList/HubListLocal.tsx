@@ -1311,10 +1311,12 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                         .map((group) => {
                           const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
                             []) as API.PluginsSearchData[]
+                          const inlineOptions = (group.data || []).slice(0, 3)
+                          const remainingOptions = (group.data || []).slice(3)
                           return (
                             <div className={styles['hub-inline-filter-group']} key={group.groupKey}>
                               <span>{group.groupName}</span>
-                              {(group.data || []).map((opt) => {
+                              {inlineOptions.map((opt) => {
                                 const active = selected.some((item) => item.value === opt.value)
                                 return (
                                   <YakitButton
@@ -1327,6 +1329,41 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                                   </YakitButton>
                                 )
                               })}
+                              {remainingOptions.length > 0 && (
+                                <YakitPopover
+                                  overlayClassName={styles['hub-inline-filter-popover']}
+                                  placement="bottomLeft"
+                                  trigger="click"
+                                  content={
+                                    <div className={styles['hub-inline-filter-popover-content']}>
+                                      {group.data.map((opt) => {
+                                        const active = selected.some((item) => item.value === opt.value)
+                                        return (
+                                          <YakitButton
+                                            key={opt.value}
+                                            type={active ? 'primary' : 'text'}
+                                            size="small"
+                                            onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                                          >
+                                            {opt.label}
+                                          </YakitButton>
+                                        )
+                                      })}
+                                    </div>
+                                  }
+                                >
+                                  <YakitButton
+                                    type={
+                                      remainingOptions.some((opt) => selected.some((item) => item.value === opt.value))
+                                        ? 'primary'
+                                        : 'text'
+                                    }
+                                    size="small"
+                                  >
+                                    更多 +{remainingOptions.length}
+                                  </YakitButton>
+                                </YakitPopover>
+                              )}
                             </div>
                           )
                         })}

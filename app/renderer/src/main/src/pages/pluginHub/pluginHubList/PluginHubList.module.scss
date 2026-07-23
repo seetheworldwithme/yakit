@@ -162,6 +162,20 @@
 
 // 本地插件页-左侧创建栈外壳
 .plugin-hub-local-shell {
+  .hub-outer-list-header {
+    gap: 12px;
+
+    .title-style {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .extra-wrapper {
+      flex: 0 0 auto;
+    }
+  }
+
   .hub-local-rail {
     flex: 0 0 auto;
     width: 56px;
@@ -472,15 +486,45 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hub-inline-filter-group {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
   color: var(--Colors-Use-Neutral-Text-3-Secondary);
   font-size: 12px;
   font-weight: 400;
+
+  > span {
+    flex: 0 0 auto;
+  }
+}
+
+.hub-inline-filter-popover {
+  padding-top: 4px;
+
+  :global {
+    .ant-popover-inner-content {
+      padding: 8px;
+    }
+  }
+}
+
+.hub-inline-filter-popover-content {
+  width: 360px;
+  max-width: min(360px, calc(100vw - 32px));
+  max-height: 240px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  overflow-y: auto;
 }
 .plugin-hub-tab-detail-list {
   width: 410px;
