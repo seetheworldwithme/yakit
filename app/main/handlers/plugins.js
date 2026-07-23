@@ -1,7 +1,7 @@
 const { ipcMain } = require('electron')
 const handlerHelper = require('./handleStreamWithContext')
 const { USER_INFO } = require('../state')
-const fs = require('fs')
+const { readPluginImportArchive } = require('./utils/pluginImport')
 
 module.exports = (win, getClient) => {
   // get plugins risk list
@@ -72,7 +72,7 @@ module.exports = (win, getClient) => {
   let importYakScriptStream
   ipcMain.handle('ImportYakScriptStream', async (e, params) => {
     try {
-      const data = fs.readFileSync(params.Filename, null)
+      const data = readPluginImportArchive(params.Filename)
       const uint8Array = new Uint8Array(data)
       params.Data = uint8Array
       importYakScriptStream = getClient().ImportYakScriptStream(params)

@@ -1263,7 +1263,8 @@ export const ImportLocalPlugin: React.FC<ImportLocalPluginProps> = React.memo((p
               }}
               multiple={false}
               selectType="file"
-              fileExtensionIsExist={false}
+              accept=".zip,.ZIP,.enc,.ENC"
+              fileExtensionIsExist
               onChange={(val) => {
                 setLocalPluginPath(val)
                 form.setFieldsValue({ localPluginPath: val })
