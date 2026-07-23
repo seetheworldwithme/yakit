@@ -345,6 +345,7 @@ process.on('loaded', function () {
       cancelScreenRecorder: (token) => invoke('cancel-StartScrecorder', token),
       activateScreenshot: () => invoke('activate-screenshot'),
       onStartYaklangEngineError: (callback) => subscribe('start-yaklang-engine-error', callback),
+      onEnginePortConflict: (callback) => subscribe('engine-port-conflict', callback),
     },
     project: {
       setCurrentProject: (params) => invoke('SetCurrentProject', params),

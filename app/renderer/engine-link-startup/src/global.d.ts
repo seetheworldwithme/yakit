@@ -25,6 +25,7 @@ interface YakitBridge {
     relaunch: () => Promise<unknown>
     completeEngineLink: (payload: Record<string, unknown>) => Promise<unknown>
     hideStartupWindow: () => void
+    reportEnginePortConflict: (port: number) => void
     closeWindow: () => Promise<unknown>
     onCloseWindow: (callback: () => void) => BridgeCleanup
     onFromMainWindow: (callback: (data: any) => void) => BridgeCleanup

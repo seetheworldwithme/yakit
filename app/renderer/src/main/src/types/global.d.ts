@@ -306,6 +306,7 @@ interface YakitBridge {
     cancelScreenRecorder: (token: string) => Promise<unknown>
     activateScreenshot: () => Promise<unknown>
     onStartYaklangEngineError: (callback: (error: string) => void) => BridgeCleanup
+    onEnginePortConflict: (callback: (payload: { port?: number }) => void) => BridgeCleanup
   }
   project: {
     setCurrentProject: (params: any) => Promise<any>

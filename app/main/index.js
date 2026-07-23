@@ -571,6 +571,11 @@ function registerGlobalIPC() {
     showMainWindowWhenReady()
   })
 
+  // 后台引擎连接页检测到端口冲突后，仅把状态投递给企业版主窗口的定制加载页。
+  ipcMain.on('engine-port-conflict', (_event, payload = {}) => {
+    safeSend(win, 'engine-port-conflict', payload)
+  })
+
   // ------------------- 窗口发送数据操作 -------------------
   // engineLink 完成操作
   ipcMain.handle('engineLinkWin-done', async (event, data) => {

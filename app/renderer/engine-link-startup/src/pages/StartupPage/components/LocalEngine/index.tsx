@@ -23,7 +23,7 @@ import { SystemInfo } from '../../utils'
 import { getLocalValue } from '@/utils/kv'
 import { LocalGVS } from '@/enums/yakitGV'
 import { UpdateYakitHint } from '../UpdateYakitHint'
-import { yakitEngine } from '@/utils/electronBridge'
+import { yakitApp, yakitEngine } from '@/utils/electronBridge'
 
 function compare(a: string, b: string) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
@@ -98,6 +98,10 @@ export const LocalEngine: React.FC<LocalEngineProps> = memo(
           case 'port_occupied':
             setLog((arr) => arr.concat(['端口不可用，可查看日志报错信息进行处理...']))
             setYakitStatus('port_occupied_prev')
+            // 企业版使用主窗口的定制加载页展示冲突提示，当前窗口仍在后台复用既有切换端口流程。
+            if (isEnpriTrace()) {
+              yakitApp.reportEnginePortConflict(port)
+            }
             break
           case 'antivirus_blocked':
             setLog((arr) => arr.concat(['被杀软拦截，可将应用加入白名单后重启...']))

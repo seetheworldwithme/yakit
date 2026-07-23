@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { YakitStatusType, YaklangEngineMode } from '@/yakitGVDefine'
 import {
   fetchEnv,
@@ -13,6 +13,7 @@ import {
 import { Tooltip } from 'antd'
 import { OutlineQuestionmarkcircleIcon } from '@/assets/icon/outline'
 import { YakitButton } from '../yakitUI/YakitButton/YakitButton'
+import { YakitInput } from '../yakitUI/YakitInput/YakitInput'
 
 import yakitSE from '@/assets/yakitSE.png'
 import yakitEE from '@/assets/yakitEE.png'
@@ -60,11 +61,35 @@ export interface NewYakitLoadingProp {
   restartLoading: boolean
   remoteControlRefreshLoading: boolean
   btnClickCallback: (type: YaklangEngineMode | YakitStatusType) => any
+  enginePortConflict?: boolean
+  enginePort?: number
+  onConnectPort?: (port: number) => void
 }
 
 export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
-  const { yakitStatus, checkLog, restartLoading, remoteControlRefreshLoading, btnClickCallback } = props
+  const {
+    yakitStatus,
+    checkLog,
+    restartLoading,
+    remoteControlRefreshLoading,
+    btnClickCallback,
+    enginePortConflict = false,
+    enginePort = 9012,
+    onConnectPort,
+  } = props
   const { t, i18n } = useI18nNamespaces(['layout', 'yakitUi'])
+  const [portValue, setPortValue] = useState<string>(String(enginePort))
+
+  useEffect(() => {
+    if (enginePortConflict) {
+      setPortValue(String(enginePort))
+    }
+  }, [enginePortConflict, enginePort])
+
+  const isValidPort = useMemo(() => {
+    const port = Number(portValue)
+    return Number.isInteger(port) && port >= 1 && port <= 65535
+  }, [portValue])
 
   const btns = useMemo(() => {
     if (yakitStatus === 'control-remote') {
@@ -235,7 +260,7 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
 
             <div className={styles['log-wrapper']}>
               <div className={styles['log-body']}>
-                {checkLog.map((item, index) => {
+                {(enginePortConflict ? ['引擎端口冲突'] : checkLog).map((item) => {
                   return (
                     <div key={item} className={styles['log-item']}>
                       {item}
@@ -245,6 +270,30 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
               </div>
             </div>
             <div className={styles['engine-log-btn']}>
+              {enginePortConflict && (
+                <div className={styles['engine-port-conflict']}>
+                  <div className={styles['engine-port-conflict-form']}>
+                    <YakitInput
+                      aria-label="引擎端口"
+                      inputMode="numeric"
+                      value={portValue}
+                      disabled={restartLoading}
+                      onChange={(event) => setPortValue(event.target.value.replace(/\D/g, ''))}
+                    />
+                    <YakitButton
+                      type="primary"
+                      loading={restartLoading}
+                      disabled={!isValidPort}
+                      onClick={() => onConnectPort?.(Number(portValue))}
+                    >
+                      连接
+                    </YakitButton>
+                  </div>
+                  {!isValidPort && (
+                    <div className={styles['engine-port-conflict-hint']}>请输入 1 到 65535 之间的端口</div>
+                  )}
+                </div>
+              )}
               {btns}
               <div
                 className={styles['engine-help-wrapper']}

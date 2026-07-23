@@ -180,6 +180,26 @@
         width: 280px;
       }
 
+      .engine-port-conflict {
+        width: 280px;
+
+        .engine-port-conflict-form {
+          display: flex;
+          gap: 8px;
+
+          :global(.yakit-input-wrapper) {
+            flex: 1;
+          }
+        }
+
+        .engine-port-conflict-hint {
+          margin-top: 6px;
+          color: var(--Colors-Use-Error-Primary);
+          font-size: 12px;
+          line-height: 18px;
+        }
+      }
+
       .engine-help-wrapper {
         width: 280px;
         display: flex;

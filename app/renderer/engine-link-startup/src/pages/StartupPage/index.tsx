@@ -141,6 +141,10 @@ export const StartupPage: React.FC = () => {
 
   // #region 软件开始进行逻辑启动
   useEffect(() => {
+    // 企业版仅使用主窗口的定制加载页；此窗口留在后台负责复用既有引擎连接流程。
+    if (isEnpriTrace()) {
+      yakitApp.hideStartupWindow()
+    }
     handleBuiltInCheck()
     handleFetchBaseInfo(() => {
       handleLinkEngineMode()

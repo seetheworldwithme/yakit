@@ -186,6 +186,8 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
   const [showLoadingPage, setShowLoadingPage] = useState<boolean>(isEnpriTrace())
   /** 本地引擎自检输出日志 */
   const [newCheckLog, setNewCheckLog] = useState<string[]>(isEnpriTrace() ? ['正在初始化...'] : [])
+  const [enginePortConflict, setEnginePortConflict] = useState<boolean>(false)
+  const [enginePort, setEnginePort] = useState<number>(9012)
   useEffect(() => {
     const cleanup = yakitUILayout.onFromEngineLinkWindow((data) => {
       setNewCheckLog([t('UILayout.entering')])
@@ -209,6 +211,15 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
     return () => {
       cleanup()
     }
+  }, [])
+  useEffect(() => {
+    return yakitUILayout.onEnginePortConflict((payload) => {
+      const port = Number(payload?.port)
+      setEnginePort(Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 9012)
+      setRestartLoading(false)
+      setEnginePortConflict(true)
+      setShowLoadingPage(true)
+    })
   }, [])
   // #endregion
 
@@ -504,6 +515,11 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
       default:
         return
     }
+  })
+  const handleConnectEnginePort = useMemoizedFn((port: number) => {
+    setRestartLoading(true)
+    setEnginePort(port)
+    yakitApp.completeMainWindow({ yakitStatus: 'port_occupied', port })
   })
 
   const openEngineLinkWin = useMemoizedFn((type: YakitSettingCallbackType | YaklangEngineMode | YakitStatusType) => {
@@ -1839,6 +1855,9 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
                 restartLoading={restartLoading}
                 remoteControlRefreshLoading={remoteControlRefreshLoading}
                 btnClickCallback={newLoadingClickCallback}
+                enginePortConflict={enginePortConflict}
+                enginePort={enginePort}
+                onConnectPort={handleConnectEnginePort}
               />
             )}
             {engineLink && (
