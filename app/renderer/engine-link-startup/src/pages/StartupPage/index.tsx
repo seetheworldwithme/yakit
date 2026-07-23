@@ -1032,6 +1032,20 @@ export const StartupPage: React.FC = () => {
           handleLinkLocalMode()
         }, 500)
         break
+      case 'port_occupied': {
+        // 主窗口定制加载页提交的新端口：复用原有切换端口后的本地引擎启动流程。
+        const port = Number(extra?.port)
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+          setRestartLoading(false)
+          setCheckLog(['端口号无效，请重新输入 1 到 65535 之间的端口'])
+          safeSetYakitStatus('port_occupied')
+          return
+        }
+        setRestartLoading(true)
+        setCustomPort(port)
+        handleStartLocalLink(isCheckVersion.current)
+        return
+      }
       default:
         break
     }

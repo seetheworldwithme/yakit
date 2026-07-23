@@ -126,4 +126,5 @@ export interface StartLocalEngine {
 export interface TypeCallbackExtra {
   message?: string
   dbPath?: string[]
+  port?: number
 }
