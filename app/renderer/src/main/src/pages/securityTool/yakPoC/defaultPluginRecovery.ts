@@ -18,6 +18,52 @@ type QueryScripts = (query: QueryYakScriptRequest, hiddenError?: boolean) => Pro
 type SaveGroup = (params: SaveYakScriptGroupRequest) => Promise<null>
 
 export const DEFAULT_BUNDLED_YAK_POC_GROUP = '企业默认漏洞插件'
+export const LEGACY_BUNDLED_YAK_POC_GROUPS = [DEFAULT_BUNDLED_YAK_POC_GROUP, '内置漏洞插件']
+
+/**
+ * Keep the offline presentation consistent with the enterprise service bundle:
+ * yakit-enterprise/backend/default-plugins/groups.json.
+ */
+export const BUNDLED_YAK_POC_GROUPS: Record<string, readonly string[]> = {
+  Java: [
+    'Fastjson 综合检测',
+    'SQL注入-Path参数注入',
+    'SQL注入-UNION注入-MD5函数',
+    'SQL注入-高危Header注入',
+    'SSTI Expr 服务器模版表达式注入',
+    'Shiro 指纹识别 + 弱密码检测',
+    'Shiro 自定义检测',
+    '基础 XSS 检测',
+  ],
+  SQL注入: [
+    'SQL注入-MySQL-ErrorBased',
+    'SQL注入-Path参数注入',
+    'SQL注入-UNION注入-MD5函数',
+    'SQL注入-堆叠注入',
+    'SQL注入-时间盲注-Sleep',
+    'SQL注入-高危Header注入',
+  ],
+  安全产品: [
+    'HTTP请求走私',
+    'SQL注入-MySQL-ErrorBased',
+    'SQL注入-时间盲注-Sleep',
+    'SSRF HTTP Public',
+    'Swagger JSON 泄漏',
+  ],
+  '远程代码执行（扫描）': [
+    'Fastjson 综合检测',
+    'SSRF HTTP Public',
+    'Shiro 指纹识别 + 弱密码检测',
+    'Shiro 自定义检测',
+    '开放 URL 重定向漏洞',
+  ],
+  PHP: ['SSTI Expr 服务器模版表达式注入', '基础 XSS 检测', '多认证综合越权测试'],
+  XSS: ['基础 XSS 检测', '文件包含'],
+  FastJSON: ['Fastjson 综合检测'],
+  IIS: ['Fastjson 综合检测'],
+  Shiro: ['Shiro 指纹识别 + 弱密码检测'],
+  Spring: ['Fastjson 综合检测'],
+}
 
 export const installDefaultYakPocPlugins = (
   request: DefaultPluginDownloadRequest,
@@ -78,39 +124,67 @@ export const installBundledYakPocPlugins = async (
 
   if (includedScriptNames.length === 0) return
 
-  await saveGroup({
-    Filter: {
-      Pagination: {
-        Page: 1,
-        Limit: includedScriptNames.length,
-        Order: 'asc',
-        OrderBy: 'script_name',
-      },
-      Type: pluginType,
-      IncludedScriptNames: includedScriptNames,
-      IsMITMParamPlugins: 2,
+  const buildFilter = (scriptNames: string[]): QueryYakScriptRequest => ({
+    Pagination: {
+      Page: 1,
+      Limit: scriptNames.length,
+      Order: 'asc',
+      OrderBy: 'script_name',
     },
-    SaveGroup: [DEFAULT_BUNDLED_YAK_POC_GROUP],
-    RemoveGroup: [],
+    Type: pluginType,
+    IncludedScriptNames: scriptNames,
+    IsMITMParamPlugins: 2,
+  })
+  const availablePluginNames = new Set(includedScriptNames)
+  const availableGroups = Object.entries(BUNDLED_YAK_POC_GROUPS)
+    .map(([group, scriptNames]) => ({
+      group,
+      scriptNames: scriptNames.filter((scriptName) => availablePluginNames.has(scriptName)),
+    }))
+    .filter((item) => item.scriptNames.length > 0)
+
+  if (availableGroups.length === 0) return
+
+  await saveGroup({
+    Filter: buildFilter(includedScriptNames),
+    SaveGroup: [],
+    RemoveGroup: [...LEGACY_BUNDLED_YAK_POC_GROUPS],
     PageId: pageId,
   })
+
+  for (const { group, scriptNames } of availableGroups) {
+    await saveGroup({
+      Filter: buildFilter(scriptNames),
+      SaveGroup: [group],
+      RemoveGroup: [],
+      PageId: pageId,
+    })
+  }
 }
 
-export const queryYakPocGroupsWithRecovery = async <T>(
+const isLegacyBundledGroup = (value?: string) => {
+  return LEGACY_BUNDLED_YAK_POC_GROUPS.includes(value || '')
+}
+
+const withoutLegacyBundledGroups = <T extends { Value?: string }>(groups: T[]) => {
+  return groups.filter((group) => !isLegacyBundledGroup(group.Value))
+}
+
+export const queryYakPocGroupsWithRecovery = async <T extends { Value?: string }>(
   queryGroups: () => Promise<T[]>,
   installBundled: () => Promise<void>,
   installOnline: () => Promise<void>,
 ): Promise<T[]> => {
   const groups = await queryGroups()
-  if (groups.length > 0) return groups
+  if (groups.length > 0 && withoutLegacyBundledGroups(groups).length === groups.length) return groups
 
   try {
     await installBundled()
   } catch (error) {}
 
-  const bundledGroups = await queryGroups()
+  const bundledGroups = withoutLegacyBundledGroups(await queryGroups())
   if (bundledGroups.length > 0) return bundledGroups
 
   await installOnline()
-  return await queryGroups()
+  return withoutLegacyBundledGroups(await queryGroups())
 }
