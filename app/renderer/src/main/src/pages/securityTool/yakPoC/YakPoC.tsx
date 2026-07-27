@@ -63,7 +63,11 @@ import { defaultPocPageInfo } from '@/defaultConstants/YakPoC'
 import { HybridScanControlAfterRequest } from '@/models/HybridScan'
 import { getReleaseEditionName, isEnterpriseOrSimpleEdition } from '@/utils/envfile'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
-import { installDefaultYakPocPlugins, queryYakPocGroupsWithDefaultInstall } from './defaultPluginRecovery'
+import {
+  installBundledYakPocPlugins,
+  installDefaultYakPocPlugins,
+  queryYakPocGroupsWithRecovery,
+} from './defaultPluginRecovery'
 import { yakitNotify } from '@/utils/notification'
 
 const HybridScanTaskListDrawer = React.lazy(
@@ -386,12 +390,16 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
       autoInstallAttemptedRef.current = true
     }
     const queryPromise = shouldAutoInstall
-      ? queryYakPocGroupsWithDefaultInstall(queryGroups, () =>
-          installDefaultYakPocPlugins({
-            ListType: '',
-            PluginType: batchPluginType.split(','),
-            Official: [true],
-          }),
+      ? queryYakPocGroupsWithRecovery(
+          queryGroups,
+          () =>
+            installBundledYakPocPlugins(pageId, batchPluginType, apiQueryYakScript, apiFetchSaveYakScriptGroupLocal),
+          () =>
+            installDefaultYakPocPlugins({
+              ListType: '',
+              PluginType: batchPluginType.split(','),
+              Official: [true],
+            }),
         )
       : queryGroups()
 
@@ -399,9 +407,7 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
       .then((res) => {
         initialResponseRef.current = res
         setResponseToSelect(res)
-        if (response.length === 0) {
-          setResponse(res)
-        }
+        setResponse(res)
       })
       .catch((error) => {
         yakitNotify('error', `安装默认漏洞插件失败：${error}`)

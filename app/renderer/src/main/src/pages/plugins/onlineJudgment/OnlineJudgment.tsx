@@ -2,7 +2,7 @@ import { OutlineRefreshIcon } from '@/assets/icon/outline'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
-import { useNetwork, useMemoizedFn } from 'ahooks'
+import { useMemoizedFn } from 'ahooks'
 import React, { forwardRef, useState, useImperativeHandle, useEffect, useMemo } from 'react'
 import { OnlineJudgmentProps, OnlineResponseStatusProps } from './OnlineJudgmentType'
 
@@ -19,7 +19,6 @@ const { ipcRenderer } = window.require('electron')
 export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
   forwardRef((props, ref) => {
     const { isJudgingLogin } = props
-    const networkState = useNetwork()
     const [initLoading, setInitLoading] = useState<boolean>(true)
     const [loading, setLoading] = useState<boolean>(true)
     const [loginShow, setLoginShow] = useState<boolean>(false)
@@ -45,7 +44,7 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
 
     useEffect(() => {
       JudgingStatus()
-    }, [networkState.online, userInfo.isLogin])
+    }, [isJudgingLogin, userInfo.isLogin])
 
     const JudgingStatus = useMemoizedFn(() => {
       if (isJudgingLogin && !userInfo.isLogin) {
@@ -56,16 +55,7 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
           message: '未登录',
         })
       } else {
-        if (networkState.online) {
-          getNetWork()
-        } else {
-          setInitLoading(false)
-          setLoading(false)
-          setOnlineResponseStatus({
-            code: -1,
-            message: '',
-          })
-        }
+        getNetWork()
       }
     })
 
@@ -84,6 +74,10 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
         })
         .catch((error) => {
           yakitNotify('error', '连接失败:' + error)
+          setOnlineResponseStatus({
+            code: -1,
+            message: String(error || ''),
+          })
         })
         .finally(() =>
           setTimeout(() => {
