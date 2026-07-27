@@ -241,6 +241,7 @@ interface YakitBridge {
     splitUpload: (payload: any) => Promise<any>
     uploadImgBase64: (payload: any) => Promise<any>
     uploadFile: (payload: any) => Promise<any>
+    importPluginPackage: (payload: { path: string; password?: string }) => Promise<any>
   }
   exporter: {
     writeToFile: (payload: any) => Promise<any>

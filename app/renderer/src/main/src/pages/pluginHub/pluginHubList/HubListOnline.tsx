@@ -54,7 +54,7 @@ import {
 } from '@/pages/mitm/MITMServerHijacking/MITMPluginLocalList'
 import { isCommunityEdition } from '@/utils/envfile'
 import { FilterPopoverBtn } from '@/pages/plugins/funcTemplate'
-import { Tooltip } from 'antd'
+import { Form, Tooltip } from 'antd'
 import useGetSetState from '../hooks/useGetSetState'
 import { getRemoteValue } from '@/utils/kv'
 import { RemotePluginGV } from '@/enums/plugin'
@@ -63,6 +63,10 @@ import { SolidYakOfficialPluginColorIcon } from '@/assets/icon/colors'
 import { grpcDownloadOnlinePlugin, grpcFetchLocalPluginDetail } from '../utils/grpc'
 import { defaultAddYakitScriptPageInfo } from '@/defaultConstants/AddYakitScript'
 import useShortcutKeyTrigger from '@/utils/globalShortcutKey/events/useShortcutKeyTrigger'
+import { YakitModal } from '@/components/yakitUI/YakitModal/YakitModal'
+import { YakitFormDragger } from '@/components/yakitUI/YakitForm/YakitForm'
+import { YakitInput } from '@/components/yakitUI/YakitInput/YakitInput'
+import { yakitUpload } from '@/services/electronBridge'
 
 import classNames from 'classnames'
 import styles from './PluginHubList.module.scss'
@@ -561,6 +565,13 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
     )
   })
 
+  const [importPluginVisible, setImportPluginVisible] = useState(false)
+  const handleImportPluginSuccess = useMemoizedFn(() => {
+    setImportPluginVisible(false)
+    handleRefreshList(true)
+    runTabTotal()
+  })
+
   /** ---------- 详情列表操作 Start ---------- */
   // 进入插件详情
   const onOptClick = useMemoizedFn((info: YakitPluginOnlineDetail, index: number) => {
@@ -630,6 +641,15 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
           size="large"
           name={t('HubListOnline.newPlugin')}
           onClick={onNewPlugin}
+        />
+        <HubButton
+          width={wrapperWidth}
+          iconWidth={900}
+          icon={<OutlineClouduploadIcon />}
+          type="outline2"
+          size="large"
+          name="批量导入到云端"
+          onClick={() => setImportPluginVisible(true)}
         />
       </div>
     )
@@ -855,6 +875,11 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
       )}
       {/* 一键上传 */}
       {uploadModal && <PluginsUploadHint visible={uploadModal} setVisible={setUploadModal} />}
+      <PluginOnlineImportModal
+        visible={importPluginVisible}
+        onCancel={() => setImportPluginVisible(false)}
+        onSuccess={handleImportPluginSuccess}
+      />
 
       {/* 批量下载同名覆盖提示 */}
       <NoPromptHint
@@ -874,5 +899,87 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
         onCallback={handleSingleSameNameHint}
       />
     </div>
+  )
+})
+
+interface PluginOnlineImportModalProps {
+  visible: boolean
+  onCancel: () => void
+  onSuccess: () => void
+}
+
+const PluginOnlineImportModal: React.FC<PluginOnlineImportModalProps> = memo((props) => {
+  const { visible, onCancel, onSuccess } = props
+  const [form] = Form.useForm()
+  const [pluginPath, setPluginPath] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!visible) return
+    form.resetFields()
+    setPluginPath('')
+  }, [visible])
+
+  const onImport = useMemoizedFn(async () => {
+    const values = form.getFieldsValue()
+    if (!values.pluginPath) {
+      yakitNotify('warning', '请选择插件包')
+      return
+    }
+    setLoading(true)
+    try {
+      const response = await yakitUpload.importPluginPackage({ path: values.pluginPath, password: values.password })
+      if (response?.code !== 200) {
+        throw new Error(response?.message || response?.data?.reason || '插件导入失败')
+      }
+      const result = response.data || {}
+      const imported = result.imported?.length || 0
+      const skipped = result.skipped?.length || 0
+      const failed = result.failed?.length || 0
+      yakitNotify('success', `插件导入完成：成功 ${imported} 个，跳过 ${skipped} 个，失败 ${failed} 个`)
+      onSuccess()
+    } catch (error) {
+      yakitNotify('error', `插件导入失败：${error}`)
+    } finally {
+      setLoading(false)
+    }
+  })
+
+  return (
+    <YakitModal
+      type="white"
+      visible={visible}
+      title="批量导入到云端"
+      width={560}
+      maskClosable={false}
+      onCancel={onCancel}
+      onOk={onImport}
+      confirmLoading={loading}
+      okText="导入"
+    >
+      <Form form={form}>
+        <YakitFormDragger
+          formItemProps={{
+            name: 'pluginPath',
+            label: '插件包',
+            labelCol: { span: 4 },
+            wrapperCol: { span: 20 },
+            rules: [{ required: true, message: '请选择插件包' }],
+          }}
+          selectType="file"
+          multiple={false}
+          accept=".zip,.ZIP,.enc,.ENC"
+          fileExtensionIsExist
+          value={pluginPath}
+          onChange={(value) => {
+            setPluginPath(value)
+            form.setFieldsValue({ pluginPath: value })
+          }}
+        />
+        <Form.Item label="解密密码" name="password" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
+          <YakitInput.Password placeholder="加密插件包请输入密码" />
+        </Form.Item>
+      </Form>
+    </YakitModal>
   )
 })

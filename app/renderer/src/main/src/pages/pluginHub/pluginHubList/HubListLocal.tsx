@@ -379,6 +379,10 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
 
   const [batchDelLoading, setBatchDelLoading] = useState<boolean>(false)
   const onHeaderExtraDel = useMemoizedFn(() => {
+    if (allChecked || selectList.some((item) => item.IsCorePlugin)) {
+      yakitNotify('warning', '内置插件无法删除')
+      return
+    }
     if (delHintCache.current) {
       handleBatchDel()
     } else {
@@ -413,6 +417,10 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
   // 单个删除的插件信息队列
   const [singleDel, setSingleDel] = useState<YakScript[]>([])
   const onFooterExtraDel = useMemoizedFn((info: YakScript) => {
+    if (info.IsCorePlugin) {
+      yakitNotify('warning', '内置插件无法删除')
+      return
+    }
     const findIndex = singleDel.findIndex((item) => item.ScriptName === info.ScriptName)
     if (findIndex > -1) {
       yakitNotify('error', t('HubListLocal.deleteBusy'))

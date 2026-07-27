@@ -290,4 +290,27 @@ module.exports = (win, getClient) => {
       throw error
     }
   })
+
+  // 上传 Yakit 导出的插件包到团队插件仓库
+  ipcMain.handle('import-plugin-package', async (event, params) => {
+    const { path, password = '' } = params
+    if (!path || !fs.existsSync(path)) {
+      throw new Error('插件包不存在')
+    }
+    if (fs.statSync(path).size > 64 * 1024 * 1024) {
+      throw new Error('插件包不能超过 64MB')
+    }
+
+    const formData = new FormData()
+    formData.append('file', fs.createReadStream(path))
+    if (password) formData.append('password', password)
+
+    return httpApi({
+      method: 'post',
+      url: 'plugins/import',
+      data: formData,
+      headers: { 'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}` },
+      argParams: { cancelInterrupt: true },
+    })
+  })
 }

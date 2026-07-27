@@ -280,6 +280,7 @@ process.on('loaded', function () {
       splitUpload: (payload) => invoke('split-upload', payload),
       uploadImgBase64: (payload) => invoke('http-upload-img-base64', payload),
       uploadFile: (payload) => invoke('http-upload-file', payload),
+      importPluginPackage: (payload) => invoke('import-plugin-package', payload),
     },
     exporter: {
       writeToFile: (payload) => invoke('ExtractDataToFile', payload),
