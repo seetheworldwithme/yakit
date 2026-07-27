@@ -161,6 +161,8 @@ const configOption = {
     '!buildHooks/**/*',
     '!build/**/*',
     '!backups/**/*',
+    // 打包输出位于项目根目录 release/，必须排除，避免把旧产物递归写入 app.asar 导致索引损坏。
+    '!release/**/*',
     '!app/renderer/src/**/*',
     // 先排除整个目录（后面的规则可以“打破前面的排除”）
     '!app/renderer/engine-link-startup/**/*',

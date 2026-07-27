@@ -12,6 +12,8 @@ ENGINE_ZIP="$BINS_DIR/yak_windows_amd64.zip"
 ENGINE_EXE="$BINS_DIR/yak_windows_amd64.exe"
 ENGINE_VERSION_FILE="$BINS_DIR/engine-version.txt"
 TEMP_DIR=""
+BUILD_LOCK_DIR="$PROJECT_ROOT/.build-win-amd64.lock"
+BUILD_LOCK_ACQUIRED=false
 
 fail() {
   echo "❌ $*" >&2
@@ -26,8 +28,14 @@ cleanup() {
   if [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]]; then
     rm -rf -- "$TEMP_DIR"
   fi
+  if [[ "$BUILD_LOCK_ACQUIRED" == "true" && -d "$BUILD_LOCK_DIR" ]]; then
+    rmdir -- "$BUILD_LOCK_DIR" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
+
+mkdir "$BUILD_LOCK_DIR" 2>/dev/null || fail "另一个 Windows amd64 打包任务正在运行"
+BUILD_LOCK_ACQUIRED=true
 
 require_command yarn
 require_command node
