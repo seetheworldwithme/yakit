@@ -61,8 +61,10 @@ import { compareAsc } from '@/pages/yakitStore/viewers/base'
 import { batchPluginType } from '@/defaultConstants/PluginBatchExecutor'
 import { defaultPocPageInfo } from '@/defaultConstants/YakPoC'
 import { HybridScanControlAfterRequest } from '@/models/HybridScan'
-import { getReleaseEditionName } from '@/utils/envfile'
+import { getReleaseEditionName, isEnterpriseOrSimpleEdition } from '@/utils/envfile'
 import { TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
+import { installDefaultYakPocPlugins, queryYakPocGroupsWithDefaultInstall } from './defaultPluginRecovery'
+import { yakitNotify } from '@/utils/notification'
 
 const HybridScanTaskListDrawer = React.lazy(
   () => import('@/pages/plugins/pluginBatchExecutor/HybridScanTaskListDrawer'),
@@ -366,6 +368,7 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
 
   const initialResponseRef = useRef<GroupCount[]>([])
+  const autoInstallAttemptedRef = useRef<boolean>(false)
   useEffect(() => {
     if (!defGroupKeywords) return
     onSearch(defGroupKeywords)
@@ -377,13 +380,31 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
 
   const init = useMemoizedFn(() => {
     setLoading(true)
-    getQueryYakScriptGroup()
+    const queryGroups = () => getQueryYakScriptGroup()
+    const shouldAutoInstall = isEnterpriseOrSimpleEdition() && !autoInstallAttemptedRef.current
+    if (shouldAutoInstall) {
+      autoInstallAttemptedRef.current = true
+    }
+    const queryPromise = shouldAutoInstall
+      ? queryYakPocGroupsWithDefaultInstall(queryGroups, () =>
+          installDefaultYakPocPlugins({
+            ListType: '',
+            PluginType: batchPluginType.split(','),
+            Official: [true],
+          }),
+        )
+      : queryGroups()
+
+    queryPromise
       .then((res) => {
         initialResponseRef.current = res
         setResponseToSelect(res)
         if (response.length === 0) {
           setResponse(res)
         }
+      })
+      .catch((error) => {
+        yakitNotify('error', `安装默认漏洞插件失败：${error}`)
       })
       .finally(() =>
         setTimeout(() => {
