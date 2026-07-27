@@ -50,6 +50,7 @@ import classNames from 'classnames'
 import styles from './PluginHubList.module.scss'
 import { JSONParseLog } from '@/utils/tool'
 import { useEmptyImage } from '@/hook/useResultEmpty/SearchEmpty'
+import { PluginOnlineImportModal } from './PluginOnlineImportModal'
 
 interface HubListOwnProps extends HubListBaseProps {}
 /** @name 我的插件 */
@@ -614,6 +615,12 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
     )
   })
 
+  const [importPluginVisible, setImportPluginVisible] = useState(false)
+  const handleImportPluginSuccess = useMemoizedFn(() => {
+    setImportPluginVisible(false)
+    handleRefreshList(true)
+  })
+
   /** ---------- 详情列表操作 Start ---------- */
   // 进入插件详情
   const onOptClick = useMemoizedFn((info: YakitPluginOnlineDetail, index: number) => {
@@ -860,6 +867,14 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
                       <YakitButton
                         type="outline2"
                         size="large"
+                        icon={<OutlinePlusIcon />}
+                        onClick={() => setImportPluginVisible(true)}
+                      >
+                        批量导入到云端
+                      </YakitButton>
+                      <YakitButton
+                        type="outline2"
+                        size="large"
                         icon={<OutlineClouddownloadIcon />}
                         loading={batchDownloadLoading}
                         disabled={listTotal === 0}
@@ -1019,6 +1034,12 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
             />
           </div>
         )}
+
+        <PluginOnlineImportModal
+          visible={importPluginVisible}
+          onCancel={() => setImportPluginVisible(false)}
+          onSuccess={handleImportPluginSuccess}
+        />
       </OnlineJudgment>
 
       <NoPromptHint
