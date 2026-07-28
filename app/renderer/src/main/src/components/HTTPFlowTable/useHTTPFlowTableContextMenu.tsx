@@ -53,6 +53,7 @@ export interface UseHTTPFlowTableContextMenuOptions {
   total: number
   downstreamProxyStr: string
   fromMITM: boolean
+  disableContextMenu: boolean
   setSelected: (row: HTTPFlow) => void
   setSelectedRowKeys: (keys: string[]) => void
   setSelectedRows: (rows: HTTPFlow[]) => void
@@ -96,6 +97,7 @@ export const useHTTPFlowTableContextMenu = (options: UseHTTPFlowTableContextMenu
     total,
     downstreamProxyStr,
     fromMITM,
+    disableContextMenu,
     setSelected,
     setSelectedRowKeys,
     setSelectedRows,
@@ -635,8 +637,8 @@ export const useHTTPFlowTableContextMenu = (options: UseHTTPFlowTableContextMenu
 
   const onRowContextMenu = (rowData: HTTPFlow, _, event: React.MouseEvent) => {
     event.preventDefault()
-    // 流量劫持页面不展示历史流量右键菜单，保留其它页面的原有操作入口。
-    if (fromMITM) return
+    // 流量劫持和历史流量页面不展示右键菜单，保留其它页面的原有操作入口。
+    if (disableContextMenu) return
 
     if (rowData) {
       setSelected(rowData)

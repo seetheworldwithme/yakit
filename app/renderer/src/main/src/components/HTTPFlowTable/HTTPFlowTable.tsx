@@ -2134,6 +2134,7 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
     total,
     downstreamProxyStr,
     fromMITM,
+    disableContextMenu: ['History', 'MITM'].includes(pageType || ''),
     setSelected,
     setSelectedRowKeys,
     setSelectedRows,
