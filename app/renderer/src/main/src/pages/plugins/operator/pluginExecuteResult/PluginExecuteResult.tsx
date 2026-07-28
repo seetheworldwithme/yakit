@@ -76,6 +76,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
     tableTabNameMap,
     columnTitleMap,
     isTaskDetail = false,
+    compactRiskDetail,
   } = props
   const { t, i18n } = useI18nNamespaces(['yakitRoute'])
 
@@ -126,7 +127,7 @@ export const PluginExecuteResult: React.FC<PluginExecuteResultProps> = React.mem
             allTotal={allTotal}
             setAllTotal={onSetRiskTotal}
             title={taskDetailHTTPFlowOptions.riskTabName}
-            compactRiskDetail={taskDetailHTTPFlowOptions.compactRiskDetail}
+            compactRiskDetail={compactRiskDetail ?? taskDetailHTTPFlowOptions.compactRiskDetail}
           />
         ) : (
           <></>

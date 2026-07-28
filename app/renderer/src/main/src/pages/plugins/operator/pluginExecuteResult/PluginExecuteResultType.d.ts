@@ -18,6 +18,8 @@ export interface PluginExecuteResultProps {
   columnTitleMap?: Record<string, string>
   /** 从任务列表打开的任务详情使用精简结果视图 */
   isTaskDetail?: boolean
+  /** 漏洞详情使用居中紧凑头部，不改变结果页其余区域 */
+  compactRiskDetail?: boolean
 }
 
 export interface VulnerabilitiesRisksTableProps {

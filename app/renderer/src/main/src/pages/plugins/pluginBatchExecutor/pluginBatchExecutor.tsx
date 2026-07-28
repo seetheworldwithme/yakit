@@ -939,6 +939,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
             defaultActiveKey={defaultActiveKey}
             pluginExecuteResultWrapper={pluginExecuteResultWrapper}
             isTaskDetail={!!initRuntimeId}
+            compactRiskDetail
           />
         )}
         <React.Suspense fallback={<div>loading...</div>}>
