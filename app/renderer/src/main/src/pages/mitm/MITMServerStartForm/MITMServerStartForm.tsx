@@ -283,17 +283,21 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
         '; downstreamProxyRuleId:' +
         downstreamProxyRuleId,
     })
-    props.onStartMITMServer(
-      params.host,
-      params.port,
-      downstreamProxyValue,
-      downstreamProxyRuleId,
-      params.enableInitialPlugin,
-      params.enableHttp2,
-      params.ForceDisableKeepAlive,
-      params.certs,
-      extra,
-    )
+    // 流量表会按本次监听的起始时间查询。先落盘再启动监听，避免首轮查询读到上次会话的时间边界。
+    const nowTime = Math.floor(new Date().getTime() / 1000).toString()
+    setRemoteValue(MITMConsts.MITMStartTimeStamp, nowTime).finally(() => {
+      props.onStartMITMServer(
+        params.host,
+        params.port,
+        downstreamProxyValue,
+        downstreamProxyRuleId,
+        params.enableInitialPlugin,
+        params.enableHttp2,
+        params.ForceDisableKeepAlive,
+        params.certs,
+        extra,
+      )
+    })
     hostRef.current.onSetRemoteValues(params.host)
     //如果有新增的代理配置 则存配置项
     checkProxyEndpoints(downstreamProxy)
@@ -303,9 +307,6 @@ export const MITMServerStartForm: React.FC<MITMServerStartFormProp> = React.memo
     setRemoteValue(MITMConsts.MITMDefaultEnableGMTLS, `${params.stateSecretHijacking}`)
     setRemoteValue(MITMConsts.MITMDefaultForceDisableKeepAlive, `${params.ForceDisableKeepAlive ? '1' : ''}`)
     setRemoteValue(CONST_DEFAULT_ENABLE_INITIAL_PLUGIN, params.enableInitialPlugin ? 'true' : '')
-    // 记录时间戳
-    const nowTime: string = Math.floor(new Date().getTime() / 1000).toString()
-    setRemoteValue(MITMConsts.MITMStartTimeStamp, nowTime)
   })
 
   const onStartMitm = useMemoizedFn((infoStr = '') => {
