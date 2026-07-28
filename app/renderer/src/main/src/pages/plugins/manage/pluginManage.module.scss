@@ -115,10 +115,26 @@
 
   .inline-filter-options {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
   }
+}
+
+.inline-filter-popover {
+  padding-top: 4px;
+
+  :global {
+    .ant-popover-inner-content {
+      padding: 8px;
+    }
+  }
+}
+
+.inline-filter-popover-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 320px;
 }
 
 // 顶栏搜索条（取代原 extra-header-wrapper）

@@ -710,7 +710,7 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
                                 trigger="click"
                                 content={
                                   <div className={styles['hub-inline-filter-popover-content']}>
-                                    {group.data.map((opt) => {
+                                    {remainingOptions.map((opt) => {
                                       const active = selected.some((item) => item.value === opt.value)
                                       return (
                                         <YakitButton

@@ -1167,28 +1167,68 @@ export const PluginManage: React.FC<PluginManageProps> = (props) => {
                 </YakitButton>
               )}
               <div className={styles['plugin-manage-inline-filters']}>
-                {inlineFilterGroups.map((group) => (
-                  <div className={styles['inline-filter-row']} key={group.groupKey}>
-                    <span>{group.groupName}</span>
-                    <div className={styles['inline-filter-options']}>
-                      {(group.data || []).map((item) => {
-                        const checked = (filters[group.groupKey] || []).some(
-                          (selectedItem) => selectedItem.value === item.value,
-                        )
-                        return (
-                          <YakitButton
-                            key={item.value}
-                            type={checked ? 'primary' : 'text'}
-                            size="small"
-                            onClick={() => onToggleInlineFilter(group.groupKey, item)}
+                {inlineFilterGroups.map((group) => {
+                  const inlineOptions = (group.data || []).slice(0, 3)
+                  const remainingOptions = (group.data || []).slice(3)
+                  const selected = filters[group.groupKey] || []
+                  return (
+                    <div className={styles['inline-filter-row']} key={group.groupKey}>
+                      <span>{group.groupName}</span>
+                      <div className={styles['inline-filter-options']}>
+                        {inlineOptions.map((item) => {
+                          const checked = selected.some((selectedItem) => selectedItem.value === item.value)
+                          return (
+                            <YakitButton
+                              key={item.value}
+                              type={checked ? 'primary' : 'text'}
+                              size="small"
+                              onClick={() => onToggleInlineFilter(group.groupKey, item)}
+                            >
+                              {item.label}
+                            </YakitButton>
+                          )
+                        })}
+                        {remainingOptions.length > 0 && (
+                          <YakitPopover
+                            overlayClassName={styles['inline-filter-popover']}
+                            placement="bottomLeft"
+                            trigger="click"
+                            content={
+                              <div className={styles['inline-filter-popover-content']}>
+                                {remainingOptions.map((item) => {
+                                  const checked = selected.some((selectedItem) => selectedItem.value === item.value)
+                                  return (
+                                    <YakitButton
+                                      key={item.value}
+                                      type={checked ? 'primary' : 'text'}
+                                      size="small"
+                                      onClick={() => onToggleInlineFilter(group.groupKey, item)}
+                                    >
+                                      {item.label}
+                                    </YakitButton>
+                                  )
+                                })}
+                              </div>
+                            }
                           >
-                            {item.label}
-                          </YakitButton>
-                        )
-                      })}
+                            <YakitButton
+                              type={
+                                remainingOptions.some((item) =>
+                                  selected.some((selectedItem) => selectedItem.value === item.value),
+                                )
+                                  ? 'primary'
+                                  : 'text'
+                              }
+                              size="small"
+                            >
+                              更多 +{remainingOptions.length}
+                            </YakitButton>
+                          </YakitPopover>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           }
