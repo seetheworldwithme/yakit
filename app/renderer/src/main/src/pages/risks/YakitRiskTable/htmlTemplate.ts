@@ -1,843 +1,210 @@
-/**漏洞与风险 导出html模板 */
-export const getHtmlTemplate = () => {
-  const html = `<!DOCTYPE html>
-    <html>
-
-    <head>
-        <meta charset="UTF-8" />
-        <title>Yakit</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.css" />
-
-    </head>
-
-    <body>
-        <div id="root"></div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.19.3/babel.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ant-design-icons/5.3.7/index.umd.min.js"></script>
-
-        <script src="./data.js"></script>
-
-        <script type="text/babel">
-            const { Table, Tag, Descriptions, Input, Space, Button } = antd
-            const { SearchOutlined } = icons
-            const data = initData||[]
-            const SeverityMapTag = [
-                {
-                    key: ["info", "fingerprint", "infof", "default"],
-                    value: "title-info",
-                    name: "信息",
-                    tag: "#56c991"
-                },
-                { key: ["low"], value: "title-low", name: "低危", tag: "#ffb660" },
-                {
-                    key: ["middle", "warn", "warning", "medium"],
-                    value: "title-middle",
-                    name: "中危",
-                    tag: "#f28b44"
-                },
-                { key: ["high"], value: "title-high", name: "高危", tag: "#f4736b" },
-                {
-                    key: ["fatal", "critical", "panic"],
-                    value: "title-fatal",
-                    name: "严重",
-                    tag: "#cb2318"
-                }
-            ]
-            const handleSearch = (
-                selectedKeys,
-                confirm,
-                dataIndex,
-            ) => {
-                confirm();
-            };
-
-            const handleReset = (clearFilters) => {
-                clearFilters();
-            };
-            const getColumnSearchProps = (dataIndex) => ({
-                filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-                    <div style={{ padding: 8 }}>
-                        <Input
-                            placeholder='Search'
-                            value={selectedKeys[0]}
-                            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-                            onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
-                            style={{ marginBottom: 8, display: 'block' }}
-                        />
-                        <Space>
-                            <Button
-                                type="primary"
-                                onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
-                                icon={<SearchOutlined />}
-                                size="small"
-                                style={{ width: 90 }}
-                            >
-                                搜索
-                            </Button>
-                            <Button
-                                onClick={() => clearFilters && handleReset(clearFilters)}
-                                size="small"
-                                style={{ width: 90 }}
-                            >
-                                重置
-                            </Button>
-                        </Space>
-                    </div>
-                ),
-                filterIcon: (filtered) => (
-                    <SearchOutlined style={{ color: filtered ? 'var(--Colors-Use-Blue-Bg)' : undefined }} />
-                ),
-                onFilter: (value, record) =>
-                    record[dataIndex]
-                        .toString()
-                        .toLowerCase()
-                        .includes((value).toLowerCase())
-            });
-            const columns = [
-                {
-                    title: "序号",
-                    dataIndex: "Id",
-                    key: "Id",
-                    sorter: (a, b) => +a.Id - +b.Id,
-                    sortDirections: ['descend', 'ascend'],
-                    width:150,
-                    ellipsis:true,
-                },
-                {
-                    title: "标题",
-                    dataIndex: "TitleVerbose",
-                    key: "TitleVerbose",
-                    ellipsis:true,
-                    render: (_, record) => record?.TitleVerbose || record.Title || "-",
-                    ...getColumnSearchProps('TitleVerbose'),
-                },
-                {
-                    title: "类型",
-                    dataIndex: "RiskTypeVerbose",
-                    key: "RiskTypeVerbose",
-                    ...getColumnSearchProps('RiskTypeVerbose'),
-                },
-                {
-                    title: "等级",
-                    dataIndex: "Severity",
-                    key: "Severity",
-                    width:100,
-                    filters: [
-                        {
-                            text: '信息',
-                            value: '信息',
-                        },
-                        {
-                            text: '低危',
-                            value: '低危',
-                        },
-                        {
-                            text: '中危',
-                            value: '中危',
-                        },
-                        {
-                            text: '高危',
-                            value: '高危',
-                        },
-                        {
-                            text: '严重',
-                            value: '严重',
-                        },
-                    ],
-                    onFilter: (value, record) => {
-                        const v = SeverityMapTag.filter((item) => item.key.includes(record.Severity || ""))[0]
-                        const severity = v ? v.name : record.Severity || "-"
-                        return severity.includes(value)
-                    },
-                    render: (_, i) => {
-                        const title = SeverityMapTag.filter((item) => item.key.includes(i.Severity || ""))[0]
-                        return (
-                            <Tag color={title?.tag}>
-                                {title ? title.name : i.Severity || "-"}
-                            </Tag>
-                        )
-                    },
-                },
-                {
-                    title: "IP",
-                    dataIndex: "IP",
-                    key: "IP",
-                    width:150,
-                },
-                {
-                    title: "Url",
-                    dataIndex: "Url",
-                    key: "Url",
-                    ellipsis:true,
-                    ...getColumnSearchProps('Url'),
-                },
-                {
-                    title: "Tag",
-                    dataIndex: "Tags",
-                    key: "Tag",
-                    render: (text) => !!text ? text.replaceAll("|", ",") : "-"
-                },
-                {
-                    title: "发现时间",
-                    dataIndex: "CreatedAt",
-                    key: "CreatedAt",
-                    width:200,
-                    render: (time) => moment.unix(+time).format('YYYY-MM-DD HH:mm:ss'),
-                    sorter: (a, b) => +a.CreatedAt - +b.CreatedAt,
-                    sortDirections: ['descend', 'ascend'],
-                },
-            ]
-            const App = () => (
-                <Table
-                    style={{ padding: 24 }}
-                    columns={columns}
-                    expandable={{
-                        expandedRowRender: (info) => {
-                            return (
-                                <>
-                                    <Descriptions bordered size='small' column={3}>
-                                        <Descriptions.Item label='IP' contentStyle={{ minWidth: 120 }}>
-                                            {info.IP || "-"}
-                                        </Descriptions.Item>
-                                        <Descriptions.Item label='ID'>{info.Id || "-"}</Descriptions.Item>
-                                        <Descriptions.Item label='端口'>{info.Port || "-"}</Descriptions.Item>
-                                        <Descriptions.Item label='Host'>{info.Host || "-"}</Descriptions.Item>
-                                        <Descriptions.Item label='类型'>
-                                            {(info?.RiskTypeVerbose || info.RiskType).replaceAll("NUCLEI-", "")}
-                                        </Descriptions.Item>
-                                        <Descriptions.Item label='来源'>{info?.FromYakScript || "漏洞检测"}</Descriptions.Item>
-                                        <Descriptions.Item label='反连Token' contentStyle={{ minWidth: 120 }}>
-                                            {info?.ReverseToken || "-"}
-                                        </Descriptions.Item>
-                                        <Descriptions.Item label='Hash'>{info?.Hash || "-"}</Descriptions.Item>
-                                        <Descriptions.Item label='验证状态'>
-                                            <Tag color={!info.WaitingVerified ? "success" : "info"}>
-                                                {!info.WaitingVerified ? "已验证" : "未验证"}
-                                            </Tag>
-                                        </Descriptions.Item>
-
-                                        <>
-                                            <Descriptions.Item label='漏洞描述' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                                                {info.Description || "-"}
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label='解决方案' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                                                {info.Solution || "-"}
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label='Parameter' span={3}>
-                                                {info.Parameter || "-"}
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label='Payload' span={3}>
-                                                {info.Payload || "-"}
-                                            </Descriptions.Item>
-                                            {
-                                                !!info.RequestString && <>
-                                                    <Descriptions.Item label='Request' span={3}>
-                                                        <div style={{ height: 300, overflow: 'auto', }}>
-                                                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.RequestString}</code></pre>
-                                                        </div>
-                                                    </Descriptions.Item>
-                                                </>
-                                            }
-                                            {
-                                                !!info.ResponseString && <>
-                                                    <Descriptions.Item label='Response' span={3}>
-                                                        <div style={{ height: 300, overflow: 'auto', }}>
-                                                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.ResponseString}</code></pre>
-                                                        </div>
-                                                    </Descriptions.Item>
-                                                </>
-                                            }
-                                            <Descriptions.Item label='详情' span={3}>
-                                                <div style={{ maxHeight: 180, overflow: "auto" }}>{info.Details || "-"}</div>
-                                            </Descriptions.Item>
-                                        </>
-                                    </Descriptions>
-                                </>
-                            )
-                        },
-                    }}
-                    dataSource={data}
-                    rowKey='Id'
-                    pagination={
-                        {
-                            defaultPageSize: 100
-                        }
-                    }
-                />
-            )
-            ReactDOM.render(<App />, document.getElementById("root"))
-        </script>
-    </body>
-
-    </html>`
-  return html
+/** 漏洞与风险离线 HTML 导出模板 */
+interface RiskHtmlLabels {
+  heading: string
+  search: string
+  noData: string
+  details: string
+  id: string
+  title: string
+  type: string
+  level: string
+  ip: string
+  url: string
+  tags: string
+  discoveryTime: string
+  request: string
+  response: string
+  description: string
+  solution: string
+  parameter: string
+  payload: string
+  source: string
 }
 
-export const getHtmlZhTWTemplate = () => {
-  const html = `<!DOCTYPE html>
-<html>
-
+const getOfflineHtmlTemplate = (labels: RiskHtmlLabels) => `<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Yakit</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.css" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>靖云甲web应用漏洞扫描</title>
+  <style>
+    :root { color-scheme: light; font-family: 'Microsoft YaHei', Arial, sans-serif; color: #172033; background: #f4f7fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1440px; margin: 0 auto; }
+    h1 { margin: 0; font-size: 24px; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .brand { color: #1677ff; font-size: 14px; font-weight: 600; }
+    .search { width: min(360px, 100%); padding: 9px 12px; border: 1px solid #cfd8e6; border-radius: 6px; font: inherit; }
+    .table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+    table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid #edf1f6; text-align: left; vertical-align: top; }
+    th { background: #f7f9fc; color: #4b5b73; font-weight: 600; white-space: nowrap; }
+    tbody tr.data-row { cursor: pointer; }
+    tbody tr.data-row:hover { background: #f3f8ff; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 12px; white-space: nowrap; }
+    .level-info { background: #4caf78; }.level-low { background: #e69a38; }.level-medium { background: #e47732; }.level-high { background: #d94b4b; }.level-critical { background: #a51d1d; }
+    .details td { padding: 0; background: #fbfcfe; }.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 18px; }
+    .detail-item { min-width: 0; }.detail-item.wide { grid-column: 1 / -1; }.detail-label { display: block; margin-bottom: 4px; color: #65758d; font-size: 12px; font-weight: 600; }.detail-value { overflow-wrap: anywhere; white-space: pre-wrap; }
+    pre { max-height: 300px; margin: 0; padding: 12px; overflow: auto; border-radius: 4px; background: #172033; color: #edf4ff; font: 12px/1.5 Consolas, monospace; white-space: pre-wrap; }
+    .empty { padding: 36px; color: #65758d; text-align: center; }
+    @media (max-width: 720px) { body { padding: 12px; }.header { align-items: stretch; flex-direction: column; }.detail-grid { grid-template-columns: 1fr; }.detail-item.wide { grid-column: auto; } }
+  </style>
 </head>
-
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.19.3/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ant-design-icons/5.3.7/index.umd.min.js"></script>
-
+  <main>
+    <div class="header">
+      <div><div class="brand">靖云甲web应用漏洞扫描</div><h1>${labels.heading}</h1></div>
+      <input id="search" class="search" type="search" placeholder="${labels.search}" />
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${labels.id}</th><th>${labels.title}</th><th>${labels.type}</th><th>${labels.level}</th><th>${
+          labels.ip
+        }</th><th>${labels.url}</th><th>${labels.tags}</th><th>${labels.discoveryTime}</th></tr></thead>
+        <tbody id="risk-list"></tbody>
+      </table>
+      <div id="empty" class="empty" hidden>${labels.noData}</div>
+    </div>
+  </main>
   <script src="./data.js"></script>
+  <script>
+    (function () {
+      var sourceData = typeof initData !== 'undefined' && Array.isArray(initData) ? initData : []
+      var list = document.getElementById('risk-list')
+      var empty = document.getElementById('empty')
+      var search = document.getElementById('search')
+      var labels = ${JSON.stringify(labels)}
+      var expandedId = null
 
-  <script type="text/babel">
-    const { Table, Tag, Descriptions, Input, Space, Button } = antd
-    const { SearchOutlined } = icons
-    const data = initData || []
-    const SeverityMapTag = [
-      {
-        key: ["info", "fingerprint", "infof", "default"],
-        value: "title-info",
-        name: "信息",
-        nameUi: "info",
-        tag: "#56c991"
-      },
-      { key: ["low"], value: "title-low", name: "低危", nameUi: "low", tag: "#ffb660" },
-      {
-        key: ["middle", "warn", "warning", "medium"],
-        value: "title-middle",
-        name: "中危",
-        nameUi: "warning",
-        tag: "#f28b44"
-      },
-      { key: ["high"], value: "title-high", name: "高危", nameUi: "high", tag: "#f4736b" },
-      {
-        key: ["fatal", "critical", "panic"],
-        value: "title-fatal",
-        name: "严重",
-        nameUi: "high",
-        tag: "#cb2318"
+      function escapeHtml(value) {
+        return String(value === undefined || value === null ? '' : value).replace(/[&<>'"]/g, function (character) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]
+        })
       }
-    ]
-    const handleSearch = (
-      selectedKeys,
-      confirm,
-      dataIndex,
-    ) => {
-      confirm();
-    };
 
-    const handleReset = (clearFilters) => {
-      clearFilters();
-    };
-    const getColumnSearchProps = (dataIndex) => ({
-      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-        <div style={{ padding: 8 }}>
-          <Input
-            placeholder='Search'
-            value={selectedKeys[0]}
-            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-            onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
-            style={{ marginBottom: 8, display: 'block' }}
-          />
-          <Space>
-            <Button
-              type="primary"
-              onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
-              icon={<SearchOutlined />}
-              size="small"
-              style={{ width: 90 }}
-            >
-              搜尋
-            </Button>
-            <Button
-              onClick={() => clearFilters && handleReset(clearFilters)}
-              size="small"
-              style={{ width: 90 }}
-            >
-              重置
-            </Button>
-          </Space>
-        </div>
-      ),
-      filterIcon: (filtered) => (
-        <SearchOutlined style={{ color: filtered ? 'var(--Colors-Use-Blue-Bg)' : undefined }} />
-      ),
-      onFilter: (value, record) =>
-        record[dataIndex]
-          .toString()
-          .toLowerCase()
-          .includes((value).toLowerCase())
-    });
-    const columns = [
-      {
-        title: "序號",
-        dataIndex: "Id",
-        key: "Id",
-        sorter: (a, b) => +a.Id - +b.Id,
-        sortDirections: ['descend', 'ascend'],
-        width: 150,
-        ellipsis: true,
-      },
-      {
-        title: "標題",
-        dataIndex: "TitleVerbose",
-        key: "TitleVerbose",
-        ellipsis: true,
-        render: (_, record) => record?.TitleVerbose || record.Title || "-",
-        ...getColumnSearchProps('TitleVerbose'),
-      },
-      {
-        title: "類型",
-        dataIndex: "RiskTypeVerbose",
-        key: "RiskTypeVerbose",
-        ...getColumnSearchProps('RiskTypeVerbose'),
-      },
-      {
-        title: "等級",
-        dataIndex: "Severity",
-        key: "Severity",
-        width: 100,
-        filters: [
-          {
-            text: '訊息',
-            value: '信息',
-          },
-          {
-            text: '低危',
-            value: '低危',
-          },
-          {
-            text: '中危',
-            value: '中危',
-          },
-          {
-            text: '高危',
-            value: '高危',
-          },
-          {
-            text: '嚴重',
-            value: '严重',
-          },
-        ],
-        onFilter: (value, record) => {
-          const v = SeverityMapTag.filter((item) => item.key.includes(record.Severity || ""))[0]
-          const severity = v ? v.name : record.Severity || "-"
-          return severity.includes(value)
-        },
-        render: (_, i) => {
-          const title = SeverityMapTag.filter((item) => item.key.includes(i.Severity || ""))[0]
-          return (
-            <Tag color={title?.tag}>
-              {title ? title.nameUi : i.Severity || "-"}
-            </Tag>
-          )
-        },
-      },
-      {
-        title: "IP",
-        dataIndex: "IP",
-        key: "IP",
-        width: 150,
-      },
-      {
-        title: "Url",
-        dataIndex: "Url",
-        key: "Url",
-        ellipsis: true,
-        ...getColumnSearchProps('Url'),
-      },
-      {
-        title: "Tag",
-        dataIndex: "Tags",
-        key: "Tag",
-        render: (text) => !!text ? text.replaceAll("|", ",") : "-"
-      },
-      {
-        title: "發現時間",
-        dataIndex: "CreatedAt",
-        key: "CreatedAt",
-        width: 200,
-        render: (time) => moment.unix(+time).format('YYYY-MM-DD HH:mm:ss'),
-        sorter: (a, b) => +a.CreatedAt - +b.CreatedAt,
-        sortDirections: ['descend', 'ascend'],
-      },
-    ]
-    const App = () => (
-      <Table
-        style={{ padding: 24 }}
-        columns={columns}
-        expandable={{
-          expandedRowRender: (info) => {
-            return (
-              <>
-                <Descriptions bordered size='small' column={3}>
-                  <Descriptions.Item label='IP' contentStyle={{ minWidth: 120 }}>
-                    {info.IP || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='ID'>{info.Id || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='連接埠'>{info.Port || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='Host'>{info.Host || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='類型'>
-                    {(info?.RiskTypeVerbose || info.RiskType).replaceAll("NUCLEI-", "")}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='來源'>{info?.FromYakScript || "Vulnerability Detection"}</Descriptions.Item>
-                  <Descriptions.Item label='反連 Token' contentStyle={{ minWidth: 120 }}>
-                    {info?.ReverseToken || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='Hash'>{info?.Hash || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='驗證狀態'>
-                    <Tag color={!info.WaitingVerified ? "success" : "info"}>
-                      {!info.WaitingVerified ? "已驗證" : "未驗證"}
-                    </Tag>
-                  </Descriptions.Item>
+      function severityInfo(value) {
+        var level = String(value || '').toLowerCase()
+        if (['fatal', 'critical', 'panic'].indexOf(level) >= 0) return { text: '严重', className: 'level-critical' }
+        if (level === 'high') return { text: '高危', className: 'level-high' }
+        if (['middle', 'warn', 'warning', 'medium'].indexOf(level) >= 0) return { text: '中危', className: 'level-medium' }
+        if (level === 'low') return { text: '低危', className: 'level-low' }
+        return { text: '信息', className: 'level-info' }
+      }
 
-                  <>
-                    <Descriptions.Item label='漏洞描述' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                      {info.Description || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='解決方案' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                      {info.Solution || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Parameter' span={3}>
-                      {info.Parameter || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Payload' span={3}>
-                      {info.Payload || "-"}
-                    </Descriptions.Item>
-                    {
-                      !!info.RequestString && <>
-                        <Descriptions.Item label='Request' span={3}>
-                          <div style={{ height: 300, overflow: 'auto', }}>
-                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.RequestString}</code></pre>
-                          </div>
-                        </Descriptions.Item>
-                      </>
-                    }
-                    {
-                      !!info.ResponseString && <>
-                        <Descriptions.Item label='Response' span={3}>
-                          <div style={{ height: 300, overflow: 'auto', }}>
-                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.ResponseString}</code></pre>
-                          </div>
-                        </Descriptions.Item>
-                      </>
-                    }
-                    <Descriptions.Item label='詳情' span={3}>
-                      <div style={{ maxHeight: 180, overflow: "auto" }}>{info.Details || "-"}</div>
-                    </Descriptions.Item>
-                  </>
-                </Descriptions>
-              </>
-            )
-          },
-        }}
-        dataSource={data}
-        rowKey='Id'
-        pagination={
-          {
-            defaultPageSize: 100
-          }
-        }
-      />
-    )
-    ReactDOM.render(<App />, document.getElementById("root"))
+      function formatTime(value) {
+        var timestamp = Number(value)
+        if (!timestamp) return '-'
+        if (timestamp < 100000000000) timestamp *= 1000
+        var date = new Date(timestamp)
+        return isNaN(date.getTime()) ? String(value) : date.toLocaleString()
+      }
+
+      function cell(value) { return '<td>' + escapeHtml(value || '-') + '</td>' }
+      function detail(label, value, wide) {
+        return '<div class="detail-item' + (wide ? ' wide' : '') + '"><span class="detail-label">' + escapeHtml(label) + '</span><div class="detail-value">' + escapeHtml(value || '-') + '</div></div>'
+      }
+      function codeDetail(label, value) {
+        if (!value) return ''
+        return '<div class="detail-item wide"><span class="detail-label">' + escapeHtml(label) + '</span><pre>' + escapeHtml(value) + '</pre></div>'
+      }
+      function rowDetails(item) {
+        return '<tr class="details"><td colspan="8"><div class="detail-grid">' +
+          detail(labels.description, item.Description, true) + detail(labels.solution, item.Solution, true) +
+          detail(labels.parameter, item.Parameter) + detail(labels.payload, item.Payload) +
+          detail(labels.source, item.FromYakScript) + codeDetail(labels.request, item.RequestString) + codeDetail(labels.response, item.ResponseString) +
+          '</div></td></tr>'
+      }
+      function render() {
+        var keyword = search.value.trim().toLowerCase()
+        var data = sourceData.filter(function (item) { return !keyword || JSON.stringify(item).toLowerCase().indexOf(keyword) >= 0 })
+        list.innerHTML = data.map(function (item) {
+          var id = item.Id || item.Hash || ''
+          var severity = severityInfo(item.Severity)
+          var row = '<tr class="data-row" data-id="' + escapeHtml(id) + '">' + cell(item.Id) + cell(item.TitleVerbose || item.Title) + cell(item.RiskTypeVerbose || item.RiskType) +
+            '<td><span class="tag ' + severity.className + '">' + escapeHtml(severity.text) + '</span></td>' + cell(item.IP) + cell(item.Url) + cell(String(item.Tags || '').replace(/\\|/g, ', ')) + cell(formatTime(item.CreatedAt)) + '</tr>'
+          return row + (String(expandedId) === String(id) ? rowDetails(item) : '')
+        }).join('')
+        empty.hidden = data.length > 0
+      }
+      list.addEventListener('click', function (event) {
+        var row = event.target.closest('.data-row')
+        if (!row) return
+        expandedId = String(expandedId) === row.dataset.id ? null : row.dataset.id
+        render()
+      })
+      search.addEventListener('input', render)
+      render()
+    })()
   </script>
 </body>
-
 </html>`
-  return html
-}
 
-export const getHtmlEnTemplate = () => {
-  const html = `<!DOCTYPE html>
-<html>
+export const getHtmlTemplate = () =>
+  getOfflineHtmlTemplate({
+    heading: '漏洞与风险台账',
+    search: '搜索漏洞信息',
+    noData: '暂无漏洞信息',
+    details: '详情',
+    id: '编号',
+    title: '标题',
+    type: '类型',
+    level: '风险等级',
+    ip: 'IP',
+    url: 'URL',
+    tags: '标签',
+    discoveryTime: '发现时间',
+    request: '请求报文',
+    response: '响应报文',
+    description: '漏洞描述',
+    solution: '修复建议',
+    parameter: '参数',
+    payload: 'Payload',
+    source: '漏洞检测来源',
+  })
 
-<head>
-  <meta charset="UTF-8" />
-  <title>Yakit</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.css" />
+export const getHtmlZhTWTemplate = () =>
+  getOfflineHtmlTemplate({
+    heading: '漏洞與風險台帳',
+    search: '搜尋漏洞資訊',
+    noData: '暫無漏洞資訊',
+    details: '詳情',
+    id: '編號',
+    title: '標題',
+    type: '類型',
+    level: '風險等級',
+    ip: 'IP',
+    url: 'URL',
+    tags: '標籤',
+    discoveryTime: '發現時間',
+    request: '請求報文',
+    response: '回應報文',
+    description: '漏洞描述',
+    solution: '修復建議',
+    parameter: '參數',
+    payload: 'Payload',
+    source: '漏洞檢測來源',
+  })
 
-</head>
-
-<body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.19.3/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/4.21.7/antd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ant-design-icons/5.3.7/index.umd.min.js"></script>
-
-  <script src="./data.js"></script>
-
-  <script type="text/babel">
-    const { Table, Tag, Descriptions, Input, Space, Button } = antd
-    const { SearchOutlined } = icons
-    const data = initData || []
-    const SeverityMapTag = [
-      {
-        key: ["info", "fingerprint", "infof", "default"],
-        value: "title-info",
-        name: "信息",
-        nameUi: "info",
-        tag: "#56c991"
-      },
-      { key: ["low"], value: "title-low", name: "低危", nameUi: "low", tag: "#ffb660" },
-      {
-        key: ["middle", "warn", "warning", "medium"],
-        value: "title-middle",
-        name: "中危",
-        nameUi: "warning",
-        tag: "#f28b44"
-      },
-      { key: ["high"], value: "title-high", name: "高危", nameUi: "high", tag: "#f4736b" },
-      {
-        key: ["fatal", "critical", "panic"],
-        value: "title-fatal",
-        name: "严重",
-        nameUi: "high",
-        tag: "#cb2318"
-      }
-    ]
-    const handleSearch = (
-      selectedKeys,
-      confirm,
-      dataIndex,
-    ) => {
-      confirm();
-    };
-
-    const handleReset = (clearFilters) => {
-      clearFilters();
-    };
-    const getColumnSearchProps = (dataIndex) => ({
-      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-        <div style={{ padding: 8 }}>
-          <Input
-            placeholder='Search'
-            value={selectedKeys[0]}
-            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-            onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
-            style={{ marginBottom: 8, display: 'block' }}
-          />
-          <Space>
-            <Button
-              type="primary"
-              onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
-              icon={<SearchOutlined />}
-              size="small"
-              style={{ width: 90 }}
-            >
-              Search
-            </Button>
-            <Button
-              onClick={() => clearFilters && handleReset(clearFilters)}
-              size="small"
-              style={{ width: 90 }}
-            >
-              Reset
-            </Button>
-          </Space>
-        </div>
-      ),
-      filterIcon: (filtered) => (
-        <SearchOutlined style={{ color: filtered ? 'var(--Colors-Use-Blue-Bg)' : undefined }} />
-      ),
-      onFilter: (value, record) =>
-        record[dataIndex]
-          .toString()
-          .toLowerCase()
-          .includes((value).toLowerCase())
-    });
-    const columns = [
-      {
-        title: "Order",
-        dataIndex: "Id",
-        key: "Id",
-        sorter: (a, b) => +a.Id - +b.Id,
-        sortDirections: ['descend', 'ascend'],
-        width: 150,
-        ellipsis: true,
-      },
-      {
-        title: "Title",
-        dataIndex: "TitleVerbose",
-        key: "TitleVerbose",
-        ellipsis: true,
-        render: (_, record) => record?.TitleVerbose || record.Title || "-",
-        ...getColumnSearchProps('TitleVerbose'),
-      },
-      {
-        title: "Type",
-        dataIndex: "RiskTypeVerbose",
-        key: "RiskTypeVerbose",
-        ...getColumnSearchProps('RiskTypeVerbose'),
-      },
-      {
-        title: "Level",
-        dataIndex: "Severity",
-        key: "Severity",
-        width: 100,
-        filters: [
-          {
-            text: 'info',
-            value: '信息',
-          },
-          {
-            text: 'low',
-            value: '低危',
-          },
-          {
-            text: 'warning',
-            value: '中危',
-          },
-          {
-            text: 'high',
-            value: '高危',
-          },
-          {
-            text: 'critical',
-            value: '严重',
-          },
-        ],
-        onFilter: (value, record) => {
-          const v = SeverityMapTag.filter((item) => item.key.includes(record.Severity || ""))[0]
-          const severity = v ? v.name : record.Severity || "-"
-          return severity.includes(value)
-        },
-        render: (_, i) => {
-          const title = SeverityMapTag.filter((item) => item.key.includes(i.Severity || ""))[0]
-          return (
-            <Tag color={title?.tag}>
-              {title ? title.nameUi : i.Severity || "-"}
-            </Tag>
-          )
-        },
-      },
-      {
-        title: "IP",
-        dataIndex: "IP",
-        key: "IP",
-        width: 150,
-      },
-      {
-        title: "Url",
-        dataIndex: "Url",
-        key: "Url",
-        ellipsis: true,
-        ...getColumnSearchProps('Url'),
-      },
-      {
-        title: "Tag",
-        dataIndex: "Tags",
-        key: "Tag",
-        render: (text) => !!text ? text.replaceAll("|", ",") : "-"
-      },
-      {
-        title: "Discovery Time",
-        dataIndex: "CreatedAt",
-        key: "CreatedAt",
-        width: 200,
-        render: (time) => moment.unix(+time).format('YYYY-MM-DD HH:mm:ss'),
-        sorter: (a, b) => +a.CreatedAt - +b.CreatedAt,
-        sortDirections: ['descend', 'ascend'],
-      },
-    ]
-    const App = () => (
-      <Table
-        style={{ padding: 24 }}
-        columns={columns}
-        expandable={{
-          expandedRowRender: (info) => {
-            return (
-              <>
-                <Descriptions bordered size='small' column={3}>
-                  <Descriptions.Item label='IP' contentStyle={{ minWidth: 120 }}>
-                    {info.IP || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='ID'>{info.Id || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='Port'>{info.Port || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='Host'>{info.Host || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='Type'>
-                    {(info?.RiskTypeVerbose || info.RiskType).replaceAll("NUCLEI-", "")}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='Source'>{info?.FromYakScript || "Vulnerability Detection"}</Descriptions.Item>
-                  <Descriptions.Item label='Reverse Token' contentStyle={{ minWidth: 120 }}>
-                    {info?.ReverseToken || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label='Hash'>{info?.Hash || "-"}</Descriptions.Item>
-                  <Descriptions.Item label='Verification Status'>
-                    <Tag color={!info.WaitingVerified ? "success" : "info"}>
-                      {!info.WaitingVerified ? "Verified" : "Not Verified"}
-                    </Tag>
-                  </Descriptions.Item>
-
-                  <>
-                    <Descriptions.Item label='Vulnerability Description' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                      {info.Description || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Solution' span={3} contentStyle={{ whiteSpace: "pre-wrap" }}>
-                      {info.Solution || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Parameter' span={3}>
-                      {info.Parameter || "-"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Payload' span={3}>
-                      {info.Payload || "-"}
-                    </Descriptions.Item>
-                    {
-                      !!info.RequestString && <>
-                        <Descriptions.Item label='Request' span={3}>
-                          <div style={{ height: 300, overflow: 'auto', }}>
-                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.RequestString}</code></pre>
-                          </div>
-                        </Descriptions.Item>
-                      </>
-                    }
-                    {
-                      !!info.ResponseString && <>
-                        <Descriptions.Item label='Response' span={3}>
-                          <div style={{ height: 300, overflow: 'auto', }}>
-                            <pre style={{ whiteSpace: 'pre-wrap' }}><code>{info.ResponseString}</code></pre>
-                          </div>
-                        </Descriptions.Item>
-                      </>
-                    }
-                    <Descriptions.Item label='Details' span={3}>
-                      <div style={{ maxHeight: 180, overflow: "auto" }}>{info.Details || "-"}</div>
-                    </Descriptions.Item>
-                  </>
-                </Descriptions>
-              </>
-            )
-          },
-        }}
-        dataSource={data}
-        rowKey='Id'
-        pagination={
-          {
-            defaultPageSize: 100
-          }
-        }
-      />
-    )
-    ReactDOM.render(<App />, document.getElementById("root"))
-  </script>
-</body>
-
-</html>`
-  return html
-}
+export const getHtmlEnTemplate = () =>
+  getOfflineHtmlTemplate({
+    heading: 'Vulnerability Risk Ledger',
+    search: 'Search vulnerability information',
+    noData: 'No vulnerability information',
+    details: 'Details',
+    id: 'ID',
+    title: 'Title',
+    type: 'Type',
+    level: 'Severity',
+    ip: 'IP',
+    url: 'URL',
+    tags: 'Tags',
+    discoveryTime: 'Discovery Time',
+    request: 'Request',
+    response: 'Response',
+    description: 'Description',
+    solution: 'Solution',
+    parameter: 'Parameter',
+    payload: 'Payload',
+    source: 'Detection Source',
+  })
