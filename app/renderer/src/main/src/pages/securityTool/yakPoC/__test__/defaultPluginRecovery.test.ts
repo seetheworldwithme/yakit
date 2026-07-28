@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  ENGINE_YAK_POC_GROUP_KEYWORDS,
   installBundledYakPocPlugins,
   queryYakPocGroupsWithRecovery,
 } from '@/pages/securityTool/yakPoC/defaultPluginRecovery'
@@ -33,16 +34,16 @@ describe('queryYakPocGroupsWithRecovery', () => {
     expect(queryGroups).toHaveBeenCalledTimes(3)
   })
 
-  it('does not install anything when local vulnerability groups already exist', async () => {
+  it('synchronizes newly imported local plugins even when vulnerability groups already exist', async () => {
     const groups = [{ Value: 'SQL注入', Total: 4 }]
     const queryGroups = vi.fn().mockResolvedValue(groups)
     const installBundled = vi.fn().mockResolvedValue(undefined)
     const installOnline = vi.fn().mockResolvedValue(undefined)
 
     await expect(queryYakPocGroupsWithRecovery(queryGroups, installBundled, installOnline)).resolves.toEqual(groups)
-    expect(installBundled).not.toHaveBeenCalled()
+    expect(installBundled).toHaveBeenCalledTimes(1)
     expect(installOnline).not.toHaveBeenCalled()
-    expect(queryGroups).toHaveBeenCalledTimes(1)
+    expect(queryGroups).toHaveBeenCalledTimes(2)
   })
 
   it('migrates the legacy generic bundled group to classified groups', async () => {
@@ -85,7 +86,9 @@ describe('installBundledYakPocPlugins', () => {
         { ScriptName: '多认证综合越权测试', Type: 'mitm', IsCorePlugin: true },
         { ScriptName: '开放 URL 重定向漏洞', Type: 'mitm', IsCorePlugin: true },
         { ScriptName: '文件包含', Type: 'mitm', IsCorePlugin: true },
-        { ScriptName: '用户自建插件', Type: 'mitm', IsCorePlugin: false },
+        { ScriptName: 'Log4Shell 漏洞检测（自动检测版）', Type: 'mitm', IsCorePlugin: false },
+        { ScriptName: 'Nginx 空字节代码执行漏洞检测', Type: 'mitm', IsCorePlugin: false },
+        { ScriptName: 'JBOSS 默认配置远程代码执行 漏洞检测', Type: 'mitm', IsCorePlugin: false },
         { ScriptName: '核心编解码器', Type: 'codec', IsCorePlugin: true },
       ],
     })
@@ -102,9 +105,11 @@ describe('installBundledYakPocPlugins', () => {
     )
 
     const savedGroupCounts = Object.fromEntries(
-      saveGroup.mock.calls.flatMap(([request]) =>
-        request.SaveGroup.map((group) => [group, request.Filter.IncludedScriptNames?.length || 0]),
-      ),
+      saveGroup.mock.calls
+        .filter(([request]) => request.Filter.IncludedScriptNames)
+        .flatMap(([request]) =>
+          request.SaveGroup.map((group) => [group, request.Filter.IncludedScriptNames?.length || 0]),
+        ),
     )
 
     expect(savedGroupCounts).toEqual({
@@ -119,6 +124,27 @@ describe('installBundledYakPocPlugins', () => {
       Shiro: 1,
       Spring: 1,
     })
+    expect(saveGroup).toHaveBeenCalledWith({
+      Filter: expect.objectContaining({
+        Keyword: ENGINE_YAK_POC_GROUP_KEYWORDS.Log4j,
+        Type: 'mitm,port-scan,nuclei',
+        IsMITMParamPlugins: 2,
+      }),
+      SaveGroup: ['Log4j'],
+      RemoveGroup: [],
+      PageId: 'poc-page-1',
+    })
+    expect(saveGroup).toHaveBeenCalledWith({
+      Filter: expect.objectContaining({
+        Keyword: ENGINE_YAK_POC_GROUP_KEYWORDS.Nginx,
+        Type: 'mitm,port-scan,nuclei',
+        IsMITMParamPlugins: 2,
+      }),
+      SaveGroup: ['Nginx'],
+      RemoveGroup: [],
+      PageId: 'poc-page-1',
+    })
+    expect(saveGroup.mock.calls.some(([request]) => request.SaveGroup.includes('本地导入插件'))).toBe(false)
     expect(saveGroup).toHaveBeenCalledWith(
       expect.objectContaining({
         PageId: 'poc-page-1',

@@ -1194,6 +1194,7 @@ export const ImportLocalPlugin: React.FC<ImportLocalPluginProps> = React.memo((p
   const handleImportLocalPluginFinish = () => {
     setVisible(false)
     sendMsgToLocalPlugin()
+    emiter.emit('onLocalPluginImported')
     yakitNotify('success', t('ImportLocalPlugin.importLocalPluginSuccess'))
   }
 

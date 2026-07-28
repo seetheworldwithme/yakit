@@ -21,6 +21,46 @@ export const DEFAULT_BUNDLED_YAK_POC_GROUP = '企业默认漏洞插件'
 export const LEGACY_BUNDLED_YAK_POC_GROUPS = [DEFAULT_BUNDLED_YAK_POC_GROUP, '内置漏洞插件']
 
 /**
+ * Mirrors yaklang/common/yakgrpc/yakit/plugin_group.go.
+ * The engine only runs this keyword classification during profile database startup,
+ * so the renderer repeats it after a local import to make eligible plugins visible
+ * without restarting the application.
+ */
+export const ENGINE_YAK_POC_GROUP_KEYWORDS: Record<string, string> = {
+  ThinkPHP: 'thinkphp',
+  Shiro: 'shiro',
+  FastJSON: 'fastjson',
+  Struts: 'struts',
+  Tomcat: 'tomcat',
+  Weblogic: 'weblogic',
+  Spring: 'spring,springboot,springcloud,springframework',
+  Jenkins: 'jenkins',
+  IIS: 'iis',
+  ElasticSearch: 'elastic',
+  '致远 OA': 'seeyou,seeyon,zhiyuan',
+  Exchange: 'exchange',
+  '通达 OA': 'tongda',
+  PhpMyAdmin: 'phpmyadmin',
+  Nexus: 'nexus',
+  Laravel: 'laravel',
+  JBoss: 'jboss',
+  ColdFusion: 'coldfusion',
+  ActiveMQ: 'activemq',
+  Wordpress: 'wordpress',
+  Java: 'java',
+  PHP: 'php',
+  Python: 'python',
+  Nginx: 'nginx',
+  网络设备与OA系统:
+    '锐捷,若依,金和,金山,金蝶,致远,Seeyou,seeyou,通达,tonged,Tongda,银澎,浪潮,泛微,方维,帆软,向日葵,ecshop,dahua,huawei,zimbra,coremail,Coremail,邮件服务器,',
+  安全产品: '防火墙,行为管理,绿盟,天擎,tianqing,防篡改,网御星云,安防,审计系统,天融信,安全系统',
+  Log4j: 'Log4j,log4j,Log4shell,log4shell,Log4Shell',
+  '远程代码执行（扫描）': 'RCE,rce',
+  XSS: 'xss,XSS',
+  SQL注入: 'sql注入',
+}
+
+/**
  * Keep the offline presentation consistent with the enterprise service bundle:
  * yakit-enterprise/backend/default-plugins/groups.json.
  */
@@ -118,11 +158,12 @@ export const installBundledYakPocPlugins = async (
     true,
   )
   const allowedTypes = new Set(pluginType.split(','))
-  const includedScriptNames = (response.Data || [])
-    .filter((plugin) => plugin.IsCorePlugin && allowedTypes.has(plugin.Type))
+  const executablePlugins = (response.Data || []).filter((plugin) => allowedTypes.has(plugin.Type))
+  const includedScriptNames = executablePlugins
+    .filter((plugin) => plugin.IsCorePlugin)
     .map((plugin) => plugin.ScriptName)
 
-  if (includedScriptNames.length === 0) return
+  if (executablePlugins.length === 0) return
 
   const buildFilter = (scriptNames: string[]): QueryYakScriptRequest => ({
     Pagination: {
@@ -143,18 +184,37 @@ export const installBundledYakPocPlugins = async (
     }))
     .filter((item) => item.scriptNames.length > 0)
 
-  if (availableGroups.length === 0) return
-
-  await saveGroup({
-    Filter: buildFilter(includedScriptNames),
-    SaveGroup: [],
-    RemoveGroup: [...LEGACY_BUNDLED_YAK_POC_GROUPS],
-    PageId: pageId,
-  })
-
-  for (const { group, scriptNames } of availableGroups) {
+  if (availableGroups.length > 0) {
     await saveGroup({
-      Filter: buildFilter(scriptNames),
+      Filter: buildFilter(includedScriptNames),
+      SaveGroup: [],
+      RemoveGroup: [...LEGACY_BUNDLED_YAK_POC_GROUPS],
+      PageId: pageId,
+    })
+
+    for (const { group, scriptNames } of availableGroups) {
+      await saveGroup({
+        Filter: buildFilter(scriptNames),
+        SaveGroup: [group],
+        RemoveGroup: [],
+        PageId: pageId,
+      })
+    }
+  }
+
+  for (const [group, keyword] of Object.entries(ENGINE_YAK_POC_GROUP_KEYWORDS)) {
+    await saveGroup({
+      Filter: {
+        Pagination: {
+          Page: 1,
+          Limit: 1,
+          Order: 'asc',
+          OrderBy: 'script_name',
+        },
+        Type: pluginType,
+        Keyword: keyword,
+        IsMITMParamPlugins: 2,
+      },
       SaveGroup: [group],
       RemoveGroup: [],
       PageId: pageId,
@@ -175,8 +235,7 @@ export const queryYakPocGroupsWithRecovery = async <T extends { Value?: string }
   installBundled: () => Promise<void>,
   installOnline: () => Promise<void>,
 ): Promise<T[]> => {
-  const groups = await queryGroups()
-  if (groups.length > 0 && withoutLegacyBundledGroups(groups).length === groups.length) return groups
+  await queryGroups()
 
   try {
     await installBundled()

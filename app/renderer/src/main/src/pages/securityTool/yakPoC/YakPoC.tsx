@@ -381,11 +381,18 @@ const PluginGroupByKeyWord: React.FC<PluginGroupByKeyWordProps> = React.memo((pr
   useEffect(() => {
     if (inViewport) init()
   }, [inViewport])
+  useEffect(() => {
+    const handleLocalPluginImported = () => init(true)
+    emiter.on('onLocalPluginImported', handleLocalPluginImported)
+    return () => {
+      emiter.off('onLocalPluginImported', handleLocalPluginImported)
+    }
+  }, [])
 
-  const init = useMemoizedFn(() => {
+  const init = useMemoizedFn((forceSync = false) => {
     setLoading(true)
     const queryGroups = () => getQueryYakScriptGroup()
-    const shouldAutoInstall = isEnterpriseOrSimpleEdition() && !autoInstallAttemptedRef.current
+    const shouldAutoInstall = isEnterpriseOrSimpleEdition() && (forceSync || !autoInstallAttemptedRef.current)
     if (shouldAutoInstall) {
       autoInstallAttemptedRef.current = true
     }

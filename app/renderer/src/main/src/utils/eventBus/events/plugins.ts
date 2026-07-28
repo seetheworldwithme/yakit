@@ -3,6 +3,8 @@ export type PluginsEventProps = {
   onSwitchPrivateDomain: string
   /**刷新单个执行页面中的插件数据 */
   onRefSinglePluginExecution?: string
+  /** 本地插件导入完成后刷新漏洞检测的可执行插件分组 */
+  onLocalPluginImported?: string
   /** 刷新Codec相关菜单 */
   onRefPluginCodecMenu?: string
 

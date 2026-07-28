@@ -119,6 +119,8 @@ Yakit 是一款网络安全测试桌面应用，**Electron 27** 架构：
 - **metric 口径**：layout 维度按文件**可见度加权**（`pages/layout/shell`/入口权重 3，`utils/hooks/store/services` 权重 0.3，普通组件 1）。改一个可见页面分数会**线性下降**；改 utils 几乎不动分。优先改门面页。
 - **P0 已完成的重命名**（新窗口读到旧名时对应过来）：`UILayout→SentinelShell`、`NewApp→SentinelWorkspace`、`ChildNewApp→SentinelChildWindow`、`AuxXterm→SentinelTerminal`、`ConcurrentStreamSkeleton→SentinelStreamSkeleton`、`ResizeLine→SentinelSplitter`。i18n key `t('UILayout.*')`/`t('NewApp.*')` 是翻译键，**保留不动**。
 
+F:\application\yaklang这个路径是yak引擎代码的路径所在，如果需要修改yak引擎相关的代码在这里修改。
+F:\code\Go\4dogs\yakit-enterprise0722这个路径是yakit web服务端的代码所在，如果需要修改服务端相关的代码在这里修改。
 注意，在回答之前，一定要说：好的，徐先生。
 
 当用户要隐藏某或者删除某个按钮以及功能的时候，首先查看 `任务管理表.csv`这个功能清单里面是否需要保留，按照最小化功能来展示的方向，可保留可不保留的一律不保留，不需要保留的话直接隐藏了，最好不要直接删除对应的代码，注释掉是最好的方案，这样后面可以回滚代码。

@@ -64,6 +64,7 @@ import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { YakitTabsProps } from '@/components/yakitSideTab/YakitSideTabType'
 import { YakitSideTab } from '@/components/yakitSideTab/YakitSideTab'
 import { JSONParseLog } from '@/utils/tool'
+import { getHybridScanErrorMessage } from './hybridScanError'
 
 const PluginBatchExecuteExtraParamsDrawer = React.lazy(() => import('./PluginBatchExecuteExtraParams'))
 const HybridScanTaskListDrawer = React.lazy(() => import('./HybridScanTaskListDrawer'))
@@ -558,7 +559,7 @@ export const HybridScanExecuteContent: React.FC<HybridScanExecuteContentProps> =
           setPauseLoading(false)
           setContinueLoading(false)
         }, 200)
-        yakitNotify('error', `[Mod] hybrid-scan error: ${error}`)
+        yakitNotify('error', getHybridScanErrorMessage(error))
       },
       setRuntimeId: (rId) => {
         setRuntimeId(rId)
