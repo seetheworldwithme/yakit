@@ -524,7 +524,7 @@ export const EditorCode: React.FC<EditorCodeProps> = memo(
           <div className={styles['header-title']}>
             {!!type && (
               <YakitTag color={(pluginTypeToName[type]?.color || undefined) as YakitTagColor | undefined}>
-                {(pluginTypeToName[type]?.name || type).replace(/^Yak(?:-|\s+)/, '')}
+                {pluginTypeToName[type]?.name || type}
               </YakitTag>
             )}
             <div className={classNames(styles['title-style'], 'yakit-content-single-ellipsis')} title={name || ''}>

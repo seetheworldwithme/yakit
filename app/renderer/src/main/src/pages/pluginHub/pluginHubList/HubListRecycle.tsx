@@ -80,7 +80,7 @@ export const HubListRecycle: React.FC<HubListRecycleProps> = memo((props) => {
   const filterGroups = useMemo(() => {
     const types = Array.from(new Set(response.data.map((item) => item.type).filter(Boolean))).map((value) => ({
       value,
-      label: pluginTypeToName[value]?.name.replace(/^Yak(?:-|\s+)/, '') || value,
+      label: pluginTypeToName[value]?.name || value,
       count: 0,
     }))
     const tags = Array.from(new Set(response.data.flatMap((item) => (item.tags || '').split(',').filter(Boolean)))).map(

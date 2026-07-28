@@ -757,7 +757,7 @@ export const PluginTypeSelect: React.FC<YakitSelectProps> = memo((props) => {
                     [styles['disable-color']]: item.key === 'lua',
                   })}
                 >
-                  {item.name.replace(/^Yak(?:-|\s+)/, '')}
+                  {item.name}
                 </div>
                 <div
                   className={classNames(styles['description-style'], {

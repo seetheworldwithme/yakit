@@ -44,7 +44,7 @@ export const pluginTypeToName: Record<string, PluginTypeInfoProps> = {
     language: 'yak',
   },
   mitm: {
-    name: 'Yak-MITM 模块',
+    name: 'MITM 模块',
     description: '专用于 MITM 模块中的模块，编写 MITM 插件，可以轻松对经过的流量进行修改',
     icon: <SolidPluginYakMitmIcon />,
     color: 'blue',
@@ -52,7 +52,7 @@ export const pluginTypeToName: Record<string, PluginTypeInfoProps> = {
     language: 'yak',
   },
   'port-scan': {
-    name: 'Yak-端口扫描',
+    name: '端口扫描',
     description: '该插件会对目标进行端口扫描，再对扫描的指纹结果做进一步的处理，常用场景先指纹识别，再 Poc 检测',
     icon: <SolidPluginProtScanIcon />,
     color: 'success',
@@ -60,7 +60,7 @@ export const pluginTypeToName: Record<string, PluginTypeInfoProps> = {
     language: 'yak',
   },
   codec: {
-    name: 'Yak-Codec',
+    name: 'Codec',
     description: 'Yakit 中的编解码模块，可以自定义实现所需要的编解码、加解密',
     icon: <SolidSparklesPluginIcon />,
     color: 'purple',
