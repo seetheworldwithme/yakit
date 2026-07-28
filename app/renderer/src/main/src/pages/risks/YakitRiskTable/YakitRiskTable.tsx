@@ -1856,7 +1856,8 @@ export const YakitRiskDetails: React.FC<YakitRiskDetailsProps> = React.memo((pro
                 </Descriptions.Item>
               </>
             </Descriptions>
-            <div className={styles['no-more']}>{t('YakitEmpty.noMoreData')}</div>
+            {/* 按产品要求隐藏列表到底提示，保留原节点，便于后续恢复展示 */}
+            {/* <div className={styles['no-more']}>{t('YakitEmpty.noMoreData')}</div> */}
           </div>
         )}
 
@@ -2159,7 +2160,8 @@ export const AuditResultDescribe: React.FC<AuditResultDescribeProps> = React.mem
           </Descriptions.Item>
         </>
       </Descriptions>
-      <div className={styles['no-more']}>{t('YakitEmpty.noMoreData')}</div>
+      {/* 按产品要求隐藏列表到底提示，保留原节点，便于后续恢复展示 */}
+      {/* <div className={styles['no-more']}>{t('YakitEmpty.noMoreData')}</div> */}
     </div>
   )
 })

@@ -481,7 +481,8 @@ export const PortAssetDescription: React.FC<PortAssetDescriptionProp> = (props) 
           </Descriptions.Item>
         )}
       </Descriptions>
-      <div className="descriptions-no-more">{t('YakitEmpty.noMoreData')}</div>
+      {/* 按产品要求隐藏列表到底提示，保留原节点，便于后续恢复展示 */}
+      {/* <div className="descriptions-no-more">{t('YakitEmpty.noMoreData')}</div> */}
     </>
   )
 }

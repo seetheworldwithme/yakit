@@ -316,7 +316,8 @@ export const YakitVirtualList = <T extends any>(props: YakitVirtualListProps<T>)
                   <LoadingOutlined />
                 </div>
               )}
-              {!loading && !hasMore && <div className={styles['no-more-text']}>{t('YakitEmpty.noMoreData')}</div>}
+              {/* 按产品要求隐藏列表到底提示，保留加载终止状态，便于后续恢复展示 */}
+              {/* {!loading && !hasMore && <div className={styles['no-more-text']}>{t('YakitEmpty.noMoreData')}</div>} */}
             </div>
           </div>
         </div>

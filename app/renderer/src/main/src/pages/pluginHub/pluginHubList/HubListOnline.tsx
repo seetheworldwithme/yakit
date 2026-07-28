@@ -30,7 +30,6 @@ import useListenWidth from '../hooks/useListenWidth'
 import { HubButton } from '../hubExtraOperate/funcTemplate'
 import {
   HubOuterList,
-  HubListFilter,
   OnlineOptFooterExtra,
   HubDetailList,
   HubDetailListOpt,
@@ -55,6 +54,7 @@ import {
 import { isCommunityEdition } from '@/utils/envfile'
 import { FilterPopoverBtn } from '@/pages/plugins/funcTemplate'
 import { Tooltip } from 'antd'
+import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import useGetSetState from '../hooks/useGetSetState'
 import { getRemoteValue } from '@/utils/kv'
 import { RemotePluginGV } from '@/enums/plugin'
@@ -608,6 +608,14 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
   }, [filters])
   /** ---------- 详情列表操作 End ---------- */
 
+  // 云端插件与本地插件保持一致：前 3 个筛选项直接展示，其余放入“更多”弹层。
+  const toggleFilter = useMemoizedFn((groupKey: string, data: API.PluginsSearchData, check: boolean) => {
+    const selected = { ...(filters as Record<string, API.PluginsSearchData[]>) }
+    if (check) selected[groupKey] = [...(selected[groupKey] || []), data]
+    else selected[groupKey] = (selected[groupKey] || []).filter((item) => item.value !== data.value)
+    setFilters({ ...selected })
+  })
+
   // 批量下载
   const headerExtra = () => {
     return (
@@ -663,17 +671,78 @@ export const HubListOnline: React.FC<HubListOnlineProps> = memo((props) => {
           spinning={loading && isInitLoading.current}
         >
           <div className={styles['outer-list']}>
-            <div className={classNames(styles['list-filter'], { [styles['hidden-view']]: hiddenFilter })}>
-              <HubListFilter
-                groupList={filterGroup}
-                selecteds={filters as Record<string, API.PluginsSearchData[]>}
-                onSelect={setFilters}
-              />
-            </div>
-
             <div className={styles['list-body']}>
               <HubOuterList
-                title="插件商店"
+                title={
+                  <div className={styles['hub-inline-title-filters']}>
+                    <span>插件商店</span>
+                    {filterGroup
+                      .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+                      .sort(
+                        (a, b) =>
+                          ['plugin_type', 'tags'].indexOf(a.groupKey) - ['plugin_type', 'tags'].indexOf(b.groupKey),
+                      )
+                      .map((group) => {
+                        const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||
+                          []) as API.PluginsSearchData[]
+                        const inlineOptions = (group.data || []).slice(0, 3)
+                        const remainingOptions = (group.data || []).slice(3)
+                        return (
+                          <div className={styles['hub-inline-filter-group']} key={group.groupKey}>
+                            <span>{group.groupName}</span>
+                            {inlineOptions.map((opt) => {
+                              const active = selected.some((item) => item.value === opt.value)
+                              return (
+                                <YakitButton
+                                  key={opt.value}
+                                  type={active ? 'primary' : 'text'}
+                                  size="small"
+                                  onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                                >
+                                  {opt.label}
+                                </YakitButton>
+                              )
+                            })}
+                            {remainingOptions.length > 0 && (
+                              <YakitPopover
+                                overlayClassName={styles['hub-inline-filter-popover']}
+                                placement="bottomLeft"
+                                trigger="click"
+                                content={
+                                  <div className={styles['hub-inline-filter-popover-content']}>
+                                    {group.data.map((opt) => {
+                                      const active = selected.some((item) => item.value === opt.value)
+                                      return (
+                                        <YakitButton
+                                          key={opt.value}
+                                          type={active ? 'primary' : 'text'}
+                                          size="small"
+                                          onClick={() => toggleFilter(group.groupKey, opt, !active)}
+                                        >
+                                          {opt.label}
+                                        </YakitButton>
+                                      )
+                                    })}
+                                  </div>
+                                }
+                              >
+                                <YakitButton
+                                  type={
+                                    remainingOptions.some((opt) => selected.some((item) => item.value === opt.value))
+                                      ? 'primary'
+                                      : 'text'
+                                  }
+                                  size="small"
+                                >
+                                  更多 +{remainingOptions.length}
+                                </YakitButton>
+                              </YakitPopover>
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                }
                 headerExtra={headerExtra()}
                 allChecked={allChecked}
                 setAllChecked={onCheck}
