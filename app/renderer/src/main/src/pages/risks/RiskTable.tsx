@@ -596,6 +596,7 @@ export const RiskTable: React.FC<RiskTableProp> = (props) => {
             }
           }}
           rowSelection={{
+            columnWidth: 44,
             onChange: (selectedRowKeys) => {
               setSelectedRowKeys(selectedRowKeys as string[])
             },

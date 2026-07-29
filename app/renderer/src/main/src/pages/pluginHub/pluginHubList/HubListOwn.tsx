@@ -958,7 +958,8 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
                           pageSizeOptions: ['10', '20', '50', '100'],
                           onChange: onPaginationChange,
                         }}
-                        scroll={{ y: 'calc(100vh - 360px)', x: 'max-content' }}
+                        scroll={{ y: 'calc(100vh - 360px)' }}
+                        tableLayout="fixed"
                         loading={loading}
                         onRow={(record) => {
                           const idx = (response.data || []).findIndex((ele) => ele.uuid === record.uuid)

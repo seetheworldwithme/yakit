@@ -12,7 +12,6 @@ import styles from './OnlineJudgment.module.scss'
 import Login from '@/pages/Login'
 import { useStore } from '@/store'
 import { useEmptyImage } from '@/hook/useResultEmpty/SearchEmpty'
-import { useTheme } from '@/hook/useTheme'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -23,11 +22,8 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
     const [loading, setLoading] = useState<boolean>(true)
     const [loginShow, setLoginShow] = useState<boolean>(false)
 
-    const { theme } = useTheme()
-
     const networkEmptyImage = useEmptyImage('network')
     const serverEmptyImage = useEmptyImage('server')
-    const powerEmptyImage = useEmptyImage('power')
 
     const [onlineResponseStatus, setOnlineResponseStatus] = useState<OnlineResponseStatusProps>({
       code: 200,
@@ -135,12 +131,7 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
                                     description='请联系管理员分配权限'
                                 />
                             )} */}
-              <YakitEmpty
-                image={<img src={powerEmptyImage} alt="" />}
-                imageStyle={{ width: 320, height: 250, marginBottom: 16 }}
-                title="暂无访问权限"
-                description="登录后即可访问该页面"
-              />
+              <YakitEmpty title="暂无访问权限" description="登录后即可访问该页面" />
               <YakitButton className={styles['refresh-button']} type="outline1" onClick={() => onLogin()}>
                 立即登录
               </YakitButton>
@@ -168,7 +159,7 @@ export const OnlineJudgment: React.FC<OnlineJudgmentProps> = React.memo(
             </>
           )
       }
-    }, [onlineResponseStatus, theme])
+    }, [onlineResponseStatus])
     const onLogin = useMemoizedFn(() => {
       setLoginShow(true)
     })
