@@ -1734,6 +1734,7 @@ const ColumnsItemRender = React.memo((props: ColumnsItemRenderProps) => {
         [styles['virtual-table-title-fixed-left']]: columnsItem.fixed === 'left',
         [styles['virtual-table-title-fixed-left-box-show-none']]:
           columnsItem.fixed === 'left' && scroll.scrollLeft <= 0,
+        [styles['virtual-table-title-has-selection']]: cIndex === 0 && !!rowSelection,
       })}
       style={{
         width: columnsItem.width || colWidth,
@@ -1753,14 +1754,15 @@ const ColumnsItemRender = React.memo((props: ColumnsItemRenderProps) => {
             {cIndex === 0 && rowSelection && rowSelection?.isShowAll !== false && (
               <>
                 {rowSelection.type !== 'radio' && (
-                  <YakitProtoCheckbox
-                    checked={isAll}
-                    indeterminate={!isAll && (rowSelection?.selectedRowKeys?.length || 0) > 0}
-                    onChange={(e) => {
-                      onChangeCheckbox(e.target.checked)
-                    }}
-                    wrapperClassName={styles['check']}
-                  />
+                  <span className={styles['check']}>
+                    <YakitProtoCheckbox
+                      checked={isAll}
+                      indeterminate={!isAll && (rowSelection?.selectedRowKeys?.length || 0) > 0}
+                      onChange={(e) => {
+                        onChangeCheckbox(e.target.checked)
+                      }}
+                    />
+                  </span>
                 )}
               </>
             )}

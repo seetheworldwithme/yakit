@@ -87,6 +87,13 @@
           text-align: center;
         }
 
+        &.virtual-table-title-has-selection {
+          :global(.virtual-col-title) {
+            justify-content: flex-start;
+            text-align: left;
+          }
+        }
+
         &:last-child {
           border-right: 0;
         }

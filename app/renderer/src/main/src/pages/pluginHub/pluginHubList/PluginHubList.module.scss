@@ -450,10 +450,12 @@
   }
 
   .col-tags {
+    min-width: 0;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 4px;
     align-items: center;
+    overflow: hidden;
 
     .col-tags-more {
       color: var(--Colors-Use-Neutral-Text-3-Secondary);
