@@ -292,7 +292,7 @@ export const MenuDNSLog: React.FC<MenuDNSLogProps> = React.memo((props) => {
           <div className={styles['header-body']}>
             <div className={styles['title-style']}>{t('Layout.MenuDNSLog.accessRecords')}</div>
             <div className={styles['sub-title-style']}>
-              Total <span className={styles['total-style']}>{total}</span>
+              总数 <span className={styles['total-style']}>{total}</span>
             </div>
           </div>
           <div className={styles['extra-header-body']}>

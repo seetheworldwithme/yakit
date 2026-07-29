@@ -768,7 +768,7 @@ const PluginExecuteCustomTable: React.FC<PluginExecuteCustomTableProps> = React.
         // title={name}
         title={
           <span className={styles['table-title']}>
-            Total<span className={styles['table-title-number']}>{data.length}</span>
+            总数<span className={styles['table-title-number']}>{data.length}</span>
           </span>
         }
         extra={

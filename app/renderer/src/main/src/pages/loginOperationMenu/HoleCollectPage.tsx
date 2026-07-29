@@ -431,7 +431,7 @@ export const HoleCollectPage: React.FC<HoleCollectPageProps> = (props) => {
           pageSize: getParams().Limit,
           showSizeChanger: true,
           total: total,
-          showTotal: (total) => <YakitTag>Total:{total}</YakitTag>,
+          showTotal: (total) => <YakitTag>总数:{total}</YakitTag>,
           pageSizeOptions: ['5', '10', '20'],
         }}
         onChange={(pagination) => {

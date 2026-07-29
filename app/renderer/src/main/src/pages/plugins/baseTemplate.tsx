@@ -199,11 +199,11 @@ export const PluginDetails: <T>(props: PluginDetailsProps<T>) => any = memo((pro
                 全选
               </div>
               <div className={styles['count-num']}>
-                Total <span className={styles['num-style']}>{total}</span>
+                总数 <span className={styles['num-style']}>{total}</span>
               </div>
               <div className={styles['divider-style']}></div>
               <div className={styles['count-num']}>
-                Selected <span className={styles['num-style']}>{selected}</span>
+                已选 <span className={styles['num-style']}>{selected}</span>
               </div>
             </div>
             {filterExtra || null}

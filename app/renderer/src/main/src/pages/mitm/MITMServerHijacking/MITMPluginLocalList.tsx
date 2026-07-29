@@ -547,11 +547,11 @@ export const YakModuleListHeard: React.FC<YakModuleListHeardProps> = React.memo(
       )}
       <div className={style['mitm-plugin-list-tip']}>
         <div>
-          Total<span>&nbsp;{total}</span>
+          总数<span>&nbsp;{total}</span>
         </div>
         <Divider type="vertical" style={{ margin: '0 8px', height: 12, top: 0 }} />
         <div>
-          Selected<span>&nbsp;{length}</span>
+          已选<span>&nbsp;{length}</span>
         </div>
       </div>
     </div>

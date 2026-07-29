@@ -15,6 +15,7 @@ import {
   PluginsQueryProps,
   convertPluginsRequestParams,
   apiFetchGroupStatisticsMine,
+  apiFetchGroupStatisticsOnline,
   DownloadOnlinePluginsRequest,
   convertDownloadOnlinePluginBatchRequestParams,
   apiDownloadPluginMine,
@@ -147,7 +148,17 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
   const fetchFilterGroup = useMemoizedFn(() => {
     apiFetchGroupStatisticsMine()
       .then((res) => {
-        setFilterGroup(res.data)
+        const cloudFilterGroups = (res.data || []).filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
+        if (cloudFilterGroups.length > 0) {
+          setFilterGroup(cloudFilterGroups)
+          return
+        }
+
+        apiFetchGroupStatisticsOnline()
+          .then((fallbackRes) => {
+            setFilterGroup((fallbackRes.data || []).filter((group) => ['plugin_type', 'tags'].includes(group.groupKey)))
+          })
+          .catch(() => {})
       })
       .catch(() => {})
   })
@@ -830,11 +841,10 @@ export const HubListOwn: React.FC<HubListOwnProps> = memo((props) => {
                     <div className={styles['hub-inline-title-filters']}>
                       <span>{t('HubListOwn.myPlugins')}</span>
                       {filterGroup
-                        .filter((group) => ['plugin_type', 'plugin_group', 'tags'].includes(group.groupKey))
+                        .filter((group) => ['plugin_type', 'tags'].includes(group.groupKey))
                         .sort(
                           (a, b) =>
-                            ['plugin_type', 'plugin_group', 'tags'].indexOf(a.groupKey) -
-                            ['plugin_type', 'plugin_group', 'tags'].indexOf(b.groupKey),
+                            ['plugin_type', 'tags'].indexOf(a.groupKey) - ['plugin_type', 'tags'].indexOf(b.groupKey),
                         )
                         .map((group) => {
                           const selected = ((filters as Record<string, API.PluginsSearchData[]>)[group.groupKey] ||

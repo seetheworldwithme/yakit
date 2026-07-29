@@ -580,7 +580,7 @@ export const RiskTable: React.FC<RiskTableProp> = (props) => {
             pageSize: limit,
             showSizeChanger: true,
             total: total,
-            showTotal: (total) => <Tag>Total:{total}</Tag>,
+            showTotal: (total) => <Tag>总数:{total}</Tag>,
             pageSizeOptions: ['5', '10', '20'],
           }}
           onChange={(pagination, filters, sorter, extra) => {

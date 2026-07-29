@@ -614,7 +614,7 @@ export const EntityRepositoryPage: React.FC = () => {
                     pageSize: 20,
                     showSizeChanger: true,
                     showQuickJumper: true,
-                    showTotal: (total) => `Total ${total} repositories`,
+                    showTotal: (total) => `总数 ${total} 个仓库`,
                   }}
                 />
               </div>
@@ -707,7 +707,7 @@ export const EntityRepositoryPage: React.FC = () => {
                     total: entityTotal,
                     showSizeChanger: true,
                     showQuickJumper: true,
-                    showTotal: (total) => `Total ${total} entities`,
+                    showTotal: (total) => `总数 ${total} 个实体`,
                     onChange: (page, pageSize) => {
                       setEntityPagination({
                         ...entityPagination,
@@ -797,7 +797,7 @@ export const EntityRepositoryPage: React.FC = () => {
                     total: relationshipTotal,
                     showSizeChanger: true,
                     showQuickJumper: true,
-                    showTotal: (total) => `Total ${total} relationships`,
+                    showTotal: (total) => `总数 ${total} 条关系`,
                     onChange: (page, pageSize) => {
                       setRelationshipPagination({
                         ...relationshipPagination,

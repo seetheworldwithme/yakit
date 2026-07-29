@@ -455,7 +455,7 @@ const KnowledgeTable: FC<KnowledgeBaseTableHeaderProps & { linkId: string[] }> =
           <React.Fragment>
             <Divider type="vertical" />
             <div className={styles['select-all']}>
-              Selected <span>all</span>{' '}
+              已选 <span>全部</span>{' '}
               <OutlineXIcon
                 onClick={() => {
                   setSelectList([])
@@ -495,7 +495,7 @@ const KnowledgeTable: FC<KnowledgeBaseTableHeaderProps & { linkId: string[] }> =
                 >
                   <div className={styles['tag-total']}>
                     <span>
-                      Selected <span className={styles['total-style']}>{selectList.length}</span>
+                      已选 <span className={styles['total-style']}>{selectList.length}</span>
                     </span>
                     <OutlineXIcon
                       onClick={() => {

@@ -793,7 +793,7 @@ export const MITMPluginHijackContent: React.FC<MITMPluginHijackContentProps> = R
           <div className={styles['plugin-loaded-list']}>
             <div className={styles['plugin-loaded-list-heard']}>
               <div className={styles['plugin-loaded-list-heard-total']}>
-                Total<span>&nbsp;{hooksItem.length}</span>
+                总数<span>&nbsp;{hooksItem.length}</span>
               </div>
               <div className={styles['plugin-loaded-list-heard-empty']} onClick={() => onSelectAll(false)}>
                 清&nbsp;空

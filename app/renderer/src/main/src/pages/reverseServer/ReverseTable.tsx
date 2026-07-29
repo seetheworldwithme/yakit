@@ -145,7 +145,7 @@ export const ReverseTable: React.FC<ReverseTableProps> = (props) => {
                   <div className="header-title title-style">
                     {total !== undefined && (
                       <div className="header-title-total">
-                        Total<span className="header-title-total-number">{total}</span>
+                        总数<span className="header-title-total-number">{total}</span>
                       </div>
                     )}
                   </div>

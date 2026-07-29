@@ -558,11 +558,11 @@ export const PluginsList: React.FC<PluginsListProps> = memo((props) => {
           </div>
           <div className={styles['body-total-selected']}>
             <div>
-              Total <span className={styles['num-style']}>{+total || 0}</span>
+              总数 <span className={styles['num-style']}>{+total || 0}</span>
             </div>
             <div className={styles['divider-style']} />
             <div>
-              Selected <span className={styles['num-style']}>{+selected || 0}</span>
+              已选 <span className={styles['num-style']}>{+selected || 0}</span>
             </div>
           </div>
           {!hideFilterTags && tagLength > 0 && (

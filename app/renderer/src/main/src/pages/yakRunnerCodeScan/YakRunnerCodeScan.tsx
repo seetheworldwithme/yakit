@@ -334,7 +334,7 @@ const CodeScanRuleByGroup: React.FC<CodeScanRuleByGroupProps> = React.memo((prop
                 全选
               </YakitCheckbox>
               <span className={styles['count-num']}>
-                Total<span className={styles['num-style']}>{total}</span>
+                总数<span className={styles['num-style']}>{total}</span>
               </span>
               <Divider type="vertical" style={{ margin: '0 4px' }} />
               <span className={styles['count-num']}>
@@ -653,7 +653,7 @@ const CodeScanRuleByKeyWord: React.FC<CodeScanRuleByKeyWordProps> = React.memo((
                 全选
               </YakitCheckbox>
               <span className={styles['count-num']}>
-                Total<span className={styles['num-style']}>{response.Total}</span>
+                总数<span className={styles['num-style']}>{response.Total}</span>
               </span>
               <Divider type="vertical" style={{ margin: '0 4px' }} />
               <span className={styles['count-num']}>

@@ -291,11 +291,11 @@ export const HubOuterList: React.FC<HubOuterListProps> = memo((props) => {
 
             <div className={styles['total-and-selected']}>
               <div>
-                Total <span className={styles['num-style']}>{Number(total) || 0}</span>
+                总数 <span className={styles['num-style']}>{Number(total) || 0}</span>
               </div>
               <div className={styles['divider-style']} />
               <div>
-                Selected <span className={styles['num-style']}>{Number(selected) || 0}</span>
+                已选 <span className={styles['num-style']}>{Number(selected) || 0}</span>
               </div>
             </div>
 
@@ -818,11 +818,11 @@ export const HubDetailList: <T>(props: HubDetailListProps<T>) => any = memo((pro
               {t('YakitCheckbox.selectAll')}
             </div>
             <div className={styles['count-num']}>
-              Total <span className={styles['num-style']}>{total}</span>
+              总数 <span className={styles['num-style']}>{total}</span>
             </div>
             <div className={styles['divider-style']}></div>
             <div className={styles['count-num']}>
-              Selected <span className={styles['num-style']}>{selected}</span>
+              已选 <span className={styles['num-style']}>{selected}</span>
             </div>
           </div>
           {filterExtra || null}
