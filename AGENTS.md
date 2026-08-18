@@ -377,8 +377,29 @@ git push -u debrand feat/irify-debrand   # 首次推送
 
 1. **「隐藏」优先于「删除」**：品牌展示点优先用条件渲染（`isIRify() ? null : <原内容>`）或**注释掉**（便于回滚）的方式处理；确属 IRify 专属且无复用价值的资产可直接删除引用。目的是控制 diff 规模、保持可回溯。
 2. **占位而非留洞**：logo 移除后若布局依赖其尺寸（如侧边栏顶部、卡片角标），保留等尺寸空白占位或调整布局，验收标准是「看起来本来就没有」，而不是「这里被抠掉了一块」。
-3. **新品牌暂不引入**：本阶段只做减法，不替换为任何新 logo/新名称。占位一律用空白/中性图形。后续引入新品牌时再统一处理。
+3. **新品牌电科院**：本分支的目标品牌是**电科院**，logo 源图为 `app/assets/brand/电科院LOGO.jpg`。替换时按「品牌资产与替换策略」一节执行，禁止再展示 Yakit / IRify / 四维相关图形。
 4. **守卫用现成 API**：`import { isIRify } from '@/utils/envfile'`，不要自己解析 env。
+
+### 品牌资产与替换策略（电科院 logo）
+
+**源图**：`app/assets/brand/电科院LOGO.jpg`（2512×521 横版组合 logo，JPEG **白底无透明通道**）。这是唯一品牌源图，**不要在页面/打包配置里直接引用这张 jpg**——它有白底、比例极宽，直接用会在深色背景处露白边、在方形图标槽位里变形。
+
+**派生图生成约定**（用 `sips` / 预览 / Figma 等工具从源图派生，派生图放 `app/assets/brand/` 下，命名带用途）：
+
+| 用途 | 派生要求 | 建议落位 |
+| --- | --- | --- |
+| 界面横版 logo（侧边栏顶/登录页/启动页） | **透明背景 PNG**（抠掉白底），保留完整图文组合，按槽位比例缩放 | `app/assets/brand/diankeyuan-logo.png` |
+| 深色背景用横版 | 同上，且文字/图形须为浅色可读（源图为深色图文则直接可用；若不可读需出深色版） | `app/assets/brand/diankeyuan-logo-dark.png` |
+| 方形图标（favicon、安装包/任务栏图标、窗口图标） | 从源图**裁出图形部分**（或居中放完整 logo 加留白），透明 PNG，导出多尺寸（16/32/64/128/256/512 及 `.ico` / `.icns`） | `app/assets/brand/diankeyuan-icon-*.png` → 再转 `.ico` / `.icns` |
+
+**替换落点**（按上文触点地图，把 Yakit/IRify logo 的引用改为指向派生图，`isIRify()` 守卫只影响 IRify 路径）：
+
+1. 主渲染端：`components/layout/FuncDomain.tsx`（侧边栏 `YakitLogo`）、`pages/Login.tsx` 等登录页、插件模板默认 icon 兜底、`public/favicon.ico`。
+2. Link 渲染端（启动页）：`pages/StartupPage/index.tsx`（`IRifyLogo` / `irifyRight` 等）。
+3. 打包图标：`packageScript/electron-builder.config.js` 的 `case 'irify'` / `case 'irifyEE'` —— 不要覆盖 `yakitsslogo*` 等共享文件（SE 版共用会波及），改为新增电科院图标文件并把 `files` 与图标路径指过去。
+4. 窗口图标/标题栏：`app/main/index.js` 引用的图标路径（按需指到新图标）。
+
+**验收**：每个替换点用 irify-see 截图确认——白底不外露、不变形、深色主题下可读；`yarn build-renders-irify` 构建通过。
 
 ## 改 UI 的标准操作流程（SOP）
 
