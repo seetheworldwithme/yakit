@@ -390,7 +390,7 @@ git push -u debrand feat/irify-debrand   # 首次推送
 | --- | --- | --- |
 | 界面横版 logo（侧边栏顶/登录页/启动页） | **透明背景 PNG**（抠掉白底），保留完整图文组合，按槽位比例缩放 | `app/assets/brand/diankeyuan-logo.png` |
 | 深色背景用横版 | 同上，且文字/图形须为浅色可读（源图为深色图文则直接可用；若不可读需出深色版） | `app/assets/brand/diankeyuan-logo-dark.png` |
-| 方形图标（favicon、安装包/任务栏图标、窗口图标） | 从源图**裁出图形部分**（或居中放完整 logo 加留白），透明 PNG，导出多尺寸（16/32/64/128/256/512 及 `.ico` / `.icns`） | `app/assets/brand/diankeyuan-icon-*.png` → 再转 `.ico` / `.icns` |
+| 方形图标（favicon、安装包/任务栏图标、窗口图标） | 从源图**裁出图形部分**（或居中放完整 logo 加留白），导出多尺寸（16/32/64/128/256/512 及 `.ico` / `.icns`）。注意：**打包用 `diankeyuan.ico` 的各帧须合成不透明白底**（Windows 桌面/任务栏图标透明背景不美观）；favicon 等 in-app PNG 仍用透明底 | `app/assets/brand/diankeyuan-icon-*.png` → 再转 `.ico` / `.icns` |
 
 **替换落点**（按上文触点地图，把 Yakit/IRify logo 的引用改为指向派生图，`isIRify()` 守卫只影响 IRify 路径）：
 
