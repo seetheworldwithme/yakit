@@ -131,6 +131,8 @@
     "build-irify": "env-cmd -e irify -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode irify",
     "build-memfit": "env-cmd -e memfit -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode memfit",
     "build-irify-enterprise": "env-cmd -e irifyEnterprise -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode irifyEnterprise",
+    "build-irify-enterprise-no-license": "env-cmd -e irifyEnterprise,enterpriseNoLicense -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode irifyEnterprise",
+    "build-test-irify-enterprise-no-license": "env-cmd -e irifyEnterprise,devTool,enterpriseNoLicense -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode irifyEnterprise",
     "build-enpritrace-agent": "env-cmd -e simpleEE -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode simpleEE",
     "build-test-simple-enterprise": "env-cmd -e simpleEE,devTool -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode simpleEE",
     "build-test-irify": "env-cmd -e irify,devTool -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build --mode irify",
