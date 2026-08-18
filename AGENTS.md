@@ -309,9 +309,14 @@ git push -u debrand feat/irify-debrand   # 首次推送
 只处理「用户在界面上能看到/点击到」的品牌元素，按优先级分四类：
 
 1. **Logo 图片与图标**：页面上任何位置渲染的 Yakit / yak / IRify 自身 / 四维相关 logo（PNG、SVG、iconfont 自定义 Icon、favicon、任务栏/窗口图标）。
-2. **品牌文案**：界面标题、关于页、启动页上出现的「Yakit」「yaklang」「四维」「MegaVector」「yaklang.com」等产品/公司名展示（注意：`YakitForm`、`YakitButton` 等组件库前缀属于代码命名，**不在范围内**，见下文原则 2）。
+2. **品牌文案**：界面标题、关于页、启动页上出现的「Yakit」「yaklang」「四维」「MegaVector」「yaklang.com」等产品/公司名展示（注意：`YakitForm`、`YakitButton` 等组件库前缀属于代码命名，**不在范围内**，见下文原则 2）。产品名展示的**中枢**在 `utils/envfile.tsx` 的 `getReleaseEditionName()`——改这里一处即可覆盖大多数标题/文案，改完再全局 grep 剩余硬编码点。
 3. **品牌外链**：`WebsiteGV` 中指向 yaklang.com、megavector.cn 等官网/关于我们/帮助文档的入口（按钮、菜单项、登录页链接）——直接隐藏入口，而不是只改 URL。
 4. **窗口/安装包元信息**：`document.title`、HTML `<title>` / `meta description` / favicon、electron-builder 的 `productName` 等用户可见元信息。
+
+### ⚠️ 两个功能性陷阱（改不好会卡死启动/装不上）
+
+1. **软件更新检查**：启动页（Link 渲染端）会向 yaklang 服务器检查 Yakit 软件更新。若本地版本号与线上不一致，会弹**强制升级弹窗并阻塞启动**，且弹窗本身就是 Yakit 品牌暴露点。需让 IRify 版本跳过启动时更新检查（参考落点：`engine-link-startup/src/pages/StartupPage/components/LocalEngine/index.tsx`，SE 版已有跳过先例可对照；升级弹窗 `components/layout/update/DownloadYakit.tsx` 一并处理）。
+2. **安装器脚本**：electron-builder 之外还有 NSIS 安装脚本（`build/` 下的 `.nsh`）可能含 yakit 品牌文案与「迁移 yakit-projects」等提示，打包前需一并检查。
 
 ## 不做什么（负面清单）
 
@@ -363,28 +368,79 @@ git push -u debrand feat/irify-debrand   # 首次推送
 
 | 文件 | 作用 |
 | --- | --- |
-| `app/main/index.js` | 窗口创建、标题栏 close 按钮图片（`yakit-close.png` / `irify-close.png`）、`yakit-window-state.json` 等用户可见产物名 |
+| `app/main/index.js` | 窗口创建、标题栏 close 按钮图片（`yakit-close.png` / `irify-close.png`）、`yakit-window-state.json` 等用户可见产物名；**打包版拦截调试开关的逻辑不动**（dev 不受影响） |
 | `packageScript/electron-builder.config.js` | `case 'irify'` / `case 'irifyEE'`：`productName: 'IRify'/'IRifyEnpriTrace'`、`appId: 'io.yaklang.irify'`、图标文件挑选 |
 | `packageScript/.env-cmdrc` | `IRify: { PLATFORM: "irify" }` 等模式注入（机制本身不动，仅知晓） |
+| `build/` 下 NSIS `.nsh` 安装脚本 | 安装界面文案（yakit 品牌字、yakit-projects 迁移提示等），打包前检查 |
 
 ## 改动手法约定
 
-1. **「隐藏」优先于「删除」**：品牌展示点优先用条件渲染（`isIRify() ? null : <原内容>`）或移除该入口的方式处理；确属 IRify 专属且无复用价值的资产可直接删除引用。目的是控制 diff 规模、保持可回溯。
+1. **「隐藏」优先于「删除」**：品牌展示点优先用条件渲染（`isIRify() ? null : <原内容>`）或**注释掉**（便于回滚）的方式处理；确属 IRify 专属且无复用价值的资产可直接删除引用。目的是控制 diff 规模、保持可回溯。
 2. **占位而非留洞**：logo 移除后若布局依赖其尺寸（如侧边栏顶部、卡片角标），保留等尺寸空白占位或调整布局，验收标准是「看起来本来就没有」，而不是「这里被抠掉了一块」。
 3. **新品牌暂不引入**：本阶段只做减法，不替换为任何新 logo/新名称。占位一律用空白/中性图形。后续引入新品牌时再统一处理。
 4. **守卫用现成 API**：`import { isIRify } from '@/utils/envfile'`，不要自己解析 env。
 
-## 验证方式
+## 改 UI 的标准操作流程（SOP）
 
-每完成一批改动，用 IRify 版本走一遍冒烟：
+> 适用于「隐 logo / 隐品牌文案 / 隐入口」等高频改动。准则：**改得准、不崩、可回滚**。
+
+### 改前：探查要全
+
+1. **读全目标文件**（含同名 `.scss`）再动手，不凭片段猜结构。
+2. **查全「定义点 + 消费点」**：菜单 / 路由 / 标签 / 图标这类「一处定义多处消费」的，先 `rg` 全部引用再改（如顶级标签由钉住 + 启动开页双驱动）。**漏一处就残影**。
+3. **先区分「隐入口」vs「删功能」**：隐入口 = 保留路由 + 页面，只去展示入口；删功能 = 连路由 / 页面一起删，删前必须做依赖扫描（`rg "YakitRoute.Xxx|openPage|onMenu"`）。本分支以**隐入口**为主。
+
+### 改时：外科式 + 保兼容
+
+1. **外科式 Edit**，不整文件重写；优先保留未触及的 JSX 分支（复制大段 JSX 易出错）。
+2. **共享文件保兼容**：`Home.tsx` / `newRoute.tsx` / `MainOperatorContent.tsx` / `FuncDomain.tsx` 等是**全变体共享**。IRify 之外其它版本（社区版 / EE / SE / memfit）的 JSX 分支**原样保留，勿删勿改**——品牌点用 `isIRify()` 守卫只影响 IRify 路径。
+3. **只动 UI 不动逻辑**：保留 state / 事件 / 接口 / 路由。
+4. **隐入口要改全所有定义处**（双驱动的两处都改，否则一边残影）。
+
+### 改后：清理 + 验证（三板斧）
+
+1. **tsc**（权威）：`cd app/renderer/src/main && ./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+2. **grep 残留**：扫已隐去/已删标识符的残留引用（应为空）
+3. **SCSS 配平**：若动了 `.scss`，查花括号配平（`{` 数 == `}` 数）
+4. 删 `export` 前全仓 grep 确认无外部引用；顺手清只服务已隐 JSX 的 state / handler / import（删前确认全文件仅 1 处引用）。
+
+## 开发调试与闭环验证
+
+### 启动 IRify（dev）
 
 ```bash
-yarn start-renders-irify
-# 按上文「启动步骤」两步法确认 :3000 与 :5173 就绪后
-yarn start-electron
+yarn dev-irify            # 常规 dev：起 IRify 两渲染端 + Electron
+yarn dev-irify:debug      # debug dev：同上，但 Electron 开 CDP 9222 端口（供 irify-see 连接）
 ```
 
-检查清单：
+> 日常改 UI 用 `dev-irify:debug` 一步到位：渲染端热更新 + CDP 可连。主进程只在**打包版**拦截 `--remote-debugging-port`，dev 模式不拦截。
+> 等价手动方式：`yarn start-renders-irify`，待 :3000 与 :5173 就绪（端口监听 + curl 出有效 HTML）后 `yarn start-electron:debug`。
+
+### irify-see skill（改前看 / 改后验的眼睛）
+
+```bash
+python3 .agents/skills/irify-see/irify-see.py            # 摘要 + 截图（默认）
+python3 .agents/skills/irify-see/irify-see.py --full     # 完整正文
+python3 .agents/skills/irify-see/irify-see.py --dom SEL  # dump 选择器 outerHTML
+```
+
+闭环流程：**irify-see 看现状 → 改代码 → 热更新稍等 1–2 秒 → irify-see 再看 + Read 截图对比**。不靠猜，以最新截图为准。截图与正文里重点搜 Yakit / yak / IRify / 四维 / megavector 字样与 logo。
+
+> browser-use 仍可用但为辅：本项目是 Electron 客户端，browser-use 无法接管 Electron 窗口；仅在验证渲染端独立页面（http://127.0.0.1:3000）或需要交互式走流程时使用。
+
+## 进度追踪
+
+去品牌改动跨多批次/多会话，进度以 `docs/irify-debrand-progress.md`（勾选清单）为单一事实源：每完成一项并**人工验证通过**（截图确认 + 三板斧通过）后打勾，未验证不算完成。首批清单条目即下方「验证方式」的检查项。
+
+## 验证方式
+
+每完成一批改动，用 debug 方式启动走一遍冒烟（详见上文「开发调试与闭环验证」）：
+
+```bash
+yarn dev-irify:debug
+```
+
+检查清单（同时是 `docs/irify-debrand-progress.md` 的首批条目）：
 
 - [ ] 启动页（Link 渲染端）：无 Yakit / IRify logo、无品牌文案与外链
 - [ ] 主界面：侧边栏、首页（irifyHome）、设置页、关于/帮助入口无任何品牌痕迹

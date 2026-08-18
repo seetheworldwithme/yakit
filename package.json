@@ -6,6 +6,7 @@
   "scripts": {
     "cli": "node ./cli/cli.mjs",
     "start-electron": "electron .",
+    "start-electron:debug": "electron . --remote-debugging-port=9222 --remote-allow-origins=*",
     "install-link-render": "cd app/renderer/engine-link-startup && yarn install",
     "install-render": "cd app/renderer/src/main && yarn install",
     "check-deps": "node scripts/check-deps.js",
@@ -65,6 +66,8 @@
     "build-renders-memfit": "run-s build-render-memfit build-link-render-memfit",
     "build-renders-test-memfit": "run-s build-render-test-memfit build-link-render-memfit",
     "dev": "concurrently -k \"yarn start-renders\" \"wait-on tcp:3000 tcp:5173 && yarn start-electron\"",
+    "dev-irify": "concurrently -k \"yarn start-renders-irify\" \"wait-on tcp:3000 tcp:5173 && yarn start-electron\"",
+    "dev-irify:debug": "concurrently -k \"yarn start-renders-irify\" \"wait-on tcp:3000 tcp:5173 && yarn start-electron:debug\"",
     "postinstall": "electron-builder install-app-deps",
     "pack-win": "env-cmd -e nonSignNormal -r packageScript/.env-cmdrc electron-builder build --win --config ./packageScript/electron-builder.config.js",
     "pack-win-legacy": "env-cmd -e nonSignLegacy -r packageScript/.env-cmdrc electron-builder build --win --config ./packageScript/electron-builder.config.js",
