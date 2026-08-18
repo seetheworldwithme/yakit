@@ -287,3 +287,113 @@ yarn pack-mac
 | `yarn pack-mac[-<后缀>]` / `pack-win[-<后缀>]` / `pack-linux[-<后缀>]` | 对应平台打包 |
 
 > 版本后缀对照：默认（无） / `-enterprise`（EE，打包为 `pack-*-ee`）/ `-simple-enterprise`（SE，`pack-*-se`）/ `-irify`（`pack-*-irify`）/ `-irify-enterprise`（`pack-*-irify-ee`）/ `-memfit`（`pack-*-memfit`）。
+
+---
+
+# IRify 去品牌化开发指南（feat/irify-debrand 分支专用）
+
+> 本分支的核心需求：**把 IRify 版本页面上的 irify、yak / Yakit、四维（MegaVector / megavector.cn）等品牌元素（logo、品牌文案、官网外链等）从界面上移除**，使用户感官上这是一个全新的、无既有品牌印记的 IRify 项目。本文是该需求的代码编写指南，后续所有编码工作以本节为准。
+
+## 分支与远程
+
+- 分支：`feat/irify-debrand`（基于 upstream `master` `3a79d4bd4` 切出）
+- 远程：`debrand` → `https://github.com/seetheworldwithme/yakit.git`（本分支 push/pull 均走此远程）
+- `origin` 仍指向上游 `yaklang/yakit`，仅用于同步上游更新，**不要把本分支 push 到 origin**
+
+```bash
+git push -u debrand feat/irify-debrand   # 首次推送
+```
+
+## 改动范围（做什么）
+
+只处理「用户在界面上能看到/点击到」的品牌元素，按优先级分四类：
+
+1. **Logo 图片与图标**：页面上任何位置渲染的 Yakit / yak / IRify 自身 / 四维相关 logo（PNG、SVG、iconfont 自定义 Icon、favicon、任务栏/窗口图标）。
+2. **品牌文案**：界面标题、关于页、启动页上出现的「Yakit」「yaklang」「四维」「MegaVector」「yaklang.com」等产品/公司名展示（注意：`YakitForm`、`YakitButton` 等组件库前缀属于代码命名，**不在范围内**，见下文原则 2）。
+3. **品牌外链**：`WebsiteGV` 中指向 yaklang.com、megavector.cn 等官网/关于我们/帮助文档的入口（按钮、菜单项、登录页链接）——直接隐藏入口，而不是只改 URL。
+4. **窗口/安装包元信息**：`document.title`、HTML `<title>` / `meta description` / favicon、electron-builder 的 `productName` 等用户可见元信息。
+
+## 不做什么（负面清单）
+
+- **不重命名代码标识符**：`yakitUI` 组件库、`YakitXxx` 组件名、`yak` 开头的函数/IPC 通道/文件名保持原样。本需求是「视觉去品牌」，不是代码级重命名，避免海量无意义 churn。
+- **不破坏功能**：去掉 logo 后布局不能塌陷（占位尺寸、flex 布局要跟手调整）；与引擎通信、升级检测等使用 yaklang 字样的**内部 IPC / 协议逻辑**不动。
+- **不动其它版本的构建**：默认版 / enterprise / memfit 等其它 5 个版本理论上仍应可构建。共享代码中的品牌展示点优先用 `isIRify()`（`app/renderer/src/main/src/utils/envfile.tsx`）守卫，仅 IRify 路径下去品牌；IRify 专属文件可直接改。
+
+## 品牌触点地图（已勘察，改动时按图索骥）
+
+> 用 `rg -i "yakit|yaklang|irify|megavector|四维"` 可复核，以下为主要落点：
+
+### 资产文件
+
+| 位置 | 内容 |
+| --- | --- |
+| `app/assets/` | 打包用 logo：`yakitlogo.*`、`yakiteelogo.*`、`yakitselogo.*`、`memfitlogo.*`、`irify-close.png` 等（由 `packageScript/electron-builder.config.js` 按 PLATFORM 挑选） |
+| `app/renderer/src/main/public/` | `favicon.ico`、`yaklogo.png`、`icons/icon.png`、`icons/favicon.svg` |
+| `app/renderer/src/main/src/assets/yakitLogo.png` | 主渲染端 Yakit logo，被 `FuncDomain.tsx`、插件模板等多处引用 |
+| `app/renderer/engine-link-startup/src/assets/` | `YakitLogo.png`、`IRifyLogo.png`、`yakitEE*`、`yakitSE*`、`irify-right.png` 等启动页品牌图 |
+
+### 代码落点（主渲染端 `app/renderer/src/main/src/`）
+
+| 文件 | 作用 |
+| --- | --- |
+| `utils/envfile.tsx` | 版本判定（`isIRify()`）与产品名映射，去品牌守卫的基础设施 |
+| `utils/logo.ts` | `YakLogoData` 内联 SVG 图形数据 |
+| `enums/website.ts` | `WebsiteGV`：`OfficialWebsite`（yaklang.com）、`AboutUsWebsite`（megavector.cn）等外链枚举 |
+| `components/layout/FuncDomain.tsx` | 左侧导航/主框架，引用 `YakitLogo`、`WebsiteGV`（版本历史等入口） |
+| `components/layout/HelpDoc/HelpDoc.tsx` | 帮助文档入口，跳转 yaklang 文档与关于我们 |
+| `components/layout/update/DownloadYakit.tsx` | 升级弹窗中的官网地址展示 |
+| `assets/newIcon.tsx`（`YakitLogoSvgIcon`）、`assets/icons.tsx`（`OfficialYakitLogoIcon`） | SVG 形式的 logo 图标组件 |
+| `pages/irifyHome/` | IRify 专属首页（本分支的主战场之一） |
+| `pages/softwareSettings/SoftwareSettings.tsx` | 设置页用 `YakitLogoSvgIcon` 做图标 |
+| `pages/plugins/*funcTemplate*.tsx`、`baseTemplate.tsx` | 插件卡片默认 icon 兜底用 Yakit logo |
+| `newApp/NewApp.tsx:304` 附近 | 动态设置 `document.title`（`app-html-title`） |
+| `index.html` | `<meta name="description" content="Yakit">`、favicon 引用、初始 title |
+
+### 代码落点（Link 渲染端 `app/renderer/engine-link-startup/src/`）
+
+| 文件 | 作用 |
+| --- | --- |
+| `pages/StartupPage/index.tsx` | 启动页主体，引用 `irifyRight`、`IRifyLogo` 等品牌图 |
+| `pages/StartupPage/components/YakitLoading/` | 加载动画品牌元素 |
+| `pages/StartupPage/components/UpdateYakitHint/` | 升级提示品牌文案 |
+| `App.tsx:17` 附近 | 启动窗口 title 设置 |
+| `index.html` | `<title>Loading...</title>` 与 favicon |
+
+### 主进程与打包配置
+
+| 文件 | 作用 |
+| --- | --- |
+| `app/main/index.js` | 窗口创建、标题栏 close 按钮图片（`yakit-close.png` / `irify-close.png`）、`yakit-window-state.json` 等用户可见产物名 |
+| `packageScript/electron-builder.config.js` | `case 'irify'` / `case 'irifyEE'`：`productName: 'IRify'/'IRifyEnpriTrace'`、`appId: 'io.yaklang.irify'`、图标文件挑选 |
+| `packageScript/.env-cmdrc` | `IRify: { PLATFORM: "irify" }` 等模式注入（机制本身不动，仅知晓） |
+
+## 改动手法约定
+
+1. **「隐藏」优先于「删除」**：品牌展示点优先用条件渲染（`isIRify() ? null : <原内容>`）或移除该入口的方式处理；确属 IRify 专属且无复用价值的资产可直接删除引用。目的是控制 diff 规模、保持可回溯。
+2. **占位而非留洞**：logo 移除后若布局依赖其尺寸（如侧边栏顶部、卡片角标），保留等尺寸空白占位或调整布局，验收标准是「看起来本来就没有」，而不是「这里被抠掉了一块」。
+3. **新品牌暂不引入**：本阶段只做减法，不替换为任何新 logo/新名称。占位一律用空白/中性图形。后续引入新品牌时再统一处理。
+4. **守卫用现成 API**：`import { isIRify } from '@/utils/envfile'`，不要自己解析 env。
+
+## 验证方式
+
+每完成一批改动，用 IRify 版本走一遍冒烟：
+
+```bash
+yarn start-renders-irify
+# 按上文「启动步骤」两步法确认 :3000 与 :5173 就绪后
+yarn start-electron
+```
+
+检查清单：
+
+- [ ] 启动页（Link 渲染端）：无 Yakit / IRify logo、无品牌文案与外链
+- [ ] 主界面：侧边栏、首页（irifyHome）、设置页、关于/帮助入口无任何品牌痕迹
+- [ ] 窗口标题、任务栏图标、favicon 无品牌信息
+- [ ] 抽查插件商店卡片、升级弹窗、登录/用户菜单等次级页面
+- [ ] 功能冒烟：引擎连接、页面切换、打开 Web Fuzzer 等核心路径不报错
+- [ ] `yarn build-renders-irify` 构建通过（提交前必跑）
+
+## 提交约定
+
+- 遵循仓库既有 commit 风格（中文、简短、如 `fix: ...` / 功能描述），可用 `/commit-msg` skill 生成。
+- 按触点分批提交（如「启动页去品牌」「主界面导航去品牌」「打包元信息」），便于回溯与 review。
