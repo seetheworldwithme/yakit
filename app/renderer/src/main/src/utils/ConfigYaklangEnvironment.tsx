@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { showModal } from '@/utils/showModal'
+import { isIRify } from '@/utils/envfile'
 import { Alert, Button, Form, Space, Spin, Table, Tag, Tooltip } from 'antd'
 import { useMemoizedFn } from 'ahooks'
 import { CopyableField, InputItem } from '@/utils/inputUtil'
@@ -210,7 +211,12 @@ export const ConfigYaklangEnvironment: React.FC<ConfigYaklangEnvironmentProp> = 
 
 export const showConfigYaklangEnvironment = (title?: string) => {
   const m = showYakitModal({
-    title: (modalT) => (title ? title : modalT('ConfigYaklangEnvironment.configYaklangSystemEnvironmentVariable')),
+    title: (modalT) =>
+      title
+        ? title
+        : isIRify()
+          ? modalT('ConfigYaklangEnvironment.configSystemEnvironmentVariable')
+          : modalT('ConfigYaklangEnvironment.configYaklangSystemEnvironmentVariable'),
     width: 800,
     content: (
       <>

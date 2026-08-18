@@ -373,7 +373,7 @@ export const YakitRouteToPageInfo: Record<
   'yakrunner-audit-code': {
     label: '代码审计',
     labelUi: 'YakitRoute.codeAudit',
-    describeUi: 'YakitRoute.auditRuleCodeAnalysis',
+    describeUi: isIRify() ? 'YakitRoute.auditRuleCodeAnalysisDebrand' : 'YakitRoute.auditRuleCodeAnalysis',
   },
   'irify-ai-code-audit': {
     label: 'AI代码审计',

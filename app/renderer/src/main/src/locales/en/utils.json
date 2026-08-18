@@ -39,7 +39,8 @@
     "deleteThisEnvironmentVariable": "Delete this environment variable",
     "configYaklangSystemEnvironmentVariable": "Configure Yaklang system environment variable",
     "newVariableTitle": "Set new variable",
-    "editVariableTitle": "Modify variable"
+    "editVariableTitle": "Modify variable",
+    "configSystemEnvironmentVariable": "Configure system environment variables"
   },
   "ConfigSystemProxy": {
     "getSystemProxyFailed": "Failed to get system proxy: {{error}}",

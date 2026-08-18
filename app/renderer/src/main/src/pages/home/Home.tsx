@@ -91,7 +91,7 @@ import { apiQueryYakScriptTotal } from '../plugins/utils'
 import { YakitGetOnlinePlugin } from '../mitm/MITMServerHijacking/MITMPluginLocalList'
 import { apiQueryPortsBase } from '../assetViewer/PortTable/utils'
 import type { QueryPortsRequest } from '../assetViewer/PortAssetPage'
-import { getReleaseEditionName, isCommunityYakit, isEnpriTrace, isEnpriTraceAgent } from '@/utils/envfile'
+import { getReleaseEditionName, isCommunityYakit, isEnpriTrace, isEnpriTraceAgent, isIRify } from '@/utils/envfile'
 import { YakitEmpty } from '@/components/yakitUI/YakitEmpty/YakitEmpty'
 import { YakitResizeBox } from '@/components/yakitUI/YakitResizeBox/YakitResizeBox'
 import ReactResizeDetector from 'react-resize-detector'
@@ -167,7 +167,7 @@ const Home: React.FC<HomeProp> = (props) => {
         label: t('YakitRoute.YakRunner'),
         icon: <PublicToolYakScriptIcon />,
         iconStyle: { backgroundColor: '#8863f7', padding: 1 },
-        desc: t('YakitRoute.yaklangProgramming'),
+        desc: isIRify() ? t('YakitRoute.scriptProgramming') : t('YakitRoute.yaklangProgramming'),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.YakScript }),
       },
@@ -203,7 +203,9 @@ const Home: React.FC<HomeProp> = (props) => {
         label: t('YakitRoute.pluginHub'),
         icon: <PublicToolPluginHubIcon />,
         iconStyle: { backgroundColor: '#F4736B', padding: 1 },
-        desc: t('YakitRoute.massiveYakitPluginsOne-ClickDownload', { edition: getReleaseEditionName() }),
+        desc: isIRify()
+          ? t('YakitRoute.massivePluginsOne-ClickDownload')
+          : t('YakitRoute.massiveYakitPluginsOne-ClickDownload', { edition: getReleaseEditionName() }),
         rightIcon: <OutlineArrowrightIcon />,
         onClick: () => onMenu({ route: YakitRoute.Plugin_Hub }),
       },

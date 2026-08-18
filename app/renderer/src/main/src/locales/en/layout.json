@@ -256,9 +256,9 @@
     "agree": "Agree",
     "refuse": "Refuse",
     "migrateDataTitle": "Migrate Data",
-    "migrateDataDesc": "Due to the reconstruction of the IRify function, in order not to affect the use, you need to click OK to migrate the old data. Data migration will not cause any data loss.",
+    "migrateDataDesc": "Due to function reconstruction, in order not to affect usage, you need to click OK to migrate the old data. Data migration will not cause any data loss.",
     "setPassword": "Set Password",
-    "irifyTechPreviewWatermark": "IRify technical preview is for technical communication only",
+    "irifyTechPreviewWatermark": "This system is for technical communication only",
     "enpriTraceTrialWatermark": "EnpriTrace Trial",
     "enpriTraceAgentTrialWatermark": "EnpriTraceAgent Trial"
   },
@@ -530,7 +530,7 @@
   },
   "DownloadYakit": {
     "downloading": "{{edition}} downloading...",
-    "officialDownloadLink": "Yakit official download link",
+    "officialDownloadLink": "Official download link",
     "officialDownloadHint": "If the download fails due to network issues, please install from the official website:",
     "website": "Website"
   },

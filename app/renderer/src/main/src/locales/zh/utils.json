@@ -39,7 +39,8 @@
     "deleteThisEnvironmentVariable": "删除本环境变量",
     "configYaklangSystemEnvironmentVariable": "配置 Yaklang 系统环境变量",
     "newVariableTitle": "设置新变量",
-    "editVariableTitle": "修改变量"
+    "editVariableTitle": "修改变量",
+    "configSystemEnvironmentVariable": "配置系统环境变量"
   },
   "ConfigSystemProxy": {
     "getSystemProxyFailed": "获取系统代理失败：{{error}}",

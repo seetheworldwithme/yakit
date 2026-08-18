@@ -256,9 +256,9 @@
     "agree": "同意",
     "refuse": "拒絕",
     "migrateDataTitle": "遷移資料",
-    "migrateDataDesc": "由於IRify功能進行重構，為不影響使用，需要點選確定將舊資料進行遷移，遷移資料不會造成任何資料丟失。",
+    "migrateDataDesc": "由於功能進行重構，為不影響使用，需要點選確定將舊資料進行遷移，遷移資料不會造成任何資料丟失。",
     "setPassword": "修改密碼",
-    "irifyTechPreviewWatermark": "IRify技術瀏覽版僅供技術交流使用",
+    "irifyTechPreviewWatermark": "本系統僅供技術交流使用",
     "enpriTraceTrialWatermark": "EnpriTrace-試用版",
     "enpriTraceAgentTrialWatermark": "EnpriTraceAgent-試用版"
   },
@@ -530,7 +530,7 @@
   },
   "DownloadYakit": {
     "downloading": "{{edition}} 軟體下載中...",
-    "officialDownloadLink": "Yakit 軟體官網下載連結",
+    "officialDownloadLink": "軟體官網下載連結",
     "officialDownloadHint": "如遇網路問題無法下載，可到官網下載安裝：",
     "website": "官網地址"
   },
@@ -539,7 +539,7 @@
     "installSuccess": "安裝成功，如未生效，重啟 {{edition}} 即可",
     "installFailed": "安裝失敗：{{error}}",
     "closeEngineRetry": "請關閉引擎後重試",
-    "downloading": "Yaklang 引擎下載中..."
+    "downloading": "引擎下載中..."
   },
   "UpdateYakitAndYaklang": {
     "detectedUpdate": "檢測到 {{edition}} 版本升級",
