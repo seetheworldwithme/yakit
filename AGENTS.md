@@ -292,7 +292,7 @@ yarn pack-mac
 
 # IRify 去品牌化开发指南（feat/irify-debrand 分支专用）
 
-> 本分支的核心需求：**把 IRify 版本页面上的 irify、yak / Yakit、四维（MegaVector / megavector.cn）等品牌元素（logo、品牌文案、官网外链等）从界面上移除**，使用户感官上这是一个全新的、无既有品牌印记的 IRify 项目。本文是该需求的代码编写指南，后续所有编码工作以本节为准。
+> 本分支的核心需求：**把 IRify 版本页面上的 irify、yak / Yakit、四维（MegaVector / megavector.cn）等品牌元素（logo、品牌文案、官网外链等）从界面上移除**，重塑为「智能化代码安全检测与验证系统」——电科院品牌、国网绿主题色、无既有品牌印记的全新产品。本文是该需求的代码编写指南，后续所有编码工作以本节为准。
 
 ## 分支与远程
 
@@ -400,6 +400,24 @@ git push -u debrand feat/irify-debrand   # 首次推送
 4. 窗口图标/标题栏：`app/main/index.js` 引用的图标路径（按需指到新图标）。
 
 **验收**：每个替换点用 irify-see 截图确认——白底不外露、不变形、深色主题下可读；`yarn build-renders-irify` 构建通过。
+
+### 主题色：国网绿
+
+- **取色依据**：电科院 logo 的主色系为**深青绿色**（像素统计峰值 `#005858`，向亮处过渡到 `#478989`）。
+- **国网绿定义**（本分支沿用）：**主色 `#00A860`（国网绿标准色）**；与 logo 深青 `#005858` 同属绿系但更明快，作为 UI 强调色可读性更好。
+- **改法（总闸，一处生效）**：`utils/envfile.tsx` 的 `GetMainColor(theme)`——当前 IRify 返回紫色（dark `#B081FF` / light `#6A44A9`），改为返回国网绿（建议 dark `#2BD588` / light `#00A860`，light/dark 用同一主色也可，以 irify-see 实测对比度为准）。`index.tsx` 会经 `applyYakitThemeColors` → `@yakit-libs/color` 的 `generateColors` 生成全套 `--Colors-Use-Main-*` token 注入，**改返回值即可，不要去逐个改 CSS 里的颜色**。
+- **注意**：`GetMainColor` 是**全变体共享**的 switch——只改 `case 'irify'` / `case 'irify-enterprise'` 两个分支，其它版本（yakit 橙 / memfit 蓝）的返回值**原样保留**。
+- **图表配色**：ECharts 等图表默认取色若仍显示旧紫色，属页面级重配范围，改时用 irify-see 逐页核实。
+- **Link 渲染端（启动页）主题色**：`engine-link-startup/src/utils/theme.ts` 有独立的主题定义，需同步检查是否需要跟随改绿。
+- **验收**：light/dark 双主题下，侧边栏选中态、按钮、链接、focus 态、图表主色均为国网绿系；无紫色残留（`rg -i "B081FF|6A44A9"` 的硬编码点单独排查，含 SCSS）。
+
+### 产品名：智能化代码安全检测与验证系统
+
+- **改法（中枢，一处生效）**：`utils/envfile.tsx` 的 `getReleaseEditionName()`——`IRify` case 返回 `'智能化代码安全检测与验证系统'`，`IRifyEnpriTrace` case 返回 `'智能化代码安全检测与验证系统'`（企业版可带后缀，如「（企业版）」，到时按需定）。
+- **注意**：函数是**全变体共享**，只改 IRify 两个 case，其它版本返回值不动。
+- **改完后全局 grep 硬编码**：`rg -n "IRify" app/renderer/src/main/src app/renderer/engine-link-startup/src`（排除 `isIRify()` 等代码标识符），页面上残留的「IRify」展示文案逐个处理（启动页、关于、登录页、`document.title` 等）。
+- **短名/标题场景**：产品名较长，`document.title`、窗口标题、启动页大标题等空间受限处可用短名「智能代码安全检测」或按截图实测调整，避免截断换行。
+- **验收**：界面标题、窗口标题、启动页、登录页等处不再出现「IRify」字样；`rg` 展示文案级残留为零。
 
 ## 改 UI 的标准操作流程（SOP）
 
