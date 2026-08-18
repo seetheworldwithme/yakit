@@ -50,9 +50,10 @@ switch (platform) {
   case 'irify':
     appInfoOption = {
       appId: 'io.yaklang.irify',
-      extraMetadata: { name: 'irify' },
+      // exe「详细信息」元信息去品牌：清空版权描述与文件描述（FileDescription 取 productName）
+      extraMetadata: { name: 'irify', description: '' },
       productName: '智能化代码安全检测与验证系统',
-      copyright: 'Copyright © 2021 v1ll4n',
+      copyright: '',
     }
     files = [
       '!app/assets/**/*',
@@ -70,9 +71,10 @@ switch (platform) {
   case 'irifyEE':
     appInfoOption = {
       appId: 'io.yaklang.irifyee',
-      extraMetadata: { name: 'irifyee' },
+      // exe「详细信息」元信息去品牌：清空版权描述与文件描述（FileDescription 取 productName）
+      extraMetadata: { name: 'irifyee', description: '' },
       productName: '智能化代码安全检测与验证系统',
-      copyright: 'Copyright © 2021 v1ll4n',
+      copyright: '',
     }
     files = [
       '!app/assets/**/*',
@@ -224,7 +226,10 @@ const configOption = {
   },
   releaseInfo: {
     releaseName: '${version}',
-    releaseNotes: 'view github release: https://github.com/yaklang/yakit/releases',
+    // irify 去品牌：升级说明不展示 yaklang GitHub 外链
+    ...(platform === 'irify' || platform === 'irifyEE'
+      ? {}
+      : { releaseNotes: 'view github release: https://github.com/yaklang/yakit/releases' }),
   },
 }
 

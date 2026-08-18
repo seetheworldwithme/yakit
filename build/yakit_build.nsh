@@ -83,8 +83,6 @@ FunctionEnd
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_SHOWREADME
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "创建桌面快捷方式"
-!define MUI_FINISHPAGE_LINK "官方网站"
-!define MUI_FINISHPAGE_LINK_LOCATION "https://yaklang.com"
 !insertmacro MUI_PAGE_FINISH
 
 
@@ -282,7 +280,7 @@ FunctionEnd
     ; 写权限已在 Section Main 中探测，此处不再重复建删临时文件
 
     ; 创建 yakit-projects 文件夹
-    DetailPrint "创建yakit-projects文件夹..."
+    DetailPrint "创建用户数据文件夹..."
     ClearErrors
     CreateDirectory "$INSTDIR\yakit-projects"
     ${If} ${Errors}
@@ -292,15 +290,15 @@ FunctionEnd
     ; Migrate yakit-projects folder
     ${If} "$PROFILE\yakit-projects" != "$INSTDIR\yakit-projects"
     ${AndIf} ${FileExists} "$PROFILE\yakit-projects"
-        DetailPrint "正在迁移yakit-projects数据..."
+        DetailPrint "正在迁移用户数据..."
         ClearErrors
         ; 旧版本数据可能包含多层目录和隐藏文件，这里必须递归复制，且不要在安装阶段直接删源目录
         nsExec::Exec '"$SYSDIR\cmd.exe" /C xcopy "$PROFILE\yakit-projects" "$INSTDIR\yakit-projects\\" /E /I /H /K /Y /C >nul 2>&1'
         Pop $0
         ${If} $0 != 0
-            DetailPrint "迁移yakit-projects文件夹失败..."
+            DetailPrint "迁移用户数据失败..."
         ${Else}
-            DetailPrint "迁移yakit-projects文件夹成功..."
+            DetailPrint "迁移用户数据成功..."
         ${EndIf}
     ${EndIf}
 
@@ -336,7 +334,7 @@ Section "Uninstall"
     ${If} $IS_UPDATED == "true"
         Goto keepFolder
     ${EndIf}
-    MessageBox MB_YESNO "卸载时是否保留yakit-projects文件夹？" IDYES keepFolder IDNO continueUninstall
+    MessageBox MB_YESNO "卸载时是否保留用户数据文件夹？" IDYES keepFolder IDNO continueUninstall
  keepFolder:
     StrCpy $KEEP_FOLDER "true"
     ; DetailPrint "保留yakit-projects文件夹..."
