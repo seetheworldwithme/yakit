@@ -97,6 +97,7 @@ import {
 import { WebsiteGV } from '@/enums/website'
 
 import YakitLogo from '@/assets/yakitLogo.png'
+import dkyLogo from '@/assets/diankeyuan-logo.png'
 import yakitImg from '../../assets/yakit.jpg'
 import classNames from 'classnames'
 import styles from './funcDomain.module.scss'
@@ -1440,14 +1441,14 @@ const UIOpUpdateYaklang: React.FC<UIOpUpdateProps> = React.memo((props) => {
       <div className={styles['update-header-wrapper']}>
         <div className={styles['header-info']}>
           <div className={styles['update-icon']}>
-            <img src={YakitLogo} width={30} />
+            <img src={isIRify() ? dkyLogo : YakitLogo} width={30} />
           </div>
           <div
             style={{
               width: versionTextMaxWidth,
             }}
           >
-            <div className={styles['update-title']}>{`Yaklang ${lastVersion || version}`}</div>
+            <div className={styles['update-title']}>{`${isIRify() ? '' : 'Yaklang '}${lastVersion || version}`}</div>
             <div className={styles['update-time']}>
               {`当前版本: ${version}`}
               {showSlimBadge ? <span className={styles['engine-build-type-tag']}>轻量</span> : null}
@@ -2283,12 +2284,14 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
                 />
               </div>
               <div className={styles['history-version']}>
-                <div
-                  className={styles['content-style']}
-                  onClick={() => yakitShell.openExternal(WebsiteGV.YakitHistoryVersionAddress)}
-                >
-                  <GithubSvgIcon className={styles['icon-style']} /> 历史版本
-                </div>
+                {!isIRify() && (
+                  <div
+                    className={styles['content-style']}
+                    onClick={() => yakitShell.openExternal(WebsiteGV.YakitHistoryVersionAddress)}
+                  >
+                    <GithubSvgIcon className={styles['icon-style']} /> 历史版本
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -2358,7 +2361,7 @@ const UIOpNotice: React.FC<UIOpNoticeProp> = React.memo((props) => {
         title={
           editShow.type === 'yakit'
             ? `${getReleaseEditionName()} ${yakitLastVersion} 更新通知`
-            : `Yaklang ${yaklangLastVersion} 更新通知`
+            : `${isIRify() ? '' : 'Yaklang '}${yaklangLastVersion} 更新通知`
         }
         centered={true}
         closable={true}

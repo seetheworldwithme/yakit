@@ -8,6 +8,7 @@ import { useMemoizedFn, useGetState } from 'ahooks'
 import { getRemoteValue, setRemoteValue } from '@/utils/kv'
 import { useStore } from '@/store'
 import yakitImg from '@/assets/yakit.jpg'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
 import type { API } from '@/services/swagger/resposeType'
 import { YakitButton } from '../yakitUI/YakitButton/YakitButton'
 import { YakitAutoComplete, defYakitAutoCompleteRef } from '../yakitUI/YakitAutoComplete/YakitAutoComplete'
@@ -16,7 +17,7 @@ import { InformationCircleIcon } from '@/assets/newIcon'
 import { CacheDropDownGV } from '@/yakitGV'
 import emiter from '@/utils/eventBus/eventBus'
 import type { YakitAutoCompleteRefProps } from '../yakitUI/YakitAutoComplete/YakitAutoCompleteType'
-import { getRemoteConfigBaseUrlGV, getRemoteHttpSettingGV } from '@/utils/envfile'
+import { getRemoteConfigBaseUrlGV, getRemoteHttpSettingGV, isIRify } from '@/utils/envfile'
 import { useUploadInfoByEnpriTrace } from '../layout/utils'
 import { JSONParseLog } from '@/utils/tool'
 import { yakitAuth, yakitCodec, yakitProfile, yakitUILayout } from '@/services/electronBridge'
@@ -275,7 +276,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
       {enterpriseLogin && (
         <div className="login-title-show">
           <div className="icon-box">
-            <img src={yakitImg} className="type-icon-img" />
+            <img src={isIRify() ? dkyIcon : yakitImg} className="type-icon-img" />
           </div>
           <div className="title-box">{t('ConfigPrivateDomain.enterpriseLogin')}</div>
         </div>

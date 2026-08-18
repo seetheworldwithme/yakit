@@ -57,6 +57,8 @@ import { PluginUpload } from '@/pages/plugins/local/PluginLocalUpload'
 import { setClipboardText } from '@/utils/clipboard'
 
 import YakitLogo from '@/assets/yakitLogo.png'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
+import { isIRify } from '@/utils/envfile'
 import UnLogin from '@/assets/unLogin.png'
 import classNames from 'classnames'
 import '../../plugins/plugins.scss'
@@ -661,8 +663,14 @@ export const HubGridOpt: React.FC<HubGridOptProps> = memo((props) => {
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[type]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[type]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
         />
       )
     }
@@ -888,8 +896,14 @@ export const HubDetailListOpt: <T>(props: HubDetailListOptProps<T>) => any = mem
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[pluginType]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[pluginType]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
         />
       )
     }

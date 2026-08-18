@@ -51,29 +51,41 @@ switch (platform) {
     appInfoOption = {
       appId: 'io.yaklang.irify',
       extraMetadata: { name: 'irify' },
-      productName: 'IRify',
+      productName: '智能化代码安全检测与验证系统',
       copyright: 'Copyright © 2021 v1ll4n',
     }
-    files = ['!app/assets/**/*', 'app/assets/irify-close.png', 'app/assets/yakitsslogo*', ...fixedFile]
-    macIcon = 'app/assets/yakitsslogo.icns'
-    linuxIcon = 'app/assets/yakitsslogo.icns'
-    winIcon = 'app/assets/yakitsslogo.ico'
-    nsisInstallerIcon = 'app/assets/yakitsslogo.ico'
-    nsisUninstallerIcon = 'app/assets/yakitsslogo.ico'
+    files = [
+      '!app/assets/**/*',
+      'app/assets/irify-close.png',
+      'app/assets/yakitsslogo*',
+      'app/assets/brand/diankeyuan*',
+      ...fixedFile,
+    ]
+    macIcon = 'app/assets/brand/diankeyuan.icns'
+    linuxIcon = 'app/assets/brand/diankeyuan.icns'
+    winIcon = 'app/assets/brand/diankeyuan.ico'
+    nsisInstallerIcon = 'app/assets/brand/diankeyuan.ico'
+    nsisUninstallerIcon = 'app/assets/brand/diankeyuan.ico'
     break
   case 'irifyEE':
     appInfoOption = {
       appId: 'io.yaklang.irifyee',
       extraMetadata: { name: 'irifyee' },
-      productName: 'IRifyEnpriTrace',
+      productName: '智能化代码安全检测与验证系统',
       copyright: 'Copyright © 2021 v1ll4n',
     }
-    files = ['!app/assets/**/*', 'app/assets/irify-close.png', 'app/assets/yakitsslogo*', ...fixedFile]
-    macIcon = 'app/assets/yakitsslogo.icns'
-    linuxIcon = 'app/assets/yakitsslogo.icns'
-    winIcon = 'app/assets/yakitsslogo.ico'
-    nsisInstallerIcon = 'app/assets/yakitsslogo.ico'
-    nsisUninstallerIcon = 'app/assets/yakitsslogo.ico'
+    files = [
+      '!app/assets/**/*',
+      'app/assets/irify-close.png',
+      'app/assets/yakitsslogo*',
+      'app/assets/brand/diankeyuan*',
+      ...fixedFile,
+    ]
+    macIcon = 'app/assets/brand/diankeyuan.icns'
+    linuxIcon = 'app/assets/brand/diankeyuan.icns'
+    winIcon = 'app/assets/brand/diankeyuan.ico'
+    nsisInstallerIcon = 'app/assets/brand/diankeyuan.ico'
+    nsisUninstallerIcon = 'app/assets/brand/diankeyuan.ico'
     break
   case 'memfit':
     appInfoOption = {

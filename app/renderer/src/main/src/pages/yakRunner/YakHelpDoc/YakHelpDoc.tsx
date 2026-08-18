@@ -15,6 +15,7 @@ import { WebsiteGV } from '@/enums/website'
 import { SafeMarkdown } from '@/pages/assetViewer/reportRenders/markdownRender'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import i18n from '@/i18n/i18n'
+import { isIRify } from '@/utils/envfile'
 
 const tOriginal = i18n.getFixedT(null, ['yakRunner', 'yakitUi'])
 
@@ -127,13 +128,15 @@ export const YakHelpDoc: React.FC<YakHelpDocProps> = (props) => {
       <div className={styles['header']}>
         <div className={styles['title']}>{t('YakRunner.helpDocumentation')}</div>
         <div className={styles['extra']}>
-          <Tooltip title={t('YakHelpDoc.goToOfficialDocs')}>
-            <YakitButton
-              icon={<OutlineGlobealtIcon />}
-              type="text2"
-              onClick={() => openExternalWebsite(WebsiteGV.YakHelpDocAddress)}
-            />
-          </Tooltip>
+          {!isIRify() && (
+            <Tooltip title={t('YakHelpDoc.goToOfficialDocs')}>
+              <YakitButton
+                icon={<OutlineGlobealtIcon />}
+                type="text2"
+                onClick={() => openExternalWebsite(WebsiteGV.YakHelpDocAddress)}
+              />
+            </Tooltip>
+          )}
         </div>
       </div>
       <div className={styles['filter-box']}>

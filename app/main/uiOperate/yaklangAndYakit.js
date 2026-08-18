@@ -55,6 +55,7 @@ module.exports = (win, getClient) => {
         EnpriTrace: fetchLatestYakitEEVersion,
         IRify: fetchLatestYakitIRifyVersion,
         'IRify-EnpriTrace': fetchLatestYakitIRifyEEVersion,
+        智能化代码安全检测与验证系统: fetchLatestYakitIRifyEEVersion,
         'Memfit AI': fetchLatestYakitMemfitVersion,
       }
       const fetchPromise = versionFetchers[releaseEditionName]

@@ -28,6 +28,7 @@ import { ShellScript } from '@/pages/webShell/models'
 import { shallow } from 'zustand/shallow'
 import { useMenuHeight } from '@/store/menuHeight'
 import { WebsiteGV } from '@/enums/website'
+import { isIRify } from '@/utils/envfile'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -211,14 +212,16 @@ export const CustomCodecEditor: React.FC<CustomCodecEditorProps> = React.memo((p
           <YakitButton type="primary" className={mitmStyles['button-save']} onClick={() => onSaveToDataBase()}>
             保存
           </YakitButton>
-          <Tooltip title="官方网站" placement="top" overlayClassName={mitmStyles['question-tooltip']}>
-            <YakitButton
-              type="outline2"
-              className={mitmStyles['button-question']}
-              onClick={() => openExternalWebsite(WebsiteGV.OfficialWebsite)}
-              icon={<QuestionMarkCircleIcon />}
-            ></YakitButton>
-          </Tooltip>
+          {!isIRify() && (
+            <Tooltip title="官方网站" placement="top" overlayClassName={mitmStyles['question-tooltip']}>
+              <YakitButton
+                type="outline2"
+                className={mitmStyles['button-question']}
+                onClick={() => openExternalWebsite(WebsiteGV.OfficialWebsite)}
+                icon={<QuestionMarkCircleIcon />}
+              ></YakitButton>
+            </Tooltip>
+          )}
           <div onClick={() => onClose()} className={mitmStyles['icon-remove']}>
             <RemoveIcon />
           </div>

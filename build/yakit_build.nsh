@@ -37,9 +37,9 @@ Function DirectoryPageShow
     ; 获取目录页面顶部文本控件的句柄
     GetDlgItem $1 $0 1006
     ${If} $IS_INSTALLED == "true"
-        SendMessage $1 ${WM_SETTEXT} 0 "STR:检测到程序已经安装。点击安装会将旧程序卸载并重新进行安装。安装程序会自动迁移 yakit-projects 文件夹。"
+        SendMessage $1 ${WM_SETTEXT} 0 "STR:检测到程序已经安装。点击安装会将旧程序卸载并重新进行安装。安装程序会自动迁移数据文件夹。"
     ${Else}
-        SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移 yakit-projects 文件夹。"
+        SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移数据文件夹。"
     ${EndIf}
 FunctionEnd
 
@@ -83,7 +83,7 @@ FunctionEnd
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_SHOWREADME
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "创建桌面快捷方式"
-!define MUI_FINISHPAGE_LINK "Yakit官网"
+!define MUI_FINISHPAGE_LINK "官方网站"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://yaklang.com"
 !insertmacro MUI_PAGE_FINISH
 
@@ -143,8 +143,14 @@ FunctionEnd
     StrCpy $INSTALL_PATH_REG_KEY_NAME "InstallPath"
     StrCpy $EXE_NAME "Yakit"
     StrCpy $ENV_VAR_NAME "YAKIT_HOME"  ; 默认环境变量名
-    ${StrStr} $0 $EXEFILE "EnpriTraceAgent"
-    ${If} $0 != "" ; se
+    ${StrStr} $0 $EXEFILE "智能化代码安全检测与验证系统"
+    ${If} $0 != "" ; irify/irifyee（新中文产品名，注册表键沿用 IRify/IRifyEnpriTrace 保持升级链路）
+        StrCpy $INSTALL_PATH_REG_KEY_NAME "IRify_InstallPath"
+        StrCpy $EXE_NAME "智能化代码安全检测与验证系统"
+        StrCpy $ENV_VAR_NAME "IRIFY_HOME"
+    ${Else}
+        ${StrStr} $0 $EXEFILE "EnpriTraceAgent"
+        ${If} $0 != "" ; se
         StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTraceAgent_InstallPath"
         StrCpy $EXE_NAME "EnpriTraceAgent"
         StrCpy $ENV_VAR_NAME "ENPRITRACEAGENT_HOME"  ; SE版本专用环境变量
@@ -177,6 +183,7 @@ FunctionEnd
             ${EndIf}
         ${EndIf}
     ${EndIf}
+    ${EndIf}
 
     ; 设置用户一开始的安装路径
     StrCpy $INSTDIR ""
@@ -190,7 +197,12 @@ FunctionEnd
     StrCpy $INSTALL_PATH_REG_KEY_NAME "InstallPath"
     StrCpy $EXE_NAME "Yakit"
     StrCpy $ENV_VAR_NAME "YAKIT_HOME"  ; 默认环境变量名
-    ${If} ${FileExists} `$INSTDIR\EnpriTraceAgent.exe` ; se
+    ${If} ${FileExists} `$INSTDIR\智能化代码安全检测与验证系统.exe` ; irify/irifyee 中文产品名
+        StrCpy $INSTALL_PATH_REG_KEY_NAME "IRify_InstallPath"
+        StrCpy $EXE_NAME "智能化代码安全检测与验证系统"
+        StrCpy $ENV_VAR_NAME "IRIFY_HOME"
+    ${Else}
+        ${If} ${FileExists} `$INSTDIR\EnpriTraceAgent.exe` ; se
         StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTraceAgent_InstallPath"
         StrCpy $EXE_NAME "EnpriTraceAgent"
         StrCpy $ENV_VAR_NAME "ENPRITRACEAGENT_HOME"
@@ -217,6 +229,7 @@ FunctionEnd
                     ${EndIf}
                 ${EndIf}
             ${EndIf}
+        ${EndIf}
         ${EndIf}
     ${EndIf}
 

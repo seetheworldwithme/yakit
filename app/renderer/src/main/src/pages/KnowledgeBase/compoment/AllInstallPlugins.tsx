@@ -21,6 +21,8 @@ import {
   OutlineRefreshIcon,
 } from '@/assets/icon/outline'
 import { YakitLogoSvgIcon, YakitSpinLogoSvgIcon } from '../icon/sidebarIcon'
+import { isIRify } from '@/utils/envfile'
+import diankeyuanIcon from '@/assets/diankeyuan-icon.png'
 import { onOpenLocalFileByPath } from '@/pages/notepadManage/notepadManage/utils'
 import { downloadWithEvents, exclude } from '../utils'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
@@ -233,7 +235,7 @@ const AllInstallPlugins: FC<AllInstallPluginsProps> = ({
               return (
                 <div className={styles['install-content-box']} key={it.InstallPath + key}>
                   <div className={styles['first-box']}>
-                    <YakitLogoSvgIcon />
+                    {isIRify() ? <img src={diankeyuanIcon} style={{ width: 20, height: 20 }} /> : <YakitLogoSvgIcon />}
                     <YakitSpinLogoSvgIcon className={styles['yakit-svg']} />
                   </div>
                   <div

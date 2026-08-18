@@ -392,13 +392,15 @@ const YakitQuestionModal: React.FC<AgrAndQSModalProps> = React.memo((props) => {
             <div className={styles['modal-body']}>
               <div className={styles['yakit-update-hint']}>{t('DownloadYakit.officialDownloadHint')}</div>
 
-              <div className={styles['yakit-update-link']}>
-                {t('DownloadYakit.website')}
-                <div className={styles['link-wrapper']}>
-                  {WebsiteGV.OfficialWebsite}
-                  <CopyComponents className={styles['copy-icon']} copyText={WebsiteGV.OfficialWebsite} />
+              {!isIRify() && (
+                <div className={styles['yakit-update-link']}>
+                  {t('DownloadYakit.website')}
+                  <div className={styles['link-wrapper']}>
+                    {WebsiteGV.OfficialWebsite}
+                    <CopyComponents className={styles['copy-icon']} copyText={WebsiteGV.OfficialWebsite} />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

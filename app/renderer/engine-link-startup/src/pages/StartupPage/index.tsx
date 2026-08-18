@@ -62,11 +62,12 @@ import yakitEELogo from '@/assets/yakitEELogo.png'
 import yakitEEDarkLogo from '@/assets/yakitEEDarkLogo.png'
 import yakitSELogo from '@/assets/yakitSELogo.png'
 import yakitSEDarkLogo from '@/assets/yakitSEDarkLogo.png'
-import irifyRight from '@/assets/irify-right.png'
 import yakitRight from '@/assets/yakit-right.png'
+import dkyLogo from '@/assets/diankeyuan-logo.png'
+import dkyLogoDark from '@/assets/diankeyuan-logo-dark.png'
 import memfitRight from '@/assets/memfit-right.webm'
 import memfitRightDark from '@/assets/memfit-right-dark.webm'
-import { SolidIrifyFontLogoIcon, SolidMemfitFontLogoIcon, SolidYakitFontLogoIcon } from '@/assets/colors'
+import { SolidMemfitFontLogoIcon, SolidYakitFontLogoIcon } from '@/assets/colors'
 import { useTheme } from '@/hooks/useTheme'
 import { SoftwareBasics } from './components/SoftwareBasics'
 import { yakitApp, yakitEngine } from '@/utils/electronBridge'
@@ -1162,7 +1163,7 @@ export const StartupPage: React.FC = () => {
     // ce
     if (isCommunityEdition()) {
       if (isCommunityIRify()) {
-        return { type: 'svg', component: SolidIrifyFontLogoIcon, width: 112, height: 41 }
+        return { type: 'img', src: theme === 'light' ? dkyLogo : dkyLogoDark, width: 168, height: 35 }
       } else if (isCommunityMemfit()) {
         return { type: 'svg', component: SolidMemfitFontLogoIcon, width: 112, height: 41 }
       } else {
@@ -1173,7 +1174,7 @@ export const StartupPage: React.FC = () => {
     // ee
     if (isEnpriTrace()) {
       if (isEnpriTraceIRify()) {
-        return { type: 'svg', component: SolidIrifyFontLogoIcon, width: 112, height: 41 }
+        return { type: 'img', src: theme === 'light' ? dkyLogo : dkyLogoDark, width: 168, height: 35 }
       } else if (isMemfit()) {
         return { type: 'svg', component: SolidMemfitFontLogoIcon, width: 112, height: 41 }
       } else {
@@ -1191,7 +1192,7 @@ export const StartupPage: React.FC = () => {
 
   const startupRightImg = useMemo(() => {
     if (isIRify()) {
-      return <img src={irifyRight} alt={t('StartupPage.no_image')} />
+      return null
     }
     if (isCommunityMemfit() || isMemfit())
       return (

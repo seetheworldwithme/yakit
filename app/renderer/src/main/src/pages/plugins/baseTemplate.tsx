@@ -54,6 +54,8 @@ import { aduitStatusToName, pluginTypeToName } from './builtInData'
 import { YakitDiffEditor } from '@/components/yakitUI/YakitDiffEditor/YakitDiffEditor'
 import UnLogin from '@/assets/unLogin.png'
 import YakitLogo from '@/assets/yakitLogo.png'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
+import { isIRify } from '@/utils/envfile'
 import type { YakitTagColor } from '@/components/yakitUI/YakitTag/YakitTagType'
 import { PluginSwitchTagToContent, PluginSwitchToTag } from '../pluginEditor/defaultconstants'
 import type { YakitSelectProps } from '@/components/yakitUI/YakitSelect/YakitSelectType'
@@ -959,8 +961,14 @@ export const PluginDetailsListItem: <T>(props: PluginDetailsListItemProps<T>) =>
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[pluginType]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[pluginType]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
         />
       )
     }

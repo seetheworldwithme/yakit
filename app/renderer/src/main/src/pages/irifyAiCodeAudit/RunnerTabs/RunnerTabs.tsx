@@ -28,7 +28,7 @@ import {
   OutlineSplitScreenIcon,
   OutlineXIcon,
 } from '@/assets/icon/outline'
-import { SolidIrifyMiniLogoIcon } from '@/assets/icon/colors'
+import diankeyuanIcon from '@/assets/diankeyuan-icon.png'
 import { YakRunnerOpenFolderIcon } from '../../yakRunner/icon'
 import { YakitEditor } from '@/components/yakitUI/YakitEditor/YakitEditor'
 import { IrifyAiCodeAuditSelectionMenu } from '../IrifyAiCodeAuditSelectionMenu'
@@ -1465,7 +1465,7 @@ export const YakRunnerWelcomePage: React.FC<YakRunnerWelcomePageProps> = memo(()
     <div className={styles['yak-runner-welcome-page']} ref={ref}>
       <div className={styles['title']}>
         <div className={styles['icon-style']}>
-          <SolidIrifyMiniLogoIcon />
+          <img src={diankeyuanIcon} style={{ width: 72, height: 72 }} />
         </div>
         <div className={styles['header-style']}>{t('welcomeTitle')}</div>
         <div className={styles['welcome-subtitle']}>{t('welcomeHint')}</div>

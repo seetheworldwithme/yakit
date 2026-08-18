@@ -34,9 +34,9 @@ export const getReleaseEditionName = () => {
     case PRODUCT_RELEASE_EDITION.BreachTrace:
       return 'BAS'
     case PRODUCT_RELEASE_EDITION.IRify:
-      return 'IRify'
+      return '智能化代码安全检测与验证系统'
     case PRODUCT_RELEASE_EDITION.IRifyEnpriTrace:
-      return 'IRify-EnpriTrace'
+      return '智能化代码安全检测与验证系统'
     case PRODUCT_RELEASE_EDITION.MEMFIT:
       return 'Memfit AI'
     default:
@@ -264,7 +264,7 @@ export const GetMainColor = (themeMode: Theme) => {
   switch (fetchEnv()) {
     case 'irify':
     case 'irify-enterprise':
-      return themeMode === 'dark' ? '#B081FF' : '#6A44A9'
+      return themeMode === 'dark' ? '#2BD588' : '#00A860'
     case 'memfit':
       return themeMode === 'dark' ? '#5E9DEA' : '#2E63B3'
     case 'enterprise':

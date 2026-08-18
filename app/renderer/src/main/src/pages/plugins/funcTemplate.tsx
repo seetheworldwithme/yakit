@@ -71,6 +71,8 @@ import { YakitSpin } from '@/components/yakitUI/YakitSpin/YakitSpin'
 import { PluginTestErrorIcon, PluginTestWarningIcon, PluginsGridCheckIcon } from './icon'
 import { YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
 import YakitLogo from '@/assets/yakitLogo.png'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
+import { isIRify } from '@/utils/envfile'
 import type { PluginFilterParams, PluginSearchParams } from './baseTemplateType'
 import { yakitNotify } from '@/utils/notification'
 import {
@@ -875,8 +877,14 @@ export const ListLayoutOpt: React.FC<ListLayoutOptProps> = memo((props) => {
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[type]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[type]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
         />
       )
     }
@@ -1129,8 +1137,14 @@ export const GridLayoutOpt: React.FC<GridLayoutOptProps> = memo((props) => {
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[type]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[type]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
         />
       )
     }

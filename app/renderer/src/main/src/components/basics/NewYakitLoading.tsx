@@ -20,7 +20,8 @@ import yakitEE from '@/assets/yakitEE.png'
 import yakitCE from '@/assets/yakit.jpg'
 import styles from './newYakitLoading.module.scss'
 import classNames from 'classnames'
-import { SolidIrifyMiniLogoIcon, SolidMemfitMiniLogoIcon } from '@/assets/icon/colors'
+import { SolidMemfitMiniLogoIcon } from '@/assets/icon/colors'
+import diankeyuanIcon from '@/assets/diankeyuan-icon.png'
 import { type TFunction, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 
 import IRifyPrimaryBg from '../../assets/uiLayout/IRifyPrimaryBg.png'
@@ -130,7 +131,7 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
         return (
           <div className={styles['yakit-loading-icon-wrapper']}>
             <div className={styles['white-icon']}>
-              <SolidIrifyMiniLogoIcon />
+              <img src={diankeyuanIcon} alt={t('YakitEmpty.noImage')} />
             </div>
           </div>
         )
@@ -159,7 +160,7 @@ export const NewYakitLoading: React.FC<NewYakitLoadingProp> = (props) => {
         return (
           <div className={styles['yakit-loading-icon-wrapper']}>
             <div className={styles['white-icon']}>
-              <SolidIrifyMiniLogoIcon />
+              <img src={diankeyuanIcon} alt={t('YakitEmpty.noImage')} />
             </div>
           </div>
         )

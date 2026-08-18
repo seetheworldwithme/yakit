@@ -27,6 +27,7 @@ import {
   isCommunityYakit,
   isEnpriTraceAgent,
   isEnterpriseEdition,
+  isIRify,
   isMemfit,
 } from '@/utils/envfile'
 import { AllKillEngineConfirm } from './AllKillEngineConfirm'
@@ -1766,7 +1767,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
 
                   {stopScreen}
 
-                  <HelpDoc system={system} />
+                  {!isIRify() && <HelpDoc system={system} />}
 
                   {engineLink && (
                     <>
@@ -1842,7 +1843,7 @@ const UILayout: React.FC<UILayoutProp> = (props) => {
                     </>
                   )}
 
-                  <HelpDoc system={system} />
+                  {!isIRify() && <HelpDoc system={system} />}
 
                   {stopScreen}
 

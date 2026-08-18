@@ -15,12 +15,8 @@ import yakitEEProject from '@/assets/yakitFontEE.png'
 import yakitSEProject from '@/assets/yakitFontSE.png'
 import yakitEEMiniProject from '@/assets/yakitEE.png'
 import yakitSEMiniProject from '@/assets/yakitSE.png'
-import {
-  SolidIrifyFontLogoIcon,
-  SolidIrifyMiniLogoIcon,
-  SolidMemfitFontLogoIcon,
-  SolidMemfitMiniLogoIcon,
-} from '@/assets/icon/colors'
+import diankeyuanLogo from '@/assets/diankeyuan-logo.png'
+import { SolidMemfitFontLogoIcon, SolidMemfitMiniLogoIcon } from '@/assets/icon/colors'
 
 const ProjectManage = React.lazy(() => import('./ProjectManage'))
 
@@ -35,7 +31,7 @@ interface SettingsMenuProp {
 }
 const ProjectLogo = (showMini: boolean) => {
   if (isIRify()) {
-    return showMini ? <SolidIrifyMiniLogoIcon className={styles['prject-logo-mini']} /> : <SolidIrifyFontLogoIcon />
+    return <img style={{ height: '100%' }} src={diankeyuanLogo} alt="暂无图片" />
   } else if (isEnpriTrace()) {
     return <img style={{ height: '100%' }} src={showMini ? yakitEEMiniProject : yakitEEProject} alt="暂无图片" />
   } else if (isEnpriTraceAgent()) {

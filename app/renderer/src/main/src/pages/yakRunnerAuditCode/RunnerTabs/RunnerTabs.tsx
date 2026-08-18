@@ -91,7 +91,7 @@ import { onSetSelectedSearchVal } from '../AuditSearchModal/AuditSearch'
 import { ConvertAuditStaticAnalyzeErrorToMarker, type IMonacoEditorMarker } from '@/utils/editorMarkers'
 import { getPathParent, grpcFetchCreateFile, grpcFetchSaveFile, monacaLanguageType } from '@/pages/yakRunner/utils'
 import { JSONParseLog } from '@/utils/tool'
-import { SolidIrifyMiniLogoIcon } from '@/assets/icon/colors'
+import diankeyuanIcon from '@/assets/diankeyuan-icon.png'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -1410,7 +1410,7 @@ export const AuditCodeWelcomePage: React.FC<AuditCodeWelcomePageProps> = memo((p
     <div className={styles['yak-runner-welcome-page']} ref={ref}>
       <div className={styles['title']}>
         <div className={styles['icon-style']}>
-          <SolidIrifyMiniLogoIcon />
+          <img src={diankeyuanIcon} style={{ width: 72, height: 72 }} />
         </div>
         <div className={styles['header-style']}>欢迎使用SyntaxFlow代码审计</div>
       </div>

@@ -34,6 +34,8 @@ import { YakEditor } from '@/utils/editors'
 import type { MitmStatus } from './MITMPage'
 import { AuthorImg } from '../plugins/funcTemplate'
 import YakitLogo from '@/assets/yakitLogo.png'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
+import { isIRify } from '@/utils/envfile'
 import UnLogin from '@/assets/unLogin.png'
 import { pluginTypeToName } from '../plugins/builtInData'
 import MITMContext from './Context/MITMContext'
@@ -332,8 +334,14 @@ export const MITMYakScriptLoader = React.memo((p: MITMYakScriptLoaderProps) => {
       }
       return (
         <AuthorImg
-          src={YakitLogo}
-          icon={<>{pluginTypeToName[Type]?.icon || <img src={YakitLogo} width={'100%'} height={'100%'} />}</>}
+          src={isIRify() ? dkyIcon : YakitLogo}
+          icon={
+            <>
+              {pluginTypeToName[Type]?.icon || (
+                <img src={isIRify() ? dkyIcon : YakitLogo} width={'100%'} height={'100%'} />
+              )}
+            </>
+          }
           wrapperClassName={style['plugin-local-headImg']}
         />
       )

@@ -46,6 +46,7 @@ import emiter from '@/utils/eventBus/eventBus'
 import { shallow } from 'zustand/shallow'
 import { useMenuHeight } from '@/store/menuHeight'
 import { WebsiteGV } from '@/enums/website'
+import { isIRify } from '@/utils/envfile'
 import {
   grpcClientMITMContentReplacerUpdate,
   grpcDisableTrafficGuard,
@@ -1046,18 +1047,20 @@ const MITMRule: React.FC<MITMRuleProp> = React.memo(
           </YakitButton>
           {ruleUse === 'mitm' && (
             <>
-              <Tooltip
-                title={t('MITMRule.official_website')}
-                placement="top"
-                overlayClassName={styles['question-tooltip']}
-              >
-                <YakitButton
-                  type="outline2"
-                  className={styles['button-question']}
-                  onClick={() => openExternalWebsite(WebsiteGV.OfficialWebsite)}
-                  icon={<QuestionMarkCircleIcon />}
-                ></YakitButton>
-              </Tooltip>
+              {!isIRify() && (
+                <Tooltip
+                  title={t('MITMRule.official_website')}
+                  placement="top"
+                  overlayClassName={styles['question-tooltip']}
+                >
+                  <YakitButton
+                    type="outline2"
+                    className={styles['button-question']}
+                    onClick={() => openExternalWebsite(WebsiteGV.OfficialWebsite)}
+                    icon={<QuestionMarkCircleIcon />}
+                  ></YakitButton>
+                </Tooltip>
+              )}
               <div onClick={() => onClose()} className={styles['icon-remove']}>
                 <RemoveIcon />
               </div>

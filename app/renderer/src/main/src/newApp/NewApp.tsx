@@ -305,6 +305,12 @@ function NewApp() {
     if (titleElement) {
       titleElement.textContent = getReleaseEditionName()
     }
+    if (isIRify()) {
+      const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null
+      if (favicon) {
+        favicon.href = '/favicon-irify.ico'
+      }
+    }
   }, [])
 
   const destroyMainWinAntdUi = useMemoizedFn(() => {

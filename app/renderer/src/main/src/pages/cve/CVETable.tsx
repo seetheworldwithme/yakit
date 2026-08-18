@@ -39,6 +39,7 @@ import { YakitAutoComplete, defYakitAutoCompleteRef } from '@/components/yakitUI
 import { CacheDropDownGV } from '@/yakitGV'
 import type { YakitAutoCompleteRefProps } from '@/components/yakitUI/YakitAutoComplete/YakitAutoCompleteType'
 import { YakitRoute } from '@/enums/yakitRoute'
+import { isIRify } from '@/utils/envfile'
 
 export interface CVETableProp {
   available: boolean
@@ -603,7 +604,7 @@ export const DatabaseUpdateModal: React.FC<DatabaseUpdateModalProps> = React.mem
           >
             {url}
           </a>
-          , 下载后请将文件放在"安装目录/yakit-projects"文件夹下
+          , 下载后请将文件放在"安装目录{isIRify() ? '/数据目录' : '/yakit-projects'}"文件夹下
         </p>
       ),
     [props.latestMode],
