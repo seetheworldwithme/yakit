@@ -25,6 +25,8 @@ import {
   OutlineXIcon,
 } from '@/assets/icon/outline'
 import { SolidYakCattleNoBackColorIcon } from '@/assets/icon/colors'
+import diankeyuanIcon from '@/assets/diankeyuan-icon.png'
+import { isIRify } from '@/utils/envfile'
 import { YakRunnerOpenFileIcon, YakRunnerOpenFolderIcon } from '../icon'
 import { YakitEditor } from '@/components/yakitUI/YakitEditor/YakitEditor'
 import { useDebounceFn, useLongPress, useMemoizedFn, useSize, useThrottleFn, useUpdateEffect } from 'ahooks'
@@ -965,7 +967,11 @@ export const YakJavaDecompilerWelcomePage: React.FC<YakJavaDecompilerWelcomePage
     <div className={styles['yak-runner-welcome-page']} ref={ref}>
       <div className={styles['title']}>
         <div className={styles['icon-style']}>
-          <SolidYakCattleNoBackColorIcon />
+          {isIRify() ? (
+            <img src={diankeyuanIcon} style={{ width: 72, height: 72 }} />
+          ) : (
+            <SolidYakCattleNoBackColorIcon />
+          )}
         </div>
         <div className={styles['header-style']}>欢迎使用 Java 反编译</div>
       </div>

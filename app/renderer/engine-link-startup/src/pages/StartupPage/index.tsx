@@ -1218,7 +1218,7 @@ export const StartupPage: React.FC = () => {
               <startupLogo.component style={{ height: startupLogo.height, width: startupLogo.width }} />
             )}
           </div>
-          <div className={styles['startup-desc']}>{t('StartupPage.born_for_cybersecurity')}</div>
+          {!isIRify() && <div className={styles['startup-desc']}>{t('StartupPage.born_for_cybersecurity')}</div>}
         </div>
         <YaklangEngineWatchDog
           credential={credential}

@@ -48,7 +48,7 @@ const HISTORY_SOURCE_FILTER_OPTIONS: {
   title: string
   icon: ReactNode
 }[] = [
-  { key: 'local', title: 'Yakit 本地会话', icon: <OutlineDesktopcomputerIcon /> },
+  { key: 'local', title: '本地会话', icon: <OutlineDesktopcomputerIcon /> },
   { key: 'feishu', title: '飞书会话', icon: <FeishuIcon /> },
   { key: 'dingtalk', title: '钉钉会话', icon: <DingtalkIcon /> },
 ]

@@ -97,7 +97,7 @@ import {
 import { WebsiteGV } from '@/enums/website'
 
 import YakitLogo from '@/assets/yakitLogo.png'
-import dkyLogo from '@/assets/diankeyuan-logo.png'
+import dkyIcon from '@/assets/diankeyuan-icon.png'
 import yakitImg from '../../assets/yakit.jpg'
 import classNames from 'classnames'
 import styles from './funcDomain.module.scss'
@@ -1309,7 +1309,7 @@ const UIOpUpdateYakit: React.FC<UIOpUpdateProps> = React.memo((props) => {
       <div className={styles['update-header-wrapper']}>
         <div className={styles['header-info']}>
           <div className={styles['update-icon']}>
-            <YakitWhiteSvgIcon />
+            {isIRify() ? <img src={dkyIcon} width={20} height={20} /> : <YakitWhiteSvgIcon />}
           </div>
           <div>
             <div className={styles['update-title']}>
@@ -1441,7 +1441,7 @@ const UIOpUpdateYaklang: React.FC<UIOpUpdateProps> = React.memo((props) => {
       <div className={styles['update-header-wrapper']}>
         <div className={styles['header-info']}>
           <div className={styles['update-icon']}>
-            <img src={isIRify() ? dkyLogo : YakitLogo} width={30} />
+            <img src={isIRify() ? dkyIcon : YakitLogo} width={20} height={20} />
           </div>
           <div
             style={{

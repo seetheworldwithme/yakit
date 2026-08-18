@@ -233,8 +233,8 @@
 }
 
 .audit-mode-badge-online {
-  background: var(--Colors-Use-Purple-Primary);
-  color: var(--Colors-Use-Purple-On-Primary);
+  background: var(--Colors-Use-Main-Primary);
+  color: var(--Colors-Use-Main-On-Primary);
 }
 
 .audit-mode-badge-offline {
@@ -385,7 +385,7 @@
   }
 
   &:hover {
-    color: var(--Colors-Use-Purple-Primary);
+    color: var(--Colors-Use-Main-Primary);
     opacity: 0.85;
   }
 }

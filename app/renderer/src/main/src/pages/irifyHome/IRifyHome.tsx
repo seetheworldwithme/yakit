@@ -50,25 +50,25 @@ const RISK_STAT_CONFIG = [
     severities: ['critical'],
     styleKey: 'serious',
     Icon: IRifyHomeSeriousIcon,
-    enLabel: 'Serious',
+    zhLabel: '严重',
   },
   {
     severities: ['high'],
     styleKey: 'high',
     Icon: IRifyHomeHighIcon,
-    enLabel: 'High',
+    zhLabel: '高危',
   },
   {
     severities: ['medium', 'middle', 'warn'],
     styleKey: 'medium',
     Icon: IRifyHomeMediumIcon,
-    enLabel: 'Medium',
+    zhLabel: '中危',
   },
   {
     severities: ['low'],
     styleKey: 'low',
     Icon: IRifyHomeLowIcon,
-    enLabel: 'Low',
+    zhLabel: '低危',
   },
 ] as const
 
@@ -157,7 +157,7 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
     const Icon = config.Icon
     const count = item?.Count ?? 0
     const percent = item?.Percent ?? 0
-    const verbose = item?.Verbose ?? config.enLabel
+    const verbose = item?.Verbose ?? config.zhLabel
 
     return (
       <div className={classNames(styles['risk-stat-item'], styles[`risk-stat-item-${config.styleKey}`])}>
@@ -169,7 +169,7 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
             <div className={styles['risk-stat-label-title']}>
               {verbose}({percent.toFixed(1)}%)
             </div>
-            <div className={styles['risk-stat-label-sub-title']}>{config.enLabel}</div>
+            <div className={styles['risk-stat-label-sub-title']}>{config.zhLabel}</div>
           </div>
         </div>
         <div className={styles['risk-stat-count']}>{count}</div>

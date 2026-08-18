@@ -343,10 +343,12 @@ const Table = <T extends any>(props: TableVirtualResizeProps<T>) => {
     () => {
       //为了出现滚动条以便于滚动加载
       if (!containerRef || !wrapperRef) return
-      // containerRef 中的数据没有铺满 tableRef,那么就要请求更多的数据
+      // loading 中(容器被 spin 遮罩/高度塌陷)时测量不可信，且会与重查形成循环，直接跳过
+      if (loading) return
+      // containerRef(滚动容器)中的数据没有铺满 containerRef 自身,那么就要请求更多的数据
       const containerHeight = containerRef.current?.clientHeight
-      const tableHeight = tableRef.current?.clientHeight
-      if (pagination && pagination.onChange && containerHeight && containerHeight <= tableHeight) {
+      const contentHeight = wrapperRef.current?.scrollHeight
+      if (pagination && pagination.onChange && containerHeight && contentHeight && containerHeight >= contentHeight) {
         const hasMore = pagination.total == data.length
         if (!hasMore) {
           prePage.current = 1
@@ -354,7 +356,7 @@ const Table = <T extends any>(props: TableVirtualResizeProps<T>) => {
         }
       }
     },
-    [tableRef.current?.clientHeight, isRefresh],
+    [tableRef.current?.clientHeight, wrapperRef.current?.scrollHeight, isRefresh, loading],
     { wait: 200 },
   )
   useEffect(() => {
