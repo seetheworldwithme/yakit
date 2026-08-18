@@ -414,10 +414,15 @@ git push -u debrand feat/irify-debrand   # 首次推送
 ### 产品名：智能化代码安全检测与验证系统
 
 - **改法（中枢，一处生效）**：`utils/envfile.tsx` 的 `getReleaseEditionName()`——`IRify` case 返回 `'智能化代码安全检测与验证系统'`，`IRifyEnpriTrace` case 返回 `'智能化代码安全检测与验证系统'`（企业版可带后缀，如「（企业版）」，到时按需定）。
-- **注意**：函数是**全变体共享**，只改 IRify 两个 case，其它版本返回值不动。
-- **改完后全局 grep 硬编码**：`rg -n "IRify" app/renderer/src/main/src app/renderer/engine-link-startup/src`（排除 `isIRify()` 等代码标识符），页面上残留的「IRify」展示文案逐个处理（启动页、关于、登录页、`document.title` 等）。
+- **⚠️ 注意：名字不only是文案，还是跨进程查找键**。`getReleaseEditionName()` 的返回值会被传给主进程，作为以下两处的 **map 查找键**，改了字符串但没同步这些键会导致版本检查/升级下载 fallback 到 Yakit 社区版逻辑：
+  - `app/main/uiOperate/yaklangAndYakit.js:57` 与 `app/main/newUiOperate/yaklangAndYakit.js:57` 的 `versionFetchers` 表：`'IRify-EnpriTrace': fetchLatestYakitIRifyEEVersion`（还有 `'IRify'`、`'Yakit'` 等键同理）
+  - 传递链路：Link 渲染端 `pages/StartupPage/grpc.ts` 调 `getReleaseEditionName()` → IPC `fetch-latest-yakit-version` → 主进程按名字查表
+- **处理规则**：改 `getReleaseEditionName()` 的 IRify 两个 case 时，**同步**修改主进程两个 `yaklangAndYakit.js` 里 `versionFetchers` 的对应键（新旧键都保留亦可：把新产品名也映射到 `fetchLatestYakitIRifyEEVersion` / `fetchLatestYakitIRifyVersion`，旧键暂留不删，便于回滚）。
+- **`app/main/handlers/utils/network.js:300` 的 `IRifyEE.name: 'IRifyEnpriTrace'` 不改**——它用于拼 OSS 升级包下载 URL（`.../svip/{version}/IRifyEnpriTrace-{version}-...dmg`），是 yaklang 服务器上的真实文件名，改了会 404。
+- **注意**：`getReleaseEditionName` 是**全变体共享**的 switch，只改 IRify 两个 case，其它版本返回值不动。**Link 渲染端有同名函数**（`engine-link-startup/src/utils/envfile.tsx:19` 的 `getReleaseEditionName`，同样返回 `'IRify-EnpriTrace'`），启动页的提示文案用它的返回值（如「未关闭{产品名}再次连接引擎」），**两处都要改**。
+- **改完后全局 grep 硬编码**：`rg -n "IRify" app/renderer/src/main/src app/renderer/engine-link-startup/src`（排除 `isIRify()` 等代码标识符），页面上残留的「IRify」/「IRify-EnpriTrace」展示文案逐个处理（启动页、关于、登录页、`document.title` 等）。
 - **短名/标题场景**：产品名较长，`document.title`、窗口标题、启动页大标题等空间受限处可用短名「智能代码安全检测」或按截图实测调整，避免截断换行。
-- **验收**：界面标题、窗口标题、启动页、登录页等处不再出现「IRify」字样；`rg` 展示文案级残留为零。
+- **验收**：界面标题、窗口标题、启动页、登录页等处不再出现「IRify」「IRify-EnpriTrace」字样；`rg` 展示文案级残留为零；启动页版本检查仍走 IRify EE 通道（控制台无 fallback 到 Yakit 的迹象）。
 
 ## 改 UI 的标准操作流程（SOP）
 

@@ -10,7 +10,7 @@
 
 - [ ] 派生品牌图：从 `app/assets/brand/电科院LOGO.jpg` 生成透明横版 PNG / 深色版 / 方形多尺寸图标（.ico/.icns）
 - [ ] 主题色国网绿：`envfile.tsx` `GetMainColor()` 的 irify/irify-enterprise 分支改国网绿（dark `#2BD588` / light `#00A860`）；Link 端 `theme.ts` 同步；排查紫色硬编码残留（`B081FF`/`6A44A9`）
-- [ ] 产品名：`envfile.tsx` `getReleaseEditionName()` IRify 两个 case 改「智能化代码安全检测与验证系统」+ 全局 grep 页面展示级「IRify」残留（document.title、启动页、登录页等）
+- [ ] 产品名：`envfile.tsx` `getReleaseEditionName()` IRify 与 IRifyEnpriTrace 两个 case 改「智能化代码安全检测与验证系统」——注意 IRify-EnpriTrace 也是跨进程查找键，需同步主进程两个 `yaklangAndYakit.js` 的 versionFetchers 键（`network.js` 的 OSS 文件名键 `IRifyEnpriTrace` 不改），Link 端有同名函数 `engine-link-startup/src/utils/envfile.tsx` 也要改 + 全局 grep 页面展示级「IRify / IRify-EnpriTrace」残留（document.title、启动页、登录页等）
 - [ ] 启动页（Link 渲染端）：Yakit / IRify logo、品牌文案与外链（`StartupPage/index.tsx`、`IRifyLogo.png`、`irify-right.png`、`UpdateYakitHint`、`YakitLoading`）；logo 位替换为电科院横版图
 - [ ] 启动页更新检查：IRify 跳过 Yakit 软件更新检查，避免强制升级弹窗阻塞启动 + 品牌暴露（`LocalEngine/index.tsx`，对照 SE 跳过先例）
 - [ ] 主界面侧边栏/顶栏：`FuncDomain.tsx` 的 `YakitLogo` 引用与版本历史等 `WebsiteGV` 入口；侧边栏 logo 位替换为电科院横版图
