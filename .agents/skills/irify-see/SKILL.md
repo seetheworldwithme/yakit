@@ -11,9 +11,10 @@ description: 通过 CDP 读取当前正在运行的 IRify(Electron) 页面——
 
 1. **IRify 必须以 debug 命令启动**，才会开放 CDP 9222 端口：
    ```bash
-   yarn dev-irify:debug
+   yarn dev-irify-ee-no-license:debug   # IRify 企业版（免 License），日常调试用这个
+   yarn dev-irify:debug                 # IRify 社区版
    ```
-   （不要用 `yarn start-renders-irify` + `yarn start-electron`，那样没有 CDP 端口，脚本连不上。）
+   （不要用不带 `:debug` 的命令，那样没有 CDP 端口，脚本连不上。）
 2. **应用窗口已打开**且主渲染页（localhost:3000）已加载完成。
 3. **Python 依赖**：脚本用到 `websocket-client`。首次报 `ModuleNotFoundError: websocket` 时安装一次：
    ```bash
@@ -55,7 +56,7 @@ description: 通过 CDP 读取当前正在运行的 IRify(Electron) 页面——
 
 | 报错 | 原因 / 处理 |
 |---|---|
-| `连不上 CDP(127.0.0.1:9222)` | 没用 `:debug` 命令启动，或应用没起来。用 `yarn dev-irify:debug` 重启。 |
+| `连不上 CDP(127.0.0.1:9222)` | 没用 `:debug` 命令启动，或应用没起来。用 `yarn dev-irify-ee-no-license:debug`（企业版）或 `yarn dev-irify:debug`（社区版）重启。 |
 | `没找到 :3000 主页面 target` | 渲染进程没加载完，或窗口未显示。等应用完全打开后再跑。 |
 | `ModuleNotFoundError: No module named 'websocket'` | `pip install websocket-client`。 |
 | 截图还是旧画面 | 热更新未完成。等几秒重跑，或 Read 截图前确认文件时间戳已更新。 |

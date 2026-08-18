@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 irify-see.py — 一键查看当前 IRify(Electron) 页面
-依赖：IRify 以 yarn dev-irify:debug 启动（CDP 端口 9222）
+依赖：IRify 以 yarn dev-irify-ee-no-license:debug（企业版）或 yarn dev-irify:debug（社区版）启动（CDP 端口 9222）
 作用：连到主渲染页，打印 当前URL/标题/激活域/可见标签/页面正文摘要，并截图到脚本同目录 irify-cdp.png
 用法：
   python3 .agents/skills/irify-see/irify-see.py            # 摘要 + 截图
@@ -30,7 +30,7 @@ def get_page_target():
     try:
         targets = json.load(urllib.request.urlopen(f"{CDP}/json", timeout=5))
     except Exception as e:
-        fail(f"连不上 CDP({CDP})——IRify 是否用 yarn dev-irify:debug 启动？({e})")
+        fail(f"连不上 CDP({CDP})——IRify 是否用 yarn dev-irify-ee-no-license:debug 启动？({e})")
     pages = [t for t in targets if t.get("type") == "page" and "3000" in t.get("url", "")]
     if not pages:
         fail("没找到 :3000 主页面 target。")

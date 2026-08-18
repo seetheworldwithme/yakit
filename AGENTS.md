@@ -448,12 +448,16 @@ git push -u debrand feat/irify-debrand   # 首次推送
 ### 启动 IRify（dev）
 
 ```bash
-yarn dev-irify            # 常规 dev：起 IRify 两渲染端 + Electron
-yarn dev-irify:debug      # debug dev：同上，但 Electron 开 CDP 9222 端口（供 irify-see 连接）
+yarn dev-irify                        # 社区版 dev：起 IRify 两渲染端 + Electron
+yarn dev-irify:debug                  # 同上，Electron 开 CDP 9222（供 irify-see 连接）
+yarn dev-irify-ee-no-license          # IRify 企业版（免 License）dev
+yarn dev-irify-ee-no-license:debug    # 同上，开 CDP 9222 —— 常用调试命令
 ```
 
-> 日常改 UI 用 `dev-irify:debug` 一步到位：渲染端热更新 + CDP 可连。主进程只在**打包版**拦截 `--remote-debugging-port`，dev 模式不拦截。
-> 等价手动方式：`yarn start-renders-irify`，待 :3000 与 :5173 就绪（端口监听 + curl 出有效 HTML）后 `yarn start-electron:debug`。
+> 企业版 no-license 的原理：主渲染端 env 多注入 `REACT_APP_REQUIRE_ENTERPRISE_LICENSE=false`（复用 `enterpriseNoLicense` env 段），跳过 `EnterpriseJudgeLogin` 的 License 校验页；Link 端与普通 IRify EE 相同。IRify EE 属企业系（`isEnterpriseEdition()` 为 true），走企业登录/独立企业数据库路径。
+>
+> 日常改 UI 用 `:debug` 一步到位：渲染端热更新 + CDP 可连。主进程只在**打包版**拦截 `--remote-debugging-port`，dev 模式不拦截。
+> 等价手动方式：`yarn start-render-irify-enterprise-no-license` + `yarn start-link-render-irify-enterprise`，待 :3000 与 :5173 就绪（端口监听 + curl 出有效 HTML）后 `yarn start-electron:debug`。
 
 ### irify-see skill（改前看 / 改后验的眼睛）
 

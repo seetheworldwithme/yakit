@@ -118,6 +118,7 @@
     "electron-render-simple-enterprise": "env-cmd -e noBrouser,devTool,simpleEE -f ./.env-cmdrc vite --mode simpleEE",
     "electron-render-irify": "env-cmd -e noBrouser,devTool,irify -f ./.env-cmdrc vite --mode irify",
     "electron-render-irify-enterprise": "env-cmd -e noBrouser,devTool,irifyEnterprise -f ./.env-cmdrc vite --mode irifyEnterprise",
+    "electron-render-irify-enterprise-no-license": "env-cmd -e noBrouser,devTool,irifyEnterprise,enterpriseNoLicense -f ./.env-cmdrc vite --mode irifyEnterprise",
     "electron-render-memfit": "env-cmd -e noBrouser,devTool,memfit -f ./.env-cmdrc vite --mode memfit",
     "build": "cross-env GENERATE_SOURCEMAP=false vite build",
     "build-test": "env-cmd -e devTool -f ./.env-cmdrc cross-env GENERATE_SOURCEMAP=false vite build",
