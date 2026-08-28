@@ -973,7 +973,7 @@ export const YakJavaDecompilerWelcomePage: React.FC<YakJavaDecompilerWelcomePage
             <SolidYakCattleNoBackColorIcon />
           )}
         </div>
-        <div className={styles['header-style']}>欢迎使用 Java 反编译</div>
+        <div className={styles['header-style']}>欢迎智能化代码安全检测与验证系统Java反编译工作台</div>
       </div>
       <div className={styles['operate-box']} style={size && size.width < 600 ? { padding: '0px 20px' } : {}}>
         <div className={styles['operate']}>
