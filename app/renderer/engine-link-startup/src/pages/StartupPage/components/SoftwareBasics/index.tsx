@@ -12,7 +12,7 @@ import { yakitApp, yakitShell } from '@/utils/electronBridge'
 import { useCountDown, useInViewport, useMemoizedFn } from 'ahooks'
 import { OutlineExitIcon } from '@/assets/outline'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
-import { isCommunityYakit } from '@/utils/envfile'
+import { isCommunityYakit, isIRify } from '@/utils/envfile'
 import { type Lange, normalizeLang, useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 import classNames from 'classnames'
 import styles from './SoftwareBasics.module.scss'
@@ -247,6 +247,7 @@ export const SoftwareBasics: React.FC<SoftwareBasicsProps> = React.memo((props) 
       onClick={handleUserInteraction}
       style={{ gap: softLang === 'en' ? 6 : 10 }}
     >
+      {isIRify() && <div className={styles['welcome-title']}>{t('SoftwareBasics.welcomeTitle')}</div>}
       <div className={styles['softwareBasics-item']}>
         <div className={styles['softwareBasics-item-title']}>
           {t('SoftwareBasics.workspace')}&nbsp;&nbsp;
