@@ -155,28 +155,6 @@
   color: var(--Colors-Use-Basic-Background);
 }
 
-.audit-mode-card-ghost {
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  fill: linear-gradient(195deg, var(--Colors-Use-Main-Focus) 0%, rgba(0, 168, 96, 0.2) 98.93%);
-}
-
-.audit-mode-card-divergency {
-  position: absolute;
-  top: 0px;
-  right: 20px;
-  width: 153px;
-  height: 99px;
-  border-radius: 153px;
-  background: var(--Colors-Use-Magenta-Primary);
-  filter: blur(65px);
-  // svg {
-  //   width: 153px;
-  //   height: 99px;
-  // }
-}
-
 .audit-mode-card-secondary {
   background: var(--Colors-Use-Main-Focus);
   gap: 12px;

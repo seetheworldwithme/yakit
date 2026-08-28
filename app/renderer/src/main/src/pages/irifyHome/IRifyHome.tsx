@@ -28,7 +28,6 @@ import {
   PublicRuleManagementIcon,
 } from '@/routes/publicIcon'
 import {
-  IRifyHomeGhostIcon,
   IRifyHomeHighIcon,
   IRifyHomeLowIcon,
   IRifyHomeMediumIcon,
@@ -220,10 +219,6 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
 
             <div className={styles['audit-mode-section']}>
               <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-primary`])}>
-                <div className={styles['audit-mode-card-ghost']}>
-                  <IRifyHomeGhostIcon />
-                </div>
-                <div className={styles['audit-mode-card-divergency']} />
                 <div className={styles['audit-mode-card-header']}>
                   <div className={styles['audit-mode-card-title-row']}>
                     <div className={classNames(styles['audit-mode-card-icon'], styles['audit-mode-card-icon-primary'])}>
@@ -257,10 +252,6 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
                 </div>
               </div>
               <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-primary`])}>
-                <div className={styles['audit-mode-card-ghost']}>
-                  <IRifyHomeGhostIcon />
-                </div>
-                <div className={styles['audit-mode-card-divergency']} />
                 <div className={styles['audit-mode-card-header']}>
                   <div className={styles['audit-mode-card-title-row']}>
                     <div className={classNames(styles['audit-mode-card-icon'], styles['audit-mode-card-icon-primary'])}>
