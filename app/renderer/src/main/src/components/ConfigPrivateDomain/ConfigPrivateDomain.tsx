@@ -278,7 +278,10 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
           <div className="icon-box">
             <img src={isIRify() ? dkyIcon : yakitImg} className="type-icon-img" />
           </div>
-          <div className="title-box">{t('ConfigPrivateDomain.enterpriseLogin')}</div>
+          <div className="title-box">
+            <div className="title-welcome">{t('ConfigPrivateDomain.enterpriseLoginWelcome')}</div>
+            <div className="title-main">{t('ConfigPrivateDomain.enterpriseLoginTitle')}</div>
+          </div>
         </div>
       )}
       <Form {...layout} form={form} name="control-hooks" onFinish={(v) => onFinish(v)} size="small">
