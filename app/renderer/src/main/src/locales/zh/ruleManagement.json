@@ -1,6 +1,6 @@
 {
   "LocalRuleGroupList": {
-    "title": "规则管理",
+    "title": "检测规则",
     "searchPlaceholder": "请输入组名",
     "uploadTitle": "上传提示",
     "uploadContent": "如果存在同名规则库，会直接覆盖",

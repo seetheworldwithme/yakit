@@ -347,7 +347,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           </div>
         </>
       )}
-      {mode === '代码审计' && (
+      {mode === (isIRify() ? '静态代码扫描' : '代码审计') && (
         <>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Project_Manager)}>
             <div className={styles['menu-icon-wrapper']}>
@@ -355,7 +355,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicProjectManagerIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.projectManagement')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyScanProject')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Audit_Code)}>
@@ -364,7 +364,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicAuditCodeIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.codeAudit')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyStaticAnalysis')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Irify_AI_Code_Audit)}>
@@ -373,7 +373,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicAIAgentIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.irifyAiCodeAudit')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyIntelligentAudit')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Code_Scan)}>
@@ -382,7 +382,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicCodeScanIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.codeScan')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyScanTask')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Rule_Management)}>
@@ -391,7 +391,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicRuleManagementIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.ruleManagement')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyDetectionRule')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.YakRunner_Audit_Hole)}>
@@ -400,7 +400,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                 <PublicAuditHoleIcon />
               </div>
             </div>
-            <div className={styles['title-style']}>{t('YakitRoute.auditVulnerability')}</div>
+            <div className={styles['title-style']}>{t('YakitRoute.irifyVulnerabilityResult')}</div>
           </div>
           <div className={styles['divider-style']}></div>
           <div className={styles['vertical-menu-wrapper']} onClick={() => onMenu(YakitRoute.Yak_Java_Decompiler)}>
@@ -413,7 +413,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
           </div>
         </>
       )}
-      {mode === '数据库' && (
+      {mode === (isIRify() ? '报告中心' : '数据库') && (
         <>
           {isIRify() ? (
             <div className={styles['multiple-vertical-menu-wrapper']}>
@@ -423,7 +423,7 @@ export const MenuMode: React.FC<MenuModeProps> = React.memo((props) => {
                     <PublicReportIcon />
                   </div>
                 </div>
-                <div className={styles['title-style']}>{t('YakitRoute.report')}</div>
+                <div className={styles['title-style']}>{t('YakitRoute.irifyDetectionReport')}</div>
               </div>
             </div>
           ) : (

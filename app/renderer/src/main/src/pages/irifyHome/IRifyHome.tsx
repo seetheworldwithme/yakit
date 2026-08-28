@@ -227,6 +227,73 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
                 <div className={styles['audit-mode-card-header']}>
                   <div className={styles['audit-mode-card-title-row']}>
                     <div className={classNames(styles['audit-mode-card-icon'], styles['audit-mode-card-icon-primary'])}>
+                      <PublicAuditCodeIcon />
+                    </div>
+                    <span className={styles['audit-mode-card-title']}>{t('AuditMode.traditionalCodeAudit')}</span>
+
+                    <span className={classNames(styles['audit-mode-badge'], styles['audit-mode-badge-offline'])}>
+                      {t('AuditMode.offline')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles['audit-mode-features']}>
+                  <div className={styles['audit-mode-feature-item']}>
+                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
+                    <span>{t('AuditMode.traditionalFeature1')}</span>
+                  </div>
+                  <div className={styles['audit-mode-feature-item']}>
+                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
+                    <span>{t('AuditMode.traditionalFeature2')}</span>
+                  </div>
+                </div>
+
+                <div
+                  className={styles['audit-mode-button']}
+                  onClick={() => onOpenPage(YakitRoute.YakRunner_Audit_Code)}
+                >
+                  {t('AuditMode.startAudit')}
+                  <OutlineArrowsmrightIcon />
+                </div>
+              </div>
+              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-primary`])}>
+                <div className={styles['audit-mode-card-ghost']}>
+                  <IRifyHomeGhostIcon />
+                </div>
+                <div className={styles['audit-mode-card-divergency']} />
+                <div className={styles['audit-mode-card-header']}>
+                  <div className={styles['audit-mode-card-title-row']}>
+                    <div className={classNames(styles['audit-mode-card-icon'], styles['audit-mode-card-icon-primary'])}>
+                      <PublicCodeScanIcon />
+                    </div>
+                    <span className={styles['audit-mode-card-title']}>{t('AuditMode.codeScan')}</span>
+                  </div>
+                </div>
+
+                <div className={styles['audit-mode-features']}>
+                  <div className={styles['audit-mode-feature-item']}>
+                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
+                    <span>{t('AuditMode.scanFeature1')}</span>
+                  </div>
+                  <div className={styles['audit-mode-feature-item']}>
+                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
+                    <span>{t('AuditMode.scanFeature2')}</span>
+                  </div>
+                  <div className={styles['audit-mode-feature-item']}>
+                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
+                    <span>{t('AuditMode.scanFeature3')}</span>
+                  </div>
+                </div>
+
+                <div className={styles['audit-mode-button']} onClick={() => onOpenPage(YakitRoute.YakRunner_Code_Scan)}>
+                  {t('AuditMode.startScan')}
+                  <OutlineArrowsmrightIcon />
+                </div>
+              </div>
+              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-secondary`])}>
+                <div className={styles['audit-mode-card-header']}>
+                  <div className={styles['audit-mode-card-title-row']}>
+                    <div className={styles['audit-mode-card-icon']}>
                       <PublicAIAuditCodeIcon />
                     </div>
                     <span className={styles['audit-mode-card-title']}>{t('AuditMode.aiCodeAudit')}</span>
@@ -260,14 +327,10 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
                   <OutlineArrowsmrightIcon />
                 </div>
               </div>
-              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-primary`])}>
-                <div className={styles['audit-mode-card-ghost']}>
-                  <IRifyHomeGhostIcon />
-                </div>
-                <div className={styles['audit-mode-card-divergency']} />
+              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-secondary`])}>
                 <div className={styles['audit-mode-card-header']}>
                   <div className={styles['audit-mode-card-title-row']}>
-                    <div className={classNames(styles['audit-mode-card-icon'], styles['audit-mode-card-icon-primary'])}>
+                    <div className={styles['audit-mode-card-icon']}>
                       <OutlineAIIcon />
                     </div>
                     <span className={styles['audit-mode-card-title']}>{t('AuditMode.aiSkillAudit')}</span>
@@ -298,69 +361,6 @@ const IRifyHome: React.FC<IRifyHomeProps> = () => {
                 </div>
                 <div className={styles['audit-mode-button']} onClick={() => onOpenIrifyAiCodeAudit('skill')}>
                   {t('AuditMode.startAiSkillAudit')}
-                  <OutlineArrowsmrightIcon />
-                </div>
-              </div>
-              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-secondary`])}>
-                <div className={styles['audit-mode-card-header']}>
-                  <div className={styles['audit-mode-card-title-row']}>
-                    <div className={styles['audit-mode-card-icon']}>
-                      <PublicAuditCodeIcon />
-                    </div>
-                    <span className={styles['audit-mode-card-title']}>{t('AuditMode.traditionalCodeAudit')}</span>
-
-                    <span className={classNames(styles['audit-mode-badge'], styles['audit-mode-badge-offline'])}>
-                      {t('AuditMode.offline')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={styles['audit-mode-features']}>
-                  <div className={styles['audit-mode-feature-item']}>
-                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
-                    <span>{t('AuditMode.traditionalFeature1')}</span>
-                  </div>
-                  <div className={styles['audit-mode-feature-item']}>
-                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
-                    <span>{t('AuditMode.traditionalFeature2')}</span>
-                  </div>
-                </div>
-
-                <div
-                  className={styles['audit-mode-button']}
-                  onClick={() => onOpenPage(YakitRoute.YakRunner_Audit_Code)}
-                >
-                  {t('AuditMode.startAudit')}
-                  <OutlineArrowsmrightIcon />
-                </div>
-              </div>
-              <div className={classNames(styles['audit-mode-card'], styles[`audit-mode-card-secondary`])}>
-                <div className={styles['audit-mode-card-header']}>
-                  <div className={styles['audit-mode-card-title-row']}>
-                    <div className={styles['audit-mode-card-icon']}>
-                      <PublicCodeScanIcon />
-                    </div>
-                    <span className={styles['audit-mode-card-title']}>{t('AuditMode.codeScan')}</span>
-                  </div>
-                </div>
-
-                <div className={styles['audit-mode-features']}>
-                  <div className={styles['audit-mode-feature-item']}>
-                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
-                    <span>{t('AuditMode.scanFeature1')}</span>
-                  </div>
-                  <div className={styles['audit-mode-feature-item']}>
-                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
-                    <span>{t('AuditMode.scanFeature2')}</span>
-                  </div>
-                  <div className={styles['audit-mode-feature-item']}>
-                    <OutlineCheckIcon className={styles['audit-mode-feature-icon']} />
-                    <span>{t('AuditMode.scanFeature3')}</span>
-                  </div>
-                </div>
-
-                <div className={styles['audit-mode-button']} onClick={() => onOpenPage(YakitRoute.YakRunner_Code_Scan)}>
-                  {t('AuditMode.startScan')}
                   <OutlineArrowsmrightIcon />
                 </div>
               </div>

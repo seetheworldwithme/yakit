@@ -123,7 +123,7 @@ export const IRifyHomeTable: React.FC<IRifyHomeTableProps> = ({ data = [], onRef
               />
             </Tooltip>
 
-            <Tooltip title={t('AuditCode.codeScan')}>
+            <Tooltip title={t('IRifyHomeTable.codeScanAction')}>
               <YakitButton
                 type="text"
                 icon={<OutlineScanIcon />}

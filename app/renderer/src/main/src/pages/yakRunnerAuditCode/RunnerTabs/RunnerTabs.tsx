@@ -1412,7 +1412,7 @@ export const AuditCodeWelcomePage: React.FC<AuditCodeWelcomePageProps> = memo((p
         <div className={styles['icon-style']}>
           <img src={diankeyuanIcon} style={{ width: 72, height: 72 }} />
         </div>
-        <div className={styles['header-style']}>欢迎使用SyntaxFlow代码审计</div>
+        <div className={styles['header-style']}>欢迎智能化代码安全检测与验证系统</div>
       </div>
       <div
         className={styles['operate-box']}

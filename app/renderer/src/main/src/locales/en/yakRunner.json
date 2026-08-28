@@ -78,7 +78,7 @@
     "debug": "Debug",
     "manualAudit": "Manual Audit",
     "codeScan": "Code Scan",
-    "projectManagement": "Project Management",
+    "projectManagement": "Scan Projects",
     "projectName": "Project Name",
     "projectDescription": "Project Description",
     "unknownPath": "Unknown path",

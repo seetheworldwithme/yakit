@@ -308,8 +308,8 @@ export const YakitRouteToPageInfo: Record<
   },
   'db-http-request-analysis': { label: '流量分析器', labelUi: 'YakitRoute.historyAnalyzer' },
   'db-reports-results': {
-    label: '报告',
-    labelUi: 'YakitRoute.report',
+    label: isIRify() ? '检测报告' : '报告',
+    labelUi: isIRify() ? 'YakitRoute.irifyDetectionReport' : 'YakitRoute.report',
     describeUi: 'YakitRoute.viewAndManageReportsGeneratedDuringScanning',
   },
   'db-risks': {
@@ -366,25 +366,28 @@ export const YakitRouteToPageInfo: Record<
   data_statistics: { label: '数据统计', labelUi: 'YakitRoute.dataStatistics' },
   'space-engine': { label: '空间引擎', labelUi: 'YakitRoute.spaceEngine' },
   'yakrunner-code-scan': {
-    label: '代码扫描',
-    labelUi: 'YakitRoute.codeScan',
+    label: isIRify() ? '扫描任务' : '代码扫描',
+    labelUi: isIRify() ? 'YakitRoute.irifyScanTask' : 'YakitRoute.codeScan',
     describeUi: 'YakitRoute.richRuleLibrary',
   },
   'yakrunner-audit-code': {
-    label: '代码审计',
-    labelUi: 'YakitRoute.codeAudit',
+    label: isIRify() ? '静态分析' : '代码审计',
+    labelUi: isIRify() ? 'YakitRoute.irifyStaticAnalysis' : 'YakitRoute.codeAudit',
     describeUi: isIRify() ? 'YakitRoute.auditRuleCodeAnalysisDebrand' : 'YakitRoute.auditRuleCodeAnalysis',
   },
   'irify-ai-code-audit': {
-    label: 'AI代码审计',
-    labelUi: 'YakitRoute.irifyAiCodeAudit',
+    label: '智能辅助审计',
+    labelUi: 'YakitRoute.irifyIntelligentAudit',
     describeUi: 'YakitRoute.irifyAiCodeAuditDescribe',
   },
-  'yakrunner-project-manager': { label: '项目管理', labelUi: 'YakitRoute.projectManagement' },
+  'yakrunner-project-manager': {
+    label: isIRify() ? '扫描项目' : '项目管理',
+    labelUi: isIRify() ? 'YakitRoute.irifyScanProject' : 'YakitRoute.projectManagement',
+  },
   yakrunner_scanHistory: { label: '项目历史', labelUi: 'YakitRoute.projectHistory' },
   'rule-management': {
-    label: '规则管理',
-    labelUi: 'YakitRoute.ruleManagement',
+    label: isIRify() ? '检测规则' : '规则管理',
+    labelUi: isIRify() ? 'YakitRoute.irifyDetectionRule' : 'YakitRoute.ruleManagement',
     describeUi: 'YakitRoute.customAuditRules',
   },
   'notepad-manage': {
@@ -394,7 +397,10 @@ export const YakitRouteToPageInfo: Record<
   'modify-notepad': {
     label: getNotepadNameByEditionMulLang(),
   },
-  'yakrunner-audit-hole': { label: '审计漏洞', labelUi: 'YakitRoute.auditVulnerability' },
+  'yakrunner-audit-hole': {
+    label: isIRify() ? '漏洞结果' : '审计漏洞',
+    labelUi: isIRify() ? 'YakitRoute.irifyVulnerabilityResult' : 'YakitRoute.auditVulnerability',
+  },
   'system-config': { label: '系统配置', labelUi: 'YakitRoute.systemConfig' },
   'yak-java-decompiler': { label: 'Java 反编译', labelUi: 'YakitRoute.javaDecompile' },
   'shortcut-key': { label: '快捷键设置', labelUi: 'YakitRoute.shortcutSettings' },
@@ -1102,8 +1108,8 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
     return [
       {
         page: undefined,
-        label: '代码审计',
-        labelUi: 'YakitRoute.codeAudit',
+        label: '静态代码扫描',
+        labelUi: 'YakitRoute.irifyStaticScan',
         children: [
           {
             page: YakitRoute.YakRunner_Project_Manager,
@@ -1137,8 +1143,8 @@ export const getPublicRouteMenu = (softMode: SoftMode) => {
       },
       {
         page: undefined,
-        label: '数据库',
-        labelUi: 'YakitRoute.database',
+        label: '报告中心',
+        labelUi: 'YakitRoute.irifyReportCenter',
         children: [{ page: YakitRoute.DB_Report, ...YakitRouteToPageInfo[YakitRoute.DB_Report] }],
       },
     ]
@@ -2117,8 +2123,8 @@ export const PrivateExpertRouteMenu: PrivateRouteMenuProps[] = isIRify()
   ? [
       {
         page: undefined,
-        label: '代码审计',
-        labelUi: 'YakitRoute.codeAudit',
+        label: '静态代码扫描',
+        labelUi: 'YakitRoute.irifyStaticScan',
         children: [
           PrivateAllMenus[YakitRoute.YakRunner_Project_Manager],
           PrivateAllMenus[YakitRoute.YakRunner_Audit_Code],
@@ -2131,8 +2137,8 @@ export const PrivateExpertRouteMenu: PrivateRouteMenuProps[] = isIRify()
       },
       {
         page: undefined,
-        label: '数据库',
-        labelUi: 'YakitRoute.database',
+        label: '报告中心',
+        labelUi: 'YakitRoute.irifyReportCenter',
         children: routeToChildren([YakitRoute.DB_Report]),
       },
       //   {

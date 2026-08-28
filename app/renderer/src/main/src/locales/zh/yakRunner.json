@@ -78,7 +78,7 @@
     "debug": "规则调试",
     "manualAudit": "手动审计",
     "codeScan": "代码扫描",
-    "projectManagement": "项目管理",
+    "projectManagement": "扫描项目",
     "projectName": "项目名称",
     "projectDescription": "项目描述",
     "unknownPath": "未知路径",

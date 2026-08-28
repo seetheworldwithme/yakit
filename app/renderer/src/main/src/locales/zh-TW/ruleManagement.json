@@ -1,6 +1,6 @@
 {
   "LocalRuleGroupList": {
-    "title": "規則管理",
+    "title": "檢測規則",
     "searchPlaceholder": "請輸入組名",
     "uploadTitle": "上傳提示",
     "uploadContent": "如果存在同名規則庫，會直接覆蓋",

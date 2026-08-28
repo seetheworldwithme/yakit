@@ -26,11 +26,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 .page-header-text {
   flex: 1;
-  min-width: 0;
+  // 窄窗口下保证标题区有最小宽度，不足时统计卡整体换行、Hero 增高
+  min-width: 300px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -56,6 +59,7 @@
   display: flex;
   gap: 4px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .header-stat-card {
@@ -115,6 +119,18 @@
   .audit-mode-section {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .page-header-text {
+    // 窄窗口时标题独占一行，统计卡换到下一行并均分
+    min-width: 100%;
+  }
+  .header-stats {
+    width: 100%;
+  }
+  .header-stat-card {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 12px 4px 4px;
+  }
 }
 
 .main-chart {
@@ -171,6 +187,10 @@
   .audit-mode-feature-item {
     color: var(--Colors-Use-Neutral-Text-2-Primary);
   }
+  .audit-mode-tag {
+    // 浅色卡上默认的浅绿字不可见，改用主色深绿
+    color: var(--Colors-Use-Main-Primary);
+  }
 }
 
 .audit-mode-card-header {
@@ -205,8 +225,9 @@
 }
 
 .audit-mode-card-subtitle {
+  // 窄卡下这行右侧提示会被挤成竖排碎片，且与卡内 feature 列表信息重复，统一隐藏（回滚改回 display: flex）
+  display: none;
   flex: 1;
-  display: flex;
   height: 16px;
   flex-direction: column;
   justify-content: center;
@@ -677,7 +698,7 @@
     }
   }
   .audit-mode-section {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 224px 224px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .audit-mode-card {
     padding: 12px 16px 16px 16px;
@@ -702,7 +723,7 @@
 
 @media (min-width: 1081px) and (max-width: 1280px) {
   .audit-mode-section {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 288px 288px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .audit-mode-card {
     padding: 12px 20px 20px 20px;
@@ -725,9 +746,6 @@
 }
 
 @media (min-width: 1281px) {
-  .audit-mode-section {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px 360px;
-  }
   .audit-mode-card {
     padding: 12px 20px 20px 20px;
   }

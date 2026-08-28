@@ -1,10 +1,10 @@
 {
   "IRifyHome": {
     "fetchDataFailed": "Failed to fetch dashboard data: {{error}}",
-    "pageTitle": "Code Audit Workbench",
-    "pageSubtitle": "Distinguish AI online audit from SSA offline rule audit, and view scan results and risk posture in one place",
-    "project": "Projects",
-    "ruleLibrary": "Rule Library",
+    "pageTitle": "Intelligent Code Security Detection and Verification Prototype",
+    "pageSubtitle": "Static code scanning, vulnerability localization, and intelligent assisted verification for power business programs",
+    "project": "Scan Projects",
+    "ruleLibrary": "Detection Rules",
     "aiAuditTask": "AI Audit Tasks",
     "riskOverview": "Risk Overview",
     "riskDistribution": "Risk Distribution",
@@ -14,7 +14,7 @@
     "quickAccess": "Quick Access"
   },
   "AuditMode": {
-    "aiCodeAudit": "AI Code Audit",
+    "aiCodeAudit": "Intelligent Assisted Audit",
     "online": "Online",
     "aiSubtitle": "Best for: complex business logic / explanation needed / assisted analysis",
     "aiFeature1": "Handles complex business logic, cross-file correlation, natural language analysis, and risk explanation",
@@ -32,25 +32,25 @@
     "tagSkillFlow": "Flow Audit",
     "tagSkillRule": "Rule Parsing",
     "startAiSkillAudit": "Start Skill Analysis",
-    "traditionalCodeAudit": "Traditional Code Audit",
+    "traditionalCodeAudit": "Static Analysis Workbench",
     "offline": "Offline",
-    "traditionalFeature1": "Analyze code behavior through audit rules to find risky code fragments",
+    "traditionalFeature1": "Analyze project code with detection rules, and inspect call relationships and risk locations",
     "traditionalFeature2": "Java, PHP, Golang and more",
     "startAudit": "Start Audit",
-    "codeScan": "Code Scan",
+    "codeScan": "Scan Tasks",
     "scanFeature1": "Built-in rich rule library",
     "scanFeature2": "Freely select rule groups for code scanning",
     "scanFeature3": "Helps analyze code structure and find risky code fragments",
     "startScan": "Start Scan"
   },
   "QuickAccess": {
-    "ruleManagement": "Rule Management",
+    "ruleManagement": "Detection Rules",
     "ruleManagementDesc": "Add, delete, modify, and group rules, and upload rules",
     "javaDecompiler": "Java Decompiler",
     "javaDecompilerDesc": "Decompile compiled bytecode files into human-readable Java source code",
-    "auditHole": "Audit Vulnerabilities",
+    "auditHole": "Vulnerability Results",
     "auditHoleDesc": "View all vulnerabilities found during code scanning or auditing",
-    "projectManagement": "Project Management",
+    "projectManagement": "Scan Projects",
     "projectManagementDesc": "Manage all projects compiled and scanned"
   },
   "IRifyHomeTable": {
@@ -58,7 +58,8 @@
     "language": "Language",
     "projectRisk": "Project Risk",
     "riskCount": "Risk Count",
-    "updatedAt": "Updated At"
+    "updatedAt": "Updated At",
+    "codeScanAction": "Scan Tasks"
   },
   "IRifyHomeEcharts": {
     "totalRisk": "Total Risks"

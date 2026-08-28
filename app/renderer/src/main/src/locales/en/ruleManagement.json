@@ -1,6 +1,6 @@
 {
   "LocalRuleGroupList": {
-    "title": "Rule Management",
+    "title": "Detection Rules",
     "searchPlaceholder": "Enter group name",
     "uploadTitle": "Upload Tips",
     "uploadContent": "If a rule library with the same name exists, it will be overwritten.",

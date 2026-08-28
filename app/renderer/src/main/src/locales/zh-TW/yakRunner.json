@@ -78,7 +78,7 @@
     "debug": "規則除錯",
     "manualAudit": "手動審計",
     "codeScan": "程式碼掃描",
-    "projectManagement": "專案管理",
+    "projectManagement": "掃描項目",
     "projectName": "專案名稱",
     "projectDescription": "專案描述",
     "unknownPath": "未知路徑",
