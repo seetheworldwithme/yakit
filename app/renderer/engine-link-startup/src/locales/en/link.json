@@ -151,7 +151,7 @@
   "QuestionModal": {
     "modal_title": "Yak Core Engine Download Links",
     "manual_download_hint": "If download fails due to network issues, install manually:",
-    "install_path_hint": "Windows users can place the engine at install-dir (usually %HOME%)/yakit-projects/yak-engine/yak.exe. macOS / Linux users can place it at ~/yakit-projects/yak-engine/yak",
+    "install_path_hint": "Windows users can place the engine at install-dir (usually %HOME%)/projects/yak-engine/yak.exe. macOS / Linux users can place it at ~/projects/yak-engine/yak",
     "windows_download": "Windows(x64)",
     "macos_download": "macOS(Intel/M1)",
     "linux_download": "Linux(x64)"

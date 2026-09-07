@@ -483,7 +483,7 @@
     ],
     "backToLocal": "返回本地连接",
     "remoteControlling": "远程控制中 ...",
-    "welcome": "欢迎使用 {{edition}}",
+    "welcome": "{{edition}}",
     "openEngineFolder": "打开引擎所在文件",
     "openEngineFolderTip": "打开文件夹后运行'start-engine-grpc'，命令行启动引擎查看具体问题"
   },

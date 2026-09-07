@@ -151,7 +151,7 @@
   "QuestionModal": {
     "modal_title": "Yak 核心引擎下載連結",
     "manual_download_hint": "如遇網路問題無法下載，可手動下載安裝：",
-    "install_path_hint": "Windows 用戶可以把引擎放在 安裝目錄(一般為%HOME%)/yakit-projects/yak-engine/yak.exe 即可識別 MacOS / Linux 用戶可以把引擎放在 ~/yakit-projects/yak-engine/yak 即可識別",
+    "install_path_hint": "Windows 用戶可以把引擎放在 安裝目錄(一般為%HOME%)/projects/yak-engine/yak.exe 即可識別 MacOS / Linux 用戶可以把引擎放在 ~/projects/yak-engine/yak 即可識別",
     "windows_download": "Windows(x64)下載",
     "macos_download": "MacOS(intel/m1)下載",
     "linux_download": "Linux(x64)下載"

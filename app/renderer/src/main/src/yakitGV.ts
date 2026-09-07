@@ -135,7 +135,7 @@ export enum RemoteGV {
 /** 项目逻辑全局变量 */
 export enum CodeGV {
   /** @name 远程连接配置信息文件路径 */
-  RemoteLinkPath = '$HOME/yakit-projects/auth/yakit-remote.json',
+  RemoteLinkPath = '$HOME/projects/auth/yakit-remote.json',
   /** @name public版本菜单模式 */
   PublicMenuModeValue = 'public',
   /** @name 菜单状态缓存 */

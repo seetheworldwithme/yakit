@@ -92,7 +92,7 @@ export const DownloadYaklang: React.FC<DownloadYaklangProps> = React.memo((props
           size: getDownloadProgress().size,
         })
 
-        // 考虑在mac下载完成后，在其yakit-projects目录下写入一个文件engine-sha256.txt，注入当前引擎hash值
+        // 考虑在mac下载完成后，在其projects目录下写入一个文件engine-sha256.txt，注入当前引擎hash值
         // 这样在下次启动时，yakit会自动检测到引擎是否一致(用于解决yakit与irify在mac下的引擎冲突)
         yakitEngine.writeEngineKeyToYakitProjects(yakLangVersion.current).finally(() => {
           // 清空主进程yaklang版本缓存

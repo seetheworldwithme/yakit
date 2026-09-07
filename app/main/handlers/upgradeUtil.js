@@ -1,4 +1,4 @@
-const { ipcMain, shell } = require('electron')
+const { ipcMain, shell, app } = require('electron')
 const childProcess = require('child_process')
 const spawn = require('cross-spawn')
 const process = require('process')
@@ -69,9 +69,38 @@ const resolveEngineBuildType = async (version) => {
 const getUserChromeDataDir = () => path.join(getYakitHome(), 'chrome-profile')
 const authMeta = []
 
+/**
+ * 数据库默认文件名品牌化迁移（仅 irify/irifyee）
+ * 老版本 IRify 引擎使用 yakit 命名的默认库文件，新引擎通过 YAK_DEFAULT_*_DATABASE_NAME
+ * 环境变量使用品牌化名称；启动引擎前原地重命名（同盘瞬时），避免老数据对用户"消失"。
+ * 目标文件已存在（新版已建库）时跳过，不覆盖。
+ */
+const migrateLegacyDBFileNames = () => {
+  const appName = String(app.getName() || '').toLowerCase()
+  if (appName !== 'irify' && appName !== 'irifyee') return
+  const legacyDBNameMap = {
+    'default-yakit.db': 'default-irify.db',
+    'yakit-profile-rule.db': 'irify-profile-rule.db',
+  }
+  const home = getYakitHome()
+  for (const [legacy, current] of Object.entries(legacyDBNameMap)) {
+    try {
+      const legacyPath = path.join(home, legacy)
+      const currentPath = path.join(home, current)
+      if (fs.existsSync(legacyPath) && !fs.existsSync(currentPath)) {
+        fs.renameSync(legacyPath, currentPath)
+        console.info(`migrated legacy database: ${legacy} -> ${current}`)
+      }
+    } catch (e) {
+      console.info(`migrate legacy database ${legacy} failed: ${e}`)
+    }
+  }
+}
+
 const initMkbaseDir = async () => {
   return new Promise((resolve, reject) => {
     try {
+      migrateLegacyDBFileNames()
       fs.mkdirSync(getRemoteLinkDir(), { recursive: true })
       fs.mkdirSync(getBasicDir(), { recursive: true })
       fs.mkdirSync(getUserChromeDataDir(), { recursive: true })

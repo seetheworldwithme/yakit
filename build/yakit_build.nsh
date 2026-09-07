@@ -106,7 +106,8 @@ Function FinishLeave
     ${EndIf}
     ${NSD_GetState} $DeleteOldEngine $0
     ${If} $0 <> 0
-        ; 删除旧引擎代码
+        ; 删除旧引擎代码（projects 为新数据目录，yakit-projects 为旧版残留目录）
+        Delete /REBOOTOK $INSTDIR\projects\yak-engine\*yak-*
         Delete /REBOOTOK $INSTDIR\yakit-projects\yak-engine\*yak-*
     ${EndIf}
     Quit
@@ -245,10 +246,10 @@ FunctionEnd
     cancelUninstall:
         Quit
     continue:
-    ; 如果保留了yakit-projects文件夹，将其从临时位置移回原始位置
+    ; 如果保留了用户数据文件夹（projects，旧版为 yakit-projects），将其从临时位置移回原始位置
     ${If} $KEEP_FOLDER == "true"
         Push "$INSTDIR"
-        Push "yakit-projects"
+        Push "projects"
         Call un.DeleteFoldersWithExclusion
 
         DELETE "$INSTDIR\$EXE_NAME.exe"
@@ -279,21 +280,31 @@ FunctionEnd
 !macro customInstall
     ; 写权限已在 Section Main 中探测，此处不再重复建删临时文件
 
-    ; 创建 yakit-projects 文件夹
+    ; 创建用户数据文件夹（projects，旧版为 yakit-projects）
     DetailPrint "创建用户数据文件夹..."
     ClearErrors
-    CreateDirectory "$INSTDIR\yakit-projects"
+    CreateDirectory "$INSTDIR\projects"
     ${If} ${Errors}
         Call ShowInstallPermissionError
     ${EndIf}
 
-    ; Migrate yakit-projects folder
-    ${If} "$PROFILE\yakit-projects" != "$INSTDIR\yakit-projects"
+    ; 旧版本安装在当前目录下的 yakit-projects 原地重命名为 projects（同盘瞬时完成）
+    ${If} ${FileExists} "$INSTDIR\yakit-projects"
+    ${AndIfNot} ${FileExists} "$INSTDIR\projects"
+        ClearErrors
+        Rename "$INSTDIR\yakit-projects" "$INSTDIR\projects"
+        ${If} ${Errors}
+            DetailPrint "迁移用户数据失败..."
+        ${EndIf}
+    ${EndIf}
+
+    ; Migrate legacy user data folder（yakit-projects -> projects）
+    ${If} "$PROFILE\yakit-projects" != "$INSTDIR\projects"
     ${AndIf} ${FileExists} "$PROFILE\yakit-projects"
         DetailPrint "正在迁移用户数据..."
         ClearErrors
         ; 旧版本数据可能包含多层目录和隐藏文件，这里必须递归复制，且不要在安装阶段直接删源目录
-        nsExec::Exec '"$SYSDIR\cmd.exe" /C xcopy "$PROFILE\yakit-projects" "$INSTDIR\yakit-projects\\" /E /I /H /K /Y /C >nul 2>&1'
+        nsExec::Exec '"$SYSDIR\cmd.exe" /C xcopy "$PROFILE\yakit-projects" "$INSTDIR\projects\\" /E /I /H /K /Y /C >nul 2>&1'
         Pop $0
         ${If} $0 != 0
             DetailPrint "迁移用户数据失败..."
@@ -306,8 +317,8 @@ FunctionEnd
     DetailPrint "写入环境变量..."
     WriteRegStr HKCU "Software\Yakit" $INSTALL_PATH_REG_KEY_NAME "$INSTDIR"
     ; 使用版本独立的环境变量
-    WriteRegStr HKCU "Environment" $ENV_VAR_NAME "$INSTDIR\yakit-projects"
-    DetailPrint "已设置环境变量: $ENV_VAR_NAME = $INSTDIR\yakit-projects"
+    WriteRegStr HKCU "Environment" $ENV_VAR_NAME "$INSTDIR\projects"
+    DetailPrint "已设置环境变量: $ENV_VAR_NAME = $INSTDIR\projects"
     ; 广播 WM_SETTINGCHANGE，让已运行的进程（explorer/终端等）刷新环境变量
     DetailPrint "正在刷新环境变量..."
     !insertmacro BroadcastEnvChange

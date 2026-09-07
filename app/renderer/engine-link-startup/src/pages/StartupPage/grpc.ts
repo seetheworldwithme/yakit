@@ -115,7 +115,7 @@ export const grpcFetchDownloadYak: APIFunc<string, boolean> = (version, hiddenEr
   })
 }
 
-/** @name 考虑在mac下载完成后，在其yakit-projects目录下写入一个文件engine-sha256.txt，注入当前引擎hash值 */
+/** @name 考虑在mac下载完成后，在其projects目录下写入一个文件engine-sha256.txt，注入当前引擎hash值 */
 export const grpcWriteEngineKeyToYakitProjects: APIFunc<WriteEngineKeyToYakitProjects, boolean> = (
   params,
   hiddenError,

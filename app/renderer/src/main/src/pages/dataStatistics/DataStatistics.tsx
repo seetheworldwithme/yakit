@@ -813,7 +813,8 @@ export const DataStatistics: React.FC<DataStatisticsProps> = (props) => {
             document.body.removeChild(a)
           } else {
             const { origin } = window.location
-            const match = filePath.match(/yakit-projects(\/[^]+)$/)
+            // ponytail: /projects 前缀同时兼容旧默认目录 yakit-projects 与新默认目录 projects
+            const match = filePath.match(/projects(\/[^]+)$/)
             if (match) {
               const a = document.createElement('a')
               a.href = `${origin}/install_package${match[1]}`

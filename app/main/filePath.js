@@ -5,7 +5,9 @@ const path = require('path')
 const process = require('process')
 const fs = require('fs')
 
-const DEFAULT_PROJECT_NAME = 'yakit-projects'
+const DEFAULT_PROJECT_NAME = 'projects'
+// 旧版默认目录名，启动时自动重命名迁移到新默认目录
+const LEGACY_PROJECT_NAME = 'yakit-projects'
 
 const DEFAULT_CONFIG = {
   YAKIT_HOME: '',
@@ -128,6 +130,14 @@ const getYakitHome = () => {
     const config = getConfig()
     let homePath = config.YAKIT_HOME
 
+    // 存量配置指向旧默认目录时视为默认值，跟随迁移后的新目录
+    if (homePath) {
+      const resolved = path.isAbsolute(homePath) ? homePath : path.join(os.homedir(), homePath)
+      if (resolved === path.join(os.homedir(), LEGACY_PROJECT_NAME)) {
+        homePath = ''
+      }
+    }
+
     // 获取当前版本对应的环境变量名
     const envVarName = getVersionEnvVarName()
 
@@ -156,21 +166,35 @@ const getYakitHome = () => {
 
 /**
  * 兼容旧逻辑的默认路径解析
- * - Windows 打包: exe目录/yakit-projects
- * - 其他: ~/yakit-projects
+ * - Windows 打包: exe目录/projects
+ * - 其他: ~/projects
+ * 老版本默认目录 yakit-projects 存在时自动重命名迁移
  */
 const _resolveDefaultProjectPath = () => {
   try {
     if (process.platform === 'win32' && app.isPackaged) {
       const appDir = path.dirname(app.getPath('exe'))
       const winPath = path.join(appDir, DEFAULT_PROJECT_NAME)
+      _migrateLegacyDir(path.join(appDir, LEGACY_PROJECT_NAME), winPath)
       _ensureDir(winPath)
       return winPath
     }
   } catch (e) {}
   const fallback = path.join(os.homedir(), DEFAULT_PROJECT_NAME)
+  _migrateLegacyDir(path.join(os.homedir(), LEGACY_PROJECT_NAME), fallback)
   _ensureDir(fallback)
   return fallback
+}
+
+// 旧默认目录整体重命名到新目录，失败（如被占用）时保留旧目录继续使用
+const _migrateLegacyDir = (legacyPath, newPath) => {
+  try {
+    if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
+      fs.renameSync(legacyPath, newPath)
+    }
+  } catch (e) {
+    console.log(`migrate legacy project dir failed: ${e}`)
+  }
 }
 
 const _ensureDir = (dir) => {

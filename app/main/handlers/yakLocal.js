@@ -1,4 +1,4 @@
-const { ipcMain, dialog } = require('electron')
+const { ipcMain, dialog, app } = require('electron')
 const childProcess = require('child_process')
 const process = require('process')
 const psList = require('./libs/ps-yak-process')
@@ -15,7 +15,9 @@ if (process.platform === 'darwin' || process.platform === 'linux') {
   process.env.PATH = process.env.PATH + ':/usr/local/bin/'
 }
 
-let dbFile = 'default-yakit.db'
+// irify/irifyee 的主项目库为品牌化命名（与 newEngineStatus 启动引擎时的环境变量一致）
+const isIRifyBrand = ['irify', 'irifyee'].includes(String(app.getName() || '').toLowerCase())
+let dbFile = isIRifyBrand ? 'default-irify.db' : 'default-yakit.db'
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * max)

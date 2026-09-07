@@ -967,7 +967,7 @@ const AILocalModelList: React.FC<AILocalModelListProps> = React.memo(
       setVisible(false)
     })
     const code = useCreation(() => {
-      return 'sudo xattr -r -d com.apple.quarantine ~/yakit-projects/projects/libs/llama-server'
+      return 'sudo xattr -r -d com.apple.quarantine ~/projects/projects/libs/llama-server'
     }, [])
     return llamaServerReady ? (
       <YakitSpin spinning={spinning}>
@@ -995,7 +995,7 @@ const AILocalModelList: React.FC<AILocalModelListProps> = React.memo(
             <div>
               {t('AILocalModelList.macNotice')}
               <YakitTag color="purple">sudo xattr -r</YakitTag>
-              <YakitTag color="purple">-d com.apple.quarantine ~/yakit-projects</YakitTag>
+              <YakitTag color="purple">-d com.apple.quarantine ~/projects</YakitTag>
               <YakitTag color="purple">
                 /projects/libs/llama-server
                 <CopyComponents copyText={code} className={styles['copy']} />
