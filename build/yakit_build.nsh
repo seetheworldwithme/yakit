@@ -146,6 +146,13 @@ FunctionEnd
     ; 根据不同版本设置不同的RegKey 社区版/SE/EE
     StrCpy $INSTALL_PATH_REG_KEY_NAME "InstallPath"
     StrCpy $EXE_NAME "Yakit"
+    ; 企业版（靖云甲）安装包为中文命名，文件名不含 EnpriTrace，必须最先匹配，
+    ; 否则会落回默认的 "Yakit"，导致选目录安装时拼出 <目录>\Yakit
+    ${StrStr} $0 $EXEFILE "靖云甲"
+    ${If} $0 != "" ; ee(靖云甲)
+        StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTrace_InstallPath"
+        StrCpy $EXE_NAME "靖云甲web应用漏洞扫描"
+    ${Else}
     ${StrStr} $0 $EXEFILE "EnpriTraceAgent"
     ${If} $0 != "" ; se
         StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTraceAgent_InstallPath"
@@ -175,6 +182,7 @@ FunctionEnd
             ${EndIf}
         ${EndIf}
     ${EndIf}
+    ${EndIf}
 
     ; 设置用户一开始的安装路径
     StrCpy $INSTDIR ""
@@ -187,6 +195,11 @@ FunctionEnd
     ; 根据不同版本设置不同的RegKey 社区版/SE/EE
     StrCpy $INSTALL_PATH_REG_KEY_NAME "InstallPath"
     StrCpy $EXE_NAME "Yakit"
+    ; 企业版（靖云甲）安装目录下的 exe 为中文名，须最先匹配
+    ${If} ${FileExists} `$INSTDIR\靖云甲web应用漏洞扫描.exe` ; ee(靖云甲)
+        StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTrace_InstallPath"
+        StrCpy $EXE_NAME "靖云甲web应用漏洞扫描"
+    ${Else}
     ${If} ${FileExists} `$INSTDIR\EnpriTraceAgent.exe` ; se
         StrCpy $INSTALL_PATH_REG_KEY_NAME "EnpriTraceAgent_InstallPath"
         StrCpy $EXE_NAME "EnpriTraceAgent"
@@ -210,6 +223,7 @@ FunctionEnd
                 ${EndIf}
             ${EndIf}
         ${EndIf}
+    ${EndIf}
     ${EndIf}
 
     !insertmacro checkInstalled
