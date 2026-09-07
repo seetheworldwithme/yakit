@@ -70,6 +70,14 @@ export const getEnvTypeByProjects = () => {
   return isIRify() ? 'ssa_project' : 'project'
 }
 
+/**
+ * 默认项目备注由引擎在首次建库时写入，含过期目录名(yakit-projects)与旧库文件名(yakssa)，
+ * 与实际存储路径不符，展示前统一修正
+ */
+const sanitizeProjectDescription = (description: string) => {
+  return (description || '').replace(/yakit-projects/g, 'projects').replace(/yakssa/g, 'ssa')
+}
+
 export interface ProjectManageProp {
   engineMode: YaklangEngineMode
   onEngineModeChange: (mode: YaklangEngineMode, keepalive?: boolean) => any
@@ -377,11 +385,22 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
         name: t('ProjectManage.description'),
         style: { flex: 1 },
         render: (data) => {
+          // 默认项目的备注是引擎首次建库时写入的固定文案（文件名为 *** 占位符），并非真实路径，
+          // 直接展示真实库文件路径，避免用户按备注找不到文件
+          if (data.ProjectName === '[default]') {
+            return (
+              <Tooltip title={data.DatabasePath}>
+                <div style={{ overflow: 'hidden' }} className={'yakit-content-single-ellipsis'}>
+                  {data.DatabasePath || '-'}
+                </div>
+              </Tooltip>
+            )
+          }
           try {
             const arr: { Key: string; Value: string }[] = JSON.parse(data.Description)
             let str = ''
             arr.forEach((item) => {
-              str += `${item.Key}：${item.Value}; `
+              str += `${sanitizeProjectDescription(item.Key)}：${sanitizeProjectDescription(item.Value)}; `
             })
             return (
               <Tooltip title={str}>
@@ -391,10 +410,11 @@ const ProjectManage: React.FC<ProjectManageProp> = memo((props) => {
               </Tooltip>
             )
           } catch (error) {
+            const description = sanitizeProjectDescription(data.Description)
             return (
-              <Tooltip title={data.Description}>
+              <Tooltip title={description}>
                 <div style={{ overflow: 'hidden' }} className={'yakit-content-single-ellipsis'}>
-                  {data.Description}
+                  {description}
                 </div>
               </Tooltip>
             )

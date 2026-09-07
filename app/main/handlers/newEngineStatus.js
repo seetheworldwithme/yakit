@@ -14,7 +14,7 @@ const DefaultDBFileEnv = {
   irify: {
     YAK_DEFAULT_PROFILE_DATABASE_NAME: 'irify-profile-rule.db',
     YAK_DEFAULT_PROJECT_DATABASE_NAME: 'default-irify.db',
-    SSA_DATABASE_RAW: 'default-yakssa.db',
+    SSA_DATABASE_RAW: 'default-ssa.db',
   },
   memfit: {
     YAK_DEFAULT_PROJECT_DATABASE_NAME: 'default-memfit.db',

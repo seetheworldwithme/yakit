@@ -1,4 +1,66 @@
-const { ipcMain } = require('electron')
+const { ipcMain, app } = require('electron')
+const fs = require('fs')
+const path = require('path')
+const { getYakProjects, getEngineLogDir } = require('../filePath')
+
+/** 导出去品牌化重命名的诊断日志，落盘到引擎日志目录便于排查 */
+const logExportDebrand = (msg) => {
+  try {
+    fs.mkdirSync(getEngineLogDir(), { recursive: true })
+    fs.appendFileSync(path.join(getEngineLogDir(), 'export-rename.log'), `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {}
+}
+
+/**
+ * 导出项目文件名去品牌化（仅 irify/irifyee）
+ * 导出文件名由引擎生成（加密导出 *.yakitproject.enc，明文导出 *.yakitproject），
+ * 引擎不提供命名参数，导出完成后原地重命名去掉 yakit 字样。
+ * 导入按文件内容解析、不校验扩展名，重命名不影响再次导入。
+ * 明文导出时引擎发出 end 后文件句柄可能未立即释放（Windows），失败时自动重试。
+ */
+const debrandExportedProjectFile = (targetPath, onRenamed) => {
+  try {
+    const appName = String(app.getName() || '').toLowerCase()
+    if (appName !== 'irify' && appName !== 'irifyee') return
+    logExportDebrand(`raw TargetPath: ${targetPath}`)
+    if (!targetPath || !/yakit/i.test(path.basename(targetPath))) return
+    // 引擎返回的可能是相对 projects 目录的相对路径（与 fingerprint/syntaxFlow 下载流一致）
+    const absPath = path.isAbsolute(targetPath) ? targetPath : path.join(getYakProjects(), targetPath)
+    // 注意不能按扩展名拆分：明文导出 *.yakitproject 的 yakit 在 extname 眼里属于"扩展名"，
+    // 必须对完整文件名整体替换（*.yakitproject.enc 与 *.yakitproject 两种命名通吃）
+    const name = path.basename(absPath)
+    const newName = name.replace(/yakit/gi, '').replace(/^\.+/, '')
+    if (!newName || newName === name) {
+      logExportDebrand(`skip: nothing to rename: ${name}`)
+      return
+    }
+    const newPath = path.join(path.dirname(absPath), newName)
+
+    let attempts = 0
+    const attempt = () => {
+      attempts++
+      try {
+        if (!fs.existsSync(absPath)) {
+          logExportDebrand(`skip: file not found: ${absPath}`)
+          return
+        }
+        if (fs.existsSync(newPath)) {
+          logExportDebrand(`skip: target already exists: ${newPath}`)
+          return
+        }
+        fs.renameSync(absPath, newPath)
+        logExportDebrand(`renamed: ${path.basename(absPath)} -> ${path.basename(newPath)} (attempts=${attempts})`)
+        onRenamed && onRenamed(newPath)
+      } catch (e) {
+        logExportDebrand(`rename failed (attempts=${attempts}): ${e}`)
+        if (attempts < 10) setTimeout(attempt, 300)
+      }
+    }
+    attempt()
+  } catch (e) {
+    logExportDebrand(`debrand failed: ${e}`)
+  }
+}
 
 module.exports = (win, getClient) => {
   // asyncSetCurrentProject wrapper
@@ -181,6 +243,19 @@ module.exports = (win, getClient) => {
   ipcMain.handle('cancel-ExportProject', handlerHelper.cancelHandler(streamExportProjectMap))
   ipcMain.handle('ExportProject', (e, params, token) => {
     let stream = getClient().ExportProject(params)
+    // 先于 registerHandler 挂监听：捕获引擎返回的目标路径，end 时先重命名再通知渲染进程
+    let exportTargetPath = ''
+    stream.on('data', (data) => {
+      if (data && data.TargetPath) exportTargetPath = data.TargetPath
+    })
+    stream.on('end', () => {
+      debrandExportedProjectFile(exportTargetPath, (newPath) => {
+        // 渲染进程记录的是旧路径，重命名成功后补发一次数据事件纠正「打开所在文件夹」的目标
+        if (newPath && win && !win.isDestroyed()) {
+          win.webContents.send(`${token}-data`, { TargetPath: newPath })
+        }
+      })
+    })
     handlerHelper.registerHandler(win, stream, streamExportProjectMap, token)
   })
 

@@ -81,6 +81,7 @@ const migrateLegacyDBFileNames = () => {
   const legacyDBNameMap = {
     'default-yakit.db': 'default-irify.db',
     'yakit-profile-rule.db': 'irify-profile-rule.db',
+    'default-yakssa.db': 'default-ssa.db',
   }
   const home = getYakitHome()
   for (const [legacy, current] of Object.entries(legacyDBNameMap)) {
