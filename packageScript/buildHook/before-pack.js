@@ -9,9 +9,7 @@ module.exports = async function (context) {
   }
   const arch = archMap[context.arch]
   const baseInfo = context.packager.appInfo
-  // 优先取 appInfo.version（已被 -c.extraMetadata.version 覆盖时为打包命令传入的版本），
-  // 无覆盖时等于 package.json，文件名日期段即可随打包日期变化
-  let productVersion = baseInfo.version || packageJson.version
+  let productVersion = packageJson.version || baseInfo.version
   // CE
   if (productVersion.endsWith('-ce')) {
     productVersion = productVersion.replace('-ce', '')

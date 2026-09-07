@@ -14,6 +14,9 @@ ENGINE_VERSION_FILE="$BINS_DIR/engine-version.txt"
 TEMP_DIR=""
 BUILD_LOCK_DIR="$PROJECT_ROOT/.build-win-amd64.lock"
 BUILD_LOCK_ACQUIRED=false
+# 打包日期注入：构建期间临时改写 package.json 版本号日期段，结束后恢复（见 cleanup）
+PACKAGE_JSON="$PROJECT_ROOT/package.json"
+ORIG_PKG_CONTENT=""
 
 fail() {
   echo "❌ $*" >&2
@@ -25,6 +28,9 @@ require_command() {
 }
 
 cleanup() {
+  if [[ -n "$ORIG_PKG_CONTENT" ]]; then
+    printf '%s\n' "$ORIG_PKG_CONTENT" > "$PACKAGE_JSON"
+  fi
   if [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]]; then
     rm -rf -- "$TEMP_DIR"
   fi
@@ -123,13 +129,26 @@ echo "[1/3] 构建渲染进程（企业版 no-license）..."
 yarn build-renders-enterprise-no-license
 
 echo "[2/3] 打包 win x64（EE 品牌，不签名）..."
-# 安装包文件名里的日期段（package.json 版本号 2.4.7-0626 的 0626 是写死的）改为打包当天日期，
-# 通过 extraMetadata 覆盖版本号，不改动共享的 package.json
+# 安装包版本号日期段（如 2.4.7-0626 的 0626）改为打包当天日期：
+# 打包前对 package.json 做字节级替换（只动 version 一处），构建结束由 cleanup 恢复。
+# 不用 -c.extraMetadata.version CLI 覆盖——env-cmd 10.1.0 会把该参数吞掉导致构建直接退出。
 BUILD_DATE="$(date +%m%d)"
+ORIG_PKG_CONTENT="$(cat "$PACKAGE_JSON")"
+node - "$PACKAGE_JSON" "$BUILD_DATE" <<'NODE'
+const fs = require('fs')
+const [pkgPath, date] = process.argv.slice(2)
+const raw = fs.readFileSync(pkgPath, 'utf8')
+const m = raw.match(/"version":\s*"([^"]+)"/)
+if (!m) {
+  throw new Error('package.json 中未找到 version 字段')
+}
+const base = m[1].replace(/-\d{4}$/, '')
+fs.writeFileSync(pkgPath, raw.replace(m[0], `"version": "${base}-${date}"`))
+console.log(`   ✅ 版本号设为 ${base}-${date}`)
+NODE
 BUILDER_ARGS=(
   electron-builder build --win --x64
   --config ./packageScript/electron-builder.config.js
-  -c.extraMetadata.version="2.4.7-${BUILD_DATE}"
 )
 if [[ "$HOST_SYSTEM" == "Darwin" ]]; then
   # electron-builder 26 会自动下载带 Wine 11 的 1.0.1 工具集，无需本机 Homebrew 安装 Wine。
