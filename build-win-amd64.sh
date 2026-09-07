@@ -123,9 +123,13 @@ echo "[1/3] 构建渲染进程（企业版 no-license）..."
 yarn build-renders-enterprise-no-license
 
 echo "[2/3] 打包 win x64（EE 品牌，不签名）..."
+# 安装包文件名里的日期段（package.json 版本号 2.4.7-0626 的 0626 是写死的）改为打包当天日期，
+# 通过 extraMetadata 覆盖版本号，不改动共享的 package.json
+BUILD_DATE="$(date +%m%d)"
 BUILDER_ARGS=(
   electron-builder build --win --x64
   --config ./packageScript/electron-builder.config.js
+  -c.extraMetadata.version="2.4.7-${BUILD_DATE}"
 )
 if [[ "$HOST_SYSTEM" == "Darwin" ]]; then
   # electron-builder 26 会自动下载带 Wine 11 的 1.0.1 工具集，无需本机 Homebrew 安装 Wine。
