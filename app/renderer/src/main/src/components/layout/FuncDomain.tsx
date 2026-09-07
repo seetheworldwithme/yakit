@@ -756,15 +756,21 @@ const GetUIOpSettingMenu = (t: (key: string) => string) => {
           key: 'webshell-manager',
           label: '网站管理',
         },
-        {
-          key: 'mcp',
-          label: t('GlobalState.mcp'),
-          children: [
-            { key: 'mcp-toggle', label: t('GlobalState.mcpToggle') },
-            { key: 'mcp-history', label: t('GlobalState.mcpHistory') },
-          ],
-        },
-        { key: 'ai-agent', label: 'AI Agent' },
+        // IRify 不在前台暴露 Yak MCP 入口
+        ...(!isIRify()
+          ? [
+              {
+                key: 'mcp',
+                label: t('GlobalState.mcp'),
+                children: [
+                  { key: 'mcp-toggle', label: t('GlobalState.mcpToggle') },
+                  { key: 'mcp-history', label: t('GlobalState.mcpHistory') },
+                ],
+              },
+            ]
+          : []),
+        // IRify 不在前台暴露 AI Agent 入口
+        ...(!isIRify() ? [{ key: 'ai-agent', label: 'AI Agent' }] : []),
         { key: 'ssa-result-diff', label: 'ssa-result-diff' },
         { key: 'ai-repository', label: '知识库' },
         { key: 'ssa-compile-history', label: 'SSA项目编译历史' },
@@ -818,7 +824,8 @@ const GetUIOpSettingMenu = (t: (key: string) => string) => {
       key: 'hotPatch-management',
       label: '全局热加载管理',
     },
-    {
+    // IRify 不在前台暴露 CVE 数据库更新入口
+    !isIRify() && {
       key: 'cve-database',
       label: 'CVE 数据库',
       children: [
@@ -844,7 +851,8 @@ const GetUIOpSettingMenu = (t: (key: string) => string) => {
         // { key: "engineVar",label: "引擎环境变量" },
         { key: 'config-network', label: '全局配置' },
         { key: 'setShortcutKey', label: '快捷键设置' },
-        { key: 'configMcp', label: 'Yak Mcp配置' },
+        // IRify 不在前台暴露 Yak MCP 配置入口
+        ...(!isIRify() ? [{ key: 'configMcp', label: 'Yak Mcp配置' }] : []),
       ],
     },
     {
