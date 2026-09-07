@@ -320,7 +320,7 @@ Section "Uninstall"
     ${If} $IS_UPDATED == "true"
         Goto keepFolder
     ${EndIf}
-    MessageBox MB_YESNO "卸载时是否保留yakit-projects文件夹？" IDYES keepFolder IDNO continueUninstall
+    MessageBox MB_YESNO "卸载时是否保留配置文件夹？" IDYES keepFolder IDNO continueUninstall
  keepFolder:
     StrCpy $KEEP_FOLDER "true"
     ; DetailPrint "保留yakit-projects文件夹..."
