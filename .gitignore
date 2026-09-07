@@ -104,3 +104,4 @@ yaklang/common/yso/resources/*.tar.gz
 yaklang/common/yak/ssa2llvm/runtime/embed/*.tar.gz
 yaklang/common/yak/ssa2llvm/runtime/embed/ssa2llvm-runtime/
 yaklang/ssa2llvm
+yaklang/
