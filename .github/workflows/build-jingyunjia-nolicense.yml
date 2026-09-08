@@ -1,0 +1,121 @@
+name: 靖云甲 no-license 安装包构建
+
+# push 到 yakit-工行换皮 分支时自动打包靖云甲(EE) no-license 安装包:
+#   Windows amd64/arm64 NSIS exe + Linux amd64/arm64 AppImage(静态 runtime,
+#   无需 libfuse2,麒麟V10/统信UOS V20 可用)。手动触发用 workflow_dispatch。
+on:
+  push:
+    branches: ["yakit-工行换皮"]
+  workflow_dispatch:
+
+concurrency:
+  group: jingyunjia-nolicense-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # 沿用官方 multi-platform-build.yml 的做法:macOS 交叉打包 win/linux,单 job 共享一次渲染进程构建
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      CI: ""
+      NODE_OPTIONS: --max_old_space_size=4096
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: "yarn"
+          cache-dependency-path: |
+            yarn.lock
+            app/renderer/src/main/yarn.lock
+            app/renderer/engine-link-startup/yarn.lock
+
+      # 沿用官方 workflow 的做法:替换为仓库自带的 zip 二进制
+      - name: 替换 zip 工具
+        run: |
+          cp buildutil/zip /usr/local/bin/zip
+          chmod +x /usr/local/bin/zip
+
+      # 引擎 zip 均被 .gitignore 忽略,CI 需从 OSS 下载并按打包钩子要求的命名落位:
+      #   bins/yak_windows_amd64.exe + bins/yak_windows_amd64.zip(钩子硬编码 amd64 引擎,
+      #   arm64 安装包内嵌 amd64 引擎,靠 Windows on ARM 的 x64 模拟运行)
+      #   bins/yak_linux_amd64.zip / bins/yak_linux_arm64.zip
+      - name: 下载 yak 引擎并落位
+        run: |
+          set -e
+          BASE="https://yaklang.oss-accelerate.aliyuncs.com/yak"
+          VER="$(curl -fsSL "$BASE/latest/version.txt")"
+          echo "引擎版本: $VER"
+          echo -n "$VER" > bins/engine-version.txt
+          curl -fsSL -o bins/yak_windows_amd64.exe "$BASE/$VER/yak_windows_amd64.exe"
+          curl -fsSL -o bins/yak_linux_amd64 "$BASE/$VER/yak_linux_amd64"
+          curl -fsSL -o bins/yak_linux_arm64 "$BASE/$VER/yak_linux_arm64"
+          # zip 内成员名须为不含 bins/ 前缀的裸文件名(与本地打包脚本一致)
+          (cd bins && zip -q yak_windows_amd64.zip yak_windows_amd64.exe)
+          (cd bins && zip -q yak_linux_amd64.zip yak_linux_amd64)
+          (cd bins && zip -q yak_linux_arm64.zip yak_linux_arm64)
+
+      - name: 安装依赖
+        run: yarn install && yarn install-render && yarn install-link-render
+
+      # 靖云甲(EE) no-license 渲染进程 + engine-link-startup 一次性构建,四个安装包共用
+      - name: 构建渲染进程(企业版 no-license)
+        run: yarn build-renders-enterprise-no-license
+
+      # 与本地打包脚本一致:安装包版本号日期段(如 2.x.y-MMDD)改为打包当天
+      - name: 版本号日期段改为打包当天
+        run: |
+          node <<'NODE'
+          const fs = require('fs')
+          const raw = fs.readFileSync('package.json', 'utf8')
+          const m = raw.match(/"version":\s*"([^"]+)"/)
+          if (!m) throw new Error('package.json 中未找到 version 字段')
+          const base = m[1].replace(/-\d{4}$/, '')
+          const next = `"version": "${base}-${new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit' }).replace('/', '')}"`
+          fs.writeFileSync('package.json', raw.replace(m[0], next))
+          console.log(`版本号设为 ${JSON.parse(raw.replace(m[0], next)).version}`)
+          NODE
+
+      # 分架构分次打包(before-pack 钩子按 arch 落引擎 zip、写 artifactName);
+      # --publish never:配置里有 generic publish,禁止 CI 触发发布
+      - name: 打包四个安装包
+        run: |
+          set -e
+          mkdir -p dist_out
+          EB_ARGS=(--publish never --config ./packageScript/electron-builder.config.js)
+
+          pack() {
+            yarn env-cmd -e nonSignNormal,EE -r packageScript/.env-cmdrc \
+              electron-builder build --"$1" --"$2" "${EB_ARGS[@]}"
+          }
+
+          # Windows amd64
+          pack win x64
+          mv release/*-windows-amd64.exe dist_out/
+
+          # Windows arm64:钩子对 win 固定命名 -amd64,打包后改名
+          pack win arm64
+          for f in release/*-windows-amd64.*; do
+            mv "$f" "${f/-windows-amd64./-windows-arm64.}"
+          done
+          mv release/*-windows-arm64.exe dist_out/
+
+          # Linux amd64 / arm64(AppImage,静态 runtime,麒麟V10/统信UOS V20 可用)
+          pack linux x64
+          mv release/*-linux-amd64.AppImage dist_out/
+          pack linux arm64
+          mv release/*-linux-arm64.AppImage dist_out/
+
+          echo "---- 产物 ----"
+          ls -lh dist_out/
+
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: 靖云甲web应用漏洞扫描-no-license
+          path: |
+            dist_out/*.exe
+            dist_out/*.AppImage
+          if-no-files-found: error
