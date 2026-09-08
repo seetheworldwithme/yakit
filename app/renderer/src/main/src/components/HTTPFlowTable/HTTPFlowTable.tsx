@@ -2771,14 +2771,12 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
           if (!width || !height) {
             return
           }
-          if (onlyShowFirstNode) {
+          const previousHeight = boxHeightRef.current
+          // 分栏模式也需要高度，否则实时表格无法发起首次查询。
+          boxHeightRef.current = height
+          if (onlyShowFirstNode && previousHeight && previousHeight < height) {
             // 窗口由小变大时 重新拉取数据
-            if (boxHeightRef.current && boxHeightRef.current < height) {
-              boxHeightRef.current = height
-              updateData()
-            } else {
-              boxHeightRef.current = height
-            }
+            updateData()
           }
         }}
         handleWidth={true}
