@@ -194,8 +194,16 @@ const configOption = {
     icon: macIcon,
   },
   linux: {
-    target: [{ target: 'AppImage', arch: ['x64', 'arm64'] }],
+    // target/arch 经 env 注入（build-linux-arm64.sh 里 export），勿依赖 CLI 传参——经 yarn/env-cmd 转发不可靠
+    target: [
+      {
+        target: process.env.YAKIT_LINUX_TARGET || 'AppImage',
+        arch: process.env.YAKIT_LINUX_ARCH ? [process.env.YAKIT_LINUX_ARCH] : ['x64', 'arm64'],
+      },
+    ],
     icon: linuxIcon,
+    // deb 打包必需的维护者信息（麒麟桌面版安装包元数据）
+    maintainer: 'v1ll4n <v1ll4n@yaklang.com>',
   },
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],

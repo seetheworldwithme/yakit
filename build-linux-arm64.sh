@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Yakit 企业版 no-license —— Linux arm64 AppImage 打包脚本
-# 用法：在 macOS 或 Linux 的项目根目录执行 `bash build-linux-arm64.sh`
+# Yakit 企业版 no-license —— Linux arm64 打包脚本（默认 AppImage）
+# 用法：`bash build-linux-arm64.sh`
+#       `YAKIT_LINUX_TARGET=deb bash build-linux-arm64.sh`  # 麒麟桌面版（银河麒麟 V10 桌面，deb 系）
 set -Eeuo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -13,6 +14,8 @@ ENGINE_BIN="$BINS_DIR/yak_linux_arm64"
 ENGINE_VERSION_FILE="$BINS_DIR/engine-version.txt"
 PACKAGE_JSON="$PROJECT_ROOT/package.json"
 ORIG_PKG_CONTENT=""
+# 打包 target：AppImage（默认）或 deb（麒麟桌面版）
+LINUX_TARGET="${YAKIT_LINUX_TARGET:-AppImage}"
 
 fail() {
   echo "❌ $*" >&2
@@ -34,6 +37,10 @@ trap cleanup EXIT
 require_command yarn
 require_command node
 require_command unzip
+
+# Electron / electron-builder 依赖包走国内镜像下载，避免 GitHub 直连抖动断流
+export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
+export ELECTRON_BUILDER_BINARIES_MIRROR="${ELECTRON_BUILDER_BINARIES_MIRROR:-https://npmmirror.com/mirrors/electron-builder-binaries/}"
 
 HOST_SYSTEM="$(uname -s)"
 case "$HOST_SYSTEM" in
@@ -95,7 +102,7 @@ fi
 echo "[1/3] 构建渲染进程（企业版 no-license）..."
 yarn build-renders-enterprise-no-license
 
-echo "[2/3] 打包 linux arm64（EE 品牌，不签名）..."
+echo "[2/3] 打包 linux arm64 / ${LINUX_TARGET}（EE 品牌，不签名）..."
 # 安装包版本号日期段（如 2.4.7-0626 的 0626）改为打包当天日期：
 # 打包前对 package.json 做字节级替换（只动 version 一处），构建结束由 cleanup 恢复。
 BUILD_DATE="$(date +%m%d)"
@@ -112,15 +119,26 @@ const base = m[1].replace(/-\d{4}$/, '')
 fs.writeFileSync(pkgPath, raw.replace(m[0], `"version": "${base}-${date}"`))
 console.log(`   ✅ 版本号设为 ${base}-${date}`)
 NODE
+# target/arch 经环境变量注入 electron-builder 配置，不依赖 CLI 传参（经 yarn/env-cmd 转发不可靠）
+export YAKIT_LINUX_TARGET="$LINUX_TARGET"
+export YAKIT_LINUX_ARCH="arm64"
+echo "   ⚙️  本次打包 target=${LINUX_TARGET} arch=arm64（如与预期不符请立即中断）"
 yarn env-cmd -e nonSignNormal,EE -r packageScript/.env-cmdrc \
-  electron-builder build --linux --arm64 \
+  electron-builder build --linux \
   --config ./packageScript/electron-builder.config.js
 
 echo "[3/3] 收拢安装包到 $OUT_DIR ..."
 mkdir -p "$OUT_DIR"
 shopt -s nullglob
-ARTIFACTS=(release/*-linux-arm64.AppImage release/*-linux-arm64.AppImage.blockmap)
-(( ${#ARTIFACTS[@]} > 0 )) || fail "electron-builder 未生成 Linux arm64 AppImage"
+if [[ "$LINUX_TARGET" == "deb" ]]; then
+  # deb 产物命名与 AppImage 同风格：${name}-${version}-linux-${arch}.deb
+  ARTIFACTS=(release/*-linux-arm64.deb)
+  OUT_DIR="$OUT_DIR/deb"
+  mkdir -p "$OUT_DIR"
+else
+  ARTIFACTS=(release/*-linux-arm64.AppImage release/*-linux-arm64.AppImage.blockmap)
+fi
+(( ${#ARTIFACTS[@]} > 0 )) || fail "electron-builder 未生成 Linux arm64 ${LINUX_TARGET}"
 mv -f "${ARTIFACTS[@]}" "$OUT_DIR/"
 
 echo "✅ Linux arm64 打包完成："
