@@ -2458,6 +2458,20 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
             onClickToRunList={onClickToRunList}
             selectedCodecType={rightItems[0]?.codecType}
           />
+          <NewCodecMiddleRunList
+            ref={newCodecMiddleRunListRef}
+            id={id}
+            fold={fold}
+            setFold={setFold}
+            rightItems={rightItems}
+            setRightItems={setRightItems}
+            inputEditor={inputEditor}
+            setOutputResponse={setOutputResponse}
+            isClickToRunList={isClickToRunList}
+            setRunLoading={setRunLoading}
+            codecFlow={codecFlow}
+            setCodecFlow={setCodecFlow}
+          />
         </DragDropContext>
       )}
       <NewCodecRightEditorBox
