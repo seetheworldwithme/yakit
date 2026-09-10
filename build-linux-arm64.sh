@@ -41,6 +41,9 @@ require_command unzip
 # Electron / electron-builder 依赖包走国内镜像下载，避免 GitHub 直连抖动断流
 export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
 export ELECTRON_BUILDER_BINARIES_MIRROR="${ELECTRON_BUILDER_BINARIES_MIRROR:-https://npmmirror.com/mirrors/electron-builder-binaries/}"
+# 下载缓存固定到 /Volumes/coding/caches，打包复用不再反复下载（~/.zshrc 里也有全局设置）
+export ELECTRON_CACHE="${ELECTRON_CACHE:-/Volumes/coding/caches/electron}"
+export ELECTRON_BUILDER_CACHE="${ELECTRON_BUILDER_CACHE:-/Volumes/coding/caches/electron-builder}"
 
 HOST_SYSTEM="$(uname -s)"
 case "$HOST_SYSTEM" in
