@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { ArtColumn, BaseTable, features, useTablePipeline } from '../../alibaba/ali-react-table-dist'
 import { analyzeFuzzerResponse, FuzzerResponse } from './HTTPFuzzerPage'
 import { formatTimestamp } from '../../utils/timeUtil'
-import * as antd from 'antd'
+import { Tooltip } from 'antd'
 import { EyeOutlined } from '@ant-design/icons'
 import { StatusCodeToColor } from '../../components/HTTPFlowTable/HTTPFlowTable'
 import { CopyableField } from '../../utils/inputUtil'
@@ -201,7 +201,7 @@ export const FuzzerResponseTableEx: React.FC<FuzzerResponseTableProp> = React.me
   })
 
   const pipeline = useTablePipeline({
-    components: antd,
+    components: { Tooltip },
     primaryKey: (raw: FuzzerResponse) => {
       return raw.UUID
     },
