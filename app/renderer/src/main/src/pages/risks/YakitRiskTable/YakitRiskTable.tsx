@@ -60,6 +60,7 @@ import {
   apiSetTagForRisk,
 } from './utils'
 import { CopyComponents, YakitTag } from '@/components/yakitUI/YakitTag/YakitTag'
+import { YakitTagColor } from '@/components/yakitUI/YakitTag/YakitTagType'
 import { YakitResizeBox, YakitResizeBoxProps } from '@/components/yakitUI/YakitResizeBox/YakitResizeBox'
 import classNames from 'classnames'
 import {
@@ -523,6 +524,47 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
           filterIcon: <OutlineSearchIcon className={styles['filter-icon']} />,
         },
         render: (_, record) => record?.TitleVerbose || record.Title || '-',
+      },
+      {
+        title: t('YakitRiskTable.level'),
+        dataKey: 'Severity',
+        width: 100,
+        align: 'center',
+        render: (_, i: Risk) => {
+          const title = SeverityMapTag.filter((item) => item.key.includes(i.Severity || ''))[0]
+          return (
+            <YakitTag color={title?.tag as YakitTagColor} className={styles['table-severity-tag']}>
+              {title ? t(title.nameUi) : i.Severity || '-'}
+            </YakitTag>
+          )
+        },
+        filterProps: {
+          filterKey: 'SeverityList',
+          filtersType: 'select',
+          filterMultiple: true,
+          filters: [
+            {
+              value: 'critical',
+              label: t('YakitTag.critical'),
+            },
+            {
+              value: 'high',
+              label: t('YakitTag.high'),
+            },
+            {
+              value: 'warning',
+              label: t('YakitTag.warning'),
+            },
+            {
+              value: 'low',
+              label: t('YakitTag.low'),
+            },
+            {
+              value: 'info',
+              label: t('YakitTag.info'),
+            },
+          ],
+        },
       },
       {
         title: 'IP',
