@@ -3262,7 +3262,6 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
               新增字典
             </YakitButton>
             <YakitButton
-              icon={<OutlineImportIcon />}
               onClick={() => {
                 const m = showYakitModal({
                   getContainer: document.getElementById('new-payload') || document.body,
