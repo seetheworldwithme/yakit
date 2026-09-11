@@ -183,6 +183,8 @@ interface CreateDictionariesProps {
   onQueryGroup: (obj?: { Group: string; Folder: string }) => void
   folder?: string
   group?: string
+  // 扩充(payload)模式下默认展示文件上传，用于批量导入
+  defaultUploadType?: 'dragger' | 'editor'
 }
 
 export interface SavePayloadProgress {
@@ -196,8 +198,10 @@ export interface SavePayloadProgress {
 // 新建字典
 export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => {
   const { t } = useI18nNamespaces(['payload', 'yakitUi'])
-  const { onClose, type, title, onQueryGroup, folder, group } = props
+  const { onClose, type, title, onQueryGroup, folder, group, defaultUploadType } = props
   const isDictionaries = type === 'dictionaries'
+  // payload 模式下默认 dragger 时放开文件上传入口（批量导入）
+  const canDragger = isDictionaries || defaultUploadType === 'dragger'
   // 可上传文件类型
   const FileType = ['text/plain', 'text/csv']
   // 收集上传的数据
@@ -213,7 +217,9 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
   const messageWarnRef = useRef<boolean>(false)
 
   // 上传文件/手动输入
-  const [uploadType, setUploadType] = useState<'dragger' | 'editor'>(isDictionaries ? 'dragger' : 'editor')
+  const [uploadType, setUploadType] = useState<'dragger' | 'editor'>(
+    defaultUploadType || (isDictionaries ? 'dragger' : 'editor'),
+  )
 
   // 存储类型
   const [storeType, setStoreType] = useState<'database' | 'file'>()
@@ -365,7 +371,7 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
               </div>
             )}
             <div className={styles['card-box']}>
-              {isDictionaries && (
+              {canDragger && (
                 <div className={styles['card-heard']}>
                   <YakitRadioButtons
                     value={uploadType}
@@ -390,7 +396,7 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
                 </div>
               )}
               <>
-                {isDictionaries && uploadType === 'dragger' && (
+                {canDragger && uploadType === 'dragger' && (
                   <div className={styles['upload-dragger-box']}>
                     <Dragger
                       className={styles['upload-dragger']}
@@ -3248,6 +3254,38 @@ export const PayloadLocalContent: React.FC<PayloadLocalContentProps> = (props) =
               }}
             >
               新增字典
+            </YakitButton>
+            <YakitButton
+              icon={<OutlineImportIcon />}
+              onClick={() => {
+                const m = showYakitModal({
+                  getContainer: document.getElementById('new-payload') || document.body,
+                  title: null,
+                  footer: null,
+                  width: 566,
+                  type: 'white',
+                  closable: false,
+                  maskClosable: false,
+                  hiddenHeader: true,
+                  content: (
+                    <CreateDictionaries
+                      title="批量导入字典"
+                      type="payload"
+                      defaultUploadType="dragger"
+                      onQueryGroup={() => {
+                        emiter.emit('refreshListEvent')
+                      }}
+                      folder={folder}
+                      group={group}
+                      onClose={() => {
+                        m.destroy()
+                      }}
+                    />
+                  ),
+                })
+              }}
+            >
+              批量导入
             </YakitButton>
             {/* 暂时隐藏全局展开入口，保留展开逻辑以便后续恢复。 */}
           </div>
