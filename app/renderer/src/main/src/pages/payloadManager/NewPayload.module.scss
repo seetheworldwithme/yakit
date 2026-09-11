@@ -268,17 +268,6 @@
   }
 }
 
-// 批量导入弹窗：整体浅蓝底（跟随主色 token），上传卡片去掉白色底与 icon
-.create-dictionaries-import {
-  background-color: var(--Colors-Use-Main-Bg);
-  .card-box {
-    background-color: transparent;
-    .upload-dragger {
-      background-color: transparent;
-    }
-  }
-}
-
 .create-dictionaries {
   .header {
     padding: 16px 24px 8px 24px;
@@ -517,6 +506,22 @@
     align-self: stretch;
   }
 }
+// 批量导入弹窗覆写，需置于 .create-dictionaries 基础块之后声明才能盖过基础规则（浅蓝主色底）
+// 注意：颜色全部走 token，禁止硬编码 hex
+.create-dictionaries-import {
+  background-color: var(--Colors-Use-Main-Bg);
+  .card-box {
+    background-color: var(--Colors-Use-Main-Bg);
+    border-color: var(--Colors-Use-Main-Border);
+    .upload-dragger {
+      background-color: var(--Colors-Use-Main-Bg);
+      &:hover {
+        border-color: var(--Colors-Use-Main-Primary);
+      }
+    }
+  }
+}
+
 .file-input {
   height: 40px;
   display: flex;
