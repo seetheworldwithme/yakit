@@ -820,7 +820,8 @@ export const NewCodecMiddleTypeItem: React.FC<NewCodecMiddleTypeItemProps> = (pr
         [styles['type-item-shield']]: itemStatus === 'shield',
       })}
     >
-      <div className={styles['type-header']} {...provided.dragHandleProps}>
+      {/* 按要求隐藏卡片头部（与外层标题重复），拖拽/屏蔽/断点/删除逻辑保留便于恢复 */}
+      {/* <div className={styles['type-header']} {...provided.dragHandleProps}>
         <div className={styles['type-title']}>
           <div className={styles['drag-icon']}>
             <SolidDragsortIcon />
@@ -867,7 +868,7 @@ export const NewCodecMiddleTypeItem: React.FC<NewCodecMiddleTypeItemProps> = (pr
             <OutlineXIcon />
           </div>
         </div>
-      </div>
+      </div> */}
       {node?.map((item, index) => {
         switch (item.type) {
           case 'flex':

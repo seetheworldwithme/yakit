@@ -139,12 +139,12 @@
             background: var(--Colors-Use-Main-Bg);
           }
           &-active {
-            border-bottom-color: var(--Colors-Use-Green-Border);
-            background: var(--Colors-Use-Green-Bg);
+            border-bottom-color: var(--Colors-Use-Main-Border);
+            background: var(--Colors-Use-Main-Bg);
             .title {
               .drag-icon,
               .text {
-                color: var(--Colors-Use-Green-Primary);
+                color: var(--Colors-Use-Main-Primary);
               }
             }
           }
@@ -210,7 +210,8 @@
     width: 0px;
   }
   .new-codec-run-list {
-    width: 420px;
+    // 按要求缩短为原宽度(420px)的二分之一
+    width: 210px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -563,8 +564,8 @@
   }
 }
 .type-item-run {
-  border-bottom: 1px solid var(--Colors-Use-Green-Border);
-  background: var(--Colors-Use-Green-Bg);
+  border-bottom: 1px solid var(--Colors-Use-Main-Border);
+  background: var(--Colors-Use-Main-Bg);
 }
 .type-item-suspend {
   border-bottom: 1px solid var(--Colors-Use-Error-Border);
