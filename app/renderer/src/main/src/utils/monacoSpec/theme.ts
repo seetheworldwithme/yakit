@@ -789,6 +789,16 @@ const defineMonacoTheme = (vars: CssVars, themeGlobal: Theme) => {
       'input.border': vars['--Colors-Use-Neutral-Border'],
 
       'editorSuggestWidget.highlightForeground': vars['--Colors-Use-Blue-Primary'],
+
+      // diff 对比高亮使用语义 token，避免浅色主题下默认透明色过淡而看不出响应包差异
+      'diffEditor.insertedLineBackground': vars['--Colors-Use-Success-Bg-Hover'],
+      'diffEditor.removedLineBackground': vars['--Colors-Use-Error-Bg-Hover'],
+      'diffEditor.insertedTextBackground': vars['--Colors-Use-Success-Focus'],
+      'diffEditor.removedTextBackground': vars['--Colors-Use-Error-Focus'],
+      'diffEditorGutter.insertedLineBackground': vars['--Colors-Use-Success-Border'],
+      'diffEditorGutter.removedLineBackground': vars['--Colors-Use-Error-Border'],
+      'diffEditorOverview.insertedForeground': vars['--Colors-Use-Success-Primary'],
+      'diffEditorOverview.removedForeground': vars['--Colors-Use-Error-Primary'],
     },
   })
   monaco.editor.setTheme('kurior')

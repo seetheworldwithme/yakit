@@ -16,6 +16,7 @@ import { useUpdateEffect, useMemoizedFn } from 'ahooks'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
 import { YakitMenuItemType } from '@/components/yakitUI/YakitMenu/YakitMenu'
 import { yakitNotify } from '@/utils/notification'
+import { prepareDiffText } from './DataCompare.utils'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -233,17 +234,26 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
       readOnly,
       fontSize,
       contextmenu: false,
+      maxComputationTime: 15000,
     })
 
     if (setNoWrap) setNoWrap(!noWrap)
     setModelEditor({ content: leftCode, language: language }, { content: rightCode, language: language }, language)
   }
   const setModelEditor = (left?: textModelProps, right?: textModelProps, language = 'yak') => {
-    const leftModel = monaco.createModel(left ? left.content : '', left ? left.language : language)
+    const preparedLeft = left ? { ...left, content: prepareDiffText(left.content) } : undefined
+    const preparedRight = right ? { ...right, content: prepareDiffText(right.content) } : undefined
+    const leftModel = monaco.createModel(
+      preparedLeft ? preparedLeft.content : '',
+      preparedLeft ? preparedLeft.language : language,
+    )
     leftModel.onDidChangeContent((e) => {
       if (setLeftCode) setLeftCode(leftModel.getValue())
     })
-    const rightModel = monaco.createModel(right ? right.content : '', right ? right.language : language)
+    const rightModel = monaco.createModel(
+      preparedRight ? preparedRight.content : '',
+      preparedRight ? preparedRight.language : language,
+    )
     if (setRightCode)
       rightModel.onDidChangeContent((e) => {
         setRightCode(rightModel.getValue())
@@ -285,6 +295,7 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
       readOnly,
       fontSize,
       contextmenu: false,
+      maxComputationTime: 15000,
     })
 
     if (!!res.info) {
