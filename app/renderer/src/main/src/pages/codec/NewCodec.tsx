@@ -2460,20 +2460,23 @@ export const NewCodec: React.FC<NewCodecProps> = (props) => {
             onClickToRunList={onClickToRunList}
             selectedCodecType={rightItems[0]?.codecType}
           />
-          <NewCodecMiddleRunList
-            ref={newCodecMiddleRunListRef}
-            id={id}
-            fold={fold}
-            setFold={setFold}
-            rightItems={rightItems}
-            setRightItems={setRightItems}
-            inputEditor={inputEditor}
-            setOutputResponse={setOutputResponse}
-            isClickToRunList={isClickToRunList}
-            setRunLoading={setRunLoading}
-            codecFlow={codecFlow}
-            setCodecFlow={setCodecFlow}
-          />
+          {/* 选中方法无参数项(如 MD5)时不渲染中栏，Input 编辑区直接占满；有参数时才弹出 */}
+          {rightItems.some((item) => item.node && item.node.length > 0) && (
+            <NewCodecMiddleRunList
+              ref={newCodecMiddleRunListRef}
+              id={id}
+              fold={fold}
+              setFold={setFold}
+              rightItems={rightItems}
+              setRightItems={setRightItems}
+              inputEditor={inputEditor}
+              setOutputResponse={setOutputResponse}
+              isClickToRunList={isClickToRunList}
+              setRunLoading={setRunLoading}
+              codecFlow={codecFlow}
+              setCodecFlow={setCodecFlow}
+            />
+          )}
         </DragDropContext>
       )}
       <NewCodecRightEditorBox
