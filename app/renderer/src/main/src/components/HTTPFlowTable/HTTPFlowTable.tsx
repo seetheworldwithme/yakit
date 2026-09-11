@@ -261,13 +261,14 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   }, [backgroundRefresh, pageType])
 
   // 整表重新加载时清空选中（hook 在换筛选、刷新时会调 onFirst）
+  // ponytail: 这里不再收回详情面板——面板内容来自父级 selected state,不依赖表格行,
+  // 整表重载(含挂载时的自动重载)强制关面板会导致"点击行后面板闪一下就消失"
   const onFirst = useMemoizedFn(() => {
     setSelectedRowKeys([])
     setSelectedRows([])
     if (!viewAttachIdFirstRef.current) {
       setScrollToIndex(0)
       setCurrentIndex(undefined)
-      setOnlyShowFirstNode && setOnlyShowFirstNode(true)
     }
     setUpdateCacheData([])
     setIsRefresh((v) => !v)
