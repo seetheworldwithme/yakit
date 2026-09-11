@@ -871,30 +871,28 @@ export const NewCodecMiddleTypeItem: React.FC<NewCodecMiddleTypeItemProps> = (pr
       {node?.map((item, index) => {
         switch (item.type) {
           case 'flex':
-            // 左右布局
+            // 上下布局：一行只展示一个控件，避免并排显得空旷
             return (
-              <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginTop: 8 }} key={`${data.key}-${index}`}>
-                <div style={{ flex: item.leftFlex || 3 }}>
-                  {/* 左 */}
-                  {onShowUI(item.leftNode, index)}
-                </div>
-                <div style={{ flex: item.rightFlex || 2 }}>
-                  {/* 右 */}
-                  {onShowUI(item.rightNode, index)}
-                </div>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}
+                key={`${data.key}-${index}`}
+              >
+                {/* 上（原左） */}
+                {onShowUI(item.leftNode, index)}
+                {/* 下（原右） */}
+                {onShowUI(item.rightNode, index)}
               </div>
             )
           case 'inputSelect':
             return (
-              <div style={{ display: 'flex', flexDirection: 'row', marginTop: 8 }} key={`${data.key}-${index}`}>
-                <div style={{ flex: 3 }}>
-                  {/* 左 */}
-                  {onShowUI(item.input, index, 'left')}
-                </div>
-                <div style={{ flex: 2, borderLeft: '1px solid var(--Colors-Use-Neutral-Border)' }}>
-                  {/* 右 */}
-                  {onShowUI(item.select, index, 'right')}
-                </div>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}
+                key={`${data.key}-${index}`}
+              >
+                {/* 上（原左） */}
+                {onShowUI(item.input, index, 'left')}
+                {/* 下（原右） */}
+                {onShowUI(item.select, index, 'right')}
               </div>
             )
           case 'checkbox':
