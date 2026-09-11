@@ -458,19 +458,12 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
     'DurationMs',
     'RequestSizeVerbose',
   ]
-  const visibleColumns = allColumns.filter((c) => !globallyHiddenColumnKeys.includes(c.dataKey))
+  // 流量档案页不走全局隐藏（IP / 请求大小 / 响应长度等由固定顺序控制），其余页面套用全局隐藏
+  const visibleColumns =
+    pageType === 'History' ? allColumns : allColumns.filter((c) => !globallyHiddenColumnKeys.includes(c.dataKey))
   // 流量档案页隐藏部分列
   if (pageType === 'History') {
-    const hiddenInHistory = [
-      'Path',
-      'FromPlugin',
-      'Tags',
-      'HtmlTitle',
-      'GetParamsTotal',
-      'PathSuffix',
-      'RequestSizeVerbose',
-      'DurationMs',
-    ]
+    const hiddenInHistory = ['Path', 'FromPlugin', 'Tags', 'HtmlTitle', 'GetParamsTotal', 'PathSuffix', 'DurationMs']
     return visibleColumns.filter((c) => !hiddenInHistory.includes(c.dataKey))
   }
   return visibleColumns
@@ -485,8 +478,17 @@ export const resolveHTTPFlowTableColumns = (
   let finalColumns: ColumnsTypeProps[] = []
 
   if (pageType === 'History') {
-    // 流量档案页固定列与顺序：序号 / 方法 / 状态码 / IP / Host / URL / 响应长度 / 请求时间 / 操作
-    const historyOrder = ['Method', 'StatusCode', 'IPAddress', 'Host', 'Url', 'BodyLength', 'UpdatedAt']
+    // 流量档案页固定列与顺序：序号 / 方法 / 状态码 / IP / Host / URL / 请求大小 / 响应长度 / 请求时间 / 操作
+    const historyOrder = [
+      'Method',
+      'StatusCode',
+      'IPAddress',
+      'Host',
+      'Url',
+      'RequestSizeVerbose',
+      'BodyLength',
+      'UpdatedAt',
+    ]
     const idColumn = columnArr.find((col) => col.dataKey === 'Id')
     const actionColumn = columnArr.find((col) => col.dataKey === 'action')
     const middles = historyOrder
