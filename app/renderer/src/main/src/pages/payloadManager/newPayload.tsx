@@ -202,6 +202,8 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
   const isDictionaries = type === 'dictionaries'
   // payload 模式下默认 dragger 时放开文件上传入口（批量导入）
   const canDragger = isDictionaries || defaultUploadType === 'dragger'
+  // 批量导入弹窗：不带手动输入切换、不带文件夹 icon、整体浅蓝底
+  const isBatchImport = !isDictionaries && canDragger
   // 可上传文件类型
   const FileType = ['text/plain', 'text/csv']
   // 收集上传的数据
@@ -342,7 +344,9 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
     },
   ).run
   return (
-    <div className={styles['create-dictionaries']}>
+    <div
+      className={classNames(styles['create-dictionaries'], { [styles['create-dictionaries-import']]: isBatchImport })}
+    >
       {!streamData && (
         <>
           <div className={styles['header']}>
@@ -371,7 +375,7 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
               </div>
             )}
             <div className={styles['card-box']}>
-              {canDragger && (
+              {isDictionaries && (
                 <div className={styles['card-heard']}>
                   <YakitRadioButtons
                     value={uploadType}
@@ -409,9 +413,11 @@ export const CreateDictionaries: React.FC<CreateDictionariesProps> = (props) => 
                       }}
                     >
                       <div className={styles['upload-info']}>
-                        <div className={styles['add-file-icon']}>
-                          <PropertyIcon />
-                        </div>
+                        {!isBatchImport && (
+                          <div className={styles['add-file-icon']}>
+                            <PropertyIcon />
+                          </div>
+                        )}
                         <div className={styles['content']}>
                           <div className={styles['title']}>{t('CreateDictionaries.uploadHint')}</div>
                           <div className={styles['sub-title']}>{t('CreateDictionaries.uploadHintFolder')}</div>

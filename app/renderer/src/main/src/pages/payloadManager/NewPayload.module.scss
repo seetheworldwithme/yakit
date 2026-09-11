@@ -268,6 +268,17 @@
   }
 }
 
+// 批量导入弹窗：整体浅蓝底（跟随主色 token），上传卡片去掉白色底与 icon
+.create-dictionaries-import {
+  background-color: var(--Colors-Use-Main-Bg);
+  .card-box {
+    background-color: transparent;
+    .upload-dragger {
+      background-color: transparent;
+    }
+  }
+}
+
 .create-dictionaries {
   .header {
     padding: 16px 24px 8px 24px;
