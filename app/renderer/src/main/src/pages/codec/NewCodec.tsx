@@ -1492,8 +1492,10 @@ export const NewCodecMiddleRunList: React.FC<NewCodecMiddleRunListProps> = forwa
               />
             </Tooltip>
           )}
-          <span>{t('NewCodecMiddleRunList.codecOrder')}</span>
-          <span className={styles['count']}>{rightItems.length}</span>
+          {/* 按要求隐藏「编码顺序」，直接展示当前选中的编解码方法名（多个时展示第一个） */}
+          {/* <span>{t('NewCodecMiddleRunList.codecOrder')}</span>
+          <span className={styles['count']}>{rightItems.length}</span> */}
+          <span>{rightItems[0]?.title || t('NewCodecMiddleRunList.codecOrder')}</span>
         </div>
         <div className={styles['extra']}>
           {codecFlow ? (
@@ -1588,7 +1590,8 @@ export const NewCodecMiddleRunList: React.FC<NewCodecMiddleRunListProps> = forwa
           )}
         </Droppable>
       </div>
-      <div className={styles['run-box']}>
+      {/* 按要求隐藏「自动执行 / 立即执行」底栏，保留 autoRun 状态与 runCodec 逻辑便于恢复 */}
+      {/* <div className={styles['run-box']}>
         <YakitCheckbox
           disabled={rightItems.length === 0 || inputEditor.length === 0}
           checked={autoRun}
@@ -1605,7 +1608,7 @@ export const NewCodecMiddleRunList: React.FC<NewCodecMiddleRunListProps> = forwa
         >
           {t('YakitButton.runNow')}
         </YakitButton>
-      </div>
+      </div> */}
       <YakitModal
         visible={cacheModal}
         bodyStyle={{ padding: 0 }}
