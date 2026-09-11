@@ -52,6 +52,7 @@ import { formatTimestamp } from '@/utils/timeUtil'
 import { JSONParseLog } from '@/utils/tool'
 import { HTTPFlowCodec } from '@/utils/encodec'
 import { YakitMenu, YakitMenuItemType } from './yakitUI/YakitMenu/YakitMenu'
+import { decodeHTTPPacketBodyForCompare } from '@/pages/compare/HTTPPacketCompare.utils'
 const { TabPane } = PluginTabs
 const { ipcRenderer } = window.require('electron')
 
@@ -1381,6 +1382,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
   // 原始数据
   const [beforeResValue, setBeforeResValue] = useState<string>('')
   const [beforeRspValue, setBeforeRspValue] = useState<string>('')
+  const [beforeRspCompareValue, setBeforeRspCompareValue] = useState<string>('')
   // 编辑器实例
   const [reqEditor, setReqEditor] = useState<IMonacoEditor>()
   const [resEditor, setResEditor] = useState<IMonacoEditor>()
@@ -1439,6 +1441,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
     setShowBeforeData(false)
     setBeforeResValue('')
     setBeforeRspValue('')
+    setBeforeRspCompareValue('')
   })
 
   useEffect(() => {
@@ -1485,6 +1488,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
     }
     if (data === 'response') {
       setBeforeRspValue('')
+      setBeforeRspCompareValue('')
     }
   })
   const handleGetHTTPFlowBare = useMemoizedFn((data: 'request' | 'response') => {
@@ -1500,6 +1504,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
           }
           if (data === 'response') {
             setBeforeRspValue(Uint8ArrayToString(res.Data))
+            setBeforeRspCompareValue(decodeHTTPPacketBodyForCompare(res.Data))
           }
         } else {
           onInitBeforeValue(data)
@@ -1989,7 +1994,7 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
             webFuzzerValue={flow?.RequestString || ''}
             editorOperationRecord="HTTP_FLOW_DETAIL_REQUEST_AND_RESPONSE"
             dataCompare={{
-              rightCode: beforeRspValue,
+              rightCode: beforeRspCompareValue || beforeRspValue,
               leftCode: rspType === 'response' ? flow?.ResponseString || '' : undefined,
               leftTitle: t('HTTPFlowDetailRequestAndResponse.response'),
               rightTitle: t('HTTPFlowDetailRequestAndResponse.rawResponse'),

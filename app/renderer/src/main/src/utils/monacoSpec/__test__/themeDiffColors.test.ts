@@ -16,7 +16,8 @@ describe('Monaco diff theme colors', () => {
   it('chunks large single-line HTTP responses before creating Monaco models', () => {
     const compareSource = fs.readFileSync(path.resolve(__dirname, '../../../pages/compare/DataCompare.tsx'), 'utf8')
 
-    expect(compareSource).toContain("import { prepareDiffText } from './DataCompare.utils'")
+    expect(compareSource).toContain("from './DataCompare.utils'")
+    expect(compareSource).toContain('getDiffLineRanges(leftModel.getValue(), rightModel.getValue())')
     expect(compareSource.match(/content: prepareDiffText\(/g) || []).toHaveLength(2)
   })
 })

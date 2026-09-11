@@ -72,3 +72,20 @@
     gap: 8px;
   }
 }
+.diff-line-delete {
+  background-color: var(--Colors-Use-Error-Bg-Hover);
+}
+
+.diff-line-insert {
+  background-color: var(--Colors-Use-Success-Bg-Hover);
+}
+
+.diff-char-delete {
+  color: var(--Colors-Use-Basic-White);
+  background-color: var(--Colors-Use-Error-Primary);
+}
+
+.diff-char-insert {
+  color: var(--Colors-Use-Basic-White);
+  background-color: var(--Colors-Use-Success-Primary);
+}

@@ -16,7 +16,7 @@ import { useUpdateEffect, useMemoizedFn } from 'ahooks'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
 import { YakitMenuItemType } from '@/components/yakitUI/YakitMenu/YakitMenu'
 import { yakitNotify } from '@/utils/notification'
-import { prepareDiffText } from './DataCompare.utils'
+import { getDiffInlineRanges, getDiffLineRanges, prepareDiffText } from './DataCompare.utils'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -219,11 +219,21 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
     initFontSize()
   }, [])
 
+  const disposeDiffEditor = (editor?: monacoEditor.editor.IStandaloneDiffEditor) => {
+    if (!editor) return
+    const model = editor.getModel()
+    editor.setModel(null)
+    model?.original.dispose()
+    model?.modified.dispose()
+    editor.dispose()
+  }
+
   const changeLineConversion = () => {
     if (!diffDivRef || !diffDivRef.current) return
     if (!diffEditorRef.current) return
     const diff = diffDivRef.current as unknown as HTMLDivElement
-    diffEditorRef.current.dispose()
+    disposeDiffEditor(diffEditorRef.current)
+    diff.replaceChildren()
 
     const isWrap = !noWrap
     diffEditorRef.current = monaco.createDiffEditor(diff, {
@@ -263,10 +273,45 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
       original: leftModel,
       modified: rightModel,
     })
+
+    const lineRanges = getDiffLineRanges(leftModel.getValue(), rightModel.getValue())
+    const inlineRanges = getDiffInlineRanges(leftModel.getValue(), rightModel.getValue())
+    diffEditorRef.current.getOriginalEditor().deltaDecorations(
+      [],
+      [
+        ...lineRanges.original.map((range) => ({
+          range: new monacoEditor.Range(range.startLineNumber, 1, range.endLineNumber, 1),
+          options: {
+            isWholeLine: true,
+            className: styles['diff-line-delete'],
+          },
+        })),
+        ...inlineRanges.original.map((range) => ({
+          range: new monacoEditor.Range(range.startLineNumber, range.startColumn, range.endLineNumber, range.endColumn),
+          options: { inlineClassName: styles['diff-char-delete'] },
+        })),
+      ],
+    )
+    diffEditorRef.current.getModifiedEditor().deltaDecorations(
+      [],
+      [
+        ...lineRanges.modified.map((range) => ({
+          range: new monacoEditor.Range(range.startLineNumber, 1, range.endLineNumber, 1),
+          options: {
+            isWholeLine: true,
+            className: styles['diff-line-insert'],
+          },
+        })),
+        ...inlineRanges.modified.map((range) => ({
+          range: new monacoEditor.Range(range.startLineNumber, range.startColumn, range.endLineNumber, range.endColumn),
+          options: { inlineClassName: styles['diff-char-insert'] },
+        })),
+      ],
+    )
   }
   useEffect(() => {
     //如果存在先销毁以前的组件
-    if (diffEditorRef.current) diffEditorRef.current.dispose()
+    disposeDiffEditor(diffEditorRef.current)
     //替换 invoke("create-compare-token")
     const getCreateCompareTokenRes = () => {
       if (token) {
@@ -287,7 +332,8 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
     if (!diffDivRef || !diffDivRef.current) return
 
     const diff = diffDivRef.current as unknown as HTMLDivElement
-    diffEditorRef.current = monaco.createDiffEditor(diff, {
+    diff.replaceChildren()
+    const diffEditor = monaco.createDiffEditor(diff, {
       enableSplitViewResizing: false,
       originalEditable,
       automaticLayout: true,
@@ -297,6 +343,7 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
       contextmenu: false,
       maxComputationTime: 15000,
     })
+    diffEditorRef.current = diffEditor
 
     if (!!res.info) {
       const { info } = res
@@ -334,14 +381,22 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
       )
     }
 
-    ipcRenderer.on(`${res.token}-data`, (e, tokenDataRes) => {
+    const compareDataHandler = (e, tokenDataRes) => {
       const { left, right } = tokenDataRes.info
 
       setModelEditor(left, right, language || left?.language || right?.language)
 
       if (tokenDataRes.info.type === 1) if (setLeftCode) setLeftCode(left.content)
       if (tokenDataRes.info.type === 2) if (setRightCode) setRightCode(right.content)
-    })
+    }
+    ipcRenderer.on(`${res.token}-data`, compareDataHandler)
+
+    return () => {
+      ipcRenderer.removeListener(`${res.token}-data`, compareDataHandler)
+      disposeDiffEditor(diffEditor)
+      diff.replaceChildren()
+      if (diffEditorRef.current === diffEditor) diffEditorRef.current = undefined
+    }
   }, [])
 
   useUpdateEffect(() => {
