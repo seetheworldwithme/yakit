@@ -1360,7 +1360,9 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
                         type="outline1"
                         colors="danger"
                         disabled={allTotal === 0}
-                        name={selectNum === 0 ? t('YakitButton.clear') : t('YakitButton.delete')}
+                        // 靖云甲：原未勾选显示「清空」、勾选后变「删除」，实际均为删数据（删全部/删所选），统一改为「删除」避免歧义
+                        // name={selectNum === 0 ? t('YakitButton.clear') : t('YakitButton.delete')}
+                        name={t('YakitButton.delete')}
                       />
                     </YakitPopconfirm>
                     <Badge dot={offsetDataInTop.length > 0} offset={[-5, 4]}>
