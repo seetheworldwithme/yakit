@@ -596,15 +596,17 @@ export const YakitRiskTable: React.FC<YakitRiskTableProps> = React.memo((props) 
         fixed: 'right',
         render: (text, record: Risk, index) => (
           <>
-            <YakitButton
-              type="text"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemoveSingle(record.Id)
-              }}
-            >
-              删除
-            </YakitButton>
+            {/* 靖云甲：行内删除增加二次确认，防误触（原为直接删除无提醒） */}
+            <YakitPopconfirm title="确定删除该风险台账吗？不可恢复" onConfirm={() => onRemoveSingle(record.Id)}>
+              <YakitButton
+                type="text"
+                onClick={(e) => {
+                  e.stopPropagation()
+                }}
+              >
+                删除
+              </YakitButton>
+            </YakitPopconfirm>
           </>
         ),
       },

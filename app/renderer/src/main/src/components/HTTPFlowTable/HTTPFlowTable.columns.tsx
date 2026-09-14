@@ -9,6 +9,7 @@ import { ColumnsTypeProps, FiltersItemProps } from '@/components/TableVirtualRes
 import { isCellRedSingleColor, getSingleColorType } from '@/components/TableVirtualResize/utils'
 import { YakitSelect } from '@/components/yakitUI/YakitSelect/YakitSelect'
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
+import { YakitPopconfirm } from '@/components/yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { formatTimestamp } from '@/utils/timeUtil'
 import { formatHTTPFlowPathSuffix } from './HTTPFlowPathSuffix'
 import { contentType, HTTP_FLOW_FAVORITE_TAG } from './HTTPFlowTable.constants'
@@ -434,9 +435,17 @@ export const buildHTTPFlowTableColumnArr = (ctx: BuildHTTPFlowTableColumnsContex
               </>
             )}
             {ctx.pageType === 'History' ? (
-              <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onDelete(e, rowData)}>
-                删除
-              </YakitButton>
+              /* 靖云甲：行内删除增加二次确认，防误触（原为直接删除无提醒） */
+              <YakitPopconfirm
+                title="确定删除该流量记录吗？不可恢复"
+                onConfirm={(e) => {
+                  if (e) actionHandlers.onDelete(e, rowData)
+                }}
+              >
+                <YakitButton type="text2" size="small">
+                  删除
+                </YakitButton>
+              </YakitPopconfirm>
             ) : (
               <YakitButton type="text2" size="small" onClick={(e) => actionHandlers.onExpand(e, rowData)}>
                 详情

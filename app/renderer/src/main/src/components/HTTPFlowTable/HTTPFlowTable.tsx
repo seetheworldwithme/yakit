@@ -28,6 +28,7 @@ import { YakitCheckableTag } from '../yakitUI/YakitTag/YakitCheckableTag'
 import { YakitMenu } from '../yakitUI/YakitMenu/YakitMenu'
 import { YakitDropdownMenu } from '../yakitUI/YakitDropdownMenu/YakitDropdownMenu'
 import { YakitButton } from '../yakitUI/YakitButton/YakitButton'
+import { YakitPopconfirm } from '../yakitUI/YakitPopconfirm/YakitPopconfirm'
 import { YakitPopover } from '../yakitUI/YakitPopover/YakitPopover'
 import { showYakitModal } from '../yakitUI/YakitModal/YakitModalConfirm'
 import { YakitHint } from '@/components/yakitUI/YakitHint/YakitHint'
@@ -2571,14 +2572,15 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
             )} */}
             {showBatchActions && (
               <>
-                <YakitButton
-                  type="outline1"
-                  colors="danger"
-                  disabled={selectedRowKeys.length === 0}
-                  onClick={() => onMultipleClick('删除记录', [])}
+                {/* 靖云甲：批量删除增加二次确认，防误触（原为直接删除无提醒） */}
+                <YakitPopconfirm
+                  title={`确定删除选中的 ${selectedRowKeys.length} 条流量记录吗？不可恢复`}
+                  onConfirm={() => onMultipleClick('删除记录', [])}
                 >
-                  删除
-                </YakitButton>
+                  <YakitButton type="outline1" colors="danger" disabled={selectedRowKeys.length === 0}>
+                    删除
+                  </YakitButton>
+                </YakitPopconfirm>
                 <YakitButton
                   type="outline2"
                   disabled={selectedRowKeys.length === 0}
