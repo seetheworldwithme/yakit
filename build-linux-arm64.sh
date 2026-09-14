@@ -41,9 +41,16 @@ require_command unzip
 # Electron / electron-builder 依赖包走国内镜像下载，避免 GitHub 直连抖动断流
 export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
 export ELECTRON_BUILDER_BINARIES_MIRROR="${ELECTRON_BUILDER_BINARIES_MIRROR:-https://npmmirror.com/mirrors/electron-builder-binaries/}"
-# 下载缓存固定到 /Volumes/coding/caches，打包复用不再反复下载（~/.zshrc 里也有全局设置）
-export ELECTRON_CACHE="${ELECTRON_CACHE:-/Volumes/coding/caches/electron}"
-export ELECTRON_BUILDER_CACHE="${ELECTRON_BUILDER_CACHE:-/Volumes/coding/caches/electron-builder}"
+# 下载缓存固定目录，打包复用不再反复下载（可用环境变量覆盖）：macOS 沿用 /Volumes/coding/caches，Linux 用 ~/.cache/yakit-build
+BUILD_CACHE_ROOT="/Volumes/coding/caches"
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  BUILD_CACHE_ROOT="$HOME/.cache/yakit-build"
+fi
+export ELECTRON_CACHE="${ELECTRON_CACHE:-$BUILD_CACHE_ROOT/electron}"
+export ELECTRON_BUILDER_CACHE="${ELECTRON_BUILDER_CACHE:-$BUILD_CACHE_ROOT/electron-builder}"
+
+# 渲染进程 CRA 构建吃内存，默认堆上限在小内存机器上会被 OOM 杀（"process exited too early"），显式抬高（可用环境变量覆盖）
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${YAKIT_NODE_HEAP_MB:-5632}"
 
 HOST_SYSTEM="$(uname -s)"
 case "$HOST_SYSTEM" in
