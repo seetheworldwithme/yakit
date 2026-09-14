@@ -534,7 +534,9 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
               showHistorySearch={showHistorySearch}
               showColorSwatch={showColorSwatch}
               showBatchActions={showBatchActions}
-              showDelAll={showDelAll}
+              // 靖云甲按功能清单最小化展示：右上角「清空」实为清空全部流量数据的危险操作（非清空查询条件），历史流量页暂不展示
+              // showDelAll={showDelAll}
+              showDelAll={pageType === 'History' ? false : showDelAll}
               showSetting={showSetting}
               showRefresh={showRefresh}
               params={params}
