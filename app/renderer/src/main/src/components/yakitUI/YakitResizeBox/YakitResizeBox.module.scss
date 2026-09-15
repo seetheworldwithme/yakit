@@ -6,6 +6,7 @@
   overflow: hidden;
   background-color: var(--Colors-Use-Basic-Background);
   .resize-split-line {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -93,6 +94,16 @@
 
   .resize-split-handle-bottom {
     transform: translate(-50%, 50%);
+    color: var(--Colors-Use-Neutral-Text-1-Title);
+  }
+
+  .resize-split-handle-horizontal {
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    min-width: 24px;
+    padding: 0;
+    transform: translate(-50%, -50%);
     color: var(--Colors-Use-Neutral-Text-1-Title);
   }
 

@@ -17,7 +17,7 @@
     "manualInput": "手动输入",
     "largeFileUpload": "大文件上传",
     "uploadHint": "可将文件拖入框内，或点击此处导入",
-    "uploadHintFolder": "支持文件夹批量上传(支持文件类型txt/csv)",
+    "uploadHintFolder": "支持文件类型txt/csv",
     "largeFileOnlyTxt": "大文件存储仅支持txt文件类型",
     "saveToFile": "文件存储",
     "largeFileStorage": "大文件存储",

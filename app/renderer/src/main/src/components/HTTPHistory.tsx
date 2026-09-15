@@ -464,7 +464,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
 
   // #region 编辑器部分是否显示
   const [onlyShowFirstNode, setOnlyShowFirstNode] = useControllableValue<boolean>(props, {
-    defaultValue: pageType === 'MITM' ? false : true,
+    defaultValue: true,
     valuePropName: 'onlyShowFirstNode',
     trigger: 'setOnlyShowFirstNode',
   })
@@ -589,7 +589,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
                 historyId={historyId}
                 downstreamProxyStr={downstreamProxy}
                 pageType={pageType}
-                showFlod={showFlod}
+                showFlod={isMITMFlowWorkbench ? false : showFlod}
               />
             )}
           </div>
@@ -606,6 +606,7 @@ export const HTTPFlowRealTimeTableAndEditor: React.FC<HTTPFlowRealTimeTableAndEd
           marginLeft: isMITMFlowWorkbench ? 6 : 0,
         }}
         lineDirection={isMITMFlowWorkbench ? 'left' : 'top'}
+        showHorizontalCollapseHandle={isMITMFlowWorkbench}
         onMouseUp={({ firstSizePercent, secondSizePercent }) => {
           lastRatioRef.current = {
             firstRatio: firstSizePercent,

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useMemoizedFn, useUpdateEffect } from 'ahooks'
 import ReactResizeDetector from 'react-resize-detector'
 import classNames from 'classnames'
-import { OutlineChevrondoubledownIcon } from '@/assets/icon/outline'
+import { OutlineChevrondoubledownIcon, OutlineChevrondoublerightIcon } from '@/assets/icon/outline'
 import styles from './YakitResizeBox.module.scss'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
 
@@ -241,6 +241,8 @@ export interface YakitResizeBoxProps {
   onMouseUp?: (e: MouseUpCallBackProps) => void
   /** 点击隐藏整个区域 */
   onClickHiddenBox?: () => void
+  /** 横向分栏时展示收起第二块区域的按钮 */
+  showHorizontalCollapseHandle?: boolean
 }
 
 export const YakitResizeBox: React.FC<YakitResizeBoxProps> = React.memo((props) => {
@@ -264,6 +266,7 @@ export const YakitResizeBox: React.FC<YakitResizeBoxProps> = React.memo((props) 
     lineInStyle,
     onMouseUp,
     onClickHiddenBox,
+    showHorizontalCollapseHandle = false,
   } = props
   const { t } = useI18nNamespaces(['yakitUi'])
 
@@ -508,6 +511,17 @@ export const YakitResizeBox: React.FC<YakitResizeBoxProps> = React.memo((props) 
             >
               <OutlineChevrondoubledownIcon />
               <span className={styles['resize-split-handle-text']}>{t('YakitButton.collapse')}</span>
+            </div>
+          )}
+          {!isVer && showHorizontalCollapseHandle && !!onClickHiddenBox && (
+            <div
+              className={classNames(styles['resize-split-handle'], styles['resize-split-handle-horizontal'])}
+              ref={handleRef}
+              onClick={onClickHiddenBox}
+              title={t('YakitButton.collapse')}
+              aria-label={t('YakitButton.collapse')}
+            >
+              <OutlineChevrondoublerightIcon />
             </div>
           )}
           <div
