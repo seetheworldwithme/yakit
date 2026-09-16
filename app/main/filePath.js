@@ -9,8 +9,8 @@ const fs = require('fs')
 const appPath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath()
 /** 系统用户根路径 */
 const osHome = os.homedir()
-/** 软件关联数据文件夹名 */
-const projectName = 'yakit-projects'
+/** 软件关联数据文件夹名（Linux 下定制为 web-project，与引擎端 utils.DefaultYakitProjectDirName 保持一致） */
+const projectName = process.platform === 'linux' ? 'web-project' : 'yakit-projects'
 
 /** 软件关联数据路径设置逻辑 Start */
 // 数据文件夹路径
@@ -53,7 +53,7 @@ const YakitProjectPath = project_path || osHomeProjectPath
 console.log(`---------- Global-Path Start ----------`)
 console.log(`software-path: ${appPath}`)
 console.log(`os-home-path: ${osHome}`)
-console.log(`yakit-projects-path: ${YakitProjectPath}`)
+console.log(`workspace-path: ${YakitProjectPath}`)
 console.log(`---------- Global-Path End ----------`)
 
 /** 引擎文件夹路径 */
