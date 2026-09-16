@@ -26,6 +26,7 @@ const {
   initAllLogFolders,
   printLogOutputFile,
 } = require('./logFile')
+const { registerDesktopEntry } = require('./desktopIntegration')
 
 const BLOCKED_CHROMIUM_DEBUG_SWITCHES = ['remote-debugging-port', 'remote-debugging-address', 'remote-debugging-pipe']
 const BLOCKED_NODE_DEBUG_ARG_PREFIXES = ['--inspect', '--inspect-brk', '--inspect-port']
@@ -701,6 +702,9 @@ if (!shouldAbortStartupForDebugFlags) {
      * 不存在则新建文件夹
      */
     initAllLogFolders()
+
+    // Linux(AppImage) 注册 desktop 入口+图标，修复 dock 栏不显示应用 logo
+    registerDesktopEntry()
 
     /** 获取缓存数据并储存于软件内 */
     initLocalCache()
