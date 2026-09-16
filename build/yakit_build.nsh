@@ -27,8 +27,8 @@ Function DirectoryPageShow
     ${If} $IS_INSTALLED == "true"
         SendMessage $1 ${WM_SETTEXT} 0 "STR:检测到程序已经安装。点击安装会将旧程序卸载并重新进行安装。"
     ${Else}
-        ; 已隐藏：安装程序会自动迁移 yakit-projects 文件夹。
-        ; SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移 yakit-projects 文件夹。"
+        ; 已隐藏：安装程序会自动迁移 web-project 文件夹。
+        ; SendMessage $1 ${WM_SETTEXT} 0 "STR:安装程序会自动迁移 web-project 文件夹。"
     ${EndIf}
 FunctionEnd
 
@@ -113,7 +113,7 @@ Function FinishLeave
     ${NSD_GetState} $DeleteOldEngine $0
     ${If} $0 <> 0
         ; 删除旧引擎代码
-        Delete /REBOOTOK $INSTDIR\yakit-projects\yak-engine\*yak-*
+        Delete /REBOOTOK $INSTDIR\web-project\yak-engine\*yak-*
     ${EndIf}
     Quit
 FunctionEnd
@@ -240,10 +240,10 @@ FunctionEnd
     cancelUninstall:
         Quit
     continue:
-    ; 如果保留了yakit-projects文件夹，将其从临时位置移回原始位置
+    ; 如果保留了web-project文件夹，将其从临时位置移回原始位置
     ${If} $KEEP_FOLDER == "true"
         Push "$INSTDIR"
-        Push "yakit-projects"
+        Push "web-project"
         Call un.DeleteFoldersWithExclusion
 
         DELETE "$INSTDIR\$EXE_NAME.exe"
@@ -272,32 +272,32 @@ FunctionEnd
     DetailPrint "检查安装目录权限..."
     Call EnsureInstallDirWritable
 
-    ; 创建 yakit-projects 文件夹
-    DetailPrint "创建yakit-projects文件夹..."
+    ; 创建 web-project 文件夹
+    DetailPrint "创建web-project文件夹..."
     ClearErrors
-    CreateDirectory "$INSTDIR\yakit-projects"
+    CreateDirectory "$INSTDIR\web-project"
     ${If} ${Errors}
         Call ShowInstallPermissionError
     ${EndIf}
 
-    ; Migrate yakit-projects folder
-    ${If} "$PROFILE\yakit-projects" != "$INSTDIR\yakit-projects"
+    ; Migrate 历史数据文件夹（旧版本数据目录名为 yakit-projects，位于用户主目录；目标为安装目录下 web-project）
+    ${If} "$PROFILE\yakit-projects" != "$INSTDIR\web-project"
     ${AndIf} ${FileExists} "$PROFILE\yakit-projects"
         ClearErrors
         ; 旧版本数据可能包含多层目录和隐藏文件，这里必须递归复制，且不要在安装阶段直接删源目录
-        nsExec::Exec '"$SYSDIR\cmd.exe" /C xcopy "$PROFILE\yakit-projects" "$INSTDIR\yakit-projects\\" /E /I /H /K /Y /C >nul 2>&1'
+        nsExec::Exec '"$SYSDIR\cmd.exe" /C xcopy "$PROFILE\yakit-projects" "$INSTDIR\web-project\\" /E /I /H /K /Y /C >nul 2>&1'
         Pop $0
         ${If} $0 != 0
-            DetailPrint "迁移yakit-projects文件夹失败..."
+            DetailPrint "迁移历史数据文件夹失败..."
         ${Else}
-            DetailPrint "迁移yakit-projects文件夹成功..."
+            DetailPrint "迁移历史数据文件夹成功..."
         ${EndIf}
     ${EndIf}
 
     ; 存储安装目录
     DetailPrint "写入环境变量..."
     WriteRegStr HKCU "Software\Yakit" $INSTALL_PATH_REG_KEY_NAME "$INSTDIR"
-    WriteRegStr HKCU "Environment" "YAKIT_HOME" "$INSTDIR\yakit-projects"
+    WriteRegStr HKCU "Environment" "YAKIT_HOME" "$INSTDIR\web-project"
     DetailPrint "正在安装..."
 !macroend
 

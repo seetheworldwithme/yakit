@@ -9,8 +9,8 @@ const fs = require('fs')
 const appPath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath()
 /** 系统用户根路径 */
 const osHome = os.homedir()
-/** 软件关联数据文件夹名（Linux 下定制为 web-project，与引擎端 utils.DefaultYakitProjectDirName 保持一致） */
-const projectName = process.platform === 'linux' ? 'web-project' : 'yakit-projects'
+/** 软件关联数据文件夹名（靖云甲定制，与引擎端 utils.DefaultYakitProjectDirName 保持一致） */
+const projectName = 'web-project'
 
 /** 软件关联数据路径设置逻辑 Start */
 // 数据文件夹路径
@@ -45,7 +45,7 @@ try {
 
 /**
  * @name 软件关联项目相关目录路径
- * 在新版本中，windows自定义安装路径会将os-home目录的yakit-projects迁移到软件根目录下
+ * 在新版本中，windows自定义安装路径会将os-home目录的历史数据目录(yakit-projects)迁移到软件根目录的 web-project 下
  * 如果获取项目关联文件夹路径错误时，将自动设置为系统用户下面(容灾处理)
  */
 const YakitProjectPath = project_path || osHomeProjectPath

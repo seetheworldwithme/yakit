@@ -812,7 +812,7 @@ export const DataStatistics: React.FC<DataStatisticsProps> = (props) => {
             document.body.removeChild(a)
           } else {
             const { origin } = window.location
-            const match = filePath.match(/yakit-projects(\/[^]+)$/)
+            const match = filePath.match(/(?:yakit-projects|web-project)(\/[^]+)$/)
             if (match) {
               const a = document.createElement('a')
               a.href = `${origin}/install_package${match[1]}`

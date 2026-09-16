@@ -32,10 +32,10 @@ module.exports = async function (context) {
         to: 'bins/flag.windows.txt',
       },
       {
-        // 预放引擎到运行时引擎目录（Windows 打包版 YakitProjectPath = 安装目录/yakit-projects）
+        // 预放引擎到运行时引擎目录（Windows 打包版 YakitProjectPath = 安装目录/web-project）
         // 首启 fs.existsSync(yak-engine/yak.exe) 即为 true，跳过下载/解压交互，直接连引擎
         from: 'bins/yak_windows_amd64.exe',
-        to: 'yakit-projects/yak-engine/yak.exe',
+        to: 'web-project/yak-engine/yak.exe',
       },
       {
         // 同时保留可恢复的内置引擎包，供“恢复内置引擎”和版本检测使用

@@ -190,7 +190,7 @@ export const apiDownloadStorageType: APIFunc<string, string> = (filePath) => {
         if (['oss', 's3'].includes(type)) {
           resolve(filePath)
         } else {
-          const match = filePath.match(/yakit-projects(\/[^]+)$/)
+          const match = filePath.match(/(?:yakit-projects|web-project)(\/[^]+)$/)
           if (match) {
             getRemoteValue(getRemoteHttpSettingGV())
               .then((setting) => {
