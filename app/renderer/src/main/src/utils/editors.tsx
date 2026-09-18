@@ -9,7 +9,7 @@ import './monacoSpec/fuzzHTTPMonacoSpec'
 import './monacoSpec/yakEditor'
 import './monacoSpec/html'
 import { Card, Form, Tooltip } from 'antd'
-import { EnterOutlined, FullscreenOutlined, SettingOutlined, ThunderboltFilled } from '@ant-design/icons'
+import { EnterOutlined, FullscreenOutlined, SettingOutlined } from '@ant-design/icons'
 import { HTTPFlowBodyByIdRequest, HTTPPacketFuzzable } from '../components/HTTPHistory'
 import ReactResizeDetector from 'react-resize-detector'
 
@@ -1039,7 +1039,6 @@ export const NewHTTPPacketEditor: React.FC<NewHTTPPacketEditorProp> = React.memo
                 <YakitButton
                   size={'small'}
                   type={'primary'}
-                  icon={<ThunderboltFilled />}
                   onClick={() =>
                     newWebFuzzerTab({
                       isHttps: props.defaultHttps || false,
@@ -1050,7 +1049,7 @@ export const NewHTTPPacketEditor: React.FC<NewHTTPPacketEditorProp> = React.memo
                     })
                   }
                 >
-                  FUZZ
+                  报文构造
                 </YakitButton>
               )}
               {showDefaultExtra && (

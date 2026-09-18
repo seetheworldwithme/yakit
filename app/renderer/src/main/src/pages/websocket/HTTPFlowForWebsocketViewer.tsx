@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Card } from 'antd'
 import { HTTPFlow } from '@/components/HTTPFlowTable/HTTPFlowTable'
 import { Uint8ArrayToString } from '@/utils/str'
-import { ThunderboltOutlined } from '@ant-design/icons'
 import { YakitEditor } from '@/components/yakitUI/YakitEditor/YakitEditor'
 import { HighLightText, OtherMenuListProps } from '@/components/yakitUI/YakitEditor/YakitEditorType'
 import { yakitNotify } from '@/utils/notification'
@@ -102,12 +101,11 @@ export const HTTPFlowForWebsocketViewer: React.FC<HTTPFlowForWebsocketViewerProp
           <YakitButton
             type={'primary'}
             size={'small'}
-            icon={<ThunderboltOutlined />}
             onClick={() => {
               newWebsocketFuzzerTab(flow.IsHTTPS, flow.Request)
             }}
           >
-            FUZZ
+            报文构造
           </YakitButton>
         </div>
       }
