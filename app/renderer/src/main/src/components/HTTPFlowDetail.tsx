@@ -1837,9 +1837,11 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
             defaultHttps={flow.IsHTTPS}
             noMinimap={true}
             noSendToComparer={true}
-            contextMenu={{
-              ...sendCodeCompareMenuItem('request'),
-            }}
+            onlySendToFuzzerMenu={true}
+            // 只保留「发送到报文构造台」，发送到对比器暂时隐藏，可回滚
+            // contextMenu={{
+            //   ...sendCodeCompareMenuItem('request'),
+            // }}
             // 这个为了解决不可见字符的问题
             defaultPacket={!!flow?.SafeHTTPRequest ? flow.SafeHTTPRequest : undefined}
             extra={
@@ -1958,9 +1960,11 @@ export const HTTPFlowDetailRequestAndResponse: React.FC<HTTPFlowDetailRequestAnd
               return titleEle
             })()}
             noSendToComparer={true}
-            contextMenu={{
-              ...sendCodeCompareMenuItem('response'),
-            }}
+            onlySendToFuzzerMenu={true}
+            // 只保留「发送到报文构造台」，发送到对比器暂时隐藏，可回滚
+            // contextMenu={{
+            //   ...sendCodeCompareMenuItem('response'),
+            // }}
             extra={secondNodeResExtraBtn()}
             AfterBeautifyRenderBtn={
               <>
