@@ -397,7 +397,7 @@
       "sendToWsFuzzer": "发送到 WS Fuzzer",
       "sendAndRedirect": "发送并跳转",
       "sendOnly": "仅发送",
-      "sendToWebFuzzer": "发送到 Web Fuzzer"
+      "sendToWebFuzzer": "发送到报文构造台"
     }
   },
   "YakitXterm": {

@@ -845,10 +845,12 @@ export const YakitEditor: React.FC<YakitEditorProps> = React.memo((props) => {
      * @description 使用下方的判断逻辑，将导致后续的(额外菜单变动)无法在右键菜单再渲染中生效
      */
     // if (isInitRef.current) return
-    rightContextMenu.current = [...DefaultMenuTopArr]
+    rightContextMenu.current = DefaultMenuTopArr.filter(
+      (item) => !(hiddenDefaultContextMenuKeys || []).includes((item as { key?: string }).key || ''),
+    )
     keyBindingRef.current = {}
 
-    if (type === 'http') {
+    if (type === 'http' && !(hiddenDefaultContextMenuKeys || []).includes('http-show-break')) {
       rightContextMenu.current = rightContextMenu.current.concat([
         {
           key: 'http-show-break',
@@ -856,7 +858,7 @@ export const YakitEditor: React.FC<YakitEditorProps> = React.memo((props) => {
         },
       ])
     }
-    if (isShowSelectRangeMenu) {
+    if (isShowSelectRangeMenu && !(hiddenDefaultContextMenuKeys || []).includes('toggle-action-bar')) {
       rightContextMenu.current = rightContextMenu.current.concat([
         {
           key: 'toggle-action-bar',

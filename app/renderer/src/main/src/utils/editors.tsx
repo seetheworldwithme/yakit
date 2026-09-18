@@ -563,6 +563,8 @@ export interface NewHTTPPacketEditorProp extends HTTPPacketFuzzable {
 
   keepSearchName?: string
   noSendToComparer?: boolean
+  /** 是否只保留「发送到报文构造台」+ 页面注入项的最小右键菜单（其余内置项隐藏，可回滚）默认否 */
+  onlySendToFuzzerMenu?: boolean
   /** 是否来自 MITM 页面 */
   fromMITM?: boolean
 }
@@ -1185,6 +1187,7 @@ export const NewHTTPPacketEditor: React.FC<NewHTTPPacketEditorProp> = React.memo
                     onlyBasicMenu={props.onlyBasicMenu}
                     showDownBodyMenu={props.showDownBodyMenu}
                     noSendToComparer={props.noSendToComparer}
+                    onlySendToFuzzerMenu={props.onlySendToFuzzerMenu}
                     onClickUrlMenu={props.onClickUrlMenu}
                     onClickUrlWithoutQueryMenu={props.onClickUrlWithoutQueryMenu}
                     onClickOpenBrowserMenu={props.onClickOpenBrowserMenu}

@@ -397,7 +397,7 @@
       "sendToWsFuzzer": "Send to WS Fuzzer",
       "sendAndRedirect": "Send and Redirect",
       "sendOnly": "Send Only",
-      "sendToWebFuzzer": "Send to Web Fuzzer"
+      "sendToWebFuzzer": "Send to Packet Builder"
     }
   },
   "YakitXterm": {

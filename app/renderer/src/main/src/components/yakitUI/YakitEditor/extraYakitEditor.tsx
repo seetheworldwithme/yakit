@@ -55,6 +55,8 @@ interface HTTPPacketYakitEditor extends Omit<YakitEditorProps, 'menuType'> {
   pageId?: string
   downbodyParams?: HTTPFlowBodyByIdRequest
   onlyBasicMenu?: boolean // 是否只展示最基础菜单 默认不是
+  /** 是否只保留「发送到报文构造台」+ 页面注入项的最小右键菜单（其余内置项隐藏，可回滚）默认否 */
+  onlySendToFuzzerMenu?: boolean
   showDownBodyMenu?: boolean
   noSendToComparer?: boolean // 是否隐藏内置的发送到对比器菜单 默认false
   onClickUrlMenu?: () => void
@@ -90,6 +92,7 @@ export const HTTPPacketYakitEditor: React.FC<HTTPPacketYakitEditor> = React.memo
     onClickOpenBrowserMenu,
     onClickOpenPacketNewWindowMenu,
     onlyBasicMenu = false,
+    onlySendToFuzzerMenu = false,
     fromMITM = false,
     ...restProps
   } = props
@@ -122,8 +125,8 @@ export const HTTPPacketYakitEditor: React.FC<HTTPPacketYakitEditor> = React.memo
   }, [])
 
   const rightMenuType: YakitEditorExtraRightMenuType[] = useMemo(() => {
-    if (onlyBasicMenu) {
-      // 只展示最基础菜单
+    if (onlyBasicMenu || onlySendToFuzzerMenu) {
+      // 只展示最基础菜单 / 最小右键菜单模式（编码、解码、HTTP变形、插件扩展等分组全部隐藏）
       return []
     }
     const init: YakitEditorExtraRightMenuType[] = ['code', 'decode', 'http']
@@ -132,7 +135,7 @@ export const HTTPPacketYakitEditor: React.FC<HTTPPacketYakitEditor> = React.memo
     } else {
       return init.concat(['customcontextmenu', 'aiplugin'])
     }
-  }, [noPacketModifier, onlyBasicMenu])
+  }, [noPacketModifier, onlyBasicMenu, onlySendToFuzzerMenu])
 
   const rightContextMenu: OtherMenuListProps = useMemo(() => {
     if (onlyBasicMenu) {
@@ -664,9 +667,18 @@ export const HTTPPacketYakitEditor: React.FC<HTTPPacketYakitEditor> = React.memo
       }
     }
 
+    // 最小右键菜单模式：仅保留「发送到报文构造台」与页面注入项，其余内置项隐藏（可回滚）
+    if (onlySendToFuzzerMenu) {
+      return {
+        ...(contextMenu || {}),
+        ...(menuItems.newFuzzer ? { newFuzzer: menuItems.newFuzzer } : {}),
+      }
+    }
+
     return menuItems
   }, [
     onlyBasicMenu,
+    onlySendToFuzzerMenu,
     defaultHttps,
     system,
     originValue,
@@ -697,7 +709,9 @@ export const HTTPPacketYakitEditor: React.FC<HTTPPacketYakitEditor> = React.memo
       menuType={rightMenuType}
       readOnly={readOnly}
       contextMenu={rightContextMenu}
-      hiddenDefaultContextMenuKeys={['copy']}
+      hiddenDefaultContextMenuKeys={
+        onlySendToFuzzerMenu ? ['copy', 'cut', 'paste', 'font-size', 'http-show-break', 'toggle-action-bar'] : ['copy']
+      }
       disableUnicodeDecode={disableUnicodeDecode}
       {...restProps}
       {...extraEditorProps}

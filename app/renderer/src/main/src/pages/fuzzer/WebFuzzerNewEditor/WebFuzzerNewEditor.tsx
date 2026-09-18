@@ -167,6 +167,8 @@ export const WebFuzzerNewEditor: React.FC<WebFuzzerNewEditorProps> = React.memo(
         noMinimap={true}
         utf8={true}
         originValue={request}
+        // 只保留「发送到报文构造台」+「插入标签/字典」，其余右键项暂时隐藏，可回滚
+        onlySendToFuzzerMenu={true}
         contextMenu={editorRightMenu}
         onEditor={setReqEditor}
         onChange={(i) => {

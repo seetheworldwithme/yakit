@@ -450,12 +450,14 @@ export const HTTPFlowDetail: React.FC<HTTPFlowDetailProp> = (props) => {
                         defaultHttps={flow?.IsHTTPS}
                         // actions={[...actionFuzzer]}
                         noSendToComparer={true}
+                        onlySendToFuzzerMenu={true}
                         extraEditorProps={{
                           isShowSelectRangeMenu: true,
                         }}
-                        contextMenu={{
-                          ...sendCodeCompareMenuItem('request'),
-                        }}
+                        // 只保留「发送到报文构造台」，发送到对比器暂时隐藏，可回滚
+                        // contextMenu={{
+                        //   ...sendCodeCompareMenuItem('request'),
+                        // }}
                         url={flow.Url}
                         downstreamProxyStr={props.downstreamProxyStr}
                         downbodyParams={{ Id: flow.Id, IsRequest: true }}
@@ -502,12 +504,14 @@ export const HTTPFlowDetail: React.FC<HTTPFlowDetailProp> = (props) => {
                         // actions={[...actionFuzzer]}
                         webFuzzerValue={flow.RequestString || ''}
                         noSendToComparer={true}
+                        onlySendToFuzzerMenu={true}
                         extraEditorProps={{
                           isShowSelectRangeMenu: true,
                         }}
-                        contextMenu={{
-                          ...sendCodeCompareMenuItem('response'),
-                        }}
+                        // 只保留「发送到报文构造台」，发送到对比器暂时隐藏，可回滚
+                        // contextMenu={{
+                        //   ...sendCodeCompareMenuItem('response'),
+                        // }}
                         url={flow.Url}
                         downstreamProxyStr={props.downstreamProxyStr}
                         downbodyParams={{ Id: flow.Id, IsRequest: false }}
