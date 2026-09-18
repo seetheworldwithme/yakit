@@ -26,6 +26,30 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "缺少命令：$1"
 }
 
+# yarn 未安装时通过 npm 全局补装（走国内镜像），新机器无需手动预装
+ensure_yarn() {
+  if command -v yarn >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "[prep] 未检测到 yarn，尝试通过 npm 全局安装..."
+  require_command npm
+  npm install -g yarn --registry="${YARN_INSTALL_REGISTRY:-https://registry.npmmirror.com}" || fail "yarn 自动安装失败，请手动安装后重试"
+  command -v yarn >/dev/null 2>&1 || fail "yarn 已安装但不在 PATH 中，请检查 npm 全局 bin 目录"
+  echo "   ✅ yarn $(yarn --version) 安装完成"
+}
+
+# 依赖未安装时自动 yarn install：以 node_modules 是否存在判断，已存在则跳过（重装可删掉对应 node_modules）
+ensure_deps() {
+  local dir="$1"
+  if [[ -d "$dir/node_modules" ]]; then
+    echo "   ✅ 依赖已就绪：$dir"
+    return 0
+  fi
+  echo "[prep] 未检测到 node_modules，安装依赖：$dir ..."
+  (cd "$dir" && yarn install) || fail "依赖安装失败：$dir"
+  echo "   ✅ 依赖安装完成：$dir"
+}
+
 cleanup() {
   if [[ -n "$ORIG_PKG_CONTENT" ]]; then
     printf '%s\n' "$ORIG_PKG_CONTENT" > "$PACKAGE_JSON"
@@ -34,7 +58,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-require_command yarn
+ensure_yarn
 require_command node
 require_command unzip
 
@@ -57,6 +81,12 @@ case "$HOST_SYSTEM" in
   Darwin|Linux) ;;
   *) fail "Linux arm64 安装包仅支持在 macOS 或 Linux 上构建" ;;
 esac
+
+# 三个包目录缺一不可：root（run-s/env-cmd/electron-builder）、CRA 渲染进程、engine-link-startup。
+# 上方镜像环境变量已先导出，yarn install 阶段的 Electron 下载同样走国内镜像。
+ensure_deps "$PROJECT_ROOT"
+ensure_deps "$PROJECT_ROOT/app/renderer/src/main"
+ensure_deps "$PROJECT_ROOT/app/renderer/engine-link-startup"
 
 echo "[prep] 校验并刷新 Linux arm64 内置引擎..."
 [[ -f "$ENGINE_ZIP" ]] || fail "缺少 $ENGINE_ZIP"
