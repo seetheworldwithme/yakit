@@ -1,6 +1,28 @@
+import { Buffer } from 'buffer'
 import { diffChars, diffLines } from 'diff'
 
 export const DIFF_MAX_LINE_LENGTH = 1000
+
+const HEX_DUMP_BYTES_PER_LINE = 16
+
+/**
+ * 文本转 hexdump(偏移 + 十六进制字节 + ASCII),用于字节级对比。
+ * ponytail: 逐行独立切 16 字节窗口,一侧比另一侧多/少字节时后续行会整体错位,
+ * 这是朴素字节对比的已知上限;要窗口对齐需换 LCS 字节 diff,当前不需要。
+ */
+export const toHexDump = (content: string) => {
+  const bytes = Buffer.from(content, 'utf8')
+  const lines: string[] = []
+  for (let offset = 0; offset < bytes.length; offset += HEX_DUMP_BYTES_PER_LINE) {
+    const chunk = bytes.subarray(offset, offset + HEX_DUMP_BYTES_PER_LINE)
+    const hex = Array.from(chunk, (byte) => byte.toString(16).padStart(2, '0'))
+      .join(' ')
+      .padEnd(HEX_DUMP_BYTES_PER_LINE * 3 - 1, ' ')
+    const ascii = Array.from(chunk, (byte) => (byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : '.')).join('')
+    lines.push(`${offset.toString(16).padStart(8, '0')}  ${hex}  |${ascii}|`)
+  }
+  return lines.join('\n')
+}
 
 export interface DiffLineRange {
   startLineNumber: number

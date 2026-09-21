@@ -16,7 +16,9 @@ import { useUpdateEffect, useMemoizedFn } from 'ahooks'
 import { showByRightContext } from '@/components/yakitUI/YakitMenu/showByRightContext'
 import { YakitMenuItemType } from '@/components/yakitUI/YakitMenu/YakitMenu'
 import { yakitNotify } from '@/utils/notification'
-import { getDiffInlineRanges, getDiffLineRanges, prepareDiffText } from './DataCompare.utils'
+import { getDiffInlineRanges, getDiffLineRanges, prepareDiffText, toHexDump } from './DataCompare.utils'
+
+type DiffMode = 'text' | 'byte'
 
 const { ipcRenderer } = window.require('electron')
 
@@ -32,6 +34,8 @@ interface DataCompareProps {
 export const DataCompare: React.FC<DataCompareProps> = (props) => {
   const { leftData, rightData } = props
   const [noWrap, setNoWrap] = useState<boolean>(false)
+  // 对比模式:默认文本,字节模式把两侧内容转 hexdump 后走同一套文本 diff
+  const [diffMode, setDiffMode] = useState<DiffMode>('text')
 
   const [left, setLeft] = useState<string>(leftData || '')
   const [right, setRight] = useState<string>(rightData || '')
@@ -50,10 +54,19 @@ export const DataCompare: React.FC<DataCompareProps> = (props) => {
             codeComparisonRef.current?.onChangeLineConversion()
           }}
         />
+        <div className={styles['compare-wrap-mode']}>
+          <Button size={'small'} type={diffMode === 'text' ? 'primary' : 'default'} onClick={() => setDiffMode('text')}>
+            文本
+          </Button>
+          <Button size={'small'} type={diffMode === 'byte' ? 'primary' : 'default'} onClick={() => setDiffMode('byte')}>
+            字节
+          </Button>
+        </div>
         <CodeComparison
           ref={codeComparisonRef}
           noWrap={noWrap}
           setNoWrap={setNoWrap}
+          mode={diffMode}
           leftCode={left}
           setLeftCode={setLeft}
           rightCode={right}
@@ -111,6 +124,7 @@ export const DataCompareModal: React.FC<DataCompareModalProps> = (props) => {
 interface CodeComparisonProps {
   noWrap?: boolean
   setNoWrap?: (b: boolean) => void
+  mode?: DiffMode
   leftCode: string
   setLeftCode?: (s: string) => void
   rightCode: string
@@ -122,12 +136,25 @@ interface CodeComparisonProps {
 }
 
 export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((props, ref) => {
-  const { noWrap, setNoWrap, leftCode, setLeftCode, rightCode, setRightCode, originalEditable = true, readOnly } = props
+  const {
+    noWrap,
+    setNoWrap,
+    mode = 'text',
+    leftCode,
+    setLeftCode,
+    rightCode,
+    setRightCode,
+    originalEditable = true,
+    readOnly,
+  } = props
   const { t } = useI18nNamespaces(['yakitUi'])
   const { fontSize, initFontSize, setFontSize } = useEditorFontSize()
   const diffDivRef = useRef(null)
   const monaco = monacoEditor.editor
   const diffEditorRef = useRef<monacoEditor.editor.IStandaloneDiffEditor>()
+  // 挂载 effect / IPC 回调里的闭包拿不到最新 mode,用 ref 中转
+  const modeRef = useRef<DiffMode>('text')
+  modeRef.current = mode
   const [language, setLanguage] = useState<string>('')
   // 从store获取对比数据
   const { token, dataMap } = useHttpFlowStore()
@@ -250,15 +277,20 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
     if (setNoWrap) setNoWrap(!noWrap)
     setModelEditor({ content: leftCode, language: language }, { content: rightCode, language: language }, language)
   }
+  // 字节模式把内容转 hexdump 后复用同一套文本 diff;文本模式只做显示换行预处理
+  const transformDiffContent = (content: string) =>
+    modeRef.current === 'byte' ? toHexDump(content) : prepareDiffText(content)
+
   const setModelEditor = (left?: textModelProps, right?: textModelProps, language = 'yak') => {
-    const preparedLeft = left ? { ...left, content: prepareDiffText(left.content) } : undefined
-    const preparedRight = right ? { ...right, content: prepareDiffText(right.content) } : undefined
+    const preparedLeft = left ? { ...left, content: transformDiffContent(left.content) } : undefined
+    const preparedRight = right ? { ...right, content: transformDiffContent(right.content) } : undefined
     const leftModel = monaco.createModel(
       preparedLeft ? preparedLeft.content : '',
       preparedLeft ? preparedLeft.language : language,
     )
     leftModel.onDidChangeContent((e) => {
-      if (setLeftCode) setLeftCode(leftModel.getValue())
+      // 字节模式下模型内容是 hexdump,不能回写到文本 state
+      if (modeRef.current === 'text' && setLeftCode) setLeftCode(leftModel.getValue())
     })
     const rightModel = monaco.createModel(
       preparedRight ? preparedRight.content : '',
@@ -266,7 +298,7 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
     )
     if (setRightCode)
       rightModel.onDidChangeContent((e) => {
-        setRightCode(rightModel.getValue())
+        if (modeRef.current === 'text') setRightCode(rightModel.getValue())
       })
     if (!diffEditorRef.current) return
     diffEditorRef.current.setModel({
@@ -402,6 +434,19 @@ export const CodeComparison: React.FC<CodeComparisonProps> = React.forwardRef((p
   useUpdateEffect(() => {
     diffEditorRef.current?.updateOptions({ fontSize })
   }, [fontSize])
+
+  // 切换文本/字节模式:用当前文本 state 重建对比模型(字节模式内容为 hexdump,只读展示)
+  useUpdateEffect(() => {
+    const model = diffEditorRef.current?.getModel()
+    if (!model) return
+    setModelEditor({ content: leftCode, language }, { content: rightCode, language }, language)
+    model.original.dispose()
+    model.modified.dispose()
+    diffEditorRef.current?.updateOptions({
+      readOnly: readOnly || mode === 'byte',
+      originalEditable: originalEditable && mode === 'text',
+    })
+  }, [mode])
 
   // 注册自定义右键菜单
   useEffect(() => {
