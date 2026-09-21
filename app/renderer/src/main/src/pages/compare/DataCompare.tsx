@@ -55,12 +55,20 @@ export const DataCompare: React.FC<DataCompareProps> = (props) => {
           }}
         />
         <div className={styles['compare-wrap-mode']}>
-          <Button size={'small'} type={diffMode === 'text' ? 'primary' : 'default'} onClick={() => setDiffMode('text')}>
+          <YakitButton
+            size={'small'}
+            type={diffMode === 'text' ? 'primary' : 'outline2'}
+            onClick={() => setDiffMode('text')}
+          >
             文本
-          </Button>
-          <Button size={'small'} type={diffMode === 'byte' ? 'primary' : 'default'} onClick={() => setDiffMode('byte')}>
+          </YakitButton>
+          <YakitButton
+            size={'small'}
+            type={diffMode === 'byte' ? 'primary' : 'outline2'}
+            onClick={() => setDiffMode('byte')}
+          >
             字节
-          </Button>
+          </YakitButton>
         </div>
         <CodeComparison
           ref={codeComparisonRef}
