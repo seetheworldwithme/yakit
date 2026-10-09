@@ -61,6 +61,7 @@ trap cleanup EXIT
 ensure_yarn
 require_command node
 require_command unzip
+require_command readelf
 
 # Electron / electron-builder 依赖包走国内镜像下载，避免 GitHub 直连抖动断流
 export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
@@ -118,6 +119,20 @@ if (header.readUInt16LE(18) !== 183) {
   throw new Error('Linux 引擎不是 arm64 架构')
 }
 NODE
+
+# 麒麟桌面端可能使用较旧的 glibc；打包前拒绝需要高于 manylinux2014 (2.17) 的引擎。
+# 只检查二进制实际引用的符号版本，避免宿主机 glibc 版本误导检查结果。
+MAX_GLIBC_MINOR=17
+REQUIRED_GLIBC_MINOR="$(readelf --version-info "$TEMP_ENGINE" | \
+  awk '{ while (match($0, /GLIBC_2\.[0-9]+/)) { version = substr($0, RSTART + 8, RLENGTH - 8); if (version + 0 > max) max = version + 0; found = 1; $0 = substr($0, RSTART + RLENGTH) } } END { if (found) print max }')"
+if [[ -n "$REQUIRED_GLIBC_MINOR" && "$REQUIRED_GLIBC_MINOR" -gt "$MAX_GLIBC_MINOR" ]]; then
+  fail "内置引擎需要 GLIBC_2.$REQUIRED_GLIBC_MINOR，高于麒麟兼容基线 GLIBC_2.$MAX_GLIBC_MINOR；请用 yaklang 的 manylinux2014 构建脚本重新编译"
+fi
+if [[ -n "$REQUIRED_GLIBC_MINOR" ]]; then
+  echo "   ✅ 引擎 GLIBC 需求：GLIBC_2.$REQUIRED_GLIBC_MINOR（上限 GLIBC_2.$MAX_GLIBC_MINOR）"
+else
+  echo "   ✅ 引擎未引用 GLIBC 版本符号"
+fi
 
 mv -f "$TEMP_ENGINE" "$ENGINE_BIN"
 chmod +x "$ENGINE_BIN" 2>/dev/null || true
