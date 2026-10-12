@@ -3,6 +3,7 @@ import { Form, Input, Button } from 'antd'
 import { warn, failed, success } from '@/utils/notification'
 import { useDebounceFn, useMemoizedFn } from 'ahooks'
 import { NetWorkApi } from '@/services/fetch'
+import { encryptEnterprisePasswords } from '@/services/enterprisePassword'
 import { API } from '@/services/swagger/resposeType'
 import { loginOut, refreshToken } from '@/utils/login'
 import { UserInfoProps, yakitDynamicStatus } from '@/store'
@@ -16,6 +17,8 @@ export interface SetPasswordProps {
   onCancel: () => any
 }
 
+type PasswordValues = Required<Pick<API.UpUserInfoRequest, 'old_pwd' | 'pwd' | 'confirm_pwd'>>
+
 const layout = {
   labelCol: { span: 7 },
   wrapperCol: { span: 17 },
@@ -28,37 +31,42 @@ const SetPassword: React.FC<SetPasswordProps> = (props) => {
   const { getFieldValue } = form
   const [loading, setLoading] = useState<boolean>(false)
   const { dynamicStatus } = yakitDynamicStatus()
-  const onFinish = useMemoizedFn((values: API.UpUserInfoRequest) => {
+  const onFinish = useMemoizedFn(async (values: PasswordValues) => {
     const { old_pwd, pwd, confirm_pwd } = values
     if (getFieldValue('confirm_pwd') !== getFieldValue('pwd')) {
       warn(t('SetPassword.passwordMismatch'))
-    } else {
-      NetWorkApi<API.UpUserInfoRequest, API.ActionSucceeded>({
+      return
+    }
+    setLoading(true)
+    try {
+      const [encryptedOldPwd, encryptedPwd, encryptedConfirmPwd] = await encryptEnterprisePasswords([
+        old_pwd,
+        pwd,
+        confirm_pwd,
+      ])
+      const result = await NetWorkApi<API.UpUserInfoRequest, API.ActionSucceeded>({
         method: 'post',
         url: 'urm/up/userinfo',
         data: {
-          old_pwd,
-          pwd,
-          confirm_pwd,
+          old_pwd: encryptedOldPwd,
+          pwd: encryptedPwd,
+          confirm_pwd: encryptedConfirmPwd,
         },
       })
-        .then((result) => {
-          if (result.ok) {
-            success(t('SetPassword.updateSuccess'))
-            onCancel()
-            if (dynamicStatus.isDynamicStatus) {
-              yakitNetwork.logoutDynamicControl({ loginOut: true })
-            } else {
-              loginOut(userInfo)
-              yakitUILayout.requestSignOut()
-            }
-          }
-        })
-        .catch((err) => {
-          setLoading(false)
-          failed(t('SetPassword.updateFailed', { error: err }))
-        })
-        .finally(() => {})
+      if (result.ok) {
+        success(t('SetPassword.updateSuccess'))
+        onCancel()
+        if (dynamicStatus.isDynamicStatus) {
+          yakitNetwork.logoutDynamicControl({ loginOut: true })
+        } else {
+          loginOut(userInfo)
+          yakitUILayout.requestSignOut()
+        }
+      }
+    } catch (err) {
+      failed(t('SetPassword.updateFailed', { error: err }))
+    } finally {
+      setLoading(false)
     }
   })
   // 判断输入内容是否通过

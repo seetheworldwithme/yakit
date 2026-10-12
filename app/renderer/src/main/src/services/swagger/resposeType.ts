@@ -457,6 +457,16 @@ export declare namespace API {
     description: string
     ssaRiskCreatedAt: number
   }
+  export interface Sm2PublicKeyResponse {
+    /**
+     * 04 || X || Y 的十六进制公钥
+     */
+    publicKey?: string
+    /**
+     * 固定为 C1C3C2，sm-crypto 加密时模式传 1
+     */
+    cipherMode?: string
+  }
   export interface ShareResponse {
     share_id: string
     extract_code?: string

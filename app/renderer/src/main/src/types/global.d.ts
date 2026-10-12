@@ -320,6 +320,7 @@ interface YakitBridge {
   }
   codec: {
     run: (params: any) => Promise<any>
+    encryptSM2: (params: { text: string; publicKey: string }) => Promise<any>
     autoDecode: (payload: any) => Promise<any>
     mutateHttpRequest: (payload: any) => Promise<any>
   }
