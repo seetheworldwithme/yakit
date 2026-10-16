@@ -150,7 +150,8 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
       if (typeof err === 'string' && skipShow && (err.includes('密码不正确') || err.includes('用户不存在'))) {
         return
       }
-      setShowSkip(true)
+      // 靖云甲不允许跳过登录:登录失败不再展示「跳过」按钮,需要恢复时取消下面注释即可
+      // setShowSkip(true)
     }
   })
 
@@ -179,7 +180,8 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
         }
         yakitAuth.editBaseUrl(values.BaseUrl).catch((err) => {
           failed(t('ConfigPrivateDomain.privateDomainSetFailed', { error: String(err) }))
-          setShowSkip(true)
+          // 靖云甲不允许跳过登录:地址设置失败不再展示「跳过」按钮,需要恢复时取消下面注释即可
+          // setShowSkip(true)
         })
         if (v?.pwd) {
           // 加密
@@ -378,6 +380,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
                 </Form.Item>
               </div>
               <Form.Item label={' '} colon={false} className="form-item-submit">
+                {/* 靖云甲不允许跳过登录:注释「跳过」按钮,需要恢复时取消注释即可
                 {isShowSkip && (
                   <YakitButton
                     style={{ width: 165, marginRight: 12 }}
@@ -389,6 +392,7 @@ export const ConfigPrivateDomain: React.FC<ConfigPrivateDomainProps> = React.mem
                     {t('YakitButton.skip')}
                   </YakitButton>
                 )}
+                */}
                 <YakitButton
                   size="large"
                   type="primary"
