@@ -77,7 +77,8 @@ export const syncBuiltinPluginsToServer = async (opts?: { silent?: boolean }): P
           yakitNotify('error', `内置插件同步完成：成功 ${names.length - errorCount} 个，失败 ${errorCount} 个`)
           resolve(finish(false))
         } else {
-          yakitNotify('success', `内置插件同步完成：共 ${names.length} 个`)
+          // 静默模式(登录自动同步)不弹「完成」通知，同步照常进行
+          if (!silent) yakitNotify('success', `内置插件同步完成：共 ${names.length} 个`)
           resolve(finish(true))
         }
       })
@@ -102,5 +103,6 @@ export const syncBuiltinPluginsToServer = async (opts?: { silent?: boolean }): P
 export const autoSyncBuiltinPluginsOnLogin = () => {
   if (autoSyncedThisSession || syncing) return
   autoSyncedThisSession = true
-  syncBuiltinPluginsToServer()
+  // 静默同步：不弹「开始/完成」通知，仅失败时提示
+  syncBuiltinPluginsToServer({ silent: true })
 }
