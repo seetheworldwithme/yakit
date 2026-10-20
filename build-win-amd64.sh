@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Yakit 企业版 no-license —— Windows amd64 打包脚本
-# 用法：在 macOS 或 Windows Git Bash 的项目根目录执行 `bash build-win-amd64.sh`
+# 用法：在 Linux / macOS / Windows Git Bash 的项目根目录执行 `bash build-win-amd64.sh`
 set -Eeuo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -53,7 +53,12 @@ case "$HOST_SYSTEM" in
     arch -x86_64 /usr/bin/true >/dev/null 2>&1 || fail "Apple Silicon 跨打 Windows 需要 Rosetta 2，请先执行：softwareupdate --install-rosetta"
     ;;
   MINGW*|MSYS*|CYGWIN*) ;;
-  *) fail "Windows amd64 安装包仅支持在 macOS 或 Windows Git Bash 上构建" ;;
+  Linux)
+    # Linux 跨打 Windows 与 macOS 同机制：electron-builder 26 自带 Wine 工具集（见下方 arm64 适配块）
+    export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
+    export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${YAKIT_NODE_HEAP_MB:-5632}"
+    ;;
+  *) fail "Windows amd64 安装包仅支持在 Linux、macOS 或 Windows Git Bash 上构建" ;;
 esac
 
 echo "[prep] 校验并刷新 Windows amd64 内置引擎..."
@@ -111,7 +116,11 @@ if [[ -z "$ENGINE_VERSION" && "$HOST_SYSTEM" == "Darwin" ]]; then
   chmod +x "$MAC_ENGINE"
   ENGINE_VERSION="$($MAC_ENGINE version | awk -F': ' '/^[[:space:]]*Version:/ { print $2; exit }')"
 elif [[ -z "$ENGINE_VERSION" ]]; then
-  ENGINE_VERSION="$($ENGINE_EXE version | awk -F': ' '/^[[:space:]]*Version:/ { print $2; exit }')"
+  ENGINE_VERSION="$({ "$ENGINE_EXE" version || true; } | awk -F': ' '/^[[:space:]]*Version:/ { print $2; exit }')"
+fi
+if [[ -z "$ENGINE_VERSION" && "$HOST_SYSTEM" == "Linux" ]]; then
+  # Linux 等无法直接运行 Windows 引擎的环境：本地构建的引擎版本形如 dev-<hash>，直接从二进制提取
+  ENGINE_VERSION="$(grep -aoE 'dev-[0-9a-f]{7,40}' "$ENGINE_EXE" | head -n 1 || true)"
 fi
 [[ -n "$ENGINE_VERSION" ]] || fail "无法读取 Windows 引擎版本号，可通过 YAK_ENGINE_VERSION 指定"
 printf '%s\n' "$ENGINE_VERSION" > "$ENGINE_VERSION_FILE"
@@ -129,6 +138,54 @@ echo "[1/3] 构建渲染进程（企业版 no-license）..."
 yarn build-renders-enterprise-no-license
 
 echo "[2/3] 打包 win x64（EE 品牌，不签名）..."
+
+# ---------- arm64 Linux 专用适配（与 build-win-amd64-legacy.sh 相同） ----------
+# 1) electron-builder 的 NSIS 工具集里 linux makensis 是 x86_64 ELF，需 qemu-user + binfmt 透明运行；
+#    运行期还需要 amd64 multiarch 的 glibc/libstdc++/zlib
+# 2) 卸载器提取默认走捆绑的 x86_64 wine，在 qemu-user 下会核心转储（wineserver 机制不兼容），
+#    改为纯 JS 的 UninstallerReader（electron-builder 在 macOS Catalina 的同款免 wine 路径）
+if [[ "$HOST_SYSTEM" == "Linux" && "$(uname -m)" == "aarch64" ]]; then
+  if ! ls /proc/sys/fs/binfmt_misc/ 2>/dev/null | grep -q '^qemu-x86_64'; then
+    fail "arm64 Linux 打 Windows 包需要 qemu-user 的 binfmt 支持，请执行：
+  sudo apt install qemu-user-static binfmt-support"
+  fi
+  MAKENSIS="$(ls -1 "$HOME"/.cache/electron-builder/nsis-*/nsis-*/linux/makensis 2>/dev/null | head -n 1 || true)"
+  if [[ -n "$MAKENSIS" && ! -x "$MAKENSIS" ]]; then
+    fail "NSIS makensis 存在但不可执行：$MAKENSIS"
+  fi
+  if [[ -n "$MAKENSIS" ]]; then
+    if ! "$MAKENSIS" -VERSION &>/dev/null; then
+      fail "x86_64 makensis 无法运行（缺 amd64 动态库），请执行：
+  sudo dpkg --add-architecture amd64
+  sudo tee /etc/apt/sources.list.d/amd64-multiarch.list >/dev/null <<'EOF'
+deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy main universe
+deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy-updates main universe
+deb [arch=amd64] http://security.ubuntu.com/ubuntu jammy-security main universe
+EOF
+  sudo apt update && sudo apt install libc6:amd64 libstdc++6:amd64 zlib1g:amd64"
+    fi
+  fi
+  node - "$PROJECT_ROOT/node_modules/app-builder-lib/out/targets/nsis/NsisTarget.js" <<'NODE'
+const fs = require('fs')
+const file = process.argv[2]
+let src = fs.readFileSync(file, 'utf8')
+const marker = '// patched by build-win-amd64-legacy'
+if (src.includes(marker)) {
+  console.log('   ✅ NSIS 卸载器提取补丁已存在，跳过')
+} else {
+  const from = 'await wineVm.exec(installerPath, [], { env: { __COMPAT_LAYER: "RunAsInvoker" } });'
+  const to = `await nsisUtil_1.UninstallerReader.exec(installerPath, uninstallerPath); ${marker}`
+  if (!src.includes(from)) {
+    throw new Error('未找到 wineVm.exec 调用，electron-builder 版本可能已更新，请检查补丁适配')
+  }
+  fs.writeFileSync(file, src.replace(from, to))
+  console.log('   ✅ NSIS 卸载器提取已改为 UninstallerReader（纯 JS，免 wine）')
+}
+NODE
+fi
+
+# 清理上次普通版产物，避免 mv 收拢时混入旧文件
+rm -f release/*-windows-amd64.exe release/*-windows-amd64.exe.blockmap
 # 安装包版本号日期段（如 2.4.7-0626 的 0626）改为打包当天日期：
 # 打包前对 package.json 做字节级替换（只动 version 一处），构建结束由 cleanup 恢复。
 # 不用 -c.extraMetadata.version CLI 覆盖——env-cmd 10.1.0 会把该参数吞掉导致构建直接退出。
