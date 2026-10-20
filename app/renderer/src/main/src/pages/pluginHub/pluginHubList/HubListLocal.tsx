@@ -54,6 +54,7 @@ import { RemotePluginGV } from '@/enums/plugin'
 import { SolidCloudpluginIcon, SolidPrivatepluginIcon, SolidYakOfficialPluginColorIcon } from '@/assets/icon/colors'
 import { showYakitModal } from '@/components/yakitUI/YakitModal/YakitModalConfirm'
 import { PluginLocalUpload } from '@/pages/plugins/local/PluginLocalUpload'
+import { syncBuiltinPluginsToServer } from '@/pages/pluginHub/builtinPluginSync'
 import {
   PluginLocalExport,
   PluginLocalExportForm,
@@ -1422,6 +1423,14 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     <YakitButton
                       type="outline2"
                       size="large"
+                      icon={<OutlineRefreshIcon />}
+                      onClick={() => syncBuiltinPluginsToServer()}
+                    >
+                      同步内置插件
+                    </YakitButton>
+                    <YakitButton
+                      type="outline2"
+                      size="large"
                       icon={<OutlineTrashIcon />}
                       disabled={selectedNum === 0 || batchDelLoading}
                       loading={batchDelLoading}
@@ -1641,6 +1650,13 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
                     disabled={allChecked || selectedNum === 0}
                     icon={<OutlineClouduploadIcon />}
                     onClick={onHeaderExtraUpload}
+                  />
+                </Tooltip>
+                <Tooltip title="同步内置插件到企业插件仓库" overlayClassName="plugins-tooltip">
+                  <YakitButton
+                    type="text2"
+                    icon={<OutlineRefreshIcon />}
+                    onClick={() => syncBuiltinPluginsToServer()}
                   />
                 </Tooltip>
                 {/* <div className={styles["divider-style"]}></div>

@@ -34,6 +34,7 @@ import { AllKillEngineConfirm } from './AllKillEngineConfirm'
 import { SoftwareSettings } from '@/pages/softwareSettings/SoftwareSettings'
 import { StopIcon } from '@/assets/newIcon'
 import EnterpriseJudgeLogin from '@/pages/EnterpriseJudgeLogin'
+import { autoSyncBuiltinPluginsOnLogin } from '@/pages/pluginHub/builtinPluginSync'
 import {
   ExportProjectProps,
   getEnvTypeByProjects,
@@ -224,6 +225,13 @@ const SentinelShell: React.FC<SentinelShellProp> = (props) => {
   // #endregion
 
   const { userInfo } = useStore()
+
+  // 登录成功后自动把本地内置插件同步到企业插件仓库(每个会话自动跑一次，手动入口在插件仓库页)
+  useUpdateEffect(() => {
+    if (userInfo.isLogin && userInfo.user_id) {
+      autoSyncBuiltinPluginsOnLogin()
+    }
+  }, [userInfo.isLogin, userInfo.user_id])
 
   // 引擎状态断开时清空yakrunner
   useUpdateEffect(() => {
