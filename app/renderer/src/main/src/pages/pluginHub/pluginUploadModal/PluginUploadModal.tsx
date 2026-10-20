@@ -52,11 +52,7 @@ export const PluginUploadModal: React.FC<PluginUploadModalProps> = memo((props) 
       setIsError(true)
       return
     }
-    if (!!info.IsCorePlugin) {
-      errorInfo.current = '内置插件不支持上传'
-      setIsError(true)
-      return
-    }
+    // 内置插件(含社区内置的 501 个)同样允许上传至企业插件仓库，不再拦截
 
     setloading(true)
     localPlugin.current = info

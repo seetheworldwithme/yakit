@@ -480,8 +480,11 @@ export const HubListLocal: React.FC<HubListLocalProps> = memo((props) => {
     if (batchUploadLoading) return
     setBatchUploadLoading(true)
 
-    const list = selectList.filter((item) => !item.IsCorePlugin).map((item) => item.ScriptName) || []
+    // 内置插件(含社区内置的 501 个)同样允许上传至企业插件仓库，不再按 IsCorePlugin 过滤
+    const list = selectList.map((item) => item.ScriptName) || []
     if (!allChecked && list.length === 0) {
+      // 复位 loading：早退路径不复位会导致上传按钮此后永久失灵
+      setBatchUploadLoading(false)
       yakitNotify('error', t('HubListLocal.builtinOrEmptySelection'))
       return
     }

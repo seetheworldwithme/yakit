@@ -1330,9 +1330,7 @@ export const LocalOptFooterExtra: React.FC<LocalOptFooterExtraProps> = memo((pro
   const { isLogin, info, onEdit, uploadInfo, onUpload, onExport, execDelInfo = [], onDel } = props
   const { t, i18n } = useI18nNamespaces(['pluginHub', 'yakitUi'])
 
-  const isShowUpload = useMemo(() => {
-    return !info.IsCorePlugin
-  }, [info.IsCorePlugin])
+  // 内置插件(含社区内置的 501 个)同样允许上传，不再按 IsCorePlugin 隐藏上传入口
   const uploadLoading = useMemo(() => {
     return info.ScriptName === uploadInfo?.ScriptName || info.Id === uploadInfo?.Id
   }, [info, uploadInfo])
@@ -1340,7 +1338,7 @@ export const LocalOptFooterExtra: React.FC<LocalOptFooterExtraProps> = memo((pro
   // 上传
   const handleUpload = useMemoizedFn((e) => {
     e.stopPropagation()
-    if (!isShowUpload || uploadLoading) return
+    if (uploadLoading) return
     if (!info.ScriptName) {
       yakitNotify('error', t('LocalOptFooterExtra.pluginInfoErrorUpload'))
       return
@@ -1415,19 +1413,10 @@ export const LocalOptFooterExtra: React.FC<LocalOptFooterExtraProps> = memo((pro
 
   return (
     <div className={styles['local-opt-footer-extra']}>
-      {isShowUpload && (
-        <>
-          <Tooltip title="上传" visible={uploadTipShow} onVisibleChange={(val) => setUploadTipShow(val)}>
-            <YakitButton
-              type="text2"
-              icon={<OutlineClouduploadIcon />}
-              loading={uploadLoading}
-              onClick={handleUpload}
-            />
-          </Tooltip>
-          <div className={styles['divider-style']}></div>
-        </>
-      )}
+      <Tooltip title="上传" visible={uploadTipShow} onVisibleChange={(val) => setUploadTipShow(val)}>
+        <YakitButton type="text2" icon={<OutlineClouduploadIcon />} loading={uploadLoading} onClick={handleUpload} />
+      </Tooltip>
+      <div className={styles['divider-style']}></div>
 
       <Tooltip title="编辑">
         <YakitButton type="text2" icon={<OutlinePencilaltIcon />} onClick={handleEdit} />
