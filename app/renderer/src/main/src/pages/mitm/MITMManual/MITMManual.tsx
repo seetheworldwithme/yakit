@@ -257,9 +257,9 @@ const MITMManual: React.FC<MITMManualProps> = React.memo(
                 newEditorShowIndexShowIndex = 0
               }
               newData.push(item)
-              if (item.Status === ManualHijackListStatus.Hijacking_Request) {
+              if (item.Status === ManualHijackListStatus.Hijacking_Request && isOnlyLookResponse) {
                 setLoading(taskID, true)
-                // 默认劫持响应：请求到达后自动发送劫持响应数据，无需手动点击「劫持响应」按钮
+                // 勾选"只看响应"时自动放行请求并劫持对应响应;未勾选则停在手劫状态,可编辑修改请求后再放行
                 const params: MITMV2HijackedCurrentResponseRequest = {
                   TaskID: taskID,
                   SendPacket: true,
@@ -1361,6 +1361,12 @@ const MITMV2ManualEditor: React.FC<MITMV2ManualEditorProps> = React.memo((props)
         <div className={styles['mitm-v2-manual-editor-btn']}>
           {!disabled && (
             <>
+              {!isResponse && !info.IsWebsocket && (
+                <YakitButton disabled={btnDisable} type="outline1" size="small" onClick={onHijackCurrentResponse}>
+                  劫持响应
+                  {convertKeyboardToUIKey(getMitmShortcutKeyEvents()[MitmShortcutKey.HijackResponseMitm].keys)}
+                </YakitButton>
+              )}
               <YakitButton
                 disabled={btnDisable}
                 type="outline1"
