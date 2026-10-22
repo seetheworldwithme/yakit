@@ -38,6 +38,11 @@
       font-weight: 600;
       line-height: 20px;
     }
+    // 文本/字节对比模式切换(与报文差异对比页一致)
+    .header-mode {
+      display: flex;
+      gap: 4px;
+    }
     .close {
       svg {
         width: 20px;

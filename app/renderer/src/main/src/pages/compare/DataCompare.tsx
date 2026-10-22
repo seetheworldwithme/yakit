@@ -98,6 +98,8 @@ interface DataCompareModalProps {
 export const DataCompareModal: React.FC<DataCompareModalProps> = (props) => {
   const { onClose, leftCode, rightCode, leftTitle, rightTitle, loadCallBack, readOnly = false } = props
   const { t, i18n } = useI18nNamespaces(['comparer'])
+  // 对比模式:与报文差异对比页一致,默认文本,可切字节(hexdump)对比
+  const [diffMode, setDiffMode] = useState<DiffMode>('text')
 
   useEffect(() => {
     loadCallBack && loadCallBack()
@@ -106,6 +108,22 @@ export const DataCompareModal: React.FC<DataCompareModalProps> = (props) => {
     <div className={styles['data-compare-modal']}>
       <div className={styles['header']}>
         <div className={styles['title']}>{t('DataCompareModal.codeCompare')}</div>
+        <div className={styles['header-mode']}>
+          <YakitButton
+            size={'small'}
+            type={diffMode === 'text' ? 'primary' : 'outline2'}
+            onClick={() => setDiffMode('text')}
+          >
+            文本
+          </YakitButton>
+          <YakitButton
+            size={'small'}
+            type={diffMode === 'byte' ? 'primary' : 'outline2'}
+            onClick={() => setDiffMode('byte')}
+          >
+            字节
+          </YakitButton>
+        </div>
         <div className={styles['close']}>
           <RemoveIcon onClick={() => onClose()} />
         </div>
@@ -118,7 +136,7 @@ export const DataCompareModal: React.FC<DataCompareModalProps> = (props) => {
           </div>
         )}
         <div className={styles['code']}>
-          <CodeComparison leftCode={leftCode} rightCode={rightCode} fontSize={12} readOnly={readOnly} />
+          <CodeComparison leftCode={leftCode} rightCode={rightCode} fontSize={12} readOnly={readOnly} mode={diffMode} />
         </div>
       </div>
       {/* <div className={styles['footer']}>
