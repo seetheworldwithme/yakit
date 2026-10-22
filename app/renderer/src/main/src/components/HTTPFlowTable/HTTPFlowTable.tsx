@@ -1,6 +1,6 @@
 import React, { Ref, useEffect, useMemo, useRef, useState, useContext } from 'react'
 import { Divider, Tooltip, Badge, Pagination } from 'antd'
-import { YakQueryHTTPFlowRequest } from '../../utils/yakQueryHTTPFlow'
+import { HistoryPluginSearchType, HistoryTableSearchType, YakQueryHTTPFlowRequest } from '../../utils/yakQueryHTTPFlow'
 import { YakScript } from '../../pages/invoker/schema'
 import { HTTPFlowDetailProp } from '../HTTPFlowDetail'
 import { yakitNotify, yakitFailed } from '../../utils/notification'
@@ -93,6 +93,8 @@ import {
   getFullRange,
   hasActiveHTTPFlowTableFilterConfig,
   safeParseHTTPFlowTableCache,
+  sanitizeHTTPFlowStatusCodeSearch,
+  splitHTTPFlowSearchValues,
   splitHTTPFlowTableShieldData,
 } from './HTTPFlowTable.utils'
 import {
@@ -2118,8 +2120,29 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
   })
 
   const [searchVal, setSearchVal] = useState<string>('')
-  const handleSearch = useMemoizedFn((searchValue, searchType) => {
-    setParams((prev) => ({ ...prev, Keyword: searchValue, KeywordType: searchType }))
+  // 搜索类型 → query 字段分发：关键字/请求/响应走 Keyword，Hostname/URL路径/文件后缀/状态码走对应筛选字段
+  // （与高级筛选"只展示"、列头状态码筛选同参数）。新类型仅历史流量页下拉可选；用 ref 记录上次是否
+  // 用过字段类筛选，仅在搜索框自身用过时才清空，避免误清列头筛选/高级筛选写入的值（MITM/Fuzzer 不受影响）。
+  const fieldSearchUsedRef = useRef<boolean>(false)
+  const handleSearch = useMemoizedFn((searchValue: string, searchType: HistoryTableSearchType) => {
+    const isKeywordSearch: boolean = ['all', 'request', 'response'].includes(searchType)
+    const isFieldSearch: boolean = !isKeywordSearch
+    const shouldResetFields = isFieldSearch || fieldSearchUsedRef.current
+    fieldSearchUsedRef.current = isFieldSearch
+    setParams((prev) => {
+      const next: YakQueryHTTPFlowRequest = {
+        ...prev,
+        Keyword: isKeywordSearch ? searchValue : '',
+        KeywordType: isKeywordSearch ? (searchType as HistoryPluginSearchType) : 'all',
+      }
+      if (shouldResetFields) {
+        next.HostnameFilter = searchType === 'hostname' ? splitHTTPFlowSearchValues(searchValue) : []
+        next.IncludePath = searchType === 'urlPath' ? splitHTTPFlowSearchValues(searchValue) : []
+        next.IncludeSuffix = searchType === 'fileSuffix' ? splitHTTPFlowSearchValues(searchValue) : []
+        next.StatusCode = searchType === 'statusCode' ? sanitizeHTTPFlowStatusCodeSearch(searchValue) : undefined
+      }
+      return next
+    })
   })
 
   const { onMultipleClick, onRowContextMenu } = useHTTPFlowTableContextMenu({
@@ -2500,6 +2523,27 @@ export const HTTPFlowTable = React.memo<HTTPFlowTableProp>((props) => {
                     label: t('HistorySearch.response'),
                     value: 'response',
                   },
+                  // 历史流量页：高级筛选入口已隐藏，将"只展示"的 Hostname/URL路径/文件后缀与状态码整合进搜索下拉
+                  ...(pageType === 'History'
+                    ? [
+                        {
+                          label: 'Hostname',
+                          value: 'hostname',
+                        },
+                        {
+                          label: t('HTTPFlowTableFormConfiguration.uRLPath'),
+                          value: 'urlPath',
+                        },
+                        {
+                          label: t('HTTPFlowTableFormConfiguration.fileExtension'),
+                          value: 'fileSuffix',
+                        },
+                        {
+                          label: t('HTTPFlowTableFormConfiguration.statusCode'),
+                          value: 'statusCode',
+                        },
+                      ]
+                    : []),
                 ]}
               />
             )}

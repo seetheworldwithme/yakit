@@ -3,6 +3,9 @@ import { yakitHTTPFlow } from '@/services/electronBridge'
 
 export type HistoryPluginSearchType = 'all' | 'request' | 'response'
 
+/** 历史流量搜索下拉扩展类型：Hostname / URL路径 / 文件后缀 / 状态码（KeywordType 之外的字段筛选） */
+export type HistoryTableSearchType = HistoryPluginSearchType | 'hostname' | 'urlPath' | 'fileSuffix' | 'statusCode'
+
 /** 与 grpc MITMExtractAggregateFlowFilterRow 一致，用于聚合左栏多选联动流量 */
 export interface MitmExtractAggregateFlowFilterRow {
   RuleVerbose?: string

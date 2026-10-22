@@ -95,6 +95,16 @@ export const buildHTTPFlowTableAdvancedQuery = (filterConfig: FilterConfig, shie
   ExcludeStatusCode: filterConfig.shield.statusCode,
 })
 
+/** 搜索框输入值按逗号拆分为筛选数组（用于 Hostname / URL路径 / 文件后缀） */
+export const splitHTTPFlowSearchValues = (value: string): string[] =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+/** 状态码搜索输入清洗：只保留数字、逗号和连字符（如 200,301-399） */
+export const sanitizeHTTPFlowStatusCodeSearch = (value: string): string => value.replace(/[^0-9,-]/g, '')
+
 export const hasActiveHTTPFlowTableFilterConfig = (filterConfig: FilterConfig): boolean => {
   const hasActiveField = (obj: Record<string, unknown>) =>
     Object.values(obj).some((value) => {

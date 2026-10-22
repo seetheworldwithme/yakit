@@ -7,7 +7,7 @@ import { HTTPHistorySourcePageType } from '@/components/HTTPHistory'
 import { type OptionProps } from '@/components/YakitCombinationSearch/YakitCombinationSearchType'
 import { YakParamProps } from '@/pages/plugins/pluginsType'
 import type { DebouncedFunc } from 'lodash'
-import type { HistoryPluginSearchType } from '@/utils/yakQueryHTTPFlow'
+import type { HistoryTableSearchType } from '@/utils/yakQueryHTTPFlow'
 import type { MitmExtractAggregateFlowFilterRow } from '@/utils/yakQueryHTTPFlow'
 
 export interface codecHistoryPluginProps {
@@ -284,7 +284,7 @@ export interface HistorySearchProps {
   searchVal?: string
   setSearchVal?: (s: string) => void
   showPopoverSearch: boolean
-  handleSearch: (searchValue: string, searchType: HistoryPluginSearchType) => void
+  handleSearch: (searchValue: string, searchType: HistoryTableSearchType) => void
   addonBeforeOption?: OptionProps[]
   hint?: boolean
 }

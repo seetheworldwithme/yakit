@@ -5,7 +5,7 @@ import { OutlineQuestionmarkcircleIcon, OutlineSearchIcon } from '@/assets/icon/
 import { YakitButton } from '@/components/yakitUI/YakitButton/YakitButton'
 import { YakitPopover } from '@/components/yakitUI/YakitPopover/YakitPopover'
 import { YakitCombinationSearch } from '@/components/YakitCombinationSearch/YakitCombinationSearch'
-import { HistoryPluginSearchType } from '@/utils/yakQueryHTTPFlow'
+import { HistoryTableSearchType } from '@/utils/yakQueryHTTPFlow'
 import useGetSetState from '@/pages/pluginHub/hooks/useGetSetState'
 import { getReleaseEditionName } from '@/utils/envfile'
 import { useI18nNamespaces } from '@/i18n/useI18nNamespaces'
@@ -16,14 +16,14 @@ const HistorySearch = React.memo<HistorySearchProps>((props) => {
   const { showPopoverSearch, handleSearch, hint = true } = props
   const { t, i18n } = useI18nNamespaces(['history'])
   const [isHoverSearch, setIsHoverSearch] = useState<boolean>(false)
-  const [searchType, setSearchType, getSearchType] = useGetSetState<HistoryPluginSearchType>('all')
+  const [searchType, setSearchType, getSearchType] = useGetSetState<HistoryTableSearchType>('all')
   const [searchVal, setSearchVal] = useControllableValue<string>(props, {
     defaultValue: '',
     valuePropName: 'searchVal',
     trigger: 'setSearchVal',
   })
   const onSelectBeforeOption = useMemoizedFn((o: string) => {
-    setSearchType(o as HistoryPluginSearchType)
+    setSearchType(o as HistoryTableSearchType)
   })
   useUpdateEffect(() => {
     onSearch()

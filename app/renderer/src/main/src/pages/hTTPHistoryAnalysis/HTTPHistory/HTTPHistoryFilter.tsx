@@ -56,7 +56,7 @@ import {
   toggleHTTPFlowFavorite,
   YakQueryHTTPFlowResponse,
 } from '@/components/HTTPFlowTable/HTTPFlowTable'
-import { YakQueryHTTPFlowRequest } from '@/utils/yakQueryHTTPFlow'
+import { HistoryPluginSearchType, HistoryTableSearchType, YakQueryHTTPFlowRequest } from '@/utils/yakQueryHTTPFlow'
 import { ColumnsTypeProps, FiltersItemProps, SortProps } from '@/components/TableVirtualResize/TableVirtualResizeType'
 import { filterColorTag, getSingleColorType, isCellRedSingleColor } from '@/components/TableVirtualResize/utils'
 import { yakitNotify } from '@/utils/notification'
@@ -2633,12 +2633,16 @@ const HTTPFlowFilterTable: React.FC<HTTPFlowTableProps> = React.memo((props) => 
                       value: 'response',
                     },
                   ]}
-                  handleSearch={useMemoizedFn((searchValue, searchType) => {
+                  handleSearch={useMemoizedFn((searchValue, searchType: HistoryTableSearchType) => {
+                    // 本页下拉仅 关键字/请求/响应 三项，收窄回 KeywordType 支持的类型
+                    const keywordType: HistoryPluginSearchType = ['request', 'response'].includes(searchType)
+                      ? (searchType as HistoryPluginSearchType)
+                      : 'all'
                     setQuery((prev) => {
                       return {
                         ...prev,
                         Keyword: searchValue,
-                        KeywordType: searchType,
+                        KeywordType: keywordType,
                       }
                     })
                   })}
